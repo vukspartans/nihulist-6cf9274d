@@ -23,11 +23,11 @@ const buttonVariants = cva(
         premium: "btn-premium text-white font-semibold",
         hero: "bg-gradient-to-r from-primary-deep via-primary to-accent text-white font-bold shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300",
         glass: "glass-card text-foreground font-medium backdrop-blur-xl",
-        accent: "bg-gradient-to-r from-accent to-accent-glow text-white font-semibold hover:shadow-accent hover:scale-105 transition-all duration-300",
+        accent: "bg-gradient-to-r from-accent to-accent-glow text-white font-semibold hover:shadow-purple hover:scale-105 transition-all duration-300",
         
-        // Construction specific
-        construction: "bg-gradient-to-r from-primary to-construction-orange text-white hover:shadow-lg hover:scale-105 transform transition-all duration-200",
-        success: "bg-construction-success text-white hover:bg-construction-success/90"
+        // Tech specific
+        tech: "bg-gradient-to-r from-tech-blue to-tech-purple text-white hover:shadow-lg hover:scale-105 transform transition-all duration-200",
+        success: "bg-tech-success text-white hover:bg-tech-success/90"
       },
       size: {
         default: "h-10 px-4 py-2",

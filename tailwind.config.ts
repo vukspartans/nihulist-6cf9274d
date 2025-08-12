@@ -57,11 +57,11 @@ export default {
 					foreground: 'hsl(var(--card-foreground))',
 					glass: 'hsl(var(--card-glass))'
 				},
-				construction: {
-					orange: 'hsl(var(--construction-orange))',
-					steel: 'hsl(var(--construction-steel))',
-					safety: 'hsl(var(--construction-safety))',
-					success: 'hsl(var(--construction-success))'
+				tech: {
+					blue: 'hsl(var(--tech-blue))',
+					purple: 'hsl(var(--tech-purple))',
+					'purple-light': 'hsl(var(--tech-purple-light))',
+					success: 'hsl(var(--tech-success))'
 				},
 				glass: {
 					bg: 'var(--glass-bg)',

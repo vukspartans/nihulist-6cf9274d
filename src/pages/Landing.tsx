@@ -20,7 +20,7 @@ const Landing = () => {
 
   if (showSupplierForm) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-accent/10 flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/30 to-tech-purple-light/20 flex items-center justify-center p-4" dir="rtl">
         <Card className="w-full max-w-md glass-card">
           <CardHeader className="text-center">
             <Button
@@ -66,12 +66,12 @@ const Landing = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-accent/5" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-tech-purple-light/10" dir="rtl">
       {/* Premium Navigation */}
       <nav className="relative z-50 py-4 px-6">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-accent flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">בנייה AI</span>
@@ -94,7 +94,7 @@ const Landing = () => {
             alt="Next-Generation Construction AI Platform"
             className="w-full h-full object-cover opacity-5"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-primary-deep/90 via-primary/80 to-accent/70"></div>
+          <div className="absolute inset-0 bg-gradient-to-l from-primary-deep/90 via-primary/80 to-tech-purple/70"></div>
         </div>
         
         {/* Floating elements */}
@@ -102,7 +102,7 @@ const Landing = () => {
           <div className="w-3 h-3 bg-primary-glow rounded-full opacity-60"></div>
         </div>
         <div className="absolute top-40 right-20 animate-float" style={{ animationDelay: "1s" }}>
-          <div className="w-2 h-2 bg-accent rounded-full opacity-40"></div>
+          <div className="w-2 h-2 bg-tech-purple rounded-full opacity-40"></div>
         </div>
         
         <div className="relative container mx-auto px-6 text-center">
@@ -110,7 +110,7 @@ const Landing = () => {
             {/* Premium badge */}
             <div className="mb-8 animate-fade-in">
               <span className="inline-flex items-center px-6 py-3 glass-card text-foreground text-sm font-medium rounded-full mb-6 animate-glow">
-                <Zap className="w-4 h-4 ml-2 text-accent" />
+                <Zap className="w-4 h-4 ml-2 text-tech-purple" />
                 פלטפורמת הבינה המלאכותית המובילה לבנייה • Series A Funded
               </span>
             </div>
@@ -171,8 +171,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Stats Section - Unicorn Metrics */}
-      <section className="py-20 bg-gradient-to-r from-primary/5 via-background to-accent/5">
+      {/* Stats Section - Clean Metrics */}
+      <section className="py-20 bg-gradient-to-r from-primary/5 via-background to-tech-purple/5">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
             <div className="space-y-3 counter-animate">
@@ -226,7 +226,7 @@ const Landing = () => {
 
             <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
               <CardHeader>
-                <div className="w-20 h-20 bg-gradient-to-r from-accent to-accent-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "1s" }}>
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-accent-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "1s" }}>
                   <Shield className="w-10 h-10 text-white" />
                 </div>
                 <CardTitle className="text-2xl font-bold">ספקים מאומתים</CardTitle>
@@ -240,7 +240,7 @@ const Landing = () => {
 
             <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.6s" }}>
               <CardHeader>
-                <div className="w-20 h-20 bg-gradient-to-r from-construction-success to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "2s" }}>
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-success to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "2s" }}>
                   <TrendingUp className="w-10 h-10 text-white" />
                 </div>
                 <CardTitle className="text-2xl font-bold">ניתוח מתקדם</CardTitle>
@@ -256,7 +256,7 @@ const Landing = () => {
       </section>
 
       {/* Social Proof Section - Premium Testimonials */}
-      <section className="py-32 bg-gradient-to-br from-muted/30 via-background to-primary/5">
+      <section className="py-32 bg-gradient-to-br from-muted/30 via-background to-tech-purple/5">
         <div className="container mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-6xl font-black mb-6">
@@ -273,7 +273,7 @@ const Landing = () => {
             <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.2s" }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
-                  <div className="flex text-accent text-2xl">
+                  <div className="flex text-tech-purple text-2xl">
                     {"★".repeat(5)}
                   </div>
                   <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
@@ -291,7 +291,7 @@ const Landing = () => {
             <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.4s" }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
-                  <div className="flex text-accent text-2xl">
+                  <div className="flex text-tech-purple text-2xl">
                     {"★".repeat(5)}
                   </div>
                   <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
@@ -309,7 +309,7 @@ const Landing = () => {
             <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.6s" }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
-                  <div className="flex text-accent text-2xl">
+                  <div className="flex text-tech-purple text-2xl">
                     {"★".repeat(5)}
                   </div>
                   <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
@@ -328,14 +328,14 @@ const Landing = () => {
       </section>
 
       {/* CTA Section - Unicorn Level */}
-      <section className="py-32 bg-gradient-to-r from-primary-deep via-primary to-accent relative overflow-hidden">
+      <section className="py-32 bg-gradient-to-r from-primary-deep via-primary to-tech-purple relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-6 text-center">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">
               מוכן להצטרף
               <br />
-              <span className="text-accent-glow">למהפכה?</span>
+              <span className="text-tech-purple-light">למהפכה?</span>
             </h2>
             <p className="text-2xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
               הצטרף ל-5,000+ יזמים וקבלנים שכבר מקצרים פרויקטים בחודשים וחוסכים מיליונים
@@ -366,7 +366,7 @@ const Landing = () => {
           <div className="grid lg:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-accent flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold">בנייה AI</span>

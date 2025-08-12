@@ -8,67 +8,68 @@ Ultra-modern design tokens for unicorn-level brand presence
 
 @layer base {
   :root {
-    /* Premium background palette */
-    --background: 240 8% 99%;
-    --foreground: 220 15% 15%;
+    /* Clean White, Blue, Purple palette */
+    --background: 0 0% 100%;
+    --foreground: 220 20% 15%;
 
-    /* Glass morphism cards */
+    /* Pure white cards with subtle shadows */
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
-    --card-glass: 0 0% 100% / 0.8;
+    --card-foreground: 220 20% 15%;
+    --card-glass: 0 0% 100% / 0.95;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
+    --popover-foreground: 220 20% 15%;
 
-    /* Primary: Premium indigo-blue gradient system */
-    --primary: 225 84% 55%;
+    /* Primary: Modern Blue */
+    --primary: 220 91% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 235 84% 65%;
-    --primary-deep: 220 84% 45%;
-    --primary-light: 235 84% 85%;
+    --primary-glow: 220 91% 70%;
+    --primary-deep: 220 91% 45%;
+    --primary-light: 220 91% 95%;
 
-    /* Secondary: Sophisticated neutrals */
-    --secondary: 225 8% 96%;
-    --secondary-foreground: 220 15% 15%;
+    /* Secondary: Clean neutrals */
+    --secondary: 220 13% 96%;
+    --secondary-foreground: 220 20% 15%;
 
-    --muted: 225 8% 96%;
-    --muted-foreground: 220 12% 48%;
+    --muted: 220 13% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent: Premium orange for construction focus */
-    --accent: 20 90% 60%;
+    /* Accent: Vibrant Purple */
+    --accent: 270 95% 65%;
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 25 90% 70%;
+    --accent-glow: 280 95% 75%;
 
-    --destructive: 0 85% 58%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 12% 90%;
-    --input: 225 12% 93%;
-    --ring: 225 84% 55%;
+    --border: 220 13% 91%;
+    --input: 220 13% 94%;
+    --ring: 220 91% 56%;
 
-    /* Construction industry premium colors */
-    --construction-orange: 20 90% 60%;
-    --construction-steel: 225 15% 60%;
-    --construction-safety: 50 100% 55%;
-    --construction-success: 145 65% 50%;
+    /* Modern tech colors */
+    --tech-blue: 220 91% 56%;
+    --tech-purple: 270 95% 65%;
+    --tech-purple-light: 280 95% 85%;
+    --tech-success: 142 76% 36%;
 
     /* Premium gradient system */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(var(--primary)), hsl(var(--accent)));
-    --gradient-card: linear-gradient(145deg, hsl(var(--card-glass)), hsl(225 8% 98%));
+    --gradient-purple: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-glow)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card-glass)), hsl(220 13% 98%));
     --gradient-glass: linear-gradient(145deg, hsl(0 0% 100% / 0.1), hsl(0 0% 100% / 0.05));
-    --gradient-border: linear-gradient(145deg, hsl(var(--border)), hsl(225 20% 85%));
+    --gradient-border: linear-gradient(145deg, hsl(var(--border)), hsl(220 20% 85%));
 
-    /* Premium shadows & effects */
-    --shadow-sm: 0 2px 8px -2px hsl(225 25% 88%);
-    --shadow-card: 0 8px 32px -8px hsl(225 25% 85%);
-    --shadow-elevated: 0 16px 64px -12px hsl(225 25% 78%);
-    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.2);
-    --shadow-accent: 0 8px 32px -8px hsl(var(--accent) / 0.25);
+    /* Clean shadows & effects */
+    --shadow-sm: 0 1px 3px 0 hsl(220 13% 91% / 0.5);
+    --shadow-card: 0 4px 20px -4px hsl(220 13% 85% / 0.3);
+    --shadow-elevated: 0 8px 40px -8px hsl(220 13% 80% / 0.25);
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.15);
+    --shadow-purple: 0 8px 32px -8px hsl(var(--accent) / 0.2);
 
     /* Glass morphism effects */
-    --glass-bg: hsl(0 0% 100% / 0.1);
-    --glass-border: hsl(0 0% 100% / 0.2);
+    --glass-bg: hsl(0 0% 100% / 0.8);
+    --glass-border: hsl(220 13% 91% / 0.5);
     
     --radius: 0.75rem;
 

@@ -145,7 +145,7 @@ const Dashboard = () => {
           </div>
           <Button
             onClick={() => navigate("/projects/new")}
-            variant="construction"
+            variant="tech"
             size="lg"
             className="mt-4 md:mt-0"
           >
@@ -183,7 +183,7 @@ const Dashboard = () => {
               {!searchTerm && (
                 <Button
                   onClick={() => navigate("/projects/new")}
-                  variant="construction"
+                  variant="tech"
                 >
                   <Plus className="w-4 h-4 ml-2" />
                   צור פרויקט חדש

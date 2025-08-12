@@ -228,7 +228,7 @@ const Auth = () => {
             <Button 
               type="submit" 
               className="w-full" 
-              variant="construction"
+              variant="premium"
               disabled={loading}
             >
               {loading ? "מתבצע..." : (isLogin ? "התחברות" : "הצטרפות")}

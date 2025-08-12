@@ -291,7 +291,7 @@ const ProjectWizard = () => {
                 id="file-upload"
               />
               <label htmlFor="file-upload">
-                <Button variant="construction" asChild>
+                <Button variant="tech" asChild>
                   <span>בחר קבצים</span>
                 </Button>
               </label>
@@ -449,7 +449,7 @@ const ProjectWizard = () => {
               <Button
                 onClick={nextStep}
                 disabled={!validateStep(currentStep)}
-                variant="construction"
+                variant="tech"
               >
                 הבא
                 <ArrowRight className="w-4 h-4 mr-2" />
@@ -458,7 +458,7 @@ const ProjectWizard = () => {
               <Button
                 onClick={createProject}
                 disabled={creating || uploading}
-                variant="construction"
+                variant="tech"
               >
                 {creating ? "יוצר פרויקט..." : uploading ? "מעלה קבצים..." : "צור פרויקט"}
                 {!creating && !uploading && <CheckCircle className="w-4 h-4 mr-2" />}
