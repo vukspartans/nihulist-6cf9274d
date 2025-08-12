@@ -122,7 +122,7 @@ const Landing = () => {
               <span className="text-foreground">בעולם הבנייה</span>
             </h1>
 
-            <p className="text-xl md:text-3xl text-muted-foreground mb-12 leading-relaxed max-w-4xl mx-auto animate-slide-up font-light" style={{ animationDelay: "0.2s" }}>
+            <p className="text-xl md:text-3xl text-white mb-12 leading-relaxed max-w-4xl mx-auto animate-slide-up font-light" style={{ animationDelay: "0.2s" }}>
               בינה מלאכותית מתקדמת + רשת ספקים מאומתת = 
               <span className="font-bold text-primary"> חיסכון 90% בזמן רכש</span>
             </p>
