@@ -43,19 +43,19 @@ const Landing = () => {
       </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-tech-purple-light/10" dir="rtl">
-      {/* Premium Navigation */}
-      <nav className="relative z-50 py-4 px-6">
+      {/* Mobile-Optimized Navigation */}
+      <nav className="relative z-50 py-4 px-4 lg:px-6">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
               <Building2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold gradient-text">בנייה AI</span>
+            <span className="text-lg lg:text-xl font-bold gradient-text">בנייה AI</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm">תמחור</Button>
-            <Button variant="ghost" size="sm">צוות</Button>
-            <Button variant="premium" size="sm" onClick={() => navigate("/auth")}>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <Button variant="ghost" size="sm" className="hidden md:flex">תמחור</Button>
+            <Button variant="ghost" size="sm" className="hidden md:flex">צוות</Button>
+            <Button variant="premium" size="sm" onClick={() => navigate("/auth")} className="text-sm lg:text-base px-4 lg:px-6">
               התחל עכשיו
             </Button>
           </div>
@@ -79,7 +79,7 @@ const Landing = () => {
           <div className="w-2 h-2 bg-tech-purple rounded-full opacity-40"></div>
         </div>
         
-        <div className="relative container mx-auto px-6 text-center">
+        <div className="relative container mx-auto px-4 lg:px-6 text-center">
           <div className="max-w-6xl mx-auto">
             {/* Premium badge */}
             <div className="mb-8 animate-fade-in">
@@ -90,7 +90,7 @@ const Landing = () => {
             </div>
 
             {/* Hero headline */}
-            <h1 className="text-6xl md:text-8xl font-black mb-8 leading-tight animate-slide-up">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black mb-6 lg:mb-8 leading-tight animate-slide-up">
               <span className="gradient-text">מהפכה</span>
               <br />
               <span className="text-foreground">בעולם הבנייה</span>
@@ -137,31 +137,31 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Stats Section - Clean Metrics */}
-      <section className="py-20 bg-gradient-to-r from-primary/5 via-background to-tech-purple/5">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div className="space-y-3 counter-animate">
-              <div className="text-5xl md:text-6xl font-black gradient-text">₪2.1B+</div>
-              <div className="text-base font-medium text-muted-foreground">שווי פרויקטים</div>
+      {/* Stats Section - Mobile Optimized */}
+      <section className="py-16 lg:py-20 bg-gradient-to-r from-primary/5 via-background to-tech-purple/5">
+        <div className="container mx-auto px-4 lg:px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center">
+            <div className="space-y-2 lg:space-y-3 counter-animate">
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black gradient-text">₪2.1B+</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">שווי פרויקטים</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{
+            <div className="space-y-2 lg:space-y-3 counter-animate" style={{
             animationDelay: "0.2s"
           }}>
-              <div className="text-5xl md:text-6xl font-black gradient-text">90%</div>
-              <div className="text-base font-medium text-muted-foreground">חיסכון בזמן</div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black gradient-text">90%</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">חיסכון בזמן</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{
+            <div className="space-y-2 lg:space-y-3 counter-animate" style={{
             animationDelay: "0.4s"
           }}>
-              <div className="text-5xl md:text-6xl font-black gradient-text">5,000+</div>
-              <div className="text-base font-medium text-muted-foreground">ספקים מאומתים</div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black gradient-text">5,000+</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">ספקים מאומתים</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{
+            <div className="space-y-2 lg:space-y-3 counter-animate" style={{
             animationDelay: "0.6s"
           }}>
-              <div className="text-5xl md:text-6xl font-black gradient-text">50M+</div>
-              <div className="text-base font-medium text-muted-foreground">נקודות נתונים</div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black gradient-text">50M+</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">נקודות נתונים</div>
             </div>
           </div>
         </div>
@@ -315,25 +315,35 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* CTA Section - Unicorn Level */}
-      <section className="py-32 bg-gradient-to-r from-primary-deep via-primary to-tech-purple relative overflow-hidden">
+      {/* Final CTA Section - Mobile Optimized for Conversion */}
+      <section className="py-20 lg:py-32 bg-gradient-to-r from-primary-deep via-primary to-tech-purple relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-6 text-center">
+        <div className="relative container mx-auto px-4 lg:px-6 text-center">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-6 lg:mb-8 leading-tight">
               מוכן להצטרף
               <br />
               <span className="text-tech-purple-light">למהפכה?</span>
             </h2>
-            <p className="text-2xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl lg:text-2xl text-white/90 mb-8 lg:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
               הצטרף ל-5,000+ יזמים וקבלנים שכבר מקצרים פרויקטים בחודשים וחוסכים מיליונים
             </p>
-            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center">
-              <Button variant="glass" size="xl" onClick={() => navigate("/auth")} className="text-xl px-12 py-6 bg-white/20 text-white border-white/30 hover:bg-white/30">
-                <Building2 className="w-7 h-7 ml-3" />
+            
+            {/* Mobile-First CTA */}
+            <div className="space-y-6 lg:space-y-0 lg:flex lg:flex-row lg:gap-8 justify-center items-center">
+              {/* Primary CTA - Full width on mobile */}
+              <Button 
+                variant="glass" 
+                size="xl" 
+                onClick={() => navigate("/auth")} 
+                className="w-full lg:w-auto text-lg lg:text-xl px-8 lg:px-12 py-4 lg:py-6 bg-white/20 text-white border-white/30 hover:bg-white/30 font-bold"
+              >
+                <Building2 className="w-6 lg:w-7 h-6 lg:h-7 ml-3" />
                 התחל חינם עכשיו
               </Button>
-              <div className="flex flex-col items-center text-white/80 text-lg">
+              
+              {/* Benefits - Stack on mobile, side by side on desktop */}
+              <div className="flex flex-col lg:items-start text-white/80 text-base lg:text-lg space-y-1">
                 <span>• ללא כרטיס אשראי</span>
                 <span>• הגדרה תוך 60 שניות</span>
                 <span>• תמיכה בעברית 24/7</span>
