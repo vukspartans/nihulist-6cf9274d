@@ -14,7 +14,396 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          id: string
+          meta: Json | null
+          project_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_type: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          project_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_files: {
+        Row: {
+          ai_summary: string | null
+          created_at: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          project_id: string
+          size_mb: number
+        }
+        Insert: {
+          ai_summary?: string | null
+          created_at?: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id?: string
+          project_id: string
+          size_mb: number
+        }
+        Update: {
+          ai_summary?: string | null
+          created_at?: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          project_id?: string
+          size_mb?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          awaiting_banner_until: string | null
+          budget: number | null
+          created_at: string
+          id: string
+          location: string | null
+          name: string
+          owner_id: string
+          status: string
+          timeline_end: string
+          timeline_start: string
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          awaiting_banner_until?: string | null
+          budget?: number | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name: string
+          owner_id: string
+          status?: string
+          timeline_end: string
+          timeline_start: string
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          awaiting_banner_until?: string | null
+          budget?: number | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string
+          owner_id?: string
+          status?: string
+          timeline_end?: string
+          timeline_start?: string
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          ai_flags: Json | null
+          attachment_url: string | null
+          id: string
+          price: number
+          project_id: string
+          status: string
+          submitted_at: string
+          supplier_id: string | null
+          supplier_name: string
+          terms: string | null
+          timeline_days: number
+        }
+        Insert: {
+          ai_flags?: Json | null
+          attachment_url?: string | null
+          id?: string
+          price: number
+          project_id: string
+          status?: string
+          submitted_at?: string
+          supplier_id?: string | null
+          supplier_name: string
+          terms?: string | null
+          timeline_days: number
+        }
+        Update: {
+          ai_flags?: Json | null
+          attachment_url?: string | null
+          id?: string
+          price?: number
+          project_id?: string
+          status?: string
+          submitted_at?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          terms?: string | null
+          timeline_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendations: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          match_score: number
+          project_id: string
+          reason: string
+          status: string
+          supplier_id: string
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          id?: string
+          match_score: number
+          project_id: string
+          reason: string
+          status?: string
+          supplier_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          match_score?: number
+          project_id?: string
+          reason?: string
+          status?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_invites: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          email: string
+          id: string
+          opened_at: string | null
+          rfp_id: string
+          status: string
+          submit_token: string
+          supplier_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          email: string
+          id?: string
+          opened_at?: string | null
+          rfp_id: string
+          status?: string
+          submit_token: string
+          supplier_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          email?: string
+          id?: string
+          opened_at?: string | null
+          rfp_id?: string
+          status?: string
+          submit_token?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_invites_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_invites_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfps: {
+        Row: {
+          body_html: string
+          id: string
+          project_id: string
+          sent_at: string
+          sent_by: string
+          subject: string
+        }
+        Insert: {
+          body_html: string
+          id?: string
+          project_id: string
+          sent_at?: string
+          sent_by: string
+          subject: string
+        }
+        Update: {
+          body_html?: string
+          id?: string
+          project_id?: string
+          sent_at?: string
+          sent_by?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          certifications: string[] | null
+          created_at: string
+          email: string | null
+          expertise: string[] | null
+          id: string
+          is_active: boolean
+          location: string | null
+          name: string
+          past_projects: string[] | null
+          phone: string | null
+          rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          certifications?: string[] | null
+          created_at?: string
+          email?: string | null
+          expertise?: string[] | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name: string
+          past_projects?: string[] | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          certifications?: string[] | null
+          created_at?: string
+          email?: string | null
+          expertise?: string[] | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name?: string
+          past_projects?: string[] | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
