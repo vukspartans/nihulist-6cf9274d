@@ -179,11 +179,13 @@ export type Database = {
           price: number
           project_id: string
           status: string
+          submit_token: string | null
           submitted_at: string
           supplier_id: string | null
           supplier_name: string
           terms: string | null
           timeline_days: number
+          token_used_at: string | null
         }
         Insert: {
           ai_flags?: Json | null
@@ -192,11 +194,13 @@ export type Database = {
           price: number
           project_id: string
           status?: string
+          submit_token?: string | null
           submitted_at?: string
           supplier_id?: string | null
           supplier_name: string
           terms?: string | null
           timeline_days: number
+          token_used_at?: string | null
         }
         Update: {
           ai_flags?: Json | null
@@ -205,11 +209,13 @@ export type Database = {
           price?: number
           project_id?: string
           status?: string
+          submit_token?: string | null
           submitted_at?: string
           supplier_id?: string | null
           supplier_name?: string
           terms?: string | null
           timeline_days?: number
+          token_used_at?: string | null
         }
         Relationships: [
           {
@@ -442,7 +448,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_project_recommendations: {
+        Args: { project_uuid: string }
+        Returns: {
+          supplier_id: string
+          supplier_name: string
+          match_score: number
+          confidence: number
+          reason: string
+        }[]
+      }
+      send_rfp_invitations: {
+        Args: { project_uuid: string; selected_supplier_ids?: string[] }
+        Returns: {
+          rfp_id: string
+          invites_sent: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
