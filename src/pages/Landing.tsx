@@ -6,29 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Building2, Users, FileText, Award, ArrowLeft, Zap, Shield, TrendingUp, Star, CheckCircle, Play, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-construction.jpg";
-
 const Landing = () => {
   const [supplierToken, setSupplierToken] = useState("");
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const navigate = useNavigate();
-
   const handleSupplierAccess = () => {
     if (supplierToken.trim()) {
       navigate(`/submit?t=${supplierToken.trim()}`);
     }
   };
-
   if (showSupplierForm) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/30 to-tech-purple-light/20 flex items-center justify-center p-4" dir="rtl">
+    return <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/30 to-tech-purple-light/20 flex items-center justify-center p-4" dir="rtl">
         <Card className="w-full max-w-md glass-card">
           <CardHeader className="text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSupplierForm(false)}
-              className="self-start mb-4"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowSupplierForm(false)} className="self-start mb-4">
               <ArrowLeft className="w-4 h-4 ml-2" />
               חזרה
             </Button>
@@ -42,31 +33,16 @@ const Landing = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="token">קוד גישה</Label>
-              <Input
-                id="token"
-                placeholder="הזן קוד גישה..."
-                value={supplierToken}
-                onChange={(e) => setSupplierToken(e.target.value)}
-                className="text-center font-mono"
-                dir="ltr"
-              />
+              <Input id="token" placeholder="הזן קוד גישה..." value={supplierToken} onChange={e => setSupplierToken(e.target.value)} className="text-center font-mono" dir="ltr" />
             </div>
-            <Button 
-              onClick={handleSupplierAccess}
-              className="w-full"
-              variant="premium"
-              disabled={!supplierToken.trim()}
-            >
+            <Button onClick={handleSupplierAccess} className="w-full" variant="premium" disabled={!supplierToken.trim()}>
               כניסה לטופס הגשת הצעה
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-tech-purple-light/10" dir="rtl">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-tech-purple-light/10" dir="rtl">
       {/* Premium Navigation */}
       <nav className="relative z-50 py-4 px-6">
         <div className="container mx-auto flex justify-between items-center">
@@ -89,11 +65,7 @@ const Landing = () => {
       {/* Hero Section - Unicorn Level */}
       <section className="relative overflow-hidden py-24 lg:py-32">
         <div className="absolute inset-0">
-          <img 
-            src={heroImage} 
-            alt="Next-Generation Construction AI Platform"
-            className="w-full h-full object-cover opacity-5"
-          />
+          <img src={heroImage} alt="Next-Generation Construction AI Platform" className="w-full h-full object-cover opacity-5" />
           <div className="absolute inset-0 bg-gradient-to-l from-primary-deep/90 via-primary/80 to-tech-purple/70"></div>
         </div>
         
@@ -101,7 +73,9 @@ const Landing = () => {
         <div className="absolute top-20 left-10 animate-float">
           <div className="w-3 h-3 bg-primary-glow rounded-full opacity-60"></div>
         </div>
-        <div className="absolute top-40 right-20 animate-float" style={{ animationDelay: "1s" }}>
+        <div className="absolute top-40 right-20 animate-float" style={{
+        animationDelay: "1s"
+      }}>
           <div className="w-2 h-2 bg-tech-purple rounded-full opacity-40"></div>
         </div>
         
@@ -122,44 +96,36 @@ const Landing = () => {
               <span className="text-foreground">בעולם הבנייה</span>
             </h1>
 
-            <p className="text-xl md:text-3xl text-white mb-12 leading-relaxed max-w-4xl mx-auto animate-slide-up font-light" style={{ animationDelay: "0.2s" }}>
+            <p className="text-xl md:text-3xl text-white mb-12 leading-relaxed max-w-4xl mx-auto animate-slide-up font-light" style={{
+            animationDelay: "0.2s"
+          }}>
               בינה מלאכותית מתקדמת + רשת ספקים מאומתת = 
-              <span className="font-bold text-primary"> חיסכון 90% בזמן רכש</span>
+              <span className="font-bold text-primary"> 123 </span>
             </p>
             
-            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: "0.4s" }}>
-              <Button
-                variant="hero"
-                size="xl"
-                onClick={() => navigate("/auth")}
-                className="w-full lg:w-auto text-xl px-12 py-6 animate-glow"
-              >
+            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center max-w-3xl mx-auto animate-slide-up" style={{
+            animationDelay: "0.4s"
+          }}>
+              <Button variant="hero" size="xl" onClick={() => navigate("/auth")} className="w-full lg:w-auto text-xl px-12 py-6 animate-glow">
                 <Building2 className="w-7 h-7 ml-3" />
                 התחל פרויקט חינם
               </Button>
               
-              <Button
-                variant="glass"
-                size="xl"
-                onClick={() => setShowSupplierForm(true)}
-                className="w-full lg:w-auto text-xl px-12 py-6"
-              >
+              <Button variant="glass" size="xl" onClick={() => setShowSupplierForm(true)} className="w-full lg:w-auto text-xl px-12 py-6">
                 <Users className="w-7 h-7 ml-3" />
                 כניסת ספקים
               </Button>
 
-              <Button
-                variant="ghost"
-                size="xl"
-                className="w-full lg:w-auto text-xl px-12 py-6 hover:bg-white/10"
-              >
+              <Button variant="ghost" size="xl" className="w-full lg:w-auto text-xl px-12 py-6 hover:bg-white/10">
                 <Play className="w-7 h-7 ml-3" />
                 צפה בדמו
               </Button>
             </div>
 
             {/* Trust indicators */}
-            <div className="mt-16 animate-fade-in" style={{ animationDelay: "0.6s" }}>
+            <div className="mt-16 animate-fade-in" style={{
+            animationDelay: "0.6s"
+          }}>
               <p className="text-sm text-muted-foreground mb-4">מובילי התעשייה בוטחים בנו</p>
               <div className="flex justify-center items-center gap-8 opacity-60">
                 <span className="text-lg font-semibold">אפריקה ישראל</span>
@@ -179,15 +145,21 @@ const Landing = () => {
               <div className="text-5xl md:text-6xl font-black gradient-text">₪2.1B+</div>
               <div className="text-base font-medium text-muted-foreground">שווי פרויקטים</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.2s" }}>
+            <div className="space-y-3 counter-animate" style={{
+            animationDelay: "0.2s"
+          }}>
               <div className="text-5xl md:text-6xl font-black gradient-text">90%</div>
               <div className="text-base font-medium text-muted-foreground">חיסכון בזמן</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.4s" }}>
+            <div className="space-y-3 counter-animate" style={{
+            animationDelay: "0.4s"
+          }}>
               <div className="text-5xl md:text-6xl font-black gradient-text">5,000+</div>
               <div className="text-base font-medium text-muted-foreground">ספקים מאומתים</div>
             </div>
-            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.6s" }}>
+            <div className="space-y-3 counter-animate" style={{
+            animationDelay: "0.6s"
+          }}>
               <div className="text-5xl md:text-6xl font-black gradient-text">50M+</div>
               <div className="text-base font-medium text-muted-foreground">נקודות נתונים</div>
             </div>
@@ -210,7 +182,9 @@ const Landing = () => {
           </div>
           
           <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{
+            animationDelay: "0.2s"
+          }}>
               <CardHeader>
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float">
                   <FileText className="w-10 h-10 text-white" />
@@ -224,9 +198,13 @@ const Landing = () => {
               </CardContent>
             </Card>
 
-            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{
+            animationDelay: "0.4s"
+          }}>
               <CardHeader>
-                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-accent-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "1s" }}>
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-accent-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{
+                animationDelay: "1s"
+              }}>
                   <Shield className="w-10 h-10 text-white" />
                 </div>
                 <CardTitle className="text-2xl font-bold">ספקים מאומתים</CardTitle>
@@ -238,9 +216,13 @@ const Landing = () => {
               </CardContent>
             </Card>
 
-            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.6s" }}>
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{
+            animationDelay: "0.6s"
+          }}>
               <CardHeader>
-                <div className="w-20 h-20 bg-gradient-to-r from-tech-success to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "2s" }}>
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-success to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{
+                animationDelay: "2s"
+              }}>
                   <TrendingUp className="w-10 h-10 text-white" />
                 </div>
                 <CardTitle className="text-2xl font-bold">ניתוח מתקדם</CardTitle>
@@ -270,7 +252,9 @@ const Landing = () => {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.2s" }}>
+            <Card className="glass-card p-8 animate-scale-in" style={{
+            animationDelay: "0.2s"
+          }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
                   <div className="flex text-tech-purple text-2xl">
@@ -288,7 +272,9 @@ const Landing = () => {
               </CardContent>
             </Card>
 
-            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.4s" }}>
+            <Card className="glass-card p-8 animate-scale-in" style={{
+            animationDelay: "0.4s"
+          }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
                   <div className="flex text-tech-purple text-2xl">
@@ -306,7 +292,9 @@ const Landing = () => {
               </CardContent>
             </Card>
 
-            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.6s" }}>
+            <Card className="glass-card p-8 animate-scale-in" style={{
+            animationDelay: "0.6s"
+          }}>
               <CardContent className="pt-0">
                 <div className="space-y-6">
                   <div className="flex text-tech-purple text-2xl">
@@ -341,12 +329,7 @@ const Landing = () => {
               הצטרף ל-5,000+ יזמים וקבלנים שכבר מקצרים פרויקטים בחודשים וחוסכים מיליונים
             </p>
             <div className="flex flex-col lg:flex-row gap-6 justify-center items-center">
-              <Button
-                variant="glass"
-                size="xl"
-                onClick={() => navigate("/auth")}
-                className="text-xl px-12 py-6 bg-white/20 text-white border-white/30 hover:bg-white/30"
-              >
+              <Button variant="glass" size="xl" onClick={() => navigate("/auth")} className="text-xl px-12 py-6 bg-white/20 text-white border-white/30 hover:bg-white/30">
                 <Building2 className="w-7 h-7 ml-3" />
                 התחל חינם עכשיו
               </Button>
@@ -406,8 +389,6 @@ const Landing = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
