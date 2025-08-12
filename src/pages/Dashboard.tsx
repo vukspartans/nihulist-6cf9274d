@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Eye, Trash2, Calendar, MapPin, DollarSign } from "lucide-react";
+import { Plus, Eye, Trash2, Calendar, MapPin, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardStats } from "@/components/DashboardStats";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { QuickActions } from "@/components/QuickActions";
+import { ProjectFilters } from "@/components/ProjectFilters";
 
 interface Project {
   id: string;
@@ -44,6 +47,9 @@ const statusColors = {
 const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -106,9 +112,32 @@ const Dashboard = () => {
     }
   };
 
-  const filteredProjects = projects.filter(project =>
-    project.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProjects = projects
+    .filter(project => {
+      const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortBy as keyof Project];
+      let bValue = b[sortBy as keyof Project];
+      
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+      
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const activeFiltersCount = (searchTerm ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setSortBy("created_at");
+    setSortOrder("desc");
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("he-IL");
@@ -154,20 +183,35 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* Search */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="חיפוש פרויקטים..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Dashboard Stats */}
+        <DashboardStats />
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          <div className="lg:col-span-3">
+            {/* Filters */}
+            <ProjectFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+              activeFiltersCount={activeFiltersCount}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+          
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <QuickActions />
+            
+            {/* Activity Feed */}
+            <ActivityFeed />
+          </div>
+        </div>
 
         {/* Projects Table */}
         {filteredProjects.length === 0 ? (
