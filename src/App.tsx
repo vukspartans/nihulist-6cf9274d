@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectWizard from "./pages/ProjectWizard";
+import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ProjectWizard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/projects/:id" 
+              element={
+                <ProtectedRoute>
+                  <ProjectDetail />
                 </ProtectedRoute>
               } 
             />

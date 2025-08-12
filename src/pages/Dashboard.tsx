@@ -250,7 +250,7 @@ const Dashboard = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/projects/${project.id}/recommendations`)}
+                              onClick={() => navigate(`/projects/${project.id}`)}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
