@@ -80,18 +80,23 @@ const Landing = () => {
         
         <div className="relative container mx-auto px-6 py-24 text-center">
           <div className="max-w-4xl mx-auto animate-fade-in">
+            <div className="mb-4">
+              <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white text-sm rounded-full mb-6">
+                🚀 חוסכים 80% מזמן הרכש • 500+ פרויקטים נוצרו השבוע
+              </span>
+            </div>
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              פלטפורמת AI לבחירת ספקים
+              הפלטפורמה החכמה לבחירת ספקים
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              קיצור תהליך בחירת ספקים בבנייה עם המלצות חכמות ומערכת השוואה מתקדמת
+              בינה מלאכותית מתקדמת + רשת ספקים מובחרת = הספק המושלם לפרויקט שלך תוך דקות
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
               <Button
                 variant="hero"
                 size="xl"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/auth")}
                 className="w-full sm:w-auto animate-slide-up"
               >
                 <Building2 className="w-6 h-6 ml-2" />
@@ -113,15 +118,39 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section className="py-16 bg-gradient-to-r from-primary/5 to-construction-orange/5">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="space-y-2">
+              <div className="text-3xl md:text-4xl font-bold text-primary">500+</div>
+              <div className="text-sm md:text-base text-muted-foreground">פרויקטים השבוע</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl md:text-4xl font-bold text-primary">80%</div>
+              <div className="text-sm md:text-base text-muted-foreground">חיסכון בזמן</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl md:text-4xl font-bold text-primary">2,000+</div>
+              <div className="text-sm md:text-base text-muted-foreground">ספקים מאומתים</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl md:text-4xl font-bold text-primary">₪50M+</div>
+              <div className="text-sm md:text-base text-muted-foreground">שווי פרויקטים</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              איך זה עובד?
+              למה אנחנו משנים את המשחק?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              תהליך פשוט ויעיל לבחירת הספק הטוב ביותר לפרויקט שלך
+              בינה מלאכותית מתקדמת פוגשת רשת ספקים מובחרת במיוחד עבור תעשיית הבנייה הישראלית
             </p>
           </div>
           
@@ -171,24 +200,90 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Social Proof Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              מה אומרים עלינו?
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              יזמים וקבלנים מכל הארץ כבר חוסכים זמן וכסף
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <Card className="construction-card">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
+                  <p className="text-muted-foreground italic">
+                    "חסכתי 3 שבועות של עבודה בפרויקט של ₪5M. הבינה המלאכותית זיהתה את הספק הטוב ביותר תוך דקות."
+                  </p>
+                  <div className="pt-4">
+                    <div className="font-semibold">אורי כהן</div>
+                    <div className="text-sm text-muted-foreground">מנכ"ל, כהן פיתוח</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="construction-card">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
+                  <p className="text-muted-foreground italic">
+                    "הפלטפורמה הכי מתקדמת שראיתי. ההשוואה האוטומטית חסכה לי עשרות שעות של ניתוח ידני."
+                  </p>
+                  <div className="pt-4">
+                    <div className="font-semibold">דנה לוי</div>
+                    <div className="text-sm text-muted-foreground">מנהלת רכש, בינוי נדלן</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="construction-card">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
+                  <p className="text-muted-foreground italic">
+                    "המערכת זיהתה בעיות בהצעות שלא היינו שמים לב אליהן. זה ממש שומר עלינו מטעויות יקרות."
+                  </p>
+                  <div className="pt-4">
+                    <div className="font-semibold">יוסי שמיר</div>
+                    <div className="text-sm text-muted-foreground">קבלן ראשי, שמיר בנייה</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary to-construction-orange">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            מוכן להתחיל?
+            הצטרף ל-500+ יזמים שכבר חוסכים זמן וכסף
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            התחל את הפרויקט הבא שלך היום וחסוך זמן יקר בתהליך בחירת הספקים
+            הפרויקט הבא שלך יכול להתחיל כבר היום. בינה מלאכותית + ספקים מאומתים = השילוב המושלם
           </p>
-          <Button
-            variant="secondary"
-            size="xl"
-            onClick={() => navigate("/dashboard")}
-            className="animate-slide-up"
-          >
-            <Building2 className="w-6 h-6 ml-2" />
-            צור פרויקט חדש
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              variant="secondary"
+              size="xl"
+              onClick={() => navigate("/auth")}
+              className="animate-slide-up"
+            >
+              <Building2 className="w-6 h-6 ml-2" />
+              התחל חינם עכשיו
+            </Button>
+            <div className="text-white/80 text-sm">
+              ללא כרטיס אשראי • הגדרה תוך 2 דקות
+            </div>
+          </div>
         </div>
       </section>
     </div>
