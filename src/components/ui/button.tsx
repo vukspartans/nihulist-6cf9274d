@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
@@ -18,9 +18,15 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        
+        // Premium startup variants
+        premium: "btn-premium text-white font-semibold",
+        hero: "bg-gradient-to-r from-primary-deep via-primary to-accent text-white font-bold shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300",
+        glass: "glass-card text-foreground font-medium backdrop-blur-xl",
+        accent: "bg-gradient-to-r from-accent to-accent-glow text-white font-semibold hover:shadow-accent hover:scale-105 transition-all duration-300",
+        
+        // Construction specific
         construction: "bg-gradient-to-r from-primary to-construction-orange text-white hover:shadow-lg hover:scale-105 transform transition-all duration-200",
-        hero: "bg-gradient-to-r from-primary to-primary-glow text-white px-8 py-6 text-lg font-semibold rounded-lg hover:shadow-glow hover:scale-105 transform transition-all duration-300",
-        accent: "bg-accent text-accent-foreground hover:bg-accent/90",
         success: "bg-construction-success text-white hover:bg-construction-success/90"
       },
       size: {

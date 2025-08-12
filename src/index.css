@@ -2,61 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Construction Industry AI Platform Design System - RTL Support
-All colors MUST be HSL. Hebrew/Arabic text support included.
+/* Premium Startup Design System - Next-Gen Construction AI
+Ultra-modern design tokens for unicorn-level brand presence
 */
 
 @layer base {
   :root {
-    /* Construction theme - Professional blues with industry oranges */
-    --background: 240 6% 98%;
-    --foreground: 215 20% 25%;
+    /* Premium background palette */
+    --background: 240 8% 99%;
+    --foreground: 220 15% 15%;
 
+    /* Glass morphism cards */
     --card: 0 0% 100%;
-    --card-foreground: 215 20% 25%;
+    --card-foreground: 220 15% 15%;
+    --card-glass: 0 0% 100% / 0.8;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 20% 25%;
+    --popover-foreground: 220 15% 15%;
 
-    /* Primary: Construction blue */
-    --primary: 210 95% 40%;
+    /* Primary: Premium indigo-blue gradient system */
+    --primary: 225 84% 55%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 210 85% 60%;
+    --primary-glow: 235 84% 65%;
+    --primary-deep: 220 84% 45%;
+    --primary-light: 235 84% 85%;
 
-    /* Secondary: Warm grays for professional look */
-    --secondary: 215 10% 95%;
-    --secondary-foreground: 215 20% 25%;
+    /* Secondary: Sophisticated neutrals */
+    --secondary: 225 8% 96%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 215 10% 95%;
-    --muted-foreground: 215 8% 55%;
+    --muted: 225 8% 96%;
+    --muted-foreground: 220 12% 48%;
 
-    --accent: 25 95% 58%;
+    /* Accent: Premium orange for construction focus */
+    --accent: 20 90% 60%;
     --accent-foreground: 0 0% 100%;
+    --accent-glow: 25 90% 70%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 85% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 15% 88%;
-    --input: 215 15% 92%;
-    --ring: 210 95% 40%;
+    --border: 225 12% 90%;
+    --input: 225 12% 93%;
+    --ring: 225 84% 55%;
 
-    /* Construction industry colors */
-    --construction-orange: 25 95% 58%;
-    --construction-steel: 215 15% 65%;
-    --construction-safety: 45 100% 50%;
-    --construction-success: 142 70% 45%;
+    /* Construction industry premium colors */
+    --construction-orange: 20 90% 60%;
+    --construction-steel: 225 15% 60%;
+    --construction-safety: 50 100% 55%;
+    --construction-success: 145 65% 50%;
 
-    /* Gradients for modern appeal */
+    /* Premium gradient system */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-construction: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--construction-orange)));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(215 10% 98%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card-glass)), hsl(225 8% 98%));
+    --gradient-glass: linear-gradient(145deg, hsl(0 0% 100% / 0.1), hsl(0 0% 100% / 0.05));
+    --gradient-border: linear-gradient(145deg, hsl(var(--border)), hsl(225 20% 85%));
 
-    /* Shadows with brand colors */
-    --shadow-card: 0 4px 12px -2px hsl(215 25% 85%);
-    --shadow-elevated: 0 8px 25px -5px hsl(215 25% 80%);
-    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.15);
+    /* Premium shadows & effects */
+    --shadow-sm: 0 2px 8px -2px hsl(225 25% 88%);
+    --shadow-card: 0 8px 32px -8px hsl(225 25% 85%);
+    --shadow-elevated: 0 16px 64px -12px hsl(225 25% 78%);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.2);
+    --shadow-accent: 0 8px 32px -8px hsl(var(--accent) / 0.25);
 
-    --radius: 0.5rem;
+    /* Glass morphism effects */
+    --glass-bg: hsl(0 0% 100% / 0.1);
+    --glass-border: hsl(0 0% 100% / 0.2);
+    
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -134,24 +148,32 @@ All colors MUST be HSL. Hebrew/Arabic text support included.
     font-family: 'Inter', 'Segoe UI', 'Noto Sans Hebrew', 'Arial Hebrew', system-ui, sans-serif;
   }
 
-  /* Animation classes */
+  /* Premium animation system */
   .animate-fade-in {
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  .animate-scale-in {
+    animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Premium keyframes */
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
     from { 
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(24px);
     }
     to { 
       opacity: 1;
@@ -159,16 +181,97 @@ All colors MUST be HSL. Hebrew/Arabic text support included.
     }
   }
 
-  /* Construction card styles */
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(32px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes glow {
+    from { box-shadow: var(--shadow-glow); }
+    to { box-shadow: 0 0 60px hsl(var(--primary) / 0.3); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Premium glass morphism cards */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card:hover {
+    background: hsl(0 0% 100% / 0.15);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-4px);
+  }
+
+  /* Premium construction cards */
   .construction-card {
     background: var(--gradient-card);
     box-shadow: var(--shadow-card);
-    transition: all 0.2s ease-out;
+    border: 1px solid hsl(var(--border));
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .construction-card:hover {
     box-shadow: var(--shadow-elevated);
+    transform: translateY(-6px);
+    border-color: hsl(var(--primary) / 0.2);
+  }
+
+  /* Hero gradient text */
+  .gradient-text {
+    background: var(--gradient-hero);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-fill-color: transparent;
+  }
+
+  /* Premium button styles */
+  .btn-premium {
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow);
+    border: 1px solid hsl(var(--primary) / 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-premium:hover {
+    box-shadow: 0 0 50px hsl(var(--primary) / 0.4);
     transform: translateY(-2px);
+  }
+
+  /* Stats counter animation */
+  .counter-animate {
+    animation: countUp 2s ease-out;
+  }
+
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   /* RTL-aware spacing */

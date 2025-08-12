@@ -27,7 +27,9 @@ export default {
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))',
-					glow: 'hsl(var(--primary-glow))'
+					glow: 'hsl(var(--primary-glow))',
+					deep: 'hsl(var(--primary-deep))',
+					light: 'hsl(var(--primary-light))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -43,7 +45,8 @@ export default {
 				},
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					foreground: 'hsl(var(--accent-foreground))',
+					glow: 'hsl(var(--accent-glow))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -51,13 +54,18 @@ export default {
 				},
 				card: {
 					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
+					foreground: 'hsl(var(--card-foreground))',
+					glass: 'hsl(var(--card-glass))'
 				},
 				construction: {
 					orange: 'hsl(var(--construction-orange))',
 					steel: 'hsl(var(--construction-steel))',
 					safety: 'hsl(var(--construction-safety))',
 					success: 'hsl(var(--construction-success))'
+				},
+				glass: {
+					bg: 'var(--glass-bg)',
+					border: 'var(--glass-border)'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',

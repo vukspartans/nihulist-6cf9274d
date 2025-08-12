@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, FileText, Award, ArrowLeft } from "lucide-react";
+import { Building2, Users, FileText, Award, ArrowLeft, Zap, Shield, TrendingUp, Star, CheckCircle, Play, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-construction.jpg";
 
@@ -20,8 +20,8 @@ const Landing = () => {
 
   if (showSupplierForm) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
-        <Card className="w-full max-w-md construction-card">
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/20 to-accent/10 flex items-center justify-center p-4" dir="rtl">
+        <Card className="w-full max-w-md glass-card">
           <CardHeader className="text-center">
             <Button
               variant="ghost"
@@ -32,7 +32,7 @@ const Landing = () => {
               <ArrowLeft className="w-4 h-4 ml-2" />
               חזרה
             </Button>
-            <CardTitle className="text-2xl font-bold text-primary">
+            <CardTitle className="text-2xl font-bold gradient-text">
               כניסה לספקים
             </CardTitle>
             <CardDescription>
@@ -54,7 +54,7 @@ const Landing = () => {
             <Button 
               onClick={handleSupplierAccess}
               className="w-full"
-              variant="construction"
+              variant="premium"
               disabled={!supplierToken.trim()}
             >
               כניסה לטופס הגשת הצעה
@@ -66,133 +66,188 @@ const Landing = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30" dir="rtl">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-accent/5" dir="rtl">
+      {/* Premium Navigation */}
+      <nav className="relative z-50 py-4 px-6">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-accent flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold gradient-text">בנייה AI</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm">תמחור</Button>
+            <Button variant="ghost" size="sm">צוות</Button>
+            <Button variant="premium" size="sm" onClick={() => navigate("/auth")}>
+              התחל עכשיו
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section - Unicorn Level */}
+      <section className="relative overflow-hidden py-24 lg:py-32">
         <div className="absolute inset-0">
           <img 
             src={heroImage} 
-            alt="Construction Industry"
-            className="w-full h-full object-cover opacity-10"
+            alt="Next-Generation Construction AI Platform"
+            className="w-full h-full object-cover opacity-5"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-primary/90 to-primary-glow/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-l from-primary-deep/90 via-primary/80 to-accent/70"></div>
         </div>
         
-        <div className="relative container mx-auto px-6 py-24 text-center">
-          <div className="max-w-4xl mx-auto animate-fade-in">
-            <div className="mb-4">
-              <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white text-sm rounded-full mb-6">
-                🚀 חוסכים 80% מזמן הרכש • 500+ פרויקטים נוצרו השבוע
+        {/* Floating elements */}
+        <div className="absolute top-20 left-10 animate-float">
+          <div className="w-3 h-3 bg-primary-glow rounded-full opacity-60"></div>
+        </div>
+        <div className="absolute top-40 right-20 animate-float" style={{ animationDelay: "1s" }}>
+          <div className="w-2 h-2 bg-accent rounded-full opacity-40"></div>
+        </div>
+        
+        <div className="relative container mx-auto px-6 text-center">
+          <div className="max-w-6xl mx-auto">
+            {/* Premium badge */}
+            <div className="mb-8 animate-fade-in">
+              <span className="inline-flex items-center px-6 py-3 glass-card text-foreground text-sm font-medium rounded-full mb-6 animate-glow">
+                <Zap className="w-4 h-4 ml-2 text-accent" />
+                פלטפורמת הבינה המלאכותית המובילה לבנייה • Series A Funded
               </span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              הפלטפורמה החכמה לבחירת ספקים
+
+            {/* Hero headline */}
+            <h1 className="text-6xl md:text-8xl font-black mb-8 leading-tight animate-slide-up">
+              <span className="gradient-text">מהפכה</span>
+              <br />
+              <span className="text-foreground">בעולם הבנייה</span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              בינה מלאכותית מתקדמת + רשת ספקים מובחרת = הספק המושלם לפרויקט שלך תוך דקות
+
+            <p className="text-xl md:text-3xl text-muted-foreground mb-12 leading-relaxed max-w-4xl mx-auto animate-slide-up font-light" style={{ animationDelay: "0.2s" }}>
+              בינה מלאכותית מתקדמת + רשת ספקים מאומתת = 
+              <span className="font-bold text-primary"> חיסכון 90% בזמן רכש</span>
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
+            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: "0.4s" }}>
               <Button
                 variant="hero"
                 size="xl"
                 onClick={() => navigate("/auth")}
-                className="w-full sm:w-auto animate-slide-up"
+                className="w-full lg:w-auto text-xl px-12 py-6 animate-glow"
               >
-                <Building2 className="w-6 h-6 ml-2" />
-                אני יזם/ית - התחל פרויקט
+                <Building2 className="w-7 h-7 ml-3" />
+                התחל פרויקט חינם
               </Button>
               
               <Button
-                variant="outline"
+                variant="glass"
                 size="xl"
                 onClick={() => setShowSupplierForm(true)}
-                className="w-full sm:w-auto bg-white/10 text-white border-white/30 hover:bg-white/20 animate-slide-up"
-                style={{ animationDelay: "0.1s" }}
+                className="w-full lg:w-auto text-xl px-12 py-6"
               >
-                <Users className="w-6 h-6 ml-2" />
-                יש לי קישור ספק
+                <Users className="w-7 h-7 ml-3" />
+                כניסת ספקים
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="xl"
+                className="w-full lg:w-auto text-xl px-12 py-6 hover:bg-white/10"
+              >
+                <Play className="w-7 h-7 ml-3" />
+                צפה בדמו
               </Button>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-gradient-to-r from-primary/5 to-construction-orange/5">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-primary">500+</div>
-              <div className="text-sm md:text-base text-muted-foreground">פרויקטים השבוע</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-primary">80%</div>
-              <div className="text-sm md:text-base text-muted-foreground">חיסכון בזמן</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-primary">2,000+</div>
-              <div className="text-sm md:text-base text-muted-foreground">ספקים מאומתים</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-primary">₪50M+</div>
-              <div className="text-sm md:text-base text-muted-foreground">שווי פרויקטים</div>
+            {/* Trust indicators */}
+            <div className="mt-16 animate-fade-in" style={{ animationDelay: "0.6s" }}>
+              <p className="text-sm text-muted-foreground mb-4">מובילי התעשייה בוטחים בנו</p>
+              <div className="flex justify-center items-center gap-8 opacity-60">
+                <span className="text-lg font-semibold">אפריקה ישראל</span>
+                <span className="text-lg font-semibold">בזק בינלאומי</span>
+                <span className="text-lg font-semibold">רמקו</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-background">
+      {/* Stats Section - Unicorn Metrics */}
+      <section className="py-20 bg-gradient-to-r from-primary/5 via-background to-accent/5">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              למה אנחנו משנים את המשחק?
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div className="space-y-3 counter-animate">
+              <div className="text-5xl md:text-6xl font-black gradient-text">₪2.1B+</div>
+              <div className="text-base font-medium text-muted-foreground">שווי פרויקטים</div>
+            </div>
+            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.2s" }}>
+              <div className="text-5xl md:text-6xl font-black gradient-text">90%</div>
+              <div className="text-base font-medium text-muted-foreground">חיסכון בזמן</div>
+            </div>
+            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.4s" }}>
+              <div className="text-5xl md:text-6xl font-black gradient-text">5,000+</div>
+              <div className="text-base font-medium text-muted-foreground">ספקים מאומתים</div>
+            </div>
+            <div className="space-y-3 counter-animate" style={{ animationDelay: "0.6s" }}>
+              <div className="text-5xl md:text-6xl font-black gradient-text">50M+</div>
+              <div className="text-base font-medium text-muted-foreground">נקודות נתונים</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section - Premium */}
+      <section className="py-32 bg-background">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-black mb-6">
+              <span className="gradient-text">למה אנחנו</span>
+              <br />
+              <span className="text-foreground">משנים הכל?</span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              בינה מלאכותית מתקדמת פוגשת רשת ספקים מובחרת במיוחד עבור תעשיית הבנייה הישראלית
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              פלטפורמת הבינה המלאכותית הראשונה שבנויה במיוחד לתעשיית הבנייה הישראלית
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <Card className="construction-card text-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
+          <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-r from-primary to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float">
+                  <FileText className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">יצירת פרויקט</CardTitle>
+                <CardTitle className="text-2xl font-bold">AI חכם ומותאם</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  הגדר פרויקט חדש, העלה מסמכים וקבל המלצות AI מותאמות אישית
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  בינה מלאכותית מבינה מסמכים בעברית, מזהה מפרטים טכניים ומתאימה ספקים בדיוק מנותיך
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="construction-card text-center animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-construction-orange to-accent rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-r from-accent to-accent-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "1s" }}>
+                  <Shield className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">שליחת RFP</CardTitle>
+                <CardTitle className="text-2xl font-bold">ספקים מאומתים</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  שלח בקשות הצעת מחיר לספקים מומלצים עם קישור מאובטח
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  רשת של אלפי ספקים שעברו אימות קפדני - רישיונות, ביטוח, איכות עבודה והיסטוריה פיננסית
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="construction-card text-center animate-slide-up" style={{ animationDelay: "0.4s" }}>
+            <Card className="construction-card text-center p-8 animate-slide-up" style={{ animationDelay: "0.6s" }}>
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-construction-success to-primary-glow rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Award className="w-8 h-8 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-r from-construction-success to-primary-glow rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float" style={{ animationDelay: "2s" }}>
+                  <TrendingUp className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">השוואה ובחירה</CardTitle>
+                <CardTitle className="text-2xl font-bold">ניתוח מתקדם</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  השווה הצעות במערכת חכמה ובחר את הספק הטוב ביותר
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  השוואת הצעות חכמה, זיהוי סיכונים פוטנציאליים והמלצות מבוססות נתונים לבחירה מיטבית
                 </p>
               </CardContent>
             </Card>
@@ -200,59 +255,70 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Social Proof Section - Premium Testimonials */}
+      <section className="py-32 bg-gradient-to-br from-muted/30 via-background to-primary/5">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              מה אומרים עלינו?
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-black mb-6">
+              <span className="text-foreground">מה אומרים</span>
+              <br />
+              <span className="gradient-text">מובילי התעשייה?</span>
             </h2>
-            <p className="text-lg text-muted-foreground">
-              יזמים וקבלנים מכל הארץ כבר חוסכים זמן וכסף
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              יזמים וקבלנים מובילים חוסכים מיליונים עם הפלטפורמה שלנו
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <Card className="construction-card">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
-                  <p className="text-muted-foreground italic">
-                    "חסכתי 3 שבועות של עבודה בפרויקט של ₪5M. הבינה המלאכותית זיהתה את הספק הטוב ביותר תוך דקות."
-                  </p>
-                  <div className="pt-4">
-                    <div className="font-semibold">אורי כהן</div>
-                    <div className="text-sm text-muted-foreground">מנכ"ל, כהן פיתוח</div>
+          <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.2s" }}>
+              <CardContent className="pt-0">
+                <div className="space-y-6">
+                  <div className="flex text-accent text-2xl">
+                    {"★".repeat(5)}
+                  </div>
+                  <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
+                    "חסכנו ₪2.5M בפרויקט אחד. הבינה המלאכותית זיהתה חוסר התאמה שלא היינו מבחינים בה בזמן."
+                  </blockquote>
+                  <div className="pt-4 border-t border-border">
+                    <div className="font-bold text-lg">אורי כהן</div>
+                    <div className="text-muted-foreground">מנכ"ל, כהן פיתוח</div>
+                    <div className="text-sm text-primary font-medium">פרויקטים בשווי ₪500M+</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="construction-card">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
-                  <p className="text-muted-foreground italic">
-                    "הפלטפורמה הכי מתקדמת שראיתי. ההשוואה האוטומטית חסכה לי עשרות שעות של ניתוח ידני."
-                  </p>
-                  <div className="pt-4">
-                    <div className="font-semibold">דנה לוי</div>
-                    <div className="text-sm text-muted-foreground">מנהלת רכש, בינוי נדלן</div>
+            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.4s" }}>
+              <CardContent className="pt-0">
+                <div className="space-y-6">
+                  <div className="flex text-accent text-2xl">
+                    {"★".repeat(5)}
+                  </div>
+                  <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
+                    "הפלטפורמה הכי מתקדמת שראיתי. התהליך שנמשך שבועות עובר ב-15 דקות עם תוצאות טובות פי 10."
+                  </blockquote>
+                  <div className="pt-4 border-t border-border">
+                    <div className="font-bold text-lg">דנה לוי</div>
+                    <div className="text-muted-foreground">מנהלת רכש, בינוי נדלן</div>
+                    <div className="text-sm text-primary font-medium">100+ פרויקטים בשנה</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="construction-card">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="text-4xl">⭐⭐⭐⭐⭐</div>
-                  <p className="text-muted-foreground italic">
-                    "המערכת זיהתה בעיות בהצעות שלא היינו שמים לב אליהן. זה ממש שומר עלינו מטעויות יקרות."
-                  </p>
-                  <div className="pt-4">
-                    <div className="font-semibold">יוסי שמיר</div>
-                    <div className="text-sm text-muted-foreground">קבלן ראשי, שמיר בנייה</div>
+            <Card className="glass-card p-8 animate-scale-in" style={{ animationDelay: "0.6s" }}>
+              <CardContent className="pt-0">
+                <div className="space-y-6">
+                  <div className="flex text-accent text-2xl">
+                    {"★".repeat(5)}
+                  </div>
+                  <blockquote className="text-lg italic text-muted-foreground leading-relaxed">
+                    "AI זיהה בעיות שרק מומחה עם 20 שנות ניסיון היה רואה. זה ממש שומר עלינו מטעויות מיליונים."
+                  </blockquote>
+                  <div className="pt-4 border-t border-border">
+                    <div className="font-bold text-lg">יוסי שמיר</div>
+                    <div className="text-muted-foreground">קבלן ראשי, שמיר בנייה</div>
+                    <div className="text-sm text-primary font-medium">מובטחת ISO 9001</div>
                   </div>
                 </div>
               </CardContent>
@@ -261,31 +327,85 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary to-construction-orange">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            הצטרף ל-500+ יזמים שכבר חוסכים זמן וכסף
-          </h2>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            הפרויקט הבא שלך יכול להתחיל כבר היום. בינה מלאכותית + ספקים מאומתים = השילוב המושלם
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              variant="secondary"
-              size="xl"
-              onClick={() => navigate("/auth")}
-              className="animate-slide-up"
-            >
-              <Building2 className="w-6 h-6 ml-2" />
-              התחל חינם עכשיו
-            </Button>
-            <div className="text-white/80 text-sm">
-              ללא כרטיס אשראי • הגדרה תוך 2 דקות
+      {/* CTA Section - Unicorn Level */}
+      <section className="py-32 bg-gradient-to-r from-primary-deep via-primary to-accent relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative container mx-auto px-6 text-center">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">
+              מוכן להצטרף
+              <br />
+              <span className="text-accent-glow">למהפכה?</span>
+            </h2>
+            <p className="text-2xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
+              הצטרף ל-5,000+ יזמים וקבלנים שכבר מקצרים פרויקטים בחודשים וחוסכים מיליונים
+            </p>
+            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center">
+              <Button
+                variant="glass"
+                size="xl"
+                onClick={() => navigate("/auth")}
+                className="text-xl px-12 py-6 bg-white/20 text-white border-white/30 hover:bg-white/30"
+              >
+                <Building2 className="w-7 h-7 ml-3" />
+                התחל חינם עכשיו
+              </Button>
+              <div className="flex flex-col items-center text-white/80 text-lg">
+                <span>• ללא כרטיס אשראי</span>
+                <span>• הגדרה תוך 60 שניות</span>
+                <span>• תמיכה בעברית 24/7</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="py-16 bg-foreground text-white">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-accent flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold">בנייה AI</span>
+              </div>
+              <p className="text-white/70">הפלטפורמה המתקדמת לניהול רכש בתעשיית הבנייה</p>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">פתרונות</h3>
+              <div className="space-y-2 text-white/70">
+                <div>AI למסמכים</div>
+                <div>רשת ספקים</div>
+                <div>ניתוח הצעות</div>
+                <div>ניהול פרויקטים</div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">חברה</h3>
+              <div className="space-y-2 text-white/70">
+                <div>אודות</div>
+                <div>צוות</div>
+                <div>קריירה</div>
+                <div>צור קשר</div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">תמיכה</h3>
+              <div className="space-y-2 text-white/70">
+                <div>מרכז עזרה</div>
+                <div>תנאי שימוש</div>
+                <div>מדיניות פרטיות</div>
+                <div>API</div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-8 text-center text-white/70">
+            <p>© 2024 בנייה AI. כל הזכויות שמורות. Made with ❤️ in Israel</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
