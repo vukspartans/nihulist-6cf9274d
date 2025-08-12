@@ -8,9 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardStats } from "@/components/DashboardStats";
-import { ActivityFeed } from "@/components/ActivityFeed";
-import { QuickActions } from "@/components/QuickActions";
 import { ProjectFilters } from "@/components/ProjectFilters";
+import { UserHeader } from "@/components/UserHeader";
 
 interface Project {
   id: string;
@@ -172,45 +171,36 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">לוח הבקרה</h1>
             <p className="text-lg text-muted-foreground">ניהול פרויקטים ובחירת ספקים</p>
           </div>
-          <Button
-            onClick={() => navigate("/projects/new")}
-            variant="tech"
-            size="lg"
-            className="mt-4 md:mt-0"
-          >
-            <Plus className="w-5 h-5 ml-2" />
-            פרויקט חדש
-          </Button>
+          <div className="flex items-center gap-4 mt-4 md:mt-0">
+            <Button
+              onClick={() => navigate("/projects/new")}
+              variant="tech"
+              size="lg"
+            >
+              <Plus className="w-5 h-5 ml-2" />
+              פרויקט חדש
+            </Button>
+            <UserHeader />
+          </div>
         </div>
 
         {/* Dashboard Stats */}
         <DashboardStats />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          <div className="lg:col-span-3">
-            {/* Filters */}
-            <ProjectFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              sortBy={sortBy}
-              onSortByChange={setSortBy}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-              activeFiltersCount={activeFiltersCount}
-              onClearFilters={handleClearFilters}
-            />
-          </div>
-          
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <QuickActions />
-            
-            {/* Activity Feed */}
-            <ActivityFeed />
-          </div>
+        {/* Filters */}
+        <div className="mb-6">
+          <ProjectFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            activeFiltersCount={activeFiltersCount}
+            onClearFilters={handleClearFilters}
+          />
         </div>
 
         {/* Projects Table */}
