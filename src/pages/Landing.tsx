@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, FileText, Award, ArrowLeft, Zap, Shield, TrendingUp, Star, CheckCircle, Play, Globe } from "lucide-react";
+import { Building2, Users, FileText, Award, ArrowLeft, Zap, Shield, TrendingUp, Star, CheckCircle, Play, Globe, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-construction.jpg";
 const Landing = () => {
   const [supplierToken, setSupplierToken] = useState("");
   const [showSupplierForm, setShowSupplierForm] = useState(false);
+  const [showDemoVideo, setShowDemoVideo] = useState(false);
   const navigate = useNavigate();
   const handleSupplierAccess = () => {
     if (supplierToken.trim()) {
@@ -116,7 +118,12 @@ const Landing = () => {
                 כניסת ספקים
               </Button>
 
-              <Button variant="ghost" size="xl" className="w-full lg:w-auto text-xl px-12 py-6 hover:bg-white/10">
+              <Button 
+                variant="ghost" 
+                size="xl" 
+                className="w-full lg:w-auto text-xl px-12 py-6 hover:bg-white/10"
+                onClick={() => setShowDemoVideo(true)}
+              >
                 <Play className="w-7 h-7 ml-3" />
                 צפה בדמו
               </Button>
@@ -399,6 +406,37 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+
+      {/* Demo Video Dialog */}
+      <Dialog open={showDemoVideo} onOpenChange={setShowDemoVideo}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl font-bold">דמו המוצר - בנייה AI</DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowDemoVideo(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="aspect-video w-full">
+            <iframe
+              width="100%"
+              height="100%"
+              src="https://www.youtube.com/embed/NCdJd5LKU_Q?autoplay=1&rel=0"
+              title="בנייה AI - דמו המוצר"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="rounded-b-lg"
+            ></iframe>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>;
 };
 export default Landing;
