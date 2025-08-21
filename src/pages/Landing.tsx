@@ -52,7 +52,7 @@ const Landing = () => {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
               <Building2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg lg:text-xl font-bold gradient-text">בנייה AI</span>
+            <span className="text-lg lg:text-xl font-bold gradient-text">NARSHA AI</span>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
             <Button variant="ghost" size="sm" className="hidden md:flex">תמחור</Button>
