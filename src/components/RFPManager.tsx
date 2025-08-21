@@ -1,25 +1,40 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Send, Users, FileText } from 'lucide-react';
+import { Send, Users, FileText, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RecommendationsCard } from './RecommendationsCard';
+import { AdvisorSelection } from './AdvisorSelection';
 import { useRFP } from '@/hooks/useRFP';
 
 interface RFPManagerProps {
   projectId: string;
   projectName: string;
+  projectType: string;
 }
 
-export const RFPManager = ({ projectId, projectName }: RFPManagerProps) => {
+export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerProps) => {
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
+  const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
+  const [currentProjectType, setCurrentProjectType] = useState(projectType);
+  const [advisorValidation, setAdvisorValidation] = useState<any>(null);
+  const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
   const [rfpSent, setRfpSent] = useState(false);
   const { sendRFPInvitations, loading } = useRFP();
 
   const handleSendRFP = async () => {
+    if (!isAdvisorSelectionValid) {
+      return;
+    }
     const result = await sendRFPInvitations(projectId, selectedSuppliers);
     if (result) {
       setRfpSent(true);
     }
+  };
+
+  const handleAdvisorValidationChange = (isValid: boolean, validation: any) => {
+    setIsAdvisorSelectionValid(isValid);
+    setAdvisorValidation(validation);
   };
 
   if (rfpSent) {
@@ -28,11 +43,11 @@ export const RFPManager = ({ projectId, projectName }: RFPManagerProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-600">
             <FileText className="h-5 w-5" />
-            RFP Sent Successfully
+            RFP נשלח בהצלחה
           </CardTitle>
           <CardDescription>
-            Your RFP for "{projectName}" has been sent to {selectedSuppliers.length || 'recommended'} suppliers.
-            You'll receive proposals as they come in.
+            ה-RFP עבור "{projectName}" נשלח ל-{selectedSuppliers.length || 'מומלצים'} ספקים.
+            תקבל הצעות ברגע שיגיעו.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -40,7 +55,7 @@ export const RFPManager = ({ projectId, projectName }: RFPManagerProps) => {
             onClick={() => setRfpSent(false)} 
             variant="outline"
           >
-            Send to More Suppliers
+            שלח לספקים נוספים
           </Button>
         </CardContent>
       </Card>
@@ -48,39 +63,65 @@ export const RFPManager = ({ projectId, projectName }: RFPManagerProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
+      {/* Advisor Selection */}
+      <AdvisorSelection
+        projectType={currentProjectType}
+        selectedAdvisors={selectedAdvisors}
+        onAdvisorsChange={setSelectedAdvisors}
+        onProjectTypeChange={setCurrentProjectType}
+        onValidationChange={handleAdvisorValidationChange}
+      />
+
+      {/* RFP Sending Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
-            Send RFP for "{projectName}"
+            שליחת RFP עבור "{projectName}"
           </CardTitle>
           <CardDescription>
-            Select suppliers to invite or use AI recommendations
+            בחר ספקים להזמנה או השתמש בהמלצות AI
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Advisor validation warning */}
+          {!isAdvisorSelectionValid && advisorValidation && (
+            <Alert className="border-yellow-500">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                לא ניתן לשלוח RFP ללא השלמת בחירת היועצים הנדרשים.
+                {advisorValidation.Missing?.length > 0 && (
+                  <span> חסרים: {advisorValidation.Missing.join(', ')}</span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
-              {selectedSuppliers.length} suppliers selected
+              {selectedSuppliers.length} ספקים נבחרו
             </div>
             <Button 
               onClick={handleSendRFP}
-              disabled={loading}
-              className="ml-auto"
+              disabled={loading || !isAdvisorSelectionValid}
+              className="mr-auto"
             >
-              {loading ? 'Sending...' : 'Send RFP Invitations'}
+              {loading ? 'שולח...' : 'שלח הזמנות RFP'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <RecommendationsCard
-        projectId={projectId}
-        onSelectSuppliers={setSelectedSuppliers}
-        selectedSuppliers={selectedSuppliers}
-      />
+      {/* Supplier Recommendations */}
+      {isAdvisorSelectionValid && (
+        <RecommendationsCard
+          projectId={projectId}
+          onSelectSuppliers={setSelectedSuppliers}
+          selectedSuppliers={selectedSuppliers}
+        />
+      )}
     </div>
   );
 };

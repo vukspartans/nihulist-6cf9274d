@@ -188,7 +188,11 @@ const ProjectDetail = () => {
           </TabsList>
 
           <TabsContent value="rfp">
-            <RFPManager projectId={project.id} projectName={project.name} />
+            <RFPManager 
+              projectId={project.id} 
+              projectName={project.name}
+              projectType={project.type || 'לא צוין'}
+            />
           </TabsContent>
 
           <TabsContent value="proposals">
