@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectWizard from "./pages/ProjectWizard";
 import ProjectDetail from "./pages/ProjectDetail";
+import SupplierSubmit from "./pages/SupplierSubmit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/submit" element={<SupplierSubmit />} />
             <Route 
               path="/dashboard" 
               element={

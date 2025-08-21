@@ -34,8 +34,15 @@ const Landing = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="token">קוד גישה</Label>
-              <Input id="token" placeholder="הזן קוד גישה..." value={supplierToken} onChange={e => setSupplierToken(e.target.value)} className="text-center font-mono" dir="ltr" />
+              <Label htmlFor="token" className="text-right">קוד גישה</Label>
+              <Input 
+                id="token" 
+                placeholder="הזן קוד גישה..." 
+                value={supplierToken} 
+                onChange={e => setSupplierToken(e.target.value)} 
+                className="text-right font-mono" 
+                dir="rtl" 
+              />
             </div>
             <Button onClick={handleSupplierAccess} className="w-full" variant="premium" disabled={!supplierToken.trim()}>
               כניסה לטופס הגשת הצעה
