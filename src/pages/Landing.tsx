@@ -409,7 +409,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-white/70">
-            <p>© 2024 בנייה AI. כל הזכויות שמורות. Made with ❤️ in Israel</p>
+            <p>© 2026 NARSHA AI. כל הזכויות שמורות. Made with ❤️ in Israel</p>
           </div>
         </div>
       </footer>
