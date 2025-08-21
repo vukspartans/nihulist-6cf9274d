@@ -69,8 +69,8 @@ const ProjectDetail = () => {
       } catch (error) {
         console.error('Error fetching project data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load project details",
+          title: "שגיאה",
+          description: "לא ניתן לטעון את פרטי הפרויקט",
           variant: "destructive",
         });
       } finally {
@@ -97,8 +97,8 @@ const ProjectDetail = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Project Not Found</h1>
-          <Button onClick={() => window.history.back()}>Go Back</Button>
+          <h1 className="text-2xl font-bold mb-4">פרויקט לא נמצא</h1>
+          <Button onClick={() => window.history.back()}>חזרה</Button>
         </div>
       </div>
     );
@@ -132,7 +132,9 @@ const ProjectDetail = () => {
                 {formatCurrency(project.budget)}
               </span>
               <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                {project.status}
+                {project.status === 'draft' ? 'טיוטה' : 
+                 project.status === 'active' ? 'פעיל' : 
+                 project.status === 'completed' ? 'הושלם' : project.status}
               </Badge>
             </div>
           </div>
@@ -214,7 +216,9 @@ const ProjectDetail = () => {
                         <Badge 
                           variant={proposal.status === 'received' ? 'default' : 'secondary'}
                         >
-                          {proposal.status}
+                          {proposal.status === 'received' ? 'התקבל' : 
+                           proposal.status === 'accepted' ? 'אושר' : 
+                           proposal.status === 'rejected' ? 'נדחה' : proposal.status}
                         </Badge>
                       </div>
                     </CardHeader>

@@ -174,10 +174,10 @@ const ProjectWizard = () => {
 
       toast({
         title: "הפרויקט נוצר בהצלחה",
-        description: "מעבר להמלצות ספקים...",
+        description: "הפרויקט נוצר בהצלחה וממתין להצעות",
       });
 
-      navigate(`/projects/${project.id}/recommendations`);
+      navigate("/dashboard");
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
