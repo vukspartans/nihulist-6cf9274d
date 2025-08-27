@@ -142,86 +142,113 @@ const ProjectWizard = () => {
     }
   };
 
-  const createProject = async () => {
-    setCreating(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
+  const createProjectInternal = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      navigate("/auth");
+      return null;
+    }
 
-      // Create project with auto-generated name if not provided
-      const projectName = projectData.name || `פרויקט ${projectData.location}`;
-      
-      const { data: project, error: projectError } = await supabase
-        .from("projects")
-        .insert({
-          owner_id: user.id,
-          name: projectName,
-          type: projectData.type || null,
-          location: projectData.location || null,
-          budget: projectData.budget ? parseFloat(projectData.budget.replace(/[^\d]/g, '')) : null,
-          timeline_start: new Date().toISOString().split('T')[0], // Current date
-          timeline_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // One year from now
-          status: projectData.status || "draft"
-        })
-        .select()
-        .single();
+    // Create project with auto-generated name if not provided
+    const projectName = projectData.name || `פרויקט ${projectData.location}`;
+    
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .insert({
+        owner_id: user.id,
+        name: projectName,
+        type: projectData.type || null,
+        location: projectData.location || null,
+        budget: projectData.budget ? parseFloat(projectData.budget.replace(/[^\d]/g, '')) : null,
+        timeline_start: new Date().toISOString().split('T')[0], // Current date
+        timeline_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // One year from now
+        status: projectData.status || "draft"
+      })
+      .select()
+      .single();
 
-      if (projectError) throw projectError;
+    if (projectError) throw projectError;
 
-      // Upload files if any
-      if (files.length > 0) {
-        setUploading(true);
-        for (const fileWithMetadata of files) {
-          const { file, customName, description } = fileWithMetadata;
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${project.id}/${Date.now()}.${fileExt}`;
-          
-          const { data: fileData, error: uploadError } = await supabase.storage
-            .from('project-files')
-            .upload(fileName, file);
+    // Upload files if any
+    if (files.length > 0) {
+      setUploading(true);
+      for (const fileWithMetadata of files) {
+        const { file, customName, description } = fileWithMetadata;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${project.id}/${Date.now()}.${fileExt}`;
+        
+        const { data: fileData, error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(fileName, file);
 
-          if (uploadError) {
-            console.error('File upload error:', uploadError);
-            continue;
-          }
-
-          // Create file record with custom metadata
-          await supabase
-            .from("project_files")
-            .insert({
-              project_id: project.id,
-              file_url: fileData.path,
-              file_name: file.name, // Original filename
-              custom_name: customName, // User-provided name
-              description: description, // User-provided description
-              file_type: file.type,
-              size_mb: file.size / (1024 * 1024),
-              ai_summary: "AI summary pending..." // Mock AI summary
-            });
+        if (uploadError) {
+          console.error('File upload error:', uploadError);
+          continue;
         }
+
+        // Create file record with custom metadata
+        await supabase
+          .from("project_files")
+          .insert({
+            project_id: project.id,
+            file_url: fileData.path,
+            file_name: file.name, // Original filename
+            custom_name: customName, // User-provided name
+            description: description, // User-provided description
+            file_type: file.type,
+            size_mb: file.size / (1024 * 1024),
+            ai_summary: "AI summary pending..." // Mock AI summary
+          });
       }
+    }
 
-      // Log activity
-      await supabase
-        .from("activity_log")
-        .insert({
-          project_id: project.id,
-          actor_type: "entrepreneur",
-          actor_id: user.id,
-          action: "PROJECT_CREATED",
-          meta: { project_name: projectName }
-        });
-
-      toast({
-        title: "הפרויקט נוצר בהצלחה",
-        description: "הפרויקט נוצר בהצלחה וממתין להצעות",
+    // Log activity
+    await supabase
+      .from("activity_log")
+      .insert({
+        project_id: project.id,
+        actor_type: "entrepreneur",
+        actor_id: user.id,
+        action: "PROJECT_CREATED",
+        meta: { project_name: projectName }
       });
 
-      navigate("/dashboard");
+    toast({
+      title: "הפרויקט נוצר בהצלחה",
+      description: "הפרויקט נוצר בהצלחה וממתין להצעות",
+    });
+
+    return project;
+  };
+
+  const createAndGoToAdvisors = async () => {
+    setCreating(true);
+    try {
+      const project = await createProjectInternal();
+      if (project) {
+        navigate(`/projects/${project.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה ביצירת הפרויקט",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+      setUploading(false);
+    }
+  };
+
+  const createAndFinish = async () => {
+    setCreating(true);
+    try {
+      const project = await createProjectInternal();
+      if (project) {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
@@ -551,7 +578,7 @@ const ProjectWizard = () => {
               onClick={prevStep}
               disabled={currentStep === 1}
             >
-              <ArrowLeft className="w-4 h-4 ml-2" />
+              <ArrowLeft className="w-4 h-4 ml-2 flip-rtl-180" />
               הקודם
             </Button>
             
@@ -565,14 +592,23 @@ const ProjectWizard = () => {
                 <ArrowRight className="w-4 h-4 mr-2 flip-rtl-180" />
               </Button>
             ) : (
-              <Button
-                onClick={createProject}
-                disabled={creating || uploading}
-                variant="tech"
-              >
-                {creating ? "יוצר פרויקט..." : uploading ? "מעלה קבצים..." : "צור פרויקט"}
-                {!creating && !uploading && <CheckCircle className="w-4 h-4 mr-2" />}
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  onClick={createAndFinish}
+                  disabled={creating || uploading}
+                  variant="outline"
+                >
+                  {creating ? "יוצר..." : uploading ? "מעלה..." : "צור וסיים"}
+                </Button>
+                <Button
+                  onClick={createAndGoToAdvisors}
+                  disabled={creating || uploading}
+                  variant="tech"
+                >
+                  {creating ? "יוצר פרויקט..." : uploading ? "מעלה קבצים..." : "צור ועבור לאיתור יועצים"}
+                  {!creating && !uploading && <CheckCircle className="w-4 h-4 mr-2" />}
+                </Button>
+              </div>
             )}
           </div>
         </div>
