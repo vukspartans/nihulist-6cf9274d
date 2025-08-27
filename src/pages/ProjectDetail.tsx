@@ -30,6 +30,18 @@ export const ProjectDetail = () => {
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // Check for edit mode from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('edit') === 'true') {
+      setEditDialogOpen(true);
+      // Clean up URL after opening dialog
+      urlParams.delete('edit');
+      navigate(`/projects/${id}${urlParams.toString() ? '?' + urlParams.toString() : ''}`, { replace: true });
+    }
+  }, [id, navigate]);
 
   useEffect(() => {
     if (id) {
@@ -159,7 +171,9 @@ export const ProjectDetail = () => {
           
           <EditProjectDialog 
             project={project} 
-            onProjectUpdate={handleProjectUpdate} 
+            onProjectUpdate={handleProjectUpdate}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
           />
         </div>
       </div>

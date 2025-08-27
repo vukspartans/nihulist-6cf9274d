@@ -164,7 +164,7 @@ const Dashboard = () => {
   };
 
   const handleEditProject = (projectId: string) => {
-    navigate(`/projects/${projectId}/edit`);
+    navigate(`/projects/${projectId}?edit=true`);
   };
 
   if (loading) {

@@ -23,6 +23,8 @@ interface Project {
 interface EditProjectDialogProps {
   project: Project;
   onProjectUpdate: (updatedProject: Project) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const projectTypes = [
@@ -40,8 +42,8 @@ const phases = [
   'הושלם'
 ];
 
-export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOpen, onOpenChange }: EditProjectDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: project.name,
@@ -53,6 +55,10 @@ export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialo
     phase: project.phase
   });
   const { toast } = useToast();
+
+  // Use controlled or internal open state
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
 
   const handleSave = async () => {
     setLoading(true);
@@ -76,7 +82,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialo
       if (error) throw error;
 
       onProjectUpdate({ ...project, ...updateData });
-      setOpen(false);
+      setIsOpen(false);
       
       toast({
         title: "נשמר בהצלחה",
@@ -95,7 +101,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialo
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Edit className="w-4 h-4" />
@@ -192,7 +198,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialo
               <Save className="w-4 h-4" />
               {loading ? 'שומר...' : 'שמירה'}
             </Button>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
               ביטול
             </Button>
           </div>
