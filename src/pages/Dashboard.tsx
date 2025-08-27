@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Eye, Trash2, Calendar, MapPin, DollarSign } from "lucide-react";
+import { Plus, Eye, MoreVertical, MapPin, DollarSign, Edit, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +19,7 @@ interface Project {
   type: string | null;
   location: string | null;
   budget: number | null;
+  advisors_budget: number | null;
   timeline_start: string;
   timeline_end: string;
   status: string;
@@ -31,6 +34,22 @@ const statusLabels = {
   selected: "נבחר ספק",
   closed: "סגור",
   deleted: "נמחק"
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'draft':
+    case 'closed':
+      return 'bg-muted-foreground';
+    case 'rfp_sent':
+    case 'collecting':
+      return 'bg-warning';
+    case 'comparing':
+    case 'selected':
+      return 'bg-success';
+    default:
+      return 'bg-muted-foreground';
+  }
 };
 
 const statusColors = {
@@ -151,6 +170,14 @@ const Dashboard = () => {
     }).format(budget);
   };
 
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+  };
+
+  const handleEditProject = (projectId: string) => {
+    navigate(`/projects/${projectId}/edit`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
@@ -241,8 +268,8 @@ const Dashboard = () => {
                       <TableHead>שם הפרויקט</TableHead>
                       <TableHead>סוג</TableHead>
                       <TableHead>מיקום</TableHead>
-                      <TableHead>תקציב</TableHead>
-                      <TableHead>לוח זמנים</TableHead>
+                      <TableHead>תקציב פרויקט</TableHead>
+                      <TableHead>תקציב יועצים</TableHead>
                       <TableHead>סטטוס</TableHead>
                       <TableHead>תאריך יצירה</TableHead>
                       <TableHead>פעולות</TableHead>
@@ -252,7 +279,18 @@ const Dashboard = () => {
                     {filteredProjects.map((project) => (
                       <TableRow key={project.id}>
                         <TableCell className="font-medium">
-                          {project.name}
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className={`w-3 h-3 rounded-full ${getStatusColor(project.status)}`}
+                              title={statusLabels[project.status as keyof typeof statusLabels]}
+                            />
+                            <button
+                              onClick={() => handleProjectClick(project.id)}
+                              className="text-left hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {project.name}
+                            </button>
+                          </div>
                         </TableCell>
                         <TableCell>{project.type || "לא צוין"}</TableCell>
                         <TableCell>
@@ -268,9 +306,9 @@ const Dashboard = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center text-sm">
-                            <Calendar className="w-4 h-4 ml-1 text-muted-foreground" />
-                            {formatDate(project.timeline_start)} - {formatDate(project.timeline_end)}
+                          <div className="flex items-center">
+                            <DollarSign className="w-4 h-4 ml-1 text-muted-foreground" />
+                            {formatBudget(project.advisors_budget)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -280,23 +318,47 @@ const Dashboard = () => {
                         </TableCell>
                         <TableCell>{formatDate(project.created_at)}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/projects/${project.id}`)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteProject(project.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditProject(project.id)}>
+                                <Edit className="w-4 h-4 ml-2" />
+                                עריכה
+                              </DropdownMenuItem>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem 
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4 ml-2" />
+                                    מחק
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      פעולה זו תמחק את הפרויקט "{project.name}" ולא ניתן לבטל אותה.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteProject(project.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      מחק
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
