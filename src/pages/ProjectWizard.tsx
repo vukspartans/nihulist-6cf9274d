@@ -16,6 +16,7 @@ interface FormData {
   address: string;
   projectName: string;
   projectType: string;
+  phase: string;
   budget: string;
   advisorsBudget: string;
   description: string;
@@ -36,6 +37,7 @@ export const ProjectWizard = () => {
     address: '',
     projectName: '',
     projectType: '',
+    phase: '',
     budget: '',
     advisorsBudget: '',
     description: '',
@@ -52,6 +54,14 @@ export const ProjectWizard = () => {
   const projectTypes = getCanonicalProjectTypes().length > 0 
     ? getCanonicalProjectTypes()
     : ["בניין מגורים", "בניין משרדים", "תשתיות", "שיפוץ ושדרוג"];
+
+  const projectPhases = [
+    'תכנון ראשוני',
+    'תכנון מפורט', 
+    'בביצוע',
+    'השלמה',
+    'תחזוקה'
+  ];
 
   // Persist wizard state in localStorage
   const DRAFT_KEY = 'project-wizard-draft';
@@ -119,6 +129,7 @@ export const ProjectWizard = () => {
       const projectData = {
         name: formData.projectName || 'פרויקט ללא שם',
         type: formData.projectType,
+        phase: formData.phase,
         location: formData.address,
         budget,
         advisors_budget: advisorsBudget,
@@ -279,7 +290,7 @@ export const ProjectWizard = () => {
 
   const isStepValid = (step: number): boolean => {
     if (step === 1) {
-      return !!formData.address && !!formData.projectType && !!formData.budget;
+      return !!formData.address && !!formData.projectType && !!formData.phase && !!formData.budget;
     }
     return true;
   };
@@ -340,6 +351,23 @@ export const ProjectWizard = () => {
                 <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
                   {projectTypes.map((type) => (
                     <SelectItem key={type} value={type} className="text-right justify-end">{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Project Phase - Required */}
+            <div className="space-y-2">
+              <Label htmlFor="phase" className="text-base font-medium">
+                סטטוס הפרויקט <span className="text-destructive">*</span>
+              </Label>
+              <Select dir="rtl" onValueChange={(value) => handleSelectChange('phase', value)}>
+                <SelectTrigger className="h-12 text-right justify-end">
+                  <SelectValue placeholder="בחר סטטוס פרויקט" className="text-right" />
+                </SelectTrigger>
+                <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
+                  {projectPhases.map((phase) => (
+                    <SelectItem key={phase} value={phase} className="text-right justify-end">{phase}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -413,75 +441,95 @@ export const ProjectWizard = () => {
           </div>
 
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="files" className="text-base font-medium">
-                קבצים (אופציונלי)
-              </Label>
-              <Input
+            <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-gradient-to-br from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-all duration-300">
+              <input
                 type="file"
-                id="files"
                 multiple
                 onChange={handleFileChange}
-                className="h-12"
+                className="hidden"
+                id="file-upload"
               />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer flex flex-col items-center gap-6 group"
+              >
+                <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xl font-semibold text-foreground">לחץ כדי להעלות קבצים</p>
+                  <p className="text-muted-foreground">או גרור ושחרר קבצים כאן</p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
+                    <span className="px-3 py-1 bg-background rounded-full border">PDF</span>
+                    <span className="px-3 py-1 bg-background rounded-full border">תמונות</span>
+                    <span className="px-3 py-1 bg-background rounded-full border">מסמכים</span>
+                  </div>
+                </div>
+              </label>
             </div>
 
             {filesWithMetadata.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">קבצים שנבחרו:</h3>
-                {filesWithMetadata.map((fileWithMeta, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <h3 className="font-semibold text-lg">קבצים שנבחרו ({filesWithMetadata.length})</h3>
+                </div>
+                <div className="grid gap-4">
+                  {filesWithMetadata.map((fileWithMeta, index) => (
+                    <div key={index} className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-primary" />
+                          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
                           <div>
-                            <p className="font-medium">{fileWithMeta.file.name}</p>
+                            <p className="font-medium text-foreground">{fileWithMeta.customName || fileWithMeta.file.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {(fileWithMeta.file.size / 1_000_000).toFixed(2)} MB
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
+                        <Button 
+                          variant="ghost" 
                           size="sm"
                           onClick={() => removeFile(index)}
-                          className="text-destructive hover:text-destructive"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                         >
-                          <X className="w-4 h-4" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </Button>
                       </div>
                       
-                      <div className="grid gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`customName-${index}`} className="text-sm font-medium">
-                            שם מותאם אישית
-                          </Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`customName-${index}`} className="text-sm font-medium">שם קובץ מותאם</Label>
                           <Input
                             id={`customName-${index}`}
                             value={fileWithMeta.customName}
                             onChange={(e) => updateFileMetadata(index, 'customName', e.target.value)}
-                            placeholder="שם הקובץ במערכת"
-                            className="h-10"
+                            placeholder="הכנס שם קובץ"
+                            className="mt-2 h-10"
                           />
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor={`description-${index}`} className="text-sm font-medium">
-                            תיאור הקובץ
-                          </Label>
+                        <div>
+                          <Label htmlFor={`description-${index}`} className="text-sm font-medium">תיאור</Label>
                           <Textarea
                             id={`description-${index}`}
                             value={fileWithMeta.description}
                             onChange={(e) => updateFileMetadata(index, 'description', e.target.value)}
                             placeholder="תיאור קצר של הקובץ"
-                            className="min-h-20"
+                            className="mt-2 min-h-20"
                           />
                         </div>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -523,16 +571,21 @@ export const ProjectWizard = () => {
                   </div>
                   
                   <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">סטטוס הפרויקט</p>
+                    <p className="text-base font-medium">{formData.phase}</p>
+                  </div>
+                  
+                  <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">תקציב פרויקט</p>
                     <p className="text-base font-medium">
-                      {formData.budget ? `₪${parseInt(formData.budget).toLocaleString()}` : 'לא הוגדר'}
+                      {formData.budget ? `₪${parseInt(formData.budget.replace(/,/g, '')).toLocaleString()}` : 'לא הוגדר'}
                     </p>
                   </div>
                   
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">תקציב יועצים</p>
                     <p className="text-base font-medium">
-                      {formData.advisorsBudget ? `₪${parseInt(formData.advisorsBudget).toLocaleString()}` : 'לא הוגדר'}
+                      {formData.advisorsBudget ? `₪${parseInt(formData.advisorsBudget.replace(/,/g, '')).toLocaleString()}` : 'לא הוגדר'}
                     </p>
                   </div>
                 </div>

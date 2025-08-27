@@ -143,6 +143,7 @@ export type Database = {
           location: string | null
           name: string
           owner_id: string
+          phase: string | null
           status: string
           timeline_end: string
           timeline_start: string
@@ -159,6 +160,7 @@ export type Database = {
           location?: string | null
           name: string
           owner_id: string
+          phase?: string | null
           status?: string
           timeline_end: string
           timeline_start: string
@@ -175,6 +177,7 @@ export type Database = {
           location?: string | null
           name?: string
           owner_id?: string
+          phase?: string | null
           status?: string
           timeline_end?: string
           timeline_start?: string
