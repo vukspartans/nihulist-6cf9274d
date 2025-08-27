@@ -13,11 +13,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 
 interface FormData {
+  address: string;
   projectName: string;
   projectType: string;
-  location: string;
   budget: string;
   advisorsBudget: string;
+  description: string;
+}
+
+interface FileWithMetadata {
+  file: File;
+  customName: string;
   description: string;
 }
 
@@ -27,14 +33,14 @@ export const ProjectWizard = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
+    address: '',
     projectName: '',
     projectType: '',
-    location: '',
     budget: '',
     advisorsBudget: '',
     description: '',
   });
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [filesWithMetadata, setFilesWithMetadata] = useState<FileWithMetadata[]>([]);
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -111,9 +117,9 @@ export const ProjectWizard = () => {
       oneYearFromNow.setFullYear(today.getFullYear() + 1);
 
       const projectData = {
-        name: formData.projectName,
+        name: formData.projectName || 'פרויקט ללא שם',
         type: formData.projectType,
-        location: formData.location,
+        location: formData.address,
         budget,
         advisors_budget: advisorsBudget,
         description: formData.description || null,
@@ -132,20 +138,20 @@ export const ProjectWizard = () => {
       if (error) throw error;
 
       // Upload files if any and create project_files records
-      if (uploadedFiles.length > 0) {
+      if (filesWithMetadata.length > 0) {
         setUploading(true);
-        for (const file of uploadedFiles) {
+        for (const fileWithMeta of filesWithMetadata) {
           try {
-            const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(file.name)}`;
+            const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(fileWithMeta.file.name)}`;
             
             const { error: uploadError } = await supabase.storage
               .from('project-files')
-              .upload(fileName, file, { upsert: true });
+              .upload(fileName, fileWithMeta.file, { upsert: true });
 
             if (uploadError) {
               toast({
                 title: "שגיאה בהעלאת קובץ",
-                description: `לא ניתן להעלות את הקובץ ${file.name}`,
+                description: `לא ניתן להעלות את הקובץ ${fileWithMeta.file.name}`,
                 variant: "destructive",
               });
               continue;
@@ -156,10 +162,12 @@ export const ProjectWizard = () => {
               .from('project_files')
               .insert({
                 project_id: project.id,
-                file_name: file.name,
-                file_type: file.type || 'application/octet-stream',
+                file_name: fileWithMeta.file.name,
+                custom_name: fileWithMeta.customName || fileWithMeta.file.name,
+                description: fileWithMeta.description || null,
+                file_type: fileWithMeta.file.type || 'application/octet-stream',
                 file_url: fileName,
-                size_mb: Math.round((file.size / 1_000_000) * 100) / 100,
+                size_mb: Math.round((fileWithMeta.file.size / 1_000_000) * 100) / 100,
               });
 
             if (dbError) {
@@ -169,7 +177,7 @@ export const ProjectWizard = () => {
             console.error('File processing error:', fileError);
             toast({
               title: "שגיאה בעיבוד קובץ",
-              description: `לא ניתן לעבד את הקובץ ${file.name}`,
+              description: `לא ניתן לעבד את הקובץ ${fileWithMeta.file.name}`,
               variant: "destructive",
             });
           }
@@ -241,19 +249,27 @@ export const ProjectWizard = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
+    const newFilesWithMeta = files.map(file => ({
+      file,
+      customName: file.name,
+      description: ''
+    }));
+    setFilesWithMetadata(prev => [...prev, ...newFilesWithMeta]);
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilesWithMetadata(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateFileMetadata = (index: number, field: 'customName' | 'description', value: string) => {
+    setFilesWithMetadata(prev => prev.map((item, i) => 
+      i === index ? { ...item, [field]: value } : item
+    ));
   };
 
   const isStepValid = (step: number): boolean => {
     if (step === 1) {
-      return !!formData.projectName && !!formData.projectType && !!formData.location;
-    }
-    if (step === 2) {
-      return !!formData.budget;
+      return !!formData.address && !!formData.projectType && !!formData.budget;
     }
     return true;
   };
@@ -261,46 +277,108 @@ export const ProjectWizard = () => {
   const renderStep = () => {
     if (currentStep === 1) {
       return (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-4">פרטי הפרויקט</h2>
-            <p className="text-muted-foreground mb-6">
+        <div className="space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-3">פרטי הפרויקט</h2>
+            <p className="text-muted-foreground text-lg">
               הזן את הפרטים הבסיסיים של הפרויקט שלך
             </p>
           </div>
 
-          <div className="grid gap-4">
-            <div>
-              <Label htmlFor="projectName">שם הפרויקט</Label>
+          <div className="grid gap-6">
+            {/* Address - Required */}
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-base font-medium">
+                כתובת <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="הזן את כתובת הפרויקט"
+                className="h-12"
+              />
+            </div>
+
+            {/* Name - Optional */}
+            <div className="space-y-2">
+              <Label htmlFor="projectName" className="text-base font-medium">
+                שם הפרויקט (אופציונלי)
+              </Label>
               <Input
                 type="text"
                 id="projectName"
                 name="projectName"
                 value={formData.projectName}
                 onChange={handleChange}
+                placeholder="שם לפרויקט שלך"
+                className="h-12"
               />
             </div>
-            <div>
-              <Label htmlFor="projectType">סוג פרויקט</Label>
+
+            {/* Project Type - Required */}
+            <div className="space-y-2">
+              <Label htmlFor="projectType" className="text-base font-medium">
+                סוג פרויקט <span className="text-destructive">*</span>
+              </Label>
               <Select onValueChange={(value) => handleSelectChange('projectType', value)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12">
                   <SelectValue placeholder="בחר סוג פרויקט" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-lg z-50">
                   {projectTypes.map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="location">מיקום</Label>
+
+            {/* Budget - Required */}
+            <div className="space-y-2">
+              <Label htmlFor="budget" className="text-base font-medium">
+                תקציב פרויקט <span className="text-destructive">*</span>
+              </Label>
               <Input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
+                type="number"
+                id="budget"
+                name="budget"
+                value={formData.budget}
                 onChange={handleChange}
+                placeholder="הכנס את תקציב הפרויקט"
+                className="h-12"
+              />
+            </div>
+
+            {/* Advisors Budget - Optional */}
+            <div className="space-y-2">
+              <Label htmlFor="advisorsBudget" className="text-base font-medium">
+                תקציב יועצים (אופציונלי)
+              </Label>
+              <Input
+                type="number"
+                id="advisorsBudget"
+                name="advisorsBudget"
+                value={formData.advisorsBudget}
+                onChange={handleChange}
+                placeholder="הכנס את תקציב היועצים"
+                className="h-12"
+              />
+            </div>
+
+            {/* Description - Optional */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-base font-medium">
+                תיאור נוסף (אופציונלי)
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="הכנס תיאור מפורט של הפרויקט"
+                className="min-h-24"
               />
             </div>
           </div>
@@ -310,80 +388,86 @@ export const ProjectWizard = () => {
 
     if (currentStep === 2) {
       return (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-4">תקציב ותיאור</h2>
-            <p className="text-muted-foreground mb-6">
-              הגדר את התקציב ותיאור הפרויקט
+        <div className="space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-3">העלאת קבצים</h2>
+            <p className="text-muted-foreground text-lg">
+              העלה קבצים רלוונטיים לפרויקט שלך
             </p>
           </div>
 
-          <div className="grid gap-4">
-            <div>
-              <Label htmlFor="budget">תקציב הפרויקט</Label>
-              <Input
-                type="number"
-                id="budget"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-                placeholder="הכנס את תקציב הפרויקט"
-              />
-            </div>
-            <div>
-              <Label htmlFor="advisorsBudget">תקציב יועצים (אופציונלי)</Label>
-              <Input
-                type="number"
-                id="advisorsBudget"
-                name="advisorsBudget"
-                value={formData.advisorsBudget}
-                onChange={handleChange}
-                placeholder="הכנס את תקציב היועצים"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">תיאור הפרויקט (אופציונלי)</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="הכנס תיאור מפורט של הפרויקט"
-              />
-            </div>
-            <div>
-              <Label htmlFor="files">קבצים (אופציונלי)</Label>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="files" className="text-base font-medium">
+                קבצים (אופציונלי)
+              </Label>
               <Input
                 type="file"
                 id="files"
                 multiple
                 onChange={handleFileChange}
+                className="h-12"
               />
-              {uploadedFiles.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-sm text-muted-foreground">קבצים שנבחרו:</p>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm">{file.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({(file.size / 1_000_000).toFixed(2)} MB)
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {filesWithMetadata.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">קבצים שנבחרו:</h3>
+                {filesWithMetadata.map((fileWithMeta, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div>
+                            <p className="font-medium">{fileWithMeta.file.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(fileWithMeta.file.size / 1_000_000).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`customName-${index}`} className="text-sm font-medium">
+                            שם מותאם אישית
+                          </Label>
+                          <Input
+                            id={`customName-${index}`}
+                            value={fileWithMeta.customName}
+                            onChange={(e) => updateFileMetadata(index, 'customName', e.target.value)}
+                            placeholder="שם הקובץ במערכת"
+                            className="h-10"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`description-${index}`} className="text-sm font-medium">
+                            תיאור הקובץ
+                          </Label>
+                          <Textarea
+                            id={`description-${index}`}
+                            value={fileWithMeta.description}
+                            onChange={(e) => updateFileMetadata(index, 'description', e.target.value)}
+                            placeholder="תיאור קצר של הקובץ"
+                            className="min-h-20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -391,71 +475,114 @@ export const ProjectWizard = () => {
 
     if (currentStep === 3) {
       return (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-4">סקירה ואישור</h2>
-            <p className="text-muted-foreground mb-6">
-              בדוק את פרטי הפרויקט לפני יצירתו
+        <div className="space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-3">סקירה ואישור</h2>
+            <p className="text-muted-foreground text-lg">
+              בדוק את פרטי הפרויקט לפני יצירתו והצעדים הבאים
             </p>
           </div>
 
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>פרטי הפרויקט</CardTitle>
+          <div className="space-y-6">
+            {/* Project Summary */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">סיכום הפרויקט</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">שם הפרויקט</label>
-                    <p className="font-medium">{formData.projectName}</p>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">כתובת</p>
+                    <p className="text-base font-medium">{formData.address}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">סוג פרויקט</label>
-                    <p className="font-medium">{formData.projectType}</p>
+                  
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">שם הפרויקט</p>
+                    <p className="text-base font-medium">{formData.projectName || 'פרויקט ללא שם'}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">מיקום</label>
-                    <p className="font-medium">{formData.location}</p>
+                  
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">סוג פרויקט</p>
+                    <p className="text-base font-medium">{formData.projectType}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">תקציב פרויקט</label>
-                    <p className="font-medium">{formData.budget ? `₪${parseInt(formData.budget).toLocaleString()}` : 'לא הוגדר'}</p>
+                  
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">תקציב פרויקט</p>
+                    <p className="text-base font-medium">
+                      {formData.budget ? `₪${parseInt(formData.budget).toLocaleString()}` : 'לא הוגדר'}
+                    </p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">תקציב יועצים</label>
-                    <p className="font-medium">{formData.advisorsBudget ? `₪${parseInt(formData.advisorsBudget).toLocaleString()}` : 'לא הוגדר'}</p>
+                  
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">תקציב יועצים</p>
+                    <p className="text-base font-medium">
+                      {formData.advisorsBudget ? `₪${parseInt(formData.advisorsBudget).toLocaleString()}` : 'לא הוגדר'}
+                    </p>
                   </div>
                 </div>
+                
                 {formData.description && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">תיאור</label>
-                    <p className="font-medium">{formData.description}</p>
+                  <div className="space-y-2 pt-4 border-t">
+                    <p className="text-sm font-medium text-muted-foreground">תיאור נוסף</p>
+                    <p className="text-base leading-relaxed">{formData.description}</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {uploadedFiles.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>קבצים</CardTitle>
+            {/* Files Summary */}
+            {filesWithMetadata.length > 0 && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">קבצים ({filesWithMetadata.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm">{file.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({(file.size / 1_000_000).toFixed(2)} MB)
-                        </span>
+                  <div className="space-y-3">
+                    {filesWithMetadata.map((fileWithMeta, index) => (
+                      <div key={index} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        <FileText className="w-5 h-5 text-primary mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{fileWithMeta.customName}</p>
+                          <p className="text-xs text-muted-foreground">{fileWithMeta.file.name}</p>
+                          {fileWithMeta.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{fileWithMeta.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {(fileWithMeta.file.size / 1_000_000).toFixed(2)} MB
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* Next Steps */}
+            <Card className="shadow-sm border-primary/20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  הצעדים הבאים
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2"></div>
+                    <p>המערכת תיצור את הפרויקט ותשמור את כל הפרטים</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2"></div>
+                    <p>תוכל לבחור לעבור ישירות לאיתור יועצים או לחזור ללוח הבקרה</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2"></div>
+                    <p>הפרויקט יישמר במצב טיוטה עד להפעלתו המלאה</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       );
@@ -464,23 +591,23 @@ export const ProjectWizard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5" dir="rtl">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center mb-4">
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold text-center mb-6">
             יצירת פרויקט חדש
           </h1>
-          <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
-          <div className="mt-2 text-center text-muted-foreground text-sm">
+          <Progress value={(currentStep / totalSteps) * 100} className="h-3 max-w-md mx-auto" />
+          <div className="mt-4 text-center text-muted-foreground">
             שלב {currentStep} מתוך {totalSteps}
           </div>
         </div>
 
-        <Card className="max-w-4xl mx-auto">
-          <CardContent className="p-8">
+        <Card className="max-w-5xl mx-auto shadow-lg">
+          <CardContent className="p-8 lg:p-12">
             {renderStep()}
 
             {/* Navigation */}
-            <div className="flex justify-between mt-8 pt-6 border-t">
+            <div className="flex justify-between items-center mt-12 pt-8 border-t border-border/50">
               {currentStep > 1 ? (
                 <Button
                   variant="outline"
