@@ -54,6 +54,11 @@ export const ProjectWizard = () => {
 
     setCreating(true);
     try {
+      // Set default timeline values (today and 1 year from today)
+      const today = new Date();
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
       const projectData = {
         name: formData.projectName,
         type: formData.projectType,
@@ -62,7 +67,9 @@ export const ProjectWizard = () => {
         advisors_budget: parseFloat(formData.advisorsBudget || '0'),
         description: formData.description || null,
         owner_id: user.id,
-        status: 'active'
+        status: 'active',
+        timeline_start: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        timeline_end: oneYearFromNow.toISOString().split('T')[0] // Format as YYYY-MM-DD
       };
 
       const { data: project, error } = await supabase
