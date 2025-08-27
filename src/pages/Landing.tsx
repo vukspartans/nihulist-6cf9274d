@@ -30,6 +30,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const Landing = () => {
+  // NihuList Landing Page - Cache Bust v2
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
