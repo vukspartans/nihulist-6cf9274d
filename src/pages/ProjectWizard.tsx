@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Upload, FileText, CheckCircle } from "lucide-rea
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAdvisorsValidation } from "@/hooks/useAdvisorsValidation";
 
 interface ProjectData {
   name: string;
@@ -22,6 +23,7 @@ interface ProjectData {
 }
 
 const ProjectWizard = () => {
+  const { getCanonicalProjectTypes, loading: advisorsLoading } = useAdvisorsValidation();
   const [currentStep, setCurrentStep] = useState(1);
   const [projectData, setProjectData] = useState<ProjectData>({
     name: "",
@@ -41,19 +43,8 @@ const ProjectWizard = () => {
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
 
-  // Project types from system
-  const projectTypes = [
-    "בניית בית פרטי",
-    "בניית מגדל משרדים", 
-    "בניית קניון",
-    "שיפוץ דירה",
-    "בניית בית ספר",
-    "בניית בית חולים",
-    "פיתוח תשתיות",
-    "בניית מפעל",
-    "שיקום מבנה",
-    "הרחבת מבנה"
-  ];
+  // Project types from canonical source
+  const projectTypes = getCanonicalProjectTypes();
 
   // Project statuses
   const projectStatuses = [
@@ -256,9 +247,9 @@ const ProjectWizard = () => {
             
             <div className="space-y-2">
               <Label htmlFor="type">סוג פרויקט *</Label>
-              <Select value={projectData.type} onValueChange={(value) => handleInputChange("type", value)}>
+              <Select value={projectData.type} onValueChange={(value) => handleInputChange("type", value)} disabled={advisorsLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="בחר סוג פרויקט..." />
+                  <SelectValue placeholder={advisorsLoading ? "טוען..." : "בחר סוג פרויקט..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {projectTypes.map((type) => (
@@ -473,7 +464,7 @@ const ProjectWizard = () => {
               <span className="text-sm font-medium">שלב {currentStep} מתוך {totalSteps}</span>
               <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" style={{ direction: 'rtl' }} />
+            <Progress value={progress} className="h-2" />
           </div>
 
           {/* Content */}
