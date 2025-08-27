@@ -67,7 +67,7 @@ export const ProjectWizard = () => {
 
       const { data: project, error } = await supabase
         .from('projects')
-        .insert([projectData])
+        .insert(projectData)
         .select()
         .single();
 
@@ -88,19 +88,6 @@ export const ProjectWizard = () => {
           }
         }
         setUploading(false);
-      }
-
-      // Try to log activity (optional - won't fail if RLS blocks)
-      try {
-        await supabase
-          .from('activity_log')
-          .insert([{
-            project_id: project.id,
-            action: 'project_created',
-            details: { name: project.name, type: project.type }
-          }]);
-      } catch (activityError) {
-        console.log('Activity log failed (non-critical):', activityError);
       }
 
       toast({

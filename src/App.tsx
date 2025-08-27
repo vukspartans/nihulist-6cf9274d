@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,8 +9,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import ProjectWizard from "./pages/ProjectWizard";
-import ProjectDetail from "./pages/ProjectDetail";
+import { ProjectWizard } from "./pages/ProjectWizard";
+import { ProjectDetail } from "./pages/ProjectDetail";
 import SupplierSubmit from "./pages/SupplierSubmit";
 import ForEntrepreneurs from "./pages/ForEntrepreneurs";
 import ForConsultants from "./pages/ForConsultants";
