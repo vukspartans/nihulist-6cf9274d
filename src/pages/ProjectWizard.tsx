@@ -22,6 +22,12 @@ interface ProjectData {
   description: string;
 }
 
+interface FileWithMetadata {
+  file: File;
+  customName: string;
+  description: string;
+}
+
 const ProjectWizard = () => {
   const { getCanonicalProjectTypes, loading: advisorsLoading } = useAdvisorsValidation();
   const [currentStep, setCurrentStep] = useState(1);
@@ -34,7 +40,7 @@ const ProjectWizard = () => {
     advisorBudget: "",
     description: ""
   });
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileWithMetadata[]>([]);
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
@@ -98,7 +104,13 @@ const ProjectWizard = () => {
       return true;
     });
 
-    setFiles(prev => [...prev, ...validFiles].slice(0, 5)); // Max 5 files
+    const newFilesWithMetadata = validFiles.map(file => ({
+      file,
+      customName: file.name.replace(/\.[^/.]+$/, ""), // Remove extension for default name
+      description: ""
+    }));
+
+    setFiles(prev => [...prev, ...newFilesWithMetadata].slice(0, 5)); // Max 5 files
   };
 
   const removeFile = (index: number) => {
@@ -163,7 +175,8 @@ const ProjectWizard = () => {
       // Upload files if any
       if (files.length > 0) {
         setUploading(true);
-        for (const file of files) {
+        for (const fileWithMetadata of files) {
+          const { file, customName, description } = fileWithMetadata;
           const fileExt = file.name.split('.').pop();
           const fileName = `${project.id}/${Date.now()}.${fileExt}`;
           
@@ -176,13 +189,15 @@ const ProjectWizard = () => {
             continue;
           }
 
-          // Create file record
+          // Create file record with custom metadata
           await supabase
             .from("project_files")
             .insert({
               project_id: project.id,
               file_url: fileData.path,
-              file_name: file.name,
+              file_name: file.name, // Original filename
+              custom_name: customName, // User-provided name
+              description: description, // User-provided description
               file_type: file.type,
               size_mb: file.size / (1024 * 1024),
               ai_summary: "AI summary pending..." // Mock AI summary
@@ -344,24 +359,57 @@ const ProjectWizard = () => {
             </div>
             
             {files.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Label>קבצים שנבחרו:</Label>
-                {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center">
-                      <FileText className="w-4 h-4 ml-2 text-muted-foreground" />
-                      <span className="text-sm">{file.name}</span>
-                      <span className="text-xs text-muted-foreground mr-2">
-                        ({(file.size / (1024 * 1024)).toFixed(1)} MB)
-                      </span>
+                {files.map((fileWithMetadata, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <FileText className="w-4 h-4 ml-2 text-muted-foreground" />
+                        <span className="text-sm font-medium">{fileWithMetadata.file.name}</span>
+                        <span className="text-xs text-muted-foreground mr-2">
+                          ({(fileWithMetadata.file.size / (1024 * 1024)).toFixed(1)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                      >
+                        ✕
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                    >
-                      ✕
-                    </Button>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor={`file-name-${index}`} className="text-sm">שם הקובץ</Label>
+                        <Input
+                          id={`file-name-${index}`}
+                          placeholder="הזן שם לקובץ..."
+                          value={fileWithMetadata.customName}
+                          onChange={(e) => {
+                            const newFiles = [...files];
+                            newFiles[index].customName = e.target.value;
+                            setFiles(newFiles);
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`file-desc-${index}`} className="text-sm">תיאור (אופציונלי)</Label>
+                        <Textarea
+                          id={`file-desc-${index}`}
+                          placeholder="הוסף תיאור לקובץ..."
+                          value={fileWithMetadata.description}
+                          onChange={(e) => {
+                            const newFiles = [...files];
+                            newFiles[index].description = e.target.value;
+                            setFiles(newFiles);
+                          }}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -424,9 +472,16 @@ const ProjectWizard = () => {
               {files.length > 0 && (
                 <div>
                   <Label className="font-semibold">קבצים ({files.length})</Label>
-                  <ul className="text-sm text-muted-foreground">
-                    {files.map((file, index) => (
-                      <li key={index}>• {file.name}</li>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {files.map((fileWithMetadata, index) => (
+                      <li key={index} className="flex flex-col">
+                        <span>• {fileWithMetadata.customName || fileWithMetadata.file.name}</span>
+                        {fileWithMetadata.description && (
+                          <span className="text-xs mr-4 text-muted-foreground/70">
+                            {fileWithMetadata.description}
+                          </span>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 </div>

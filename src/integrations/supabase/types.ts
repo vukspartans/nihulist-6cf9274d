@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -89,6 +89,8 @@ export type Database = {
         Row: {
           ai_summary: string | null
           created_at: string
+          custom_name: string | null
+          description: string | null
           file_name: string
           file_type: string
           file_url: string
@@ -99,6 +101,8 @@ export type Database = {
         Insert: {
           ai_summary?: string | null
           created_at?: string
+          custom_name?: string | null
+          description?: string | null
           file_name: string
           file_type: string
           file_url: string
@@ -109,6 +113,8 @@ export type Database = {
         Update: {
           ai_summary?: string | null
           created_at?: string
+          custom_name?: string | null
+          description?: string | null
           file_name?: string
           file_type?: string
           file_url?: string
@@ -451,18 +457,18 @@ export type Database = {
       generate_project_recommendations: {
         Args: { project_uuid: string }
         Returns: {
+          confidence: number
+          match_score: number
+          reason: string
           supplier_id: string
           supplier_name: string
-          match_score: number
-          confidence: number
-          reason: string
         }[]
       }
       send_rfp_invitations: {
         Args: { project_uuid: string; selected_supplier_ids?: string[] }
         Returns: {
-          rfp_id: string
           invites_sent: number
+          rfp_id: string
         }[]
       }
     }
