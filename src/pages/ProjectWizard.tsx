@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { FileText, ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from "@/components/ui/progress"
 import { supabase } from '@/integrations/supabase/client';
+import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 
 interface FormData {
   projectName: string;
@@ -39,6 +40,15 @@ export const ProjectWizard = () => {
   const [user, setUser] = useState<any>(null);
 
   const totalSteps = 3;
+  const { getCanonicalProjectTypes } = useAdvisorsValidation();
+
+  // Get canonical project types with fallback
+  const projectTypes = getCanonicalProjectTypes().length > 0 
+    ? getCanonicalProjectTypes()
+    : ["בניין מגורים", "בניין משרדים", "תשתיות", "שיפוץ ושדרוג"];
+
+  // Persist wizard state in localStorage
+  const DRAFT_KEY = 'project-wizard-draft';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -47,13 +57,54 @@ export const ProjectWizard = () => {
     };
 
     fetchUser();
+
+    // Restore draft from localStorage
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const { currentStep: savedStep, formData: savedFormData } = JSON.parse(savedDraft);
+        setCurrentStep(savedStep || 1);
+        setFormData(prev => ({ ...prev, ...savedFormData }));
+      } catch (error) {
+        console.error('Error restoring draft:', error);
+      }
+    }
   }, []);
+
+  // Save draft to localStorage whenever formData or currentStep changes
+  useEffect(() => {
+    const draftData = { currentStep, formData };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+  }, [currentStep, formData]);
 
   const createProjectInternal = async () => {
     if (!user) return null;
 
     setCreating(true);
     try {
+      // Validate and safely parse budget
+      const budget = Number(formData.budget);
+      if (!formData.budget || isNaN(budget)) {
+        toast({
+          title: "שגיאה בתקציב",
+          description: "אנא הכנס תקציב פרויקט תקין",
+          variant: "destructive",
+        });
+        setCreating(false);
+        return null;
+      }
+
+      const advisorsBudget = formData.advisorsBudget ? Number(formData.advisorsBudget) : null;
+      if (formData.advisorsBudget && isNaN(advisorsBudget!)) {
+        toast({
+          title: "שגיאה בתקציב יועצים",
+          description: "אנא הכנס תקציב יועצים תקין או השאר ריק",
+          variant: "destructive",
+        });
+        setCreating(false);
+        return null;
+      }
+
       // Set default timeline values (today and 1 year from today)
       const today = new Date();
       const oneYearFromNow = new Date();
@@ -63,11 +114,11 @@ export const ProjectWizard = () => {
         name: formData.projectName,
         type: formData.projectType,
         location: formData.location,
-        budget: parseFloat(formData.budget),
-        advisors_budget: parseFloat(formData.advisorsBudget || '0'),
+        budget,
+        advisors_budget: advisorsBudget,
         description: formData.description || null,
         owner_id: user.id,
-        status: 'active',
+        status: 'draft', // Set to draft status
         timeline_start: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
         timeline_end: oneYearFromNow.toISOString().split('T')[0] // Format as YYYY-MM-DD
       };
@@ -80,22 +131,54 @@ export const ProjectWizard = () => {
 
       if (error) throw error;
 
-      // Upload files if any
+      // Upload files if any and create project_files records
       if (uploadedFiles.length > 0) {
         setUploading(true);
         for (const file of uploadedFiles) {
-          const fileName = `${project.id}/${file.name}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('project-files')
-            .upload(fileName, file);
+          try {
+            const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(file.name)}`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from('project-files')
+              .upload(fileName, file, { upsert: true });
 
-          if (uploadError) {
-            console.error('File upload error:', uploadError);
+            if (uploadError) {
+              toast({
+                title: "שגיאה בהעלאת קובץ",
+                description: `לא ניתן להעלות את הקובץ ${file.name}`,
+                variant: "destructive",
+              });
+              continue;
+            }
+
+            // Create project_files record
+            const { error: dbError } = await supabase
+              .from('project_files')
+              .insert({
+                project_id: project.id,
+                file_name: file.name,
+                file_type: file.type || 'application/octet-stream',
+                file_url: fileName,
+                size_mb: Math.round((file.size / 1_000_000) * 100) / 100,
+              });
+
+            if (dbError) {
+              console.error('Error creating project_files record:', dbError);
+            }
+          } catch (fileError) {
+            console.error('File processing error:', fileError);
+            toast({
+              title: "שגיאה בעיבוד קובץ",
+              description: `לא ניתן לעבד את הקובץ ${file.name}`,
+              variant: "destructive",
+            });
           }
         }
         setUploading(false);
       }
+
+      // Clear localStorage draft
+      localStorage.removeItem(DRAFT_KEY);
 
       toast({
         title: "פרויקט נוצר בהצלחה!",
@@ -158,7 +241,11 @@ export const ProjectWizard = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles(files);
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const isStepValid = (step: number): boolean => {
@@ -200,10 +287,9 @@ export const ProjectWizard = () => {
                   <SelectValue placeholder="בחר סוג פרויקט" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="בניין מגורים">בניין מגורים</SelectItem>
-                  <SelectItem value="בניין משרדים">בניין משרדים</SelectItem>
-                  <SelectItem value="תשתיות">תשתיות</SelectItem>
-                  <SelectItem value="שיפוץ ושדרוג">שיפוץ ושדרוג</SelectItem>
+                  {projectTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -273,6 +359,30 @@ export const ProjectWizard = () => {
                 multiple
                 onChange={handleFileChange}
               />
+              {uploadedFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm text-muted-foreground">קבצים שנבחרו:</p>
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(file.size / 1_000_000).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -337,6 +447,9 @@ export const ProjectWizard = () => {
                       <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                         <FileText className="w-4 h-4" />
                         <span className="text-sm">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(file.size / 1_000_000).toFixed(2)} MB)
+                        </span>
                       </div>
                     ))}
                   </div>
