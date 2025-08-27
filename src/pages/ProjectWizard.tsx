@@ -241,12 +241,13 @@ const ProjectWizard = () => {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="location">מיקום הפרויקט *</Label>
+              <Label htmlFor="location">מיקום הפרויקט <span className="text-destructive">*</span></Label>
               <Input
                 id="location"
                 placeholder="עיר או כתובת מלאה..."
                 value={projectData.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
+                aria-required="true"
               />
             </div>
             
@@ -261,9 +262,9 @@ const ProjectWizard = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="type">סוג פרויקט *</Label>
+              <Label htmlFor="type">סוג פרויקט <span className="text-destructive">*</span></Label>
               <Select value={projectData.type} onValueChange={(value) => handleInputChange("type", value)} disabled={advisorsLoading}>
-                <SelectTrigger>
+                <SelectTrigger aria-required="true">
                   <SelectValue placeholder={advisorsLoading ? "טוען..." : "בחר סוג פרויקט..."} />
                 </SelectTrigger>
                 <SelectContent>
@@ -330,6 +331,8 @@ const ProjectWizard = () => {
                 rows={4}
               />
             </div>
+            
+            <p className="text-xs text-muted-foreground text-right">* שדה נדרש</p>
           </div>
         );
 
