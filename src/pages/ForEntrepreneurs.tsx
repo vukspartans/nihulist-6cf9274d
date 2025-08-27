@@ -74,8 +74,8 @@ const ForEntrepreneurs = () => {
               <Users className="w-6 h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">NihuList</span>
-              <span className="text-sm text-muted-foreground">ניהוליסט</span>
+              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
+              <span className="text-sm text-muted-foreground">NihuList</span>
             </div>
           </Link>
           
@@ -95,8 +95,8 @@ const ForEntrepreneurs = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-24 lg:py-32 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
+      {/* Hero Section - Optimized Above the Fold */}
+      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="animate-fade-in">

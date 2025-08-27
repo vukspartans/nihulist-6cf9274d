@@ -128,8 +128,8 @@ const ForConsultants = () => {
               <Users className="w-6 h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">NihuList</span>
-              <span className="text-sm text-muted-foreground">ניהוליסט</span>
+              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
+              <span className="text-sm text-muted-foreground">NihuList</span>
             </div>
           </Link>
           
@@ -149,63 +149,61 @@ const ForConsultants = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-24 lg:py-32 bg-gradient-to-br from-background via-tech-purple/5 to-primary/5">
+      {/* Hero Section - Optimized Above the Fold */}
+      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-tech-purple/5 to-primary/5">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-6 lg:space-y-8">
             <div className="animate-fade-in">
-                <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm mb-6">
-                  <Award className="w-4 h-4 text-tech-purple" />
+                <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-xs lg:text-sm">
+                  <Award className="w-3 h-3 lg:w-4 lg:h-4 text-tech-purple" />
                   רשת מומחי הבנייה המובילה בישראל
                 </Badge>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
               <span className="text-foreground">הצמח את</span>
               <br />
               <span className="gradient-text">עסק הבנייה</span>
               <br />
-              <span className="text-foreground">שלך</span>
+              <span className="text-foreground text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">שלך</span>
             </h1>
 
-            <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
-              הצטרף לרשת מומחי הבנייה המובילה והתחבר עם יזמי נדל"ן איכותיים
-              <br />
-              שמחפשים בדיוק את המומחיות שלך בתחום הבנייה.
+            <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
+              הצטרף לרשת מומחי הבנייה המובילה והתחבר עם יזמי נדל"ן איכותיים שמחפשים את המומחיות שלך.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
-                size="xl" 
+                size="lg" 
                 onClick={() => navigate('/auth?type=consultant')}
-                className="text-lg px-10 py-6 hover-scale"
+                className="text-lg px-8 py-6 hover-scale"
               >
-                <UserCheck className="w-6 h-6 ml-2" />
+                <UserCheck className="w-5 h-5 ml-2" />
                 הצטרף עכשיו
               </Button>
               
               <Button 
                 variant="outline" 
-                size="xl"
-                className="text-lg px-10 py-6 hover-scale"
+                size="lg"
+                className="text-lg px-8 py-6 hover-scale"
               >
-                <BarChart className="w-6 h-6 ml-2" />
+                <BarChart className="w-5 h-5 ml-2" />
                 צפה איך זה עובד
               </Button>
             </div>
 
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap justify-center items-center gap-8 text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
+            {/* Trust Indicators - Compact */}
+            <div className="flex flex-wrap justify-center items-center gap-4 lg:gap-6 text-xs lg:text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
               <span className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-green-500" />
-                +40% גידול הכנסות
+                <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-green-500" />
+                +40% הכנסות
               </span>
               <span className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-tech-purple" />
+                <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-tech-purple" />
                 תשלומים מובטחים
               </span>
               <span className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-500" />
+                <Star className="w-3 h-3 lg:w-4 lg:h-4 text-yellow-500" />
                 לקוחות איכותיים
               </span>
             </div>

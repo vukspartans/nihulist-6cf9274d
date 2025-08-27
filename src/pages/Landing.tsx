@@ -78,8 +78,8 @@ const Landing = () => {
               <Users className="w-6 h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">NihuList</span>
-              <span className="text-sm text-muted-foreground">ניהוליסט</span>
+              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
+              <span className="text-sm text-muted-foreground">NihuList</span>
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
@@ -96,78 +96,77 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-32 lg:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
+      {/* Hero Section - Optimized Above the Fold */}
+      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-7xl mx-auto">
             {/* Left content */}
-            <div className="space-y-10 text-center lg:text-right">
+            <div className="space-y-6 lg:space-y-8 text-center lg:text-right">
               {/* Security badge */}
               <div className="animate-fade-in">
-                <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm hover-scale">
-                  <Shield className="w-4 h-4 text-primary" />
+                <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-xs lg:text-sm hover-scale">
+                  <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
                   הגנה ברמה בנקאית על המידע שלכם
                 </Badge>
               </div>
 
-              {/* Main headline */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
-                <span className="gradient-text">NihuList</span>
+              {/* Main headline - Reduced size for better space usage */}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
+                <span className="gradient-text">ניהוליסט</span>
                 <br />
                 <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
-                <span className="gradient-text">חכם יותר, מהיר יותר</span>
+                <span className="gradient-text text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">חכם יותר, מהיר יותר</span>
               </h1>
 
-              {/* Subtext */}
-              <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
-                הפלטפורמה הבטוחה והחכמה ביותר למציאת המומחים המושלמים לכל פרויקט בנייה ונדל"ן.
+              {/* Subtext - More concise */}
+              <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
+                הפלטפורמה הבטוחה למציאת המומחים המושלמים לכל פרויקט בנייה ונדל"ן.
               </p>
 
               {/* CTA Button */}
               <div className="animate-slide-up" style={{animationDelay: "0.4s"}}>
                 <Button 
-                  size="xl" 
+                  size="lg" 
                   onClick={() => setShowUserTypeDialog(true)}
-                  className="text-xl px-12 py-8 hover-scale animate-glow"
+                  className="text-lg px-8 py-6 hover-scale animate-glow"
                 >
-                  <Zap className="w-6 h-6 ml-2" />
+                  <Zap className="w-5 h-5 ml-2" />
                   התחל עכשיו
                 </Button>
               </div>
 
-              {/* Trust indicators */}
-              <div className="space-y-6 animate-fade-in" style={{animationDelay: "0.6s"}}>
-                <p className="text-sm text-muted-foreground">אמון של יזמים ויועצים מובילים</p>
-                <div className="flex flex-wrap justify-center lg:justify-start gap-8 text-sm font-medium text-muted-foreground">
+              {/* Trust indicators - Compact */}
+              <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
+                <div className="flex flex-wrap justify-center lg:justify-start gap-4 lg:gap-6 text-xs lg:text-sm font-medium text-muted-foreground">
                   <span className="flex items-center gap-2 hover-scale">
-                    <CheckCircle className="w-4 h-4 text-primary" />
-                    +500 פרויקטים הושלמו
+                    <CheckCircle className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                    +500 פרויקטים
                   </span>
                   <span className="flex items-center gap-2 hover-scale">
-                    <UserCheck className="w-4 h-4 text-primary" />
-                    +1,000 יועצים מאומתים
+                    <UserCheck className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                    +1,000 יועצים
                   </span>
                   <span className="flex items-center gap-2 hover-scale">
-                    <Shield className="w-4 h-4 text-primary" />
-                    אבטחה ברמה ארגונית
+                    <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                    אבטחה ארגונית
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right content - Hero Image */}
+            {/* Right content - Compact Hero Image */}
             <div className="flex justify-center lg:justify-end animate-scale-in" style={{animationDelay: "0.3s"}}>
               <div className="relative">
-                <div className="w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 flex items-center justify-center hover-scale">
-                  <div className="text-6xl sm:text-8xl animate-pulse">👨‍💼📱</div>
+                <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 flex items-center justify-center hover-scale">
+                  <div className="text-4xl sm:text-6xl lg:text-7xl animate-pulse">👨‍💼📱</div>
                 </div>
                 {/* Floating elements */}
-                <div className="absolute -top-4 -right-4 w-12 h-12 bg-primary rounded-2xl flex items-center justify-center animate-float">
-                  <Trophy className="w-6 h-6 text-white" />
+                <div className="absolute -top-3 -right-3 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center animate-float">
+                  <Trophy className="w-5 h-5 text-white" />
                 </div>
-                <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-tech-purple rounded-2xl flex items-center justify-center animate-float" style={{animationDelay: "1s"}}>
-                  <Target className="w-6 h-6 text-white" />
+                <div className="absolute -bottom-3 -left-3 w-10 h-10 bg-tech-purple rounded-2xl flex items-center justify-center animate-float" style={{animationDelay: "1s"}}>
+                  <Target className="w-5 h-5 text-white" />
                 </div>
               </div>
             </div>
