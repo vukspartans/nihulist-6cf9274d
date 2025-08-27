@@ -333,13 +333,13 @@ export const ProjectWizard = () => {
               <Label htmlFor="projectType" className="text-base font-medium">
                 סוג פרויקט <span className="text-destructive">*</span>
               </Label>
-              <Select onValueChange={(value) => handleSelectChange('projectType', value)}>
-                <SelectTrigger className="h-12 text-right">
+              <Select dir="rtl" onValueChange={(value) => handleSelectChange('projectType', value)}>
+                <SelectTrigger className="h-12 text-right justify-end">
                   <SelectValue placeholder="בחר סוג פרויקט" className="text-right" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border shadow-lg z-50">
+                <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
                   {projectTypes.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                    <SelectItem key={type} value={type} className="text-right justify-end">{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
