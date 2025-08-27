@@ -39,24 +39,24 @@ const Landing = () => {
   const testimonials = [
     {
       name: "דר' מיכל כהן",
-      role: "יועצת ניהול, תחום טכנולוגיה",
-      company: "יועצת עצמאית",
+      role: "יועצת ניהול אסטרטגי",
+      company: "Consulting Excellence",
       image: "👩‍💼",
-      quote: "NihuList חיבר אותי עם לקוחות איכותיים שמתאימים בדיוק למומחיות שלי. הפלטפורמה פשוטה וחכמה."
+      quote: "NihuList שינה לי את המשחק לחלוטין. מחברת אותי עם לקוחות איכותיים שמבינים את הערך שלי ומוכנים לשלם עליו בהתאם."
     },
     {
       name: "רון אברהם",
-      role: "יזם טכנולוגי",
-      company: "TechStart Solutions",
+      role: "מייסד ומנכ״ל",
+      company: "TechStart Ventures",
       image: "👨‍💻",
-      quote: "מצאתי יועץ שיווק מושלם תוך 24 שעות. החיסכון בזמן והתוצאות המדהימות הפכו את זה לכלי החיוני שלי."
+      quote: "במקום לבזבז שבועות על חיפוש יועצים, מצאתי את המומחה המושלם תוך 24 שעות. התוצאות עלו על כל הציפיות."
     },
     {
       name: "שרה לוי",
       role: "יועצת עסקית ופיננסית",
-      company: "Business Growth Consulting",
+      company: "Growth Partners",
       image: "👩‍💼",
-      quote: "הרשת של NihuList מביאה לי פרויקטים איכותיים עם לקוחות רציניים. הכי מומלץ ליועצים מקצועיים."
+      quote: "הפלטפורמה מביאה לי רק פרויקטים איכותיים עם יזמים רציניים. הכנסותיי גדלו פי 3 מאז שהצטרפתי."
     }
   ];
 
@@ -102,7 +102,7 @@ const Landing = () => {
               <div className="animate-fade-in">
                 <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-sm">
                   <Shield className="w-4 h-4 text-primary" />
-                  Data protected with enterprise-grade security
+                  הגנה ברמה בנקאית על המידע שלכם
                 </Badge>
               </div>
 
@@ -110,14 +110,14 @@ const Landing = () => {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight animate-slide-up">
                 <span className="gradient-text">NihuList</span>
                 <br />
-                <span className="text-foreground">Connecting Entrepreneurs and Consultants,</span>
+                <span className="text-foreground">מחברים יזמים ויועצים</span>
                 <br />
-                <span className="gradient-text">Smarter and Faster</span>
+                <span className="gradient-text">חכם יותר, מהיר יותר</span>
               </h1>
 
               {/* Subtext */}
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
-                A secure, AI-powered platform for finding the right consultant, every time.
+                הפלטפormה הבטוחה והחכמה ביותר למציאת היועץ המושלם לכל פרויקט עסקי.
               </p>
 
               {/* CTA Button */}
@@ -128,17 +128,17 @@ const Landing = () => {
                   className="text-lg px-8 py-6 animate-glow"
                 >
                   <Zap className="w-6 h-6 ml-2" />
-                  Get Started
+                  התחל עכשיו
                 </Button>
               </div>
 
               {/* Trust indicators */}
               <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
-                <p className="text-sm text-muted-foreground">Trusted by verified consultants and entrepreneurs</p>
+                <p className="text-sm text-muted-foreground">אמון של יזמים ויועצים מובילים</p>
                 <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm font-medium text-muted-foreground">
                   <span className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-primary" />
-                    +500 פרויקטים
+                    +500 פרויקטים הושלמו
                   </span>
                   <span className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-primary" />
@@ -146,7 +146,7 @@ const Landing = () => {
                   </span>
                   <span className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-primary" />
-                    Enterprise Security
+                    אבטחה ברמה ארגונית
                   </span>
                 </div>
               </div>
@@ -176,27 +176,27 @@ const Landing = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              <span className="text-foreground">Verified Consultants & Entrepreneurs</span>
+              <span className="text-foreground">יועצים ויזמים מאומתים</span>
             </h2>
-            <p className="text-xl text-muted-foreground">Carefully screened to ensure trust and quality</p>
+            <p className="text-xl text-muted-foreground">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית</p>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center max-w-4xl mx-auto">
             <div className="space-y-3">
               <div className="text-4xl lg:text-5xl font-black gradient-text">+500</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">Projects Created</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטים הושלמו</div>
             </div>
             <div className="space-y-3">
               <div className="text-4xl lg:text-5xl font-black gradient-text">+1,000</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">Verified Consultants</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">יועצים מאומתים</div>
             </div>
             <div className="space-y-3">
               <div className="text-4xl lg:text-5xl font-black gradient-text">95%</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">Success Rate</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">שביעות רצון</div>
             </div>
             <div className="space-y-3">
               <div className="text-4xl lg:text-5xl font-black gradient-text">24/7</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">Support</div>
+              <div className="text-sm lg:text-base font-medium text-muted-foreground">תמיכה</div>
             </div>
           </div>
 
@@ -204,7 +204,7 @@ const Landing = () => {
           <div className="mt-12 text-center">
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-primary/10 rounded-full">
               <Lock className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Data protected with enterprise-grade security</span>
+              <span className="text-sm font-medium">הגנה ברמה בנקאית על המידע שלכם</span>
             </div>
           </div>
         </div>
@@ -215,11 +215,11 @@ const Landing = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">How</span>
-              <span className="gradient-text"> It Works</span>
+              <span className="text-foreground">איך</span>
+              <span className="gradient-text"> זה עובד</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Three simple steps to connect with the perfect consultant
+              שלושה צעדים פשוטים למציאת היועץ המושלם לכל פרויקט
             </p>
           </div>
           
@@ -233,11 +233,11 @@ const Landing = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">Create a Project</CardTitle>
+                <CardTitle className="text-2xl font-bold">צור פרויקט</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Describe your project needs, timeline, and budget. Our AI analyzes your requirements to find the perfect match.
+                  תאר את צרכי הפרויקט, לוחות זמנים ותקציב. הבינה המלאכותית מנתחת את הדרישות ומוצאת התאמות מושלמות.
                 </p>
               </CardContent>
             </Card>
@@ -251,11 +251,11 @@ const Landing = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Search className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">Match with Consultants</CardTitle>
+                <CardTitle className="text-2xl font-bold">התאמה עם יועצים</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Get matched with verified consultants who have the exact expertise you need. View profiles, ratings, and past work.
+                  קבל התאמות עם יועצים מאומתים שיש להם בדיוק את המומחיות שאתה צריך. צפה בפרופילים, דירוגים ועבודות קודמות.
                 </p>
               </CardContent>
             </Card>
@@ -269,11 +269,11 @@ const Landing = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <MessageSquare className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">Compare & Choose</CardTitle>
+                <CardTitle className="text-2xl font-bold">השווה ובחר</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Review proposals, compare rates and timelines, then choose the consultant that's the perfect fit for your project.
+                  סקור הצעות, השווה תעריפים ולוחות זמנים, ובחר ביועץ שהכי מתאים לפרויקט שלך.
                 </p>
               </CardContent>
             </Card>
@@ -291,28 +291,28 @@ const Landing = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto lg:mx-0 mb-6">
                   <Briefcase className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold mb-4">For Entrepreneurs</CardTitle>
+                <CardTitle className="text-3xl font-bold mb-4">ליזמים</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Find the right consultants for your business. Save time, reduce costs, and get expert guidance.
+                  מצא את היועצים הנכונים לעסק שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
                 <ul className="space-y-3 text-right">
                   <li className="flex items-center gap-3 justify-end">
-                    <span>Access to verified consultants</span>
+                    <span>גישה ליועצים מאומתים</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end">
-                    <span>AI-powered matching</span>
+                    <span>התאמה מבוססת בינה מלאכותית</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end">
-                    <span>Transparent pricing</span>
+                    <span>תמחור שקוף וברור</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                 </ul>
                 <Button className="w-full lg:w-auto mt-6" onClick={() => handleUserTypeSelection('entrepreneur')}>
-                  Start as Entrepreneur
+                  התחל כיזם
                 </Button>
               </CardContent>
             </Card>
@@ -323,28 +323,28 @@ const Landing = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto lg:mx-0 mb-6">
                   <UserCheck className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold mb-4">For Consultants</CardTitle>
+                <CardTitle className="text-3xl font-bold mb-4">ליועצים</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Reach new clients and grow your consulting business. Get matched with quality projects.
+                  הגע ללקוחות חדשים והצמח את עסק הייעוץ שלך. קבל התאמות עם פרויקטים איכותיים.
                 </p>
                 <ul className="space-y-3 text-right">
                   <li className="flex items-center gap-3 justify-end">
-                    <span>Access to quality projects</span>
+                    <span>גישה לפרויקטים איכותיים</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end">
-                    <span>Build your reputation</span>
+                    <span>בניית מוניטין מקצועי</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end">
-                    <span>Flexible work schedule</span>
+                    <span>גמישות בלוחות זמנים</span>
                     <CheckCircle className="w-5 h-5 text-primary" />
                   </li>
                 </ul>
                 <Button variant="outline" className="w-full lg:w-auto mt-6" onClick={() => handleUserTypeSelection('consultant')}>
-                  Join as Consultant
+                  הצטרף כיועץ
                 </Button>
               </CardContent>
             </Card>
@@ -357,12 +357,12 @@ const Landing = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">What Our Users</span>
+              <span className="text-foreground">מה אומרים</span>
               <br />
-              <span className="gradient-text">Are Saying</span>
+              <span className="gradient-text">המשתמשים שלנו</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real stories from entrepreneurs and consultants who found success on our platform
+              סיפורי הצלחה אמיתיים של יזמים ויועצים שמצאו זה את זה דרך הפלטפורמה שלנו
             </p>
           </div>
 
@@ -427,12 +427,12 @@ const Landing = () => {
         <div className="relative container mx-auto px-4 lg:px-6 text-center">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
-              Ready to Transform
+              מוכן לשנות
               <br />
-              <span className="text-tech-purple-light">Your Business?</span>
+              <span className="text-tech-purple-light">את העסק שלך?</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Join thousands of entrepreneurs and consultants who are already experiencing the future of professional collaboration
+              הצטרף לאלפי יזמים ויועצים שכבר חווים את העתיד של שיתוף פעולה מקצועי
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -443,7 +443,7 @@ const Landing = () => {
                 className="text-xl px-12 py-6 bg-white text-primary hover:bg-white/90"
               >
                 <Zap className="w-6 h-6 ml-2" />
-                Start Your First Project Today
+                התחל את הפרויקט הראשון היום
               </Button>
               
               <Button 
@@ -453,7 +453,7 @@ const Landing = () => {
                 className="text-xl px-12 py-6 text-white border-white/30 hover:bg-white/10"
               >
                 <UserCheck className="w-6 h-6 ml-2" />
-                Join as Verified Consultant
+                הצטרף כיועץ מאומת
               </Button>
             </div>
             
@@ -461,15 +461,15 @@ const Landing = () => {
             <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-white/70 text-sm">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
-                <span>Enterprise Security</span>
+                <span>אבטחה ארגונית</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4" />
-                <span>Verified Network</span>
+                <span>רשת מאומתת</span>
               </div>
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                <span>24/7 Support</span>
+                <span>תמיכה 24/7</span>
               </div>
             </div>
           </div>
@@ -481,8 +481,8 @@ const Landing = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">Frequently Asked</span>
-              <span className="gradient-text"> Questions</span>
+              <span className="text-foreground">שאלות</span>
+              <span className="gradient-text"> נפוצות</span>
             </h2>
           </div>
 
@@ -490,8 +490,8 @@ const Landing = () => {
             <Card className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-xl font-bold mb-2">How does the matching process work?</h3>
-                  <p className="text-muted-foreground">Our AI analyzes your project requirements and matches you with consultants who have the exact expertise, experience, and availability you need.</p>
+                  <h3 className="text-xl font-bold mb-2">איך עובד תהליך ההתאמה?</h3>
+                  <p className="text-muted-foreground">הבינה המלאכותית שלנו מנתחת את דרישות הפרויקט ומתאימה אותך ליועצים שיש להם בדיוק את המומחיות, הניסיון והזמינות שאתה צריך.</p>
                 </div>
               </div>
             </Card>
@@ -499,8 +499,8 @@ const Landing = () => {
             <Card className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-xl font-bold mb-2">How are consultants verified?</h3>
-                  <p className="text-muted-foreground">Every consultant goes through a rigorous verification process including credential checks, reference calls, and portfolio reviews to ensure quality.</p>
+                  <h3 className="text-xl font-bold mb-2">איך מאמתים את היועצים?</h3>
+                  <p className="text-muted-foreground">כל יועץ עובר תהליך אימות קפדני הכולל בדיקת אישורים, שיחות עם ממליצים וסקירת תיק עבודות כדי להבטיח איכות מקסימלית.</p>
                 </div>
               </div>
             </Card>
@@ -508,8 +508,8 @@ const Landing = () => {
             <Card className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-xl font-bold mb-2">What kind of projects can I post?</h3>
-                  <p className="text-muted-foreground">From business strategy and marketing to technical consulting and financial planning - we support all types of professional consulting projects.</p>
+                  <h3 className="text-xl font-bold mb-2">איזה סוגי פרויקטים אפשר לפרסם?</h3>
+                  <p className="text-muted-foreground">מאסטרטגיה עסקית ושיווק ועד ייעוץ טכני ותכנון פיננסי - אנחנו תומכים בכל סוגי הפרויקטים המקצועיים.</p>
                 </div>
               </div>
             </Card>
@@ -532,42 +532,42 @@ const Landing = () => {
                 </div>
               </div>
               <p className="text-white/80 text-sm leading-relaxed">
-                Connecting entrepreneurs and consultants through our secure, AI-powered platform.
+                מחברים יזמים ויועצים דרך הפלטפורמה הבטוחה והחכמה שלנו.
               </p>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-lg font-bold">Platform</h4>
+              <h4 className="text-lg font-bold">פלטפורמה</h4>
               <div className="space-y-3 text-sm">
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">How it Works</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Security</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Pricing</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Verified Network</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">איך זה עובד</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">אבטחה</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">תמחור</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">רשת מאומתת</a>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-lg font-bold">Resources</h4>
+              <h4 className="text-lg font-bold">משאבים</h4>
               <div className="space-y-3 text-sm">
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Help Center</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Blog</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Case Studies</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Best Practices</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">מרכז עזרה</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">בלוג</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">מקרי מבחן</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">שיטות עבודה מומלצות</a>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-lg font-bold">Contact</h4>
+              <h4 className="text-lg font-bold">צור קשר</h4>
               <div className="space-y-3 text-sm">
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Support</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Sales</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">Partnerships</a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors">About</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">תמיכה</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">מכירות</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">שותפויות</a>
+                <a href="#" className="block text-white/80 hover:text-white transition-colors">אודות</a>
               </div>
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-white/70">
-            <p>© 2026 NihuList. All rights reserved. Made with ❤️</p>
+            <p>© 2026 NihuList. כל הזכויות שמורות. Made with ❤️</p>
           </div>
         </div>
       </footer>
@@ -577,7 +577,7 @@ const Landing = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold text-center mb-4">
-              Choose Your Path
+              בחר את המסלול שלך
             </DialogTitle>
           </DialogHeader>
           
@@ -592,13 +592,13 @@ const Landing = () => {
                   <Briefcase className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-3">I'm an Entrepreneur</h3>
+                  <h3 className="text-2xl font-bold mb-3">אני יזם</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    I need to find qualified consultants for my business projects and get expert guidance.
+                    אני צריך למצוא יועצים מוכשרים לפרויקטים העסקיים שלי ולקבל הדרכה מקצועית.
                   </p>
                 </div>
                 <Button className="w-full">
-                  Continue as Entrepreneur
+                  המשך כיזם
                   <ChevronLeft className="w-4 h-4 mr-2" />
                 </Button>
               </div>
@@ -614,13 +614,13 @@ const Landing = () => {
                   <UserCheck className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-3">I'm a Consultant</h3>
+                  <h3 className="text-2xl font-bold mb-3">אני יועץ</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    I want to offer my consulting services and connect with quality clients and projects.
+                    אני רוצה להציע את שירותי הייעוץ שלי ולהתחבר עם לקוחות ופרויקטים איכותיים.
                   </p>
                 </div>
                 <Button variant="outline" className="w-full">
-                  Continue as Consultant
+                  המשך כיועץ
                   <ChevronLeft className="w-4 h-4 mr-2" />
                 </Button>
               </div>
@@ -633,7 +633,7 @@ const Landing = () => {
       <Dialog open={showDemoVideo} onOpenChange={setShowDemoVideo}>
         <DialogContent className="max-w-4xl w-[95vw] h-[80vh] p-0 bg-black">
           <DialogHeader className="sr-only">
-            <DialogTitle>Demo Video</DialogTitle>
+            <DialogTitle>סרטון הדגמה</DialogTitle>
           </DialogHeader>
           <div className="relative w-full h-full">
             <Button onClick={() => setShowDemoVideo(false)} variant="ghost" size="sm" className="absolute top-4 right-4 z-10 text-white hover:bg-white/20">
