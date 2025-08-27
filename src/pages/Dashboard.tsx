@@ -269,7 +269,7 @@ const Dashboard = () => {
                          <TableCell className="font-medium">
                            <div className="flex items-center gap-3">
                              <div 
-                               className={`w-3 h-3 rounded-full ${getPhaseStatusColor(project.phase)}`}
+                               className={`w-3 h-3 min-w-[12px] min-h-[12px] rounded-full shrink-0 ${getPhaseStatusColor(project.phase)}`}
                                title={project.phase || 'לא צוין שלב'}
                              />
                              <button
