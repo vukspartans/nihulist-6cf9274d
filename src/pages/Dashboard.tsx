@@ -12,20 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardStats } from "@/components/DashboardStats";
 import { ProjectFilters } from "@/components/ProjectFilters";
 import { UserHeader } from "@/components/UserHeader";
-
-interface Project {
-  id: string;
-  name: string;
-  type: string | null;
-  location: string | null;
-  budget: number | null;
-  advisors_budget: number | null;
-  timeline_start: string;
-  timeline_end: string;
-  status: string;
-  phase: string | null;
-  created_at: string;
-}
+import { ProjectSummary } from "@/types/project";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -52,7 +39,7 @@ const getPhaseStatusColor = (phase: string | null) => {
 
 
 const Dashboard = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("created_at");
@@ -126,8 +113,8 @@ const Dashboard = () => {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      let aValue = a[sortBy as keyof Project];
-      let bValue = b[sortBy as keyof Project];
+      let aValue = a[sortBy as keyof ProjectSummary];
+      let bValue = b[sortBy as keyof ProjectSummary];
       
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
       if (typeof bValue === 'string') bValue = bValue.toLowerCase();

@@ -8,17 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Edit, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface Project {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
-  budget: number;
-  advisors_budget: number | null;
-  description: string | null;
-  phase: string;
-}
+import { Project } from '@/types/project';
+import { PROJECT_TYPES, PROJECT_PHASES } from '@/constants/project';
 
 interface EditProjectDialogProps {
   project: Project;
@@ -27,32 +18,17 @@ interface EditProjectDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const projectTypes = [
-  'בניין מגורים',
-  'בניין משרדים',
-  'תשתיות',
-  'שיפוץ ושדרוג'
-];
-
-const phases = [
-  'תכנון ראשוני',
-  'אישורים',
-  'ביצוע',
-  'גמר',
-  'הושלם'
-];
-
 export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOpen, onOpenChange }: EditProjectDialogProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: project.name,
-    type: project.type,
-    location: project.location,
-    budget: project.budget.toString(),
+    type: project.type || '',
+    location: project.location || '',
+    budget: project.budget?.toString() || '',
     advisors_budget: project.advisors_budget?.toString() || '',
     description: project.description || '',
-    phase: project.phase
+    phase: project.phase || ''
   });
   const { toast } = useToast();
 
@@ -68,7 +44,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
         name: computedName,
         type: formData.type,
         location: formData.location,
-        budget: parseFloat(formData.budget),
+        budget: parseFloat(formData.budget) || 0,
         advisors_budget: formData.advisors_budget ? parseFloat(formData.advisors_budget) : null,
         description: formData.description || null,
         phase: formData.phase
@@ -129,7 +105,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">
-                {projectTypes.map((type) => (
+                {PROJECT_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
                   </SelectItem>
@@ -145,7 +121,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">
-                {phases.map((phase) => (
+                {PROJECT_PHASES.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {phase}
                   </SelectItem>

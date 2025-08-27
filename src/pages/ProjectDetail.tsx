@@ -11,18 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { PriceProposalManager } from '@/components/PriceProposalManager';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { useToast } from '@/hooks/use-toast';
-
-interface Project {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
-  status: string;
-  budget: number;
-  advisors_budget: number | null;
-  description: string | null;
-  phase: string;
-}
+import { Project } from '@/types/project';
+import { PROJECT_PHASES } from '@/constants/project';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -55,7 +45,7 @@ export const ProjectDetail = () => {
         .from('projects')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setProject(data);
@@ -71,13 +61,6 @@ export const ProjectDetail = () => {
     }
   };
 
-  const phases = [
-    'תכנון ראשוני',
-    'אישורים', 
-    'ביצוע',
-    'גמר',
-    'הושלם'
-  ];
 
   const handlePhaseChange = async (newPhase: string) => {
     try {
@@ -160,7 +143,7 @@ export const ProjectDetail = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">
-                {phases.map((phase) => (
+                {PROJECT_PHASES.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {phase}
                   </SelectItem>

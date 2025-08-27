@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from "@/components/ui/progress"
 import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
+import { PROJECT_PHASES } from '@/constants/project';
 
 interface FormData {
   address: string;
@@ -55,13 +56,6 @@ export const ProjectWizard = () => {
     ? getCanonicalProjectTypes()
     : ["בניין מגורים", "בניין משרדים", "תשתיות", "שיפוץ ושדרוג"];
 
-  const projectPhases = [
-    'תכנון ראשוני',
-    'תכנון מפורט', 
-    'בביצוע',
-    'השלמה',
-    'תחזוקה'
-  ];
 
   // Persist wizard state in localStorage
   const DRAFT_KEY = 'project-wizard-draft';
@@ -369,7 +363,7 @@ export const ProjectWizard = () => {
                   <SelectValue placeholder="בחר סטטוס פרויקט" className="text-right" />
                 </SelectTrigger>
                 <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
-                  {projectPhases.map((phase) => (
+                  {PROJECT_PHASES.map((phase) => (
                     <SelectItem key={phase} value={phase} className="text-right justify-end">{phase}</SelectItem>
                   ))}
                 </SelectContent>
