@@ -425,7 +425,7 @@ const Landing = () => {
                       size="sm"
                       onClick={() => setCurrentTestimonial((prev) => prev === 0 ? testimonials.length - 1 : prev - 1)}
                     >
-                      <ChevronRight className="w-5 h-5" />
+                      <ChevronRight className="w-5 h-5 flip-rtl-180" />
                     </Button>
                     <div className="flex gap-2">
                       {testimonials.map((_, index) => (
@@ -443,7 +443,7 @@ const Landing = () => {
                       size="sm"
                       onClick={() => setCurrentTestimonial((prev) => prev === testimonials.length - 1 ? 0 : prev + 1)}
                     >
-                      <ChevronLeft className="w-5 h-5" />
+                      <ChevronLeft className="w-5 h-5 flip-rtl-180" />
                     </Button>
                   </div>
                 </div>

@@ -83,7 +83,7 @@ const BreadcrumbSeparator = ({
     className={cn("[&>svg]:size-3.5", className)}
     {...props}
   >
-    {children ?? <ChevronRight />}
+    {children ?? <ChevronRight className="flip-rtl-180" />}
   </li>
 )
 BreadcrumbSeparator.displayName = "BreadcrumbSeparator"

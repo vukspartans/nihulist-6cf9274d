@@ -279,4 +279,9 @@ Ultra-modern design tokens for unicorn-level brand presence
   .space-x-rtl > * + * {
     margin-inline-start: 0.5rem;
   }
+
+  /* RTL arrow flipping utility */
+  [dir="rtl"] .flip-rtl-180 {
+    transform: rotate(180deg);
+  }
 }

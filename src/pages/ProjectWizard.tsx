@@ -509,7 +509,7 @@ const ProjectWizard = () => {
               onClick={() => navigate("/dashboard")}
               className="mb-4"
             >
-              <ArrowLeft className="w-4 h-4 ml-2" />
+          <ArrowLeft className="w-4 h-4 ml-2 flip-rtl-180" />
               חזרה ללוח הבקרה
             </Button>
             <h1 className="text-3xl font-bold text-foreground mb-2">פרויקט חדש</h1>
@@ -562,7 +562,7 @@ const ProjectWizard = () => {
                 variant="tech"
               >
                 הבא
-                <ArrowRight className="w-4 h-4 mr-2" />
+                <ArrowRight className="w-4 h-4 mr-2 flip-rtl-180" />
               </Button>
             ) : (
               <Button

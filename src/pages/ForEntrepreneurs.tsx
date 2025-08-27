@@ -334,7 +334,7 @@ const ForEntrepreneurs = () => {
       <div className="py-8 bg-background border-t border-border/40">
         <div className="container mx-auto px-4 lg:px-6">
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors story-link">
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 flip-rtl-180" />
             חזרה לעמוד הבית
           </Link>
         </div>
