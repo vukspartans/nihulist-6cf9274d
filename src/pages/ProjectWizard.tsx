@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react';
+import { FileText, ArrowLeft, ArrowRight, Loader2, X, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from "@/components/ui/progress"
 import { supabase } from '@/integrations/supabase/client';
@@ -88,8 +88,8 @@ export const ProjectWizard = () => {
 
     setCreating(true);
     try {
-      // Validate and safely parse budget
-      const budget = Number(formData.budget);
+      // Validate and safely parse budget (remove commas for parsing)
+      const budget = Number(formData.budget.replace(/,/g, ''));
       if (!formData.budget || isNaN(budget)) {
         toast({
           title: "שגיאה בתקציב",
@@ -100,7 +100,7 @@ export const ProjectWizard = () => {
         return null;
       }
 
-      const advisorsBudget = formData.advisorsBudget ? Number(formData.advisorsBudget) : null;
+      const advisorsBudget = formData.advisorsBudget ? Number(formData.advisorsBudget.replace(/,/g, '')) : null;
       if (formData.advisorsBudget && isNaN(advisorsBudget!)) {
         toast({
           title: "שגיאה בתקציב יועצים",
@@ -240,7 +240,17 @@ export const ProjectWizard = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Format budget fields with thousands separator
+    if (name === 'budget' || name === 'advisorsBudget') {
+      // Remove any non-digit characters except for existing commas
+      const numericValue = value.replace(/[^\d]/g, '');
+      // Add thousands separator
+      const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setFormData(prev => ({ ...prev, [name]: formattedValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -324,8 +334,8 @@ export const ProjectWizard = () => {
                 סוג פרויקט <span className="text-destructive">*</span>
               </Label>
               <Select onValueChange={(value) => handleSelectChange('projectType', value)}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="בחר סוג פרויקט" />
+                <SelectTrigger className="h-12 text-right">
+                  <SelectValue placeholder="בחר סוג פרויקט" className="text-right" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
                   {projectTypes.map((type) => (
@@ -340,15 +350,18 @@ export const ProjectWizard = () => {
               <Label htmlFor="budget" className="text-base font-medium">
                 תקציב פרויקט <span className="text-destructive">*</span>
               </Label>
-              <Input
-                type="number"
-                id="budget"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-                placeholder="הכנס את תקציב הפרויקט"
-                className="h-12"
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  id="budget"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  placeholder="הכנס את תקציב הפרויקט"
+                  className="h-12 pl-8"
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₪</span>
+              </div>
             </div>
 
             {/* Advisors Budget - Optional */}
@@ -356,15 +369,18 @@ export const ProjectWizard = () => {
               <Label htmlFor="advisorsBudget" className="text-base font-medium">
                 תקציב יועצים (אופציונלי)
               </Label>
-              <Input
-                type="number"
-                id="advisorsBudget"
-                name="advisorsBudget"
-                value={formData.advisorsBudget}
-                onChange={handleChange}
-                placeholder="הכנס את תקציב היועצים"
-                className="h-12"
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  id="advisorsBudget"
+                  name="advisorsBudget"
+                  value={formData.advisorsBudget}
+                  onChange={handleChange}
+                  placeholder="הכנס את תקציב היועצים"
+                  className="h-12 pl-8"
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₪</span>
+              </div>
             </div>
 
             {/* Description - Optional */}
@@ -591,6 +607,18 @@ export const ProjectWizard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5" dir="rtl">
+      {/* Top navigation */}
+      <div className="container mx-auto px-4 pt-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <Home className="w-4 h-4" />
+          חזרה ללוח הבקרה
+        </Button>
+      </div>
+      
       <div className="container mx-auto px-4 py-12">
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-center mb-6">
@@ -628,7 +656,7 @@ export const ProjectWizard = () => {
                   className="flex items-center gap-2"
                 >
                   הבא
-                  <ArrowRight className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
                 </Button>
               ) : (
                 <div className="flex gap-3">
@@ -666,6 +694,18 @@ export const ProjectWizard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Bottom navigation */}
+        <div className="text-center pt-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto"
+          >
+            <Home className="w-4 h-4" />
+            חזרה ללוח הבקרה
+          </Button>
+        </div>
       </div>
     </div>
   );
