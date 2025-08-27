@@ -38,25 +38,25 @@ const Landing = () => {
 
   const testimonials = [
     {
-      name: "דר' מיכל כהן",
-      role: "יועצת ניהול אסטרטגי",
-      company: "Consulting Excellence",
+      name: "אדר' מיכל כהן",
+      role: "אדריכלית ראשית",
+      company: "כהן אדריכלות",
       image: "👩‍💼",
-      quote: "NihuList שינה לי את המשחק לחלוטין. מחברת אותי עם לקוחות איכותיים שמבינים את הערך שלי ומוכנים לשלם עליו בהתאם."
+      quote: "NihuList שינה לי את המשחק לחלוטין. מחברת אותי עם יזמי נדל\"ן איכותיים שמבינים את הערך של תכנון מקצועי ומוכנים לשלם עליו בהתאם."
     },
     {
       name: "רון אברהם",
       role: "מייסד ומנכ״ל",
-      company: "TechStart Ventures",
+      company: "אברהם נדל\"ן",
       image: "👨‍💻",
-      quote: "במקום לבזבז שבועות על חיפוש יועצים, מצאתי את המומחה המושלם תוך 24 שעות. התוצאות עלו על כל הציפיות."
+      quote: "במקום לבזבז שבועות על חיפוש קבלני בנייה ומהנדסים, מצאתי את הצוות המושלם תוך 24 שעות. הפרויקט הושלם בזמן ובתקציב."
     },
     {
       name: "שרה לוי",
-      role: "יועצת עסקית ופיננסית",
-      company: "Growth Partners",
+      role: "מהנדסת אזרחית",
+      company: "לוי הנדסה",
       image: "👩‍💼",
-      quote: "הפלטפורמה מביאה לי רק פרויקטים איכותיים עם יזמים רציניים. הכנסותיי גדלו פי 3 מאז שהצטרפתי."
+      quote: "הפלטפורמה מביאה לי רק פרויקטי בנייה איכותיים עם יזמים רציניים. הכנסותיי גדלו פי 3 מאז שהצטרפתי."
     }
   ];
 
@@ -111,17 +111,17 @@ const Landing = () => {
               </div>
 
               {/* Main headline */}
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
                 <span className="gradient-text">NihuList</span>
                 <br />
-                <span className="text-foreground">מחברים יזמים ויועצים</span>
+                <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
                 <span className="gradient-text">חכם יותר, מהיר יותר</span>
               </h1>
 
               {/* Subtext */}
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
-                הפלטפורמה הבטוחה והחכמה ביותר למציאת היועץ המושלם לכל פרויקט עסקי.
+                הפלטפורמה הבטוחה והחכמה ביותר למציאת המומחים המושלמים לכל פרויקט בנייה ונדל"ן.
               </p>
 
               {/* CTA Button */}
@@ -186,19 +186,19 @@ const Landing = () => {
         <div className="container mx-auto px-4 lg:px-6 relative">
           <div className="text-center mb-20 animate-fade-in">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">יועצים ויזמים מאומתים</span>
+              <span className="text-foreground">מומחי בנייה ויזמי נדל"ן מאומתים</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית</p>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-20">
             <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.1s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטים הושלמו</div>
+                <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
+                <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטי בנייה הושלמו</div>
             </div>
             <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.2s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">+1,000</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">יועצים מאומתים</div>
+                <div className="text-4xl lg:text-6xl font-black gradient-text">+1,000</div>
+                <div className="text-sm lg:text-base font-medium text-muted-foreground">מומחי בנייה מאומתים</div>
             </div>
             <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.3s"}}>
               <div className="text-4xl lg:text-6xl font-black gradient-text">95%</div>
@@ -234,7 +234,7 @@ const Landing = () => {
               <span className="gradient-text"> זה עובד</span>
             </h2>
             <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-              שלושה צעדים פשוטים למציאת היועץ המושלם לכל פרויקט
+              שלושה צעדים פשוטים למציאת המומחה המושלם לכל פרויקט בנייה ונדל"ן
             </p>
           </div>
           
@@ -248,11 +248,11 @@ const Landing = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
                   <FileText className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">צור פרויקט</CardTitle>
+                <CardTitle className="text-3xl font-bold">צור פרויקט בנייה</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  תאר את צרכי הפרויקט, לוחות זמנים ותקציב. הבינה המלאכותית מנתחת את הדרישות ומוצאת התאמות מושלמות.
+                  תאר את פרויקט הבנייה או הנדל"ן שלך, לוחות זמנים ותקציב. הבינה המלאכותית מנתחת את הדרישות ומוצאת מומחים מושלמים.
                 </p>
               </CardContent>
             </Card>
@@ -266,11 +266,11 @@ const Landing = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "1s"}}>
                   <Search className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">התאמה עם יועצים</CardTitle>
+                <CardTitle className="text-3xl font-bold">התאמה עם מומחים</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  קבל התאמות עם יועצים מאומתים שיש להם בדיוק את המומחיות שאתה צריך. צפה בפרופילים, דירוגים ועבודות קודמות.
+                  קבל התאמות עם מומחי בנייה ונדל"ן מאומתים שיש להם בדיוק את המומחיות שאתה צריך. צפה בפרופילים, דירוגים ופרויקטים קודמים.
                 </p>
               </CardContent>
             </Card>
@@ -288,7 +288,7 @@ const Landing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  סקור הצעות, השווה תעריפים ולוחות זמנים, ובחר ביועץ שהכי מתאים לפרויקט שלך.
+                  סקור הצעות, השווה תעריפים ולוחות זמנים, ובחר במומחה שהכי מתאים לפרויקט הבנייה שלך.
                 </p>
               </CardContent>
             </Card>
@@ -314,15 +314,15 @@ const Landing = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float">
                   <Briefcase className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">ליזמים</CardTitle>
+                <CardTitle className="text-4xl font-bold mb-6">ליזמי נדל"ן</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8 relative">
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  מצא את היועצים הנכונים לעסק שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
+                  מצא את מומחי הבנייה והנדל"ן הנכונים לפרויקט שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
                 <ul className="space-y-4 text-right">
                   <li className="flex items-center gap-3 justify-end hover-scale">
-                    <span className="text-lg">גישה ליועצים מאומתים</span>
+                    <span className="text-lg">גישה למומחי בנייה מאומתים</span>
                     <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end hover-scale">
@@ -351,15 +351,15 @@ const Landing = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float" style={{animationDelay: "1s"}}>
                   <UserCheck className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">ליועצים</CardTitle>
+                <CardTitle className="text-4xl font-bold mb-6">למומחי בנייה</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8 relative">
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  הגע ללקוחות חדשים והצמח את עסק הייעוץ שלך. קבל התאמות עם פרויקטים איכותיים.
+                  הגע ליזמי נדל"ן והצמח את עסק הבנייה שלך. קבל התאמות עם פרויקטי בנייה איכותיים.
                 </p>
                 <ul className="space-y-4 text-right">
                   <li className="flex items-center gap-3 justify-end hover-scale">
-                    <span className="text-lg">גישה לפרויקטים איכותיים</span>
+                    <span className="text-lg">גישה לפרויקטי בנייה איכותיים</span>
                     <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                   <li className="flex items-center gap-3 justify-end hover-scale">
@@ -377,7 +377,7 @@ const Landing = () => {
                   className="w-full lg:w-auto mt-8 text-lg px-8 py-4 hover-scale border-2" 
                   onClick={() => handleUserTypeSelection('consultant')}
                 >
-                  הצטרף כיועץ
+                  הצטרף כמומחה
                 </Button>
               </CardContent>
             </Card>

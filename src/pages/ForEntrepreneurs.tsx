@@ -28,17 +28,17 @@ const ForEntrepreneurs = () => {
     {
       icon: <Target className="w-8 h-8" />,
       title: "התאמה מדויקת",
-      description: "אלגוריתם AI מתקדם מוצא את היועץ המושלם בהתאם לתחום, תקציב ולוחות זמנים שלך"
+      description: "אלגוריתם AI מתקדם מוצא את מומחה הבנייה המושלם בהתאם לסוג הפרויקט, תקציב ולוחות זמנים שלך"
     },
     {
       icon: <Shield className="w-8 h-8" />,
-      title: "יועצים מאומתים",
-      description: "כל יועץ עבר אימות קפדני של כישורים, ניסיון וממליצים מהתעשייה"
+      title: "מומחים מאומתים",
+      description: "כל מומחה עבר אימות קפדני של כישורים, ניסיון, רישיונות וממליצים מהתעשייה"
     },
     {
       icon: <BarChart className="w-8 h-8" />,
       title: "השוואה חכמה",
-      description: "כלים מתקדמים להשוואת הצעות, ניתוח עלות-תועלת ובחירה מיטבית"
+      description: "כלים מתקדמים להשוואת הצעות קבלנים, ניתוח עלות-תועלת ובחירה מיטבית"
     }
   ];
 
@@ -52,15 +52,15 @@ const ForEntrepreneurs = () => {
   const testimonials = [
     {
       name: "אבי שטרן",
-      title: "מייסד ומנכ״ל StartupTech",
-      quote: "מצאתי יועץ שיווק דיגיטלי שהכפיל לי את המכירות תוך 3 חודשים. השקעה שהחזירה את עצמה פי 10.",
-      savings: "₪500K"
+      title: "מייסד ומנכ״ל נרשה בנייה",
+      quote: "מצאתי צוות קבלנים מקצועי שהשלים לי פרויקט בנייה של 20 יחידות דיור תוך 8 חודשים. איכות ומקצועיות ברמה גבוהה.",
+      savings: "₪2.5M"
     },
     {
       name: "מיכל רוזן",
-      title: "מנכ״לית FoodTech",
-      quote: "היועצת הפיננסית שמצאתי דרך NihuList עזרה לי לגייס 2M$ בסיבוב A. מקצועיות ברמה אחרת.",
-      savings: "₪2M"
+      title: "מנכ״לית רוזן נדל\"ן",
+      quote: "האדריכל והמהנדס שמצאתי דרך NihuList עזרו לי לתכנן ולהוציא היתרי בנייה לפרויקט מסחרי של 50 מיליון ש\"ח. מקצועיות ברמה אחרת.",
+      savings: "₪5M"
     }
   ];
 
@@ -109,15 +109,15 @@ const ForEntrepreneurs = () => {
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
               <span className="text-foreground">מצא את</span>
               <br />
-              <span className="gradient-text">היועץ המושלם</span>
+              <span className="gradient-text">מומחי הבנייה המושלמים</span>
               <br />
-              <span className="text-foreground">לעסק שלך</span>
+              <span className="text-foreground">לפרויקט שלך</span>
             </h1>
 
             <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
-              פלטפורמה חכמה שמחברת אותך עם יועצים מובילים בתעשייה.
+              פלטפורמה חכמה שמחברת אותך עם מומחי בנייה ונדל"ן מובילים בתעשייה.
               <br />
-              חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות.
+              חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות בפרויקט הבנייה שלך.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
@@ -164,11 +164,11 @@ const ForEntrepreneurs = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">למה יזמים</span>
+              <span className="text-foreground">למה יזמי נדל"ן</span>
               <span className="gradient-text"> בוחרים בנו?</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              טכנולוגיה מתקדמת + רשת יועצים איכותית = הצלחה מובטחת
+              טכנולוגיה מתקדמת + רשת מומחי בנייה איכותית = הצלחה מובטחת בפרויקט
             </p>
           </div>
 

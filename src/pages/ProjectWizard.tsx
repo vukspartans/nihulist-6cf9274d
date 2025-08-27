@@ -207,10 +207,10 @@ const ProjectWizard = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="type">סוג הפרויקט</Label>
+              <Label htmlFor="type">סוג פרויקט הבנייה</Label>
               <Input
                 id="type"
-                placeholder="למשל: בניית משרדים, שיפוץ בית..."
+                placeholder="למשל: בניית בית פרטי, מגדל משרדים, קניון, שיפוץ דירה..."
                 value={projectData.type}
                 onChange={(e) => handleInputChange("type", e.target.value)}
               />
@@ -263,7 +263,7 @@ const ProjectWizard = () => {
               <Label htmlFor="description">תיאור נוסף</Label>
               <Textarea
                 id="description"
-                placeholder="תאר את הפרויקט בקצרה..."
+                placeholder="תאר את פרויקט הבנייה בקצרה: היקף, דרישות מיוחדות, חומרים..."
                 value={projectData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
                 rows={3}
@@ -279,7 +279,7 @@ const ProjectWizard = () => {
               <Upload className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">העלאת מסמכים</h3>
               <p className="text-muted-foreground mb-4">
-                העלה עד 5 קבצים (PDF/Word, עד 10MB כל אחד)
+                העלה עד 5 קבצים: תוכניות, דרישות טכניות, מפרטים (PDF/Word, עד 10MB כל אחד)
               </p>
               
               <input

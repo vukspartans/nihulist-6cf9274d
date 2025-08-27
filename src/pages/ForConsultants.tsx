@@ -70,18 +70,18 @@ const ForConsultants = () => {
 
   const testimonials = [
     {
-      name: "דר' רונית כהן",
-      title: "יועצת אסטרטגיה עסקית",
+      name: "אדר' רונית כהן",
+      title: "אדריכלית ומתכננת ערים",
       expertise: "15 שנות ניסיון",
-      quote: "NihuList שינה לי את הקריירה. מפרויקטים קטנים עברתי לייעוץ לחברות הייטק מובילות. ההכנסות שלי גדלו פי 3.",
+      quote: "NihuList שינה לי את הקריירה. מפרויקטים קטנים עברתי לתכנון פרויקטי נדל\"ן מובילים. ההכנסות שלי גדלו פי 3.",
       earnings: "₪2.5M השנה"
     },
     {
       name: "אבי לוי",
-      title: "יועץ שיווק דיגיטלי",
-      expertise: "מומחה PPC ו-SEO",
-      quote: "הפלטפורמה מביאה לי רק לקוחות איכותיים שמבינים את הערך של שיווק מקצועי. לא מבזבז זמן על הצעות מחיר חינם.",
-      earnings: "₪150K חודשיים"
+      title: "קבלן ראשי ומהנדס בנייה",
+      expertise: "מומחה בבנייה ירוקה",
+      quote: "הפלטפורמה מביאה לי רק פרויקטי בנייה איכותיים שמבינים את הערך של בנייה מקצועית. לא מבזבז זמן על הצעות מחיר חינם.",
+      earnings: "₪500K חודשיים"
     }
   ];
 
@@ -154,24 +154,24 @@ const ForConsultants = () => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="animate-fade-in">
-              <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm mb-6">
-                <Award className="w-4 h-4 text-tech-purple" />
-                רשת היועצים המובילה בישראל
-              </Badge>
+                <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm mb-6">
+                  <Award className="w-4 h-4 text-tech-purple" />
+                  רשת מומחי הבנייה המובילה בישראל
+                </Badge>
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
               <span className="text-foreground">הצמח את</span>
               <br />
-              <span className="gradient-text">עסק הייעוץ</span>
+              <span className="gradient-text">עסק הבנייה</span>
               <br />
               <span className="text-foreground">שלך</span>
             </h1>
 
             <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
-              הצטרף לרשת היועצים המובילה והתחבר עם לקוחות איכותיים
+              הצטרף לרשת מומחי הבנייה המובילה והתחבר עם יזמי נדל"ן איכותיים
               <br />
-              שמחפשים בדיוק את המומחיות שלך.
+              שמחפשים בדיוק את המומחיות שלך בתחום הבנייה.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
@@ -222,7 +222,7 @@ const ForConsultants = () => {
               <span className="gradient-text"> זה עובד?</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              תהליך פשוט ומהיר להצטרפות לרשת היועצים המובילה
+              תהליך פשוט ומהיר להצטרפות לרשת מומחי הבנייה המובילה
             </p>
           </div>
 
