@@ -267,14 +267,14 @@ const Dashboard = () => {
                     {filteredProjects.map((project) => (
                       <TableRow key={project.id}>
                          <TableCell className="font-medium">
-                           <div className="flex items-center gap-3">
+                           <div className="flex items-center gap-3 justify-start">
                              <div 
                                className={`w-3 h-3 min-w-[12px] min-h-[12px] rounded-full shrink-0 ${getPhaseStatusColor(project.phase)}`}
                                title={project.phase || 'לא צוין שלב'}
                              />
                              <button
                                onClick={() => handleProjectClick(project.id)}
-                               className="text-left hover:text-primary transition-colors cursor-pointer"
+                               className="text-right hover:text-primary transition-colors cursor-pointer flex-1 text-start"
                              >
                                {project.name}
                              </button>
