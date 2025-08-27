@@ -178,8 +178,8 @@ export const AdvisorSelection = ({
             <div className="space-y-4">
               <h3 className="font-medium">יועצים נדרשים לפרויקט זה</h3>
               <div className="grid gap-3">
-                {recommendedAdvisors.length > 0 ? (
-                  recommendedAdvisors.map((advisor) => {
+                {data.required_categories.length > 0 ? (
+                  data.required_categories.map((advisor) => {
                     const isSelected = selectedAdvisors.includes(advisor);
                     const isMissing = validation?.Missing.includes(advisor);
                     
@@ -213,7 +213,7 @@ export const AdvisorSelection = ({
                   })
                 ) : (
                   <div className="text-center py-4 text-muted-foreground">
-                    לא נמצאו יועצים ספציפיים לסוג פרויקט זה
+                    לא נמצאו יועצים נדרשים לסוג פרויקט זה
                   </div>
                 )}
               </div>

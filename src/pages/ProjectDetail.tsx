@@ -181,9 +181,6 @@ export const ProjectDetail = () => {
                 </div>
               </div>
             </div>
-            <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-              {project.status === 'active' ? 'פעיל' : project.status}
-            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

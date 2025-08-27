@@ -26,10 +26,10 @@ interface EditProjectDialogProps {
 }
 
 const projectTypes = [
-  'פרויקט קטן',
-  'פרויקט בינוני', 
-  'פרויקט גדול',
-  'פרויקט ענק'
+  'בניין מגורים',
+  'בניין משרדים',
+  'תשתיות',
+  'שיפוץ ושדרוג'
 ];
 
 const phases = [
