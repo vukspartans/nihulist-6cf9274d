@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Eye, MoreVertical, MapPin, DollarSign, Edit, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, MapPin, DollarSign, Edit, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -23,44 +23,33 @@ interface Project {
   timeline_start: string;
   timeline_end: string;
   status: string;
+  phase: string | null;
   created_at: string;
 }
 
-const statusLabels = {
-  draft: "טיוטה",
-  rfp_sent: "RFP נשלח",
-  collecting: "איסוף הצעות",
-  comparing: "השוואה",
-  selected: "נבחר ספק",
-  closed: "סגור",
-  deleted: "נמחק"
-};
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'draft':
-    case 'closed':
-      return 'bg-muted-foreground';
-    case 'rfp_sent':
-    case 'collecting':
-      return 'bg-warning';
-    case 'comparing':
-    case 'selected':
-      return 'bg-success';
-    default:
-      return 'bg-muted-foreground';
+const getPhaseStatusColor = (phase: string | null) => {
+  if (!phase) return 'bg-muted-foreground';
+  
+  // Planning phases - Orange
+  if (phase.includes('תכנון') || phase.includes('הערכה') || phase.includes('סקר')) {
+    return 'bg-orange-500';
   }
+  
+  // Active/execution phases - Green  
+  if (phase.includes('ביצוע') || phase.includes('פיקוח') || phase.includes('מערכות')) {
+    return 'bg-green-500';
+  }
+  
+  // Completed/closed phases - Red
+  if (phase.includes('סגור') || phase.includes('הושלם') || phase.includes('סיום')) {
+    return 'bg-red-500';
+  }
+  
+  // Default to orange for planning
+  return 'bg-orange-500';
 };
 
-const statusColors = {
-  draft: "secondary",
-  rfp_sent: "default",
-  collecting: "accent",
-  comparing: "construction",
-  selected: "success",
-  closed: "muted",
-  deleted: "destructive"
-} as const;
 
 const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -87,7 +76,7 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from("projects")
-        .select("*")
+        .select("id, name, type, location, budget, advisors_budget, timeline_start, timeline_end, status, phase, created_at")
         .eq("owner_id", user.id)
         .neq("status", "deleted")
         .order("created_at", { ascending: false });
@@ -264,34 +253,33 @@ const Dashboard = () => {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>שם הפרויקט</TableHead>
-                      <TableHead>סוג</TableHead>
-                      <TableHead>מיקום</TableHead>
-                      <TableHead>תקציב פרויקט</TableHead>
-                      <TableHead>תקציב יועצים</TableHead>
-                      <TableHead>סטטוס</TableHead>
-                      <TableHead>תאריך יצירה</TableHead>
-                      <TableHead>פעולות</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       <TableHead>שם הפרויקט</TableHead>
+                       <TableHead>סוג</TableHead>
+                       <TableHead>מיקום</TableHead>
+                       <TableHead>תקציב פרויקט</TableHead>
+                       <TableHead>תקציב יועצים</TableHead>
+                       <TableHead>תאריך יצירה</TableHead>
+                       <TableHead>פעולות</TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProjects.map((project) => (
                       <TableRow key={project.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-3">
-                            <div 
-                              className={`w-3 h-3 rounded-full ${getStatusColor(project.status)}`}
-                              title={statusLabels[project.status as keyof typeof statusLabels]}
-                            />
-                            <button
-                              onClick={() => handleProjectClick(project.id)}
-                              className="text-left hover:text-primary transition-colors cursor-pointer"
-                            >
-                              {project.name}
-                            </button>
-                          </div>
-                        </TableCell>
+                         <TableCell className="font-medium">
+                           <div className="flex items-center gap-3">
+                             <div 
+                               className={`w-3 h-3 rounded-full ${getPhaseStatusColor(project.phase)}`}
+                               title={project.phase || 'לא צוין שלב'}
+                             />
+                             <button
+                               onClick={() => handleProjectClick(project.id)}
+                               className="text-left hover:text-primary transition-colors cursor-pointer"
+                             >
+                               {project.name}
+                             </button>
+                           </div>
+                         </TableCell>
                         <TableCell>{project.type || "לא צוין"}</TableCell>
                         <TableCell>
                           <div className="flex items-center">
@@ -305,18 +293,13 @@ const Dashboard = () => {
                             {formatBudget(project.budget)}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <DollarSign className="w-4 h-4 ml-1 text-muted-foreground" />
-                            {formatBudget(project.advisors_budget)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusColors[project.status as keyof typeof statusColors]}>
-                            {statusLabels[project.status as keyof typeof statusLabels]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(project.created_at)}</TableCell>
+                         <TableCell>
+                           <div className="flex items-center">
+                             <DollarSign className="w-4 h-4 ml-1 text-muted-foreground" />
+                             {formatBudget(project.advisors_budget)}
+                           </div>
+                         </TableCell>
+                         <TableCell>{formatDate(project.created_at)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
