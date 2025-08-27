@@ -57,7 +57,16 @@ export const useAdvisorsValidation = () => {
 
   const getCanonicalProjectTypes = (): string[] => {
     if (!data) return [];
-    return data.projects.map(p => p.Project).sort();
+    
+    // Normalize and deduplicate project types
+    const normalizedTypes = new Set(
+      data.projects.map(p => normalize(p.Project)).filter(Boolean)
+    );
+    
+    // Sort by Hebrew alphabetical order
+    return Array.from(normalizedTypes).sort((a, b) => 
+      a.localeCompare(b, 'he', { sensitivity: 'base' })
+    );
   };
 
   const validateAdvisorSelection = (
@@ -77,7 +86,7 @@ export const useAdvisorsValidation = () => {
 
     const normalizedProjectName = normalize(incomingProjectName);
     const canonicalProjects = new Map(
-      data.projects.map(p => [p.Project, p.Advisors])
+      data.projects.map(p => [normalize(p.Project), p.Advisors])
     );
 
     // Check if project type is known
@@ -119,7 +128,8 @@ export const useAdvisorsValidation = () => {
 
   const getRecommendedAdvisors = (projectType: string): string[] => {
     if (!data) return [];
-    const project = data.projects.find(p => p.Project === projectType);
+    const normalizedProjectType = normalize(projectType);
+    const project = data.projects.find(p => normalize(p.Project) === normalizedProjectType);
     return project ? project.Advisors.sort() : [];
   };
 
