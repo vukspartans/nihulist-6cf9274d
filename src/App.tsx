@@ -11,6 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import ProjectWizard from "./pages/ProjectWizard";
 import ProjectDetail from "./pages/ProjectDetail";
 import SupplierSubmit from "./pages/SupplierSubmit";
+import ForEntrepreneurs from "./pages/ForEntrepreneurs";
+import ForConsultants from "./pages/ForConsultants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/for-entrepreneurs" element={<ForEntrepreneurs />} />
+            <Route path="/for-consultants" element={<ForConsultants />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/submit" element={<SupplierSubmit />} />
             <Route 

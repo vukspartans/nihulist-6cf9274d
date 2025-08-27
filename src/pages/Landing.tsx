@@ -27,7 +27,7 @@ import {
   Briefcase,
   Target
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Landing = () => {
   // NihuList Landing Page - Cache Bust v2
@@ -71,7 +71,7 @@ const Landing = () => {
 
   return <div className="min-h-screen bg-background" dir="rtl">
       {/* Navigation */}
-      <nav className="relative z-50 py-4 px-4 lg:px-6 bg-background/80 backdrop-blur-sm border-b border-border/40">
+      <nav className="relative z-50 py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
@@ -83,8 +83,12 @@ const Landing = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
-            <Button variant="ghost" size="sm" className="hidden md:flex">איך זה עובד</Button>
-            <Button variant="ghost" size="sm" className="hidden md:flex">אבטחה</Button>
+            <Link to="/for-entrepreneurs">
+              <Button variant="ghost" size="sm" className="hidden md:flex">ליזמים</Button>
+            </Link>
+            <Link to="/for-consultants">
+              <Button variant="ghost" size="sm" className="hidden md:flex">ליועצים</Button>
+            </Link>
             <Button variant="premium" size="sm" onClick={() => setShowUserTypeDialog(true)} className="text-sm lg:text-base px-6">
               התחל עכשיו
             </Button>
@@ -93,21 +97,21 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
+      <section className="relative overflow-hidden py-32 lg:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center max-w-7xl mx-auto">
             {/* Left content */}
-            <div className="space-y-8 text-center lg:text-right">
+            <div className="space-y-10 text-center lg:text-right">
               {/* Security badge */}
               <div className="animate-fade-in">
-                <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-sm">
+                <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm hover-scale">
                   <Shield className="w-4 h-4 text-primary" />
                   הגנה ברמה בנקאית על המידע שלכם
                 </Badge>
               </div>
 
               {/* Main headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight animate-slide-up">
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
                 <span className="gradient-text">NihuList</span>
                 <br />
                 <span className="text-foreground">מחברים יזמים ויועצים</span>
@@ -117,7 +121,7 @@ const Landing = () => {
 
               {/* Subtext */}
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
-                הפלטפormה הבטוחה והחכמה ביותר למציאת היועץ המושלם לכל פרויקט עסקי.
+                הפלטפורמה הבטוחה והחכמה ביותר למציאת היועץ המושלם לכל פרויקט עסקי.
               </p>
 
               {/* CTA Button */}
@@ -125,7 +129,7 @@ const Landing = () => {
                 <Button 
                   size="xl" 
                   onClick={() => setShowUserTypeDialog(true)}
-                  className="text-lg px-8 py-6 animate-glow"
+                  className="text-xl px-12 py-8 hover-scale animate-glow"
                 >
                   <Zap className="w-6 h-6 ml-2" />
                   התחל עכשיו
@@ -133,18 +137,18 @@ const Landing = () => {
               </div>
 
               {/* Trust indicators */}
-              <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
+              <div className="space-y-6 animate-fade-in" style={{animationDelay: "0.6s"}}>
                 <p className="text-sm text-muted-foreground">אמון של יזמים ויועצים מובילים</p>
-                <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm font-medium text-muted-foreground">
-                  <span className="flex items-center gap-2">
+                <div className="flex flex-wrap justify-center lg:justify-start gap-8 text-sm font-medium text-muted-foreground">
+                  <span className="flex items-center gap-2 hover-scale">
                     <CheckCircle className="w-4 h-4 text-primary" />
                     +500 פרויקטים הושלמו
                   </span>
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 hover-scale">
                     <UserCheck className="w-4 h-4 text-primary" />
                     +1,000 יועצים מאומתים
                   </span>
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 hover-scale">
                     <Shield className="w-4 h-4 text-primary" />
                     אבטחה ברמה ארגונית
                   </span>
@@ -155,8 +159,8 @@ const Landing = () => {
             {/* Right content - Hero Image */}
             <div className="flex justify-center lg:justify-end animate-scale-in" style={{animationDelay: "0.3s"}}>
               <div className="relative">
-                <div className="w-96 h-96 lg:w-[500px] lg:h-[500px] rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 flex items-center justify-center">
-                  <div className="text-8xl">👨‍💼📱</div>
+                <div className="w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 flex items-center justify-center hover-scale">
+                  <div className="text-6xl sm:text-8xl animate-pulse">👨‍💼📱</div>
                 </div>
                 {/* Floating elements */}
                 <div className="absolute -top-4 -right-4 w-12 h-12 bg-primary rounded-2xl flex items-center justify-center animate-float">
@@ -172,37 +176,43 @@ const Landing = () => {
       </section>
 
       {/* Trust & Credibility Section */}
-      <section className="py-16 lg:py-20 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
+      <section className="py-24 lg:py-32 bg-muted/30 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-primary rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-tech-purple rounded-full blur-3xl animate-float" style={{animationDelay: "2s"}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 lg:px-6 relative">
+          <div className="text-center mb-20 animate-fade-in">
+            <h2 className="text-4xl lg:text-5xl font-black mb-6">
               <span className="text-foreground">יועצים ויזמים מאומתים</span>
             </h2>
-            <p className="text-xl text-muted-foreground">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית</p>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center max-w-4xl mx-auto">
-            <div className="space-y-3">
-              <div className="text-4xl lg:text-5xl font-black gradient-text">+500</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-20">
+            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.1s"}}>
+              <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
               <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטים הושלמו</div>
             </div>
-            <div className="space-y-3">
-              <div className="text-4xl lg:text-5xl font-black gradient-text">+1,000</div>
+            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.2s"}}>
+              <div className="text-4xl lg:text-6xl font-black gradient-text">+1,000</div>
               <div className="text-sm lg:text-base font-medium text-muted-foreground">יועצים מאומתים</div>
             </div>
-            <div className="space-y-3">
-              <div className="text-4xl lg:text-5xl font-black gradient-text">95%</div>
+            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.3s"}}>
+              <div className="text-4xl lg:text-6xl font-black gradient-text">95%</div>
               <div className="text-sm lg:text-base font-medium text-muted-foreground">שביעות רצון</div>
             </div>
-            <div className="space-y-3">
-              <div className="text-4xl lg:text-5xl font-black gradient-text">24/7</div>
+            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.4s"}}>
+              <div className="text-4xl lg:text-6xl font-black gradient-text">24/7</div>
               <div className="text-sm lg:text-base font-medium text-muted-foreground">תמיכה</div>
             </div>
           </div>
 
           {/* Security Banner */}
-          <div className="mt-12 text-center">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-primary/10 rounded-full">
+          <div className="text-center animate-fade-in" style={{animationDelay: "0.5s"}}>
+            <div className="inline-flex items-center gap-2 px-8 py-4 bg-primary/10 rounded-full hover-scale">
               <Lock className="w-5 h-5 text-primary" />
               <span className="text-sm font-medium">הגנה ברמה בנקאית על המידע שלכם</span>
             </div>
@@ -211,68 +221,73 @@ const Landing = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 lg:py-32 bg-background">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+      <section className="py-32 lg:py-40 bg-background relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 right-20 w-64 h-64 bg-tech-purple rounded-full blur-3xl animate-float" style={{animationDelay: "3s"}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 lg:px-6 relative">
+          <div className="text-center mb-24 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-black mb-8">
               <span className="text-foreground">איך</span>
               <span className="gradient-text"> זה עובד</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
               שלושה צעדים פשוטים למציאת היועץ המושלם לכל פרויקט
             </p>
           </div>
           
-          <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
             {/* Step 1 */}
-            <Card className="text-center p-8 relative overflow-hidden animate-slide-up" style={{animationDelay: "0.2s"}}>
-              <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.2s"}}>
+              <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 1
               </div>
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-8 h-8 text-white" />
+              <CardHeader className="pb-8">
+                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
+                  <FileText className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">צור פרויקט</CardTitle>
+                <CardTitle className="text-3xl font-bold">צור פרויקט</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-lg text-muted-foreground leading-relaxed">
                   תאר את צרכי הפרויקט, לוחות זמנים ותקציב. הבינה המלאכותית מנתחת את הדרישות ומוצאת התאמות מושלמות.
                 </p>
               </CardContent>
             </Card>
 
             {/* Step 2 */}
-            <Card className="text-center p-8 relative overflow-hidden animate-slide-up" style={{animationDelay: "0.4s"}}>
-              <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.4s"}}>
+              <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 2
               </div>
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Search className="w-8 h-8 text-white" />
+              <CardHeader className="pb-8">
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "1s"}}>
+                  <Search className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">התאמה עם יועצים</CardTitle>
+                <CardTitle className="text-3xl font-bold">התאמה עם יועצים</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-lg text-muted-foreground leading-relaxed">
                   קבל התאמות עם יועצים מאומתים שיש להם בדיוק את המומחיות שאתה צריך. צפה בפרופילים, דירוגים ועבודות קודמות.
                 </p>
               </CardContent>
             </Card>
 
             {/* Step 3 */}
-            <Card className="text-center p-8 relative overflow-hidden animate-slide-up" style={{animationDelay: "0.6s"}}>
-              <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.6s"}}>
+              <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 3
               </div>
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <MessageSquare className="w-8 h-8 text-white" />
+              <CardHeader className="pb-8">
+                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "2s"}}>
+                  <MessageSquare className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold">השווה ובחר</CardTitle>
+                <CardTitle className="text-3xl font-bold">השווה ובחר</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-lg text-muted-foreground leading-relaxed">
                   סקור הצעות, השווה תעריפים ולוחות זמנים, ובחר ביועץ שהכי מתאים לפרויקט שלך.
                 </p>
               </CardContent>
@@ -282,68 +297,86 @@ const Landing = () => {
       </section>
 
       {/* Audience Section */}
-      <section className="py-20 lg:py-32 bg-muted/30">
+      <section className="py-32 lg:py-40 bg-muted/30 relative overflow-hidden">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+          <div className="text-center mb-24 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-black mb-8">
+              <span className="text-foreground">למי</span>
+              <span className="gradient-text"> אנחנו מתאימים?</span>
+            </h2>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-16 max-w-7xl mx-auto">
             {/* For Entrepreneurs */}
-            <Card className="p-8 lg:p-12 text-center lg:text-right animate-slide-up" style={{animationDelay: "0.2s"}}>
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto lg:mx-0 mb-6">
-                  <Briefcase className="w-8 h-8 text-white" />
+            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.2s"}}>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent"></div>
+              <CardHeader className="relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float">
+                  <Briefcase className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold mb-4">ליזמים</CardTitle>
+                <CardTitle className="text-4xl font-bold mb-6">ליזמים</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-lg text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-8 relative">
+                <p className="text-xl text-muted-foreground leading-relaxed">
                   מצא את היועצים הנכונים לעסק שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
-                <ul className="space-y-3 text-right">
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>גישה ליועצים מאומתים</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                <ul className="space-y-4 text-right">
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">גישה ליועצים מאומתים</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>התאמה מבוססת בינה מלאכותית</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">התאמה מבוססת בינה מלאכותית</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>תמחור שקוף וברור</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">תמחור שקוף וברור</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
-                <Button className="w-full lg:w-auto mt-6" onClick={() => handleUserTypeSelection('entrepreneur')}>
+                <Button 
+                  size="xl" 
+                  className="w-full lg:w-auto mt-8 text-lg px-8 py-4 hover-scale" 
+                  onClick={() => handleUserTypeSelection('entrepreneur')}
+                >
                   התחל כיזם
                 </Button>
               </CardContent>
             </Card>
 
             {/* For Consultants */}
-            <Card className="p-8 lg:p-12 text-center lg:text-right animate-slide-up" style={{animationDelay: "0.4s"}}>
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto lg:mx-0 mb-6">
-                  <UserCheck className="w-8 h-8 text-white" />
+            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.4s"}}>
+              <div className="absolute inset-0 bg-gradient-to-br from-tech-purple/5 to-transparent"></div>
+              <CardHeader className="relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float" style={{animationDelay: "1s"}}>
+                  <UserCheck className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold mb-4">ליועצים</CardTitle>
+                <CardTitle className="text-4xl font-bold mb-6">ליועצים</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-lg text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-8 relative">
+                <p className="text-xl text-muted-foreground leading-relaxed">
                   הגע ללקוחות חדשים והצמח את עסק הייעוץ שלך. קבל התאמות עם פרויקטים איכותיים.
                 </p>
-                <ul className="space-y-3 text-right">
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>גישה לפרויקטים איכותיים</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                <ul className="space-y-4 text-right">
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">גישה לפרויקטים איכותיים</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>בניית מוניטין מקצועי</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">בניית מוניטין מקצועי</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end">
-                    <span>גמישות בלוחות זמנים</span>
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                  <li className="flex items-center gap-3 justify-end hover-scale">
+                    <span className="text-lg">גמישות בלוחות זמנים</span>
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full lg:w-auto mt-6" onClick={() => handleUserTypeSelection('consultant')}>
+                <Button 
+                  variant="outline" 
+                  size="xl" 
+                  className="w-full lg:w-auto mt-8 text-lg px-8 py-4 hover-scale border-2" 
+                  onClick={() => handleUserTypeSelection('consultant')}
+                >
                   הצטרף כיועץ
                 </Button>
               </CardContent>
