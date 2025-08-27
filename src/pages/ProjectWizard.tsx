@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, Upload, FileText, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,9 +15,9 @@ interface ProjectData {
   name: string;
   type: string;
   location: string;
+  status: string;
   budget: string;
-  timeline_start: string;
-  timeline_end: string;
+  advisorBudget: string;
   description: string;
 }
 
@@ -26,9 +27,9 @@ const ProjectWizard = () => {
     name: "",
     type: "",
     location: "",
+    status: "",
     budget: "",
-    timeline_start: "",
-    timeline_end: "",
+    advisorBudget: "",
     description: ""
   });
   const [files, setFiles] = useState<File[]>([]);
@@ -39,6 +40,41 @@ const ProjectWizard = () => {
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  // Project types from system
+  const projectTypes = [
+    "בניית בית פרטי",
+    "בניית מגדל משרדים", 
+    "בניית קניון",
+    "שיפוץ דירה",
+    "בניית בית ספר",
+    "בניית בית חולים",
+    "פיתוח תשתיות",
+    "בניית מפעל",
+    "שיקום מבנה",
+    "הרחבת מבנה"
+  ];
+
+  // Project statuses
+  const projectStatuses = [
+    "תכנון ראשוני",
+    "בתכנון מפורט", 
+    "בהיתרים",
+    "מוכן לביצוע",
+    "בביצוע",
+    "בגמר"
+  ];
+
+  // Format number with commas and ₪ symbol
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    if (!numericValue) return '';
+    return new Intl.NumberFormat('he-IL').format(parseInt(numericValue));
+  };
+
+  const handleBudgetChange = (field: 'budget' | 'advisorBudget', value: string) => {
+    setProjectData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleInputChange = (field: keyof ProjectData, value: string) => {
     setProjectData(prev => ({ ...prev, [field]: value }));
@@ -81,7 +117,7 @@ const ProjectWizard = () => {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(projectData.name && projectData.timeline_start && projectData.timeline_end);
+        return !!(projectData.location && projectData.type);
       case 2:
         return true; // File upload is optional
       case 3:
@@ -113,18 +149,20 @@ const ProjectWizard = () => {
         return;
       }
 
-      // Create project
+      // Create project with auto-generated name if not provided
+      const projectName = projectData.name || `פרויקט ${projectData.location}`;
+      
       const { data: project, error: projectError } = await supabase
         .from("projects")
         .insert({
           owner_id: user.id,
-          name: projectData.name,
+          name: projectName,
           type: projectData.type || null,
           location: projectData.location || null,
-          budget: projectData.budget ? parseFloat(projectData.budget) : null,
-          timeline_start: projectData.timeline_start,
-          timeline_end: projectData.timeline_end,
-          status: "draft"
+          budget: projectData.budget ? parseFloat(projectData.budget.replace(/[^\d]/g, '')) : null,
+          timeline_start: new Date().toISOString().split('T')[0], // Current date
+          timeline_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // One year from now
+          status: projectData.status || "draft"
         })
         .select()
         .single();
@@ -169,7 +207,7 @@ const ProjectWizard = () => {
           actor_type: "entrepreneur",
           actor_id: user.id,
           action: "PROJECT_CREATED",
-          meta: { project_name: projectData.name }
+          meta: { project_name: projectName }
         });
 
       toast({
@@ -197,76 +235,93 @@ const ProjectWizard = () => {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">שם הפרויקט *</Label>
-              <Input
-                id="name"
-                placeholder="הזן שם פרויקט..."
-                value={projectData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">סוג פרויקט הבנייה</Label>
-              <Input
-                id="type"
-                placeholder="למשל: בניית בית פרטי, מגדל משרדים, קניון, שיפוץ דירה..."
-                value={projectData.type}
-                onChange={(e) => handleInputChange("type", e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="location">מיקום</Label>
+              <Label htmlFor="location">מיקום הפרויקט *</Label>
               <Input
                 id="location"
-                placeholder="עיר או כתובת..."
+                placeholder="עיר או כתובת מלאה..."
                 value={projectData.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="budget">תקציב (₪)</Label>
+              <Label htmlFor="name">שם הפרויקט</Label>
               <Input
-                id="budget"
-                type="number"
-                placeholder="הזן תקציב..."
-                value={projectData.budget}
-                onChange={(e) => handleInputChange("budget", e.target.value)}
+                id="name"
+                placeholder="השאר ריק לשם אוטומטי על פי המיקום"
+                value={projectData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="timeline_start">תאריך התחלה *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="type">סוג פרויקט *</Label>
+              <Select value={projectData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר סוג פרויקט..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">סטטוס פרויקט</Label>
+              <Select value={projectData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר סטטוס..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="budget">תקציב פרויקט</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
                 <Input
-                  id="timeline_start"
-                  type="date"
-                  value={projectData.timeline_start}
-                  onChange={(e) => handleInputChange("timeline_start", e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="timeline_end">תאריך סיום *</Label>
-                <Input
-                  id="timeline_end"
-                  type="date"
-                  value={projectData.timeline_end}
-                  onChange={(e) => handleInputChange("timeline_end", e.target.value)}
+                  id="budget"
+                  placeholder="הזן תקציב..."
+                  value={formatCurrency(projectData.budget)}
+                  onChange={(e) => handleBudgetChange("budget", e.target.value)}
+                  className="pl-8"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">תיאור נוסף</Label>
+              <Label htmlFor="advisorBudget">תקציב יועצים</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                <Input
+                  id="advisorBudget"
+                  placeholder="הזן תקציב יועצים..."
+                  value={formatCurrency(projectData.advisorBudget)}
+                  onChange={(e) => handleBudgetChange("advisorBudget", e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">תיאור הפרויקט</Label>
               <Textarea
                 id="description"
-                placeholder="תאר את פרויקט הבנייה בקצרה: היקף, דרישות מיוחדות, חומרים..."
+                placeholder="תארו את הפרויקט - מספר קומות, מספר יחידות, סה״כ שטח עיקרי, שטח שירות וכל דבר אחר שחשוב לכם"
                 value={projectData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
-                rows={3}
+                rows={4}
               />
             </div>
           </div>
@@ -335,31 +390,37 @@ const ProjectWizard = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <Label className="font-semibold">מיקום</Label>
+                  <p>{projectData.location}</p>
+                </div>
+                <div>
                   <Label className="font-semibold">שם הפרויקט</Label>
-                  <p>{projectData.name}</p>
+                  <p>{projectData.name || `פרויקט ${projectData.location}`}</p>
                 </div>
                 {projectData.type && (
                   <div>
-                    <Label className="font-semibold">סוג</Label>
+                    <Label className="font-semibold">סוג פרויקט</Label>
                     <p>{projectData.type}</p>
                   </div>
                 )}
-                {projectData.location && (
+                {projectData.status && (
                   <div>
-                    <Label className="font-semibold">מיקום</Label>
-                    <p>{projectData.location}</p>
+                    <Label className="font-semibold">סטטוס פרויקט</Label>
+                    <p>{projectData.status}</p>
                   </div>
                 )}
                 {projectData.budget && (
                   <div>
-                    <Label className="font-semibold">תקציב</Label>
-                    <p>{new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS" }).format(parseFloat(projectData.budget))}</p>
+                    <Label className="font-semibold">תקציב פרויקט</Label>
+                    <p>₪{formatCurrency(projectData.budget)}</p>
                   </div>
                 )}
-                <div>
-                  <Label className="font-semibold">לוח זמנים</Label>
-                  <p>{new Date(projectData.timeline_start).toLocaleDateString("he-IL")} - {new Date(projectData.timeline_end).toLocaleDateString("he-IL")}</p>
-                </div>
+                {projectData.advisorBudget && (
+                  <div>
+                    <Label className="font-semibold">תקציב יועצים</Label>
+                    <p>₪{formatCurrency(projectData.advisorBudget)}</p>
+                  </div>
+                )}
               </div>
               
               {projectData.description && (
@@ -412,7 +473,7 @@ const ProjectWizard = () => {
               <span className="text-sm font-medium">שלב {currentStep} מתוך {totalSteps}</span>
               <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-2" style={{ direction: 'rtl' }} />
           </div>
 
           {/* Content */}
