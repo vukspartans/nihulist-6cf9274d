@@ -57,8 +57,9 @@ export const EditProjectDialog = ({ project, onProjectUpdate }: EditProjectDialo
   const handleSave = async () => {
     setLoading(true);
     try {
+      const computedName = formData.name.trim() || formData.location.trim();
       const updateData = {
-        name: formData.name,
+        name: computedName,
         type: formData.type,
         location: formData.location,
         budget: parseFloat(formData.budget),

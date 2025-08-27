@@ -127,7 +127,7 @@ export const ProjectWizard = () => {
       oneYearFromNow.setFullYear(today.getFullYear() + 1);
 
       const projectData = {
-        name: formData.projectName || 'פרויקט ללא שם',
+        name: formData.projectName.trim() || formData.address.trim(),
         type: formData.projectType,
         phase: formData.phase,
         location: formData.address,
@@ -334,9 +334,12 @@ export const ProjectWizard = () => {
                 name="projectName"
                 value={formData.projectName}
                 onChange={handleChange}
-                placeholder="שם לפרויקט שלך"
+                placeholder={formData.address || "שם לפרויקט שלך"}
                 className="h-12"
               />
+              <p className="text-sm text-muted-foreground">
+                אם יישאר ריק, נשתמש בכתובת בתור שם הפרויקט
+              </p>
             </div>
 
             {/* Project Type - Required */}
@@ -562,7 +565,7 @@ export const ProjectWizard = () => {
                   
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">שם הפרויקט</p>
-                    <p className="text-base font-medium">{formData.projectName || 'פרויקט ללא שם'}</p>
+                    <p className="text-base font-medium">{formData.projectName.trim() || formData.address.trim()}</p>
                   </div>
                   
                   <div className="space-y-1">
