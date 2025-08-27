@@ -134,9 +134,11 @@ export type Database = {
       }
       projects: {
         Row: {
+          advisors_budget: number | null
           awaiting_banner_until: string | null
           budget: number | null
           created_at: string
+          description: string | null
           id: string
           location: string | null
           name: string
@@ -148,9 +150,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          advisors_budget?: number | null
           awaiting_banner_until?: string | null
           budget?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           location?: string | null
           name: string
@@ -162,9 +166,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          advisors_budget?: number | null
           awaiting_banner_until?: string | null
           budget?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           location?: string | null
           name?: string

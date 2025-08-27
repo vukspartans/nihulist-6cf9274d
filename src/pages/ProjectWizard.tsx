@@ -1,620 +1,438 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Upload, FileText, CheckCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAdvisorsValidation } from "@/hooks/useAdvisorsValidation";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { FileText, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Progress } from "@/components/ui/progress"
+import { supabase } from '@/integrations/supabase/client';
 
-interface ProjectData {
-  name: string;
-  type: string;
+interface FormData {
+  projectName: string;
+  projectType: string;
   location: string;
-  status: string;
   budget: string;
-  advisorBudget: string;
+  advisorsBudget: string;
   description: string;
 }
 
-interface FileWithMetadata {
-  file: File;
-  customName: string;
-  description: string;
-}
-
-const ProjectWizard = () => {
-  const { getCanonicalProjectTypes, loading: advisorsLoading } = useAdvisorsValidation();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [projectData, setProjectData] = useState<ProjectData>({
-    name: "",
-    type: "",
-    location: "",
-    status: "",
-    budget: "",
-    advisorBudget: "",
-    description: ""
-  });
-  const [files, setFiles] = useState<FileWithMetadata[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [creating, setCreating] = useState(false);
+export const ProjectWizard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<FormData>({
+    projectName: '',
+    projectType: '',
+    location: '',
+    budget: '',
+    advisorsBudget: '',
+    description: '',
+  });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
   const totalSteps = 3;
-  const progress = (currentStep / totalSteps) * 100;
 
-  // Project types from canonical source
-  const projectTypes = getCanonicalProjectTypes();
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
 
-  // Project statuses
-  const projectStatuses = [
-    "תכנון ראשוני",
-    "בתכנון מפורט", 
-    "בהיתרים",
-    "מוכן לביצוע",
-    "בביצוע",
-    "בגמר"
-  ];
-
-  // Format number with commas and ₪ symbol
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/[^\d]/g, '');
-    if (!numericValue) return '';
-    return new Intl.NumberFormat('he-IL').format(parseInt(numericValue));
-  };
-
-  const handleBudgetChange = (field: 'budget' | 'advisorBudget', value: string) => {
-    setProjectData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleInputChange = (field: keyof ProjectData, value: string) => {
-    setProjectData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || []);
-    const validFiles = selectedFiles.filter(file => {
-      const isValidType = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type);
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
-      
-      if (!isValidType) {
-        toast({
-          title: "סוג קובץ לא נתמך",
-          description: `הקובץ ${file.name} אינו נתמך. רק PDF ו-Word מותרים.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      if (!isValidSize) {
-        toast({
-          title: "קובץ גדול מדי",
-          description: `הקובץ ${file.name} גדול מ-10MB.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      return true;
-    });
-
-    const newFilesWithMetadata = validFiles.map(file => ({
-      file,
-      customName: file.name.replace(/\.[^/.]+$/, ""), // Remove extension for default name
-      description: ""
-    }));
-
-    setFiles(prev => [...prev, ...newFilesWithMetadata].slice(0, 5)); // Max 5 files
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 1:
-        return !!(projectData.location && projectData.type);
-      case 2:
-        return true; // File upload is optional
-      case 3:
-        return true; // Review step
-      default:
-        return false;
-    }
-  };
-
-  const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+    fetchUser();
+  }, []);
 
   const createProjectInternal = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      navigate("/auth");
-      return null;
-    }
+    if (!user) return null;
 
-    // Create project with auto-generated name if not provided
-    const projectName = projectData.name || `פרויקט ${projectData.location}`;
-    
-    const { data: project, error: projectError } = await supabase
-      .from("projects")
-      .insert({
+    setCreating(true);
+    try {
+      const projectData = {
+        name: formData.projectName,
+        type: formData.projectType,
+        location: formData.location,
+        budget: parseFloat(formData.budget),
+        advisors_budget: parseFloat(formData.advisorsBudget || '0'),
+        description: formData.description || null,
         owner_id: user.id,
-        name: projectName,
-        type: projectData.type || null,
-        location: projectData.location || null,
-        budget: projectData.budget ? parseFloat(projectData.budget.replace(/[^\d]/g, '')) : null,
-        timeline_start: new Date().toISOString().split('T')[0], // Current date
-        timeline_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // One year from now
-        status: projectData.status || "draft"
-      })
-      .select()
-      .single();
+        status: 'active'
+      };
 
-    if (projectError) throw projectError;
+      const { data: project, error } = await supabase
+        .from('projects')
+        .insert([projectData])
+        .select()
+        .single();
 
-    // Upload files if any
-    if (files.length > 0) {
-      setUploading(true);
-      for (const fileWithMetadata of files) {
-        const { file, customName, description } = fileWithMetadata;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${project.id}/${Date.now()}.${fileExt}`;
-        
-        const { data: fileData, error: uploadError } = await supabase.storage
-          .from('project-files')
-          .upload(fileName, file);
+      if (error) throw error;
 
-        if (uploadError) {
-          console.error('File upload error:', uploadError);
-          continue;
+      // Upload files if any
+      if (uploadedFiles.length > 0) {
+        setUploading(true);
+        for (const file of uploadedFiles) {
+          const fileName = `${project.id}/${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('project-files')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('File upload error:', uploadError);
+          }
         }
-
-        // Create file record with custom metadata
-        await supabase
-          .from("project_files")
-          .insert({
-            project_id: project.id,
-            file_url: fileData.path,
-            file_name: file.name, // Original filename
-            custom_name: customName, // User-provided name
-            description: description, // User-provided description
-            file_type: file.type,
-            size_mb: file.size / (1024 * 1024),
-            ai_summary: "AI summary pending..." // Mock AI summary
-          });
+        setUploading(false);
       }
-    }
 
-    // Log activity
-    await supabase
-      .from("activity_log")
-      .insert({
-        project_id: project.id,
-        actor_type: "entrepreneur",
-        actor_id: user.id,
-        action: "PROJECT_CREATED",
-        meta: { project_name: projectName }
+      // Try to log activity (optional - won't fail if RLS blocks)
+      try {
+        await supabase
+          .from('activity_log')
+          .insert([{
+            project_id: project.id,
+            action: 'project_created',
+            details: { name: project.name, type: project.type }
+          }]);
+      } catch (activityError) {
+        console.log('Activity log failed (non-critical):', activityError);
+      }
+
+      toast({
+        title: "פרויקט נוצר בהצלחה!",
+        description: `הפרויקט "${project.name}" נוצר בהצלחה`,
       });
 
-    toast({
-      title: "הפרויקט נוצר בהצלחה",
-      description: "הפרויקט נוצר בהצלחה וממתין להצעות",
-    });
+      return project;
 
-    return project;
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "שגיאה ביצירת פרויקט",
+        description: "אירעה שגיאה ביצירת הפרויקט. אנא נסה שוב.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setCreating(false);
+    }
   };
 
   const createAndGoToAdvisors = async () => {
-    setCreating(true);
-    try {
-      const project = await createProjectInternal();
-      if (project) {
-        navigate(`/projects/${project.id}`);
-      }
-    } catch (error) {
-      console.error("Error creating project:", error);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה ביצירת הפרויקט",
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-      setUploading(false);
+    const project = await createProjectInternal();
+    if (project) {
+      navigate(`/projects/${project.id}`);
     }
   };
 
   const createAndFinish = async () => {
-    setCreating(true);
-    try {
-      const project = await createProjectInternal();
-      if (project) {
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      console.error("Error creating project:", error);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה ביצירת הפרויקט",
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-      setUploading(false);
+    const project = await createProjectInternal();
+    if (project) {
+      navigate('/dashboard');
     }
   };
 
+  const handleNext = () => {
+    if (isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      toast({
+        title: "יש למלא את כל השדות",
+        description: "אנא מלא את כל השדות הנדרשים בשלב זה.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles(files);
+  };
+
+  const isStepValid = (step: number): boolean => {
+    if (step === 1) {
+      return !!formData.projectName && !!formData.projectType && !!formData.location;
+    }
+    if (step === 2) {
+      return !!formData.budget;
+    }
+    return true;
+  };
+
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">מיקום הפרויקט <span className="text-destructive">*</span></Label>
+    if (currentStep === 1) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-4">פרטי הפרויקט</h2>
+            <p className="text-muted-foreground mb-6">
+              הזן את הפרטים הבסיסיים של הפרויקט שלך
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            <div>
+              <Label htmlFor="projectName">שם הפרויקט</Label>
               <Input
-                id="location"
-                placeholder="עיר או כתובת מלאה..."
-                value={projectData.location}
-                onChange={(e) => handleInputChange("location", e.target.value)}
-                aria-required="true"
+                type="text"
+                id="projectName"
+                name="projectName"
+                value={formData.projectName}
+                onChange={handleChange}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="name">שם הפרויקט</Label>
-              <Input
-                id="name"
-                placeholder="השאר ריק לשם אוטומטי על פי המיקום"
-                value={projectData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">סוג פרויקט <span className="text-destructive">*</span></Label>
-              <Select value={projectData.type} onValueChange={(value) => handleInputChange("type", value)} disabled={advisorsLoading}>
-                <SelectTrigger aria-required="true">
-                  <SelectValue placeholder={advisorsLoading ? "טוען..." : "בחר סוג פרויקט..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">סטטוס פרויקט</Label>
-              <Select value={projectData.status} onValueChange={(value) => handleInputChange("status", value)}>
+            <div>
+              <Label htmlFor="projectType">סוג פרויקט</Label>
+              <Select onValueChange={(value) => handleSelectChange('projectType', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="בחר סטטוס..." />
+                  <SelectValue placeholder="בחר סוג פרויקט" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projectStatuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="בניין מגורים">בניין מגורים</SelectItem>
+                  <SelectItem value="בניין משרדים">בניין משרדים</SelectItem>
+                  <SelectItem value="תשתיות">תשתיות</SelectItem>
+                  <SelectItem value="שיפוץ ושדרוג">שיפוץ ושדרוג</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="budget">תקציב פרויקט</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
-                <Input
-                  id="budget"
-                  placeholder="הזן תקציב..."
-                  value={formatCurrency(projectData.budget)}
-                  onChange={(e) => handleBudgetChange("budget", e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+            <div>
+              <Label htmlFor="location">מיקום</Label>
+              <Input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+              />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="advisorBudget">תקציב יועצים</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
-                <Input
-                  id="advisorBudget"
-                  placeholder="הזן תקציב יועצים..."
-                  value={formatCurrency(projectData.advisorBudget)}
-                  onChange={(e) => handleBudgetChange("advisorBudget", e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (currentStep === 2) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-4">תקציב ותיאור</h2>
+            <p className="text-muted-foreground mb-6">
+              הגדר את התקציב ותיאור הפרויקט
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            <div>
+              <Label htmlFor="budget">תקציב הפרויקט</Label>
+              <Input
+                type="number"
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+                placeholder="הכנס את תקציב הפרויקט"
+              />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">תיאור הפרויקט</Label>
+            <div>
+              <Label htmlFor="advisorsBudget">תקציב יועצים (אופציונלי)</Label>
+              <Input
+                type="number"
+                id="advisorsBudget"
+                name="advisorsBudget"
+                value={formData.advisorsBudget}
+                onChange={handleChange}
+                placeholder="הכנס את תקציב היועצים"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">תיאור הפרויקט (אופציונלי)</Label>
               <Textarea
                 id="description"
-                placeholder="תארו את הפרויקט - מספר קומות, מספר יחידות, סה״כ שטח עיקרי, שטח שירות וכל דבר אחר שחשוב לכם"
-                value={projectData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                rows={4}
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="הכנס תיאור מפורט של הפרויקט"
               />
             </div>
-            
-            <p className="text-xs text-muted-foreground text-right">* שדה נדרש</p>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-4">
-            <div className="text-center py-6">
-              <Upload className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">העלאת מסמכים</h3>
-              <p className="text-muted-foreground mb-4">
-                העלה עד 5 קבצים: תוכניות, דרישות טכניות, מפרטים (PDF/Word, עד 10MB כל אחד)
-              </p>
-              
-              <input
+            <div>
+              <Label htmlFor="files">קבצים (אופציונלי)</Label>
+              <Input
                 type="file"
+                id="files"
                 multiple
-                accept=".pdf,.doc,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
+                onChange={handleFileChange}
               />
-              <label htmlFor="file-upload">
-                <Button variant="tech" asChild>
-                  <span>בחר קבצים</span>
-                </Button>
-              </label>
             </div>
-            
-            {files.length > 0 && (
-              <div className="space-y-4">
-                <Label>קבצים שנבחרו:</Label>
-                {files.map((fileWithMetadata, index) => (
-                  <div key={index} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FileText className="w-4 h-4 ml-2 text-muted-foreground" />
-                        <span className="text-sm font-medium">{fileWithMetadata.file.name}</span>
-                        <span className="text-xs text-muted-foreground mr-2">
-                          ({(fileWithMetadata.file.size / (1024 * 1024)).toFixed(1)} MB)
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor={`file-name-${index}`} className="text-sm">שם הקובץ</Label>
-                        <Input
-                          id={`file-name-${index}`}
-                          placeholder="הזן שם לקובץ..."
-                          value={fileWithMetadata.customName}
-                          onChange={(e) => {
-                            const newFiles = [...files];
-                            newFiles[index].customName = e.target.value;
-                            setFiles(newFiles);
-                          }}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`file-desc-${index}`} className="text-sm">תיאור (אופציונלי)</Label>
-                        <Textarea
-                          id={`file-desc-${index}`}
-                          placeholder="הוסף תיאור לקובץ..."
-                          value={fileWithMetadata.description}
-                          onChange={(e) => {
-                            const newFiles = [...files];
-                            newFiles[index].description = e.target.value;
-                            setFiles(newFiles);
-                          }}
-                          rows={2}
-                        />
-                      </div>
-                    </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (currentStep === 3) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-4">סקירה ואישור</h2>
+            <p className="text-muted-foreground mb-6">
+              בדוק את פרטי הפרויקט לפני יצירתו
+            </p>
+          </div>
+
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>פרטי הפרויקט</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">שם הפרויקט</label>
+                    <p className="font-medium">{formData.projectName}</p>
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">סוג פרויקט</label>
+                    <p className="font-medium">{formData.projectType}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">מיקום</label>
+                    <p className="font-medium">{formData.location}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">תקציב פרויקט</label>
+                    <p className="font-medium">{formData.budget ? `₪${parseInt(formData.budget).toLocaleString()}` : 'לא הוגדר'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">תקציב יועצים</label>
+                    <p className="font-medium">{formData.advisorsBudget ? `₪${parseInt(formData.advisorsBudget).toLocaleString()}` : 'לא הוגדר'}</p>
+                  </div>
+                </div>
+                {formData.description && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">תיאור</label>
+                    <p className="font-medium">{formData.description}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {uploadedFiles.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>קבצים</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm">{file.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <CheckCircle className="w-16 h-16 mx-auto text-construction-success mb-4" />
-              <h3 className="text-xl font-semibold mb-2">סקירת הפרויקט</h3>
-              <p className="text-muted-foreground">בדוק את הפרטים לפני יצירת הפרויקט</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="font-semibold">מיקום</Label>
-                  <p>{projectData.location}</p>
-                </div>
-                <div>
-                  <Label className="font-semibold">שם הפרויקט</Label>
-                  <p>{projectData.name || `פרויקט ${projectData.location}`}</p>
-                </div>
-                {projectData.type && (
-                  <div>
-                    <Label className="font-semibold">סוג פרויקט</Label>
-                    <p>{projectData.type}</p>
-                  </div>
-                )}
-                {projectData.status && (
-                  <div>
-                    <Label className="font-semibold">סטטוס פרויקט</Label>
-                    <p>{projectData.status}</p>
-                  </div>
-                )}
-                {projectData.budget && (
-                  <div>
-                    <Label className="font-semibold">תקציב פרויקט</Label>
-                    <p>₪{formatCurrency(projectData.budget)}</p>
-                  </div>
-                )}
-                {projectData.advisorBudget && (
-                  <div>
-                    <Label className="font-semibold">תקציב יועצים</Label>
-                    <p>₪{formatCurrency(projectData.advisorBudget)}</p>
-                  </div>
-                )}
-              </div>
-              
-              {projectData.description && (
-                <div>
-                  <Label className="font-semibold">תיאור</Label>
-                  <p className="text-sm text-muted-foreground">{projectData.description}</p>
-                </div>
-              )}
-              
-              {files.length > 0 && (
-                <div>
-                  <Label className="font-semibold">קבצים ({files.length})</Label>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {files.map((fileWithMetadata, index) => (
-                      <li key={index} className="flex flex-col">
-                        <span>• {fileWithMetadata.customName || fileWithMetadata.file.name}</span>
-                        {fileWithMetadata.description && (
-                          <span className="text-xs mr-4 text-muted-foreground/70">
-                            {fileWithMetadata.description}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
+        </div>
+      );
     }
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <div className="container mx-auto px-6 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/dashboard")}
-              className="mb-4"
-            >
-          <ArrowLeft className="w-4 h-4 ml-2 flip-rtl-180" />
-              חזרה ללוח הבקרה
-            </Button>
-            <h1 className="text-3xl font-bold text-foreground mb-2">פרויקט חדש</h1>
-            <p className="text-muted-foreground">יצירת פרויקט חדש לבחירת ספקים</p>
-          </div>
-
-          {/* Progress */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium">שלב {currentStep} מתוך {totalSteps}</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {/* Content */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>
-                {currentStep === 1 && "פרטי הפרויקט"}
-                {currentStep === 2 && "העלאת מסמכים"}
-                {currentStep === 3 && "סקירה ואישור"}
-              </CardTitle>
-              <CardDescription>
-                {currentStep === 1 && "הזן את הפרטים הבסיסיים של הפרויקט"}
-                {currentStep === 2 && "העלה מסמכים רלוונטיים לפרויקט (אופציונלי)"}
-                {currentStep === 3 && "בדוק את הפרטים ולחץ על יצירת פרויקט"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderStep()}
-            </CardContent>
-          </Card>
-
-          {/* Navigation */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-            >
-              <ArrowLeft className="w-4 h-4 ml-2 flip-rtl-180" />
-              הקודם
-            </Button>
-            
-            {currentStep < totalSteps ? (
-              <Button
-                onClick={nextStep}
-                disabled={!validateStep(currentStep)}
-                variant="tech"
-              >
-                הבא
-                <ArrowRight className="w-4 h-4 mr-2 flip-rtl-180" />
-              </Button>
-            ) : (
-              <div className="flex gap-3">
-                <Button
-                  onClick={createAndFinish}
-                  disabled={creating || uploading}
-                  variant="outline"
-                >
-                  {creating ? "יוצר..." : uploading ? "מעלה..." : "צור וסיים"}
-                </Button>
-                <Button
-                  onClick={createAndGoToAdvisors}
-                  disabled={creating || uploading}
-                  variant="tech"
-                >
-                  {creating ? "יוצר פרויקט..." : uploading ? "מעלה קבצים..." : "צור ועבור לאיתור יועצים"}
-                  {!creating && !uploading && <CheckCircle className="w-4 h-4 mr-2" />}
-                </Button>
-              </div>
-            )}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5" dir="rtl">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-center mb-4">
+            יצירת פרויקט חדש
+          </h1>
+          <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
+          <div className="mt-2 text-center text-muted-foreground text-sm">
+            שלב {currentStep} מתוך {totalSteps}
           </div>
         </div>
+
+        <Card className="max-w-4xl mx-auto">
+          <CardContent className="p-8">
+            {renderStep()}
+
+            {/* Navigation */}
+            <div className="flex justify-between mt-8 pt-6 border-t">
+              {currentStep > 1 ? (
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4 ml-2 flip-rtl-180" />
+                  הקודם
+                </Button>
+              ) : (
+                <div />
+              )}
+
+              {currentStep < totalSteps ? (
+                <Button
+                  onClick={handleNext}
+                  disabled={!isStepValid(currentStep)}
+                  className="flex items-center gap-2"
+                >
+                  הבא
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                </Button>
+              ) : (
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={createAndFinish}
+                    disabled={creating || uploading}
+                    className="flex items-center gap-2"
+                  >
+                    {creating || uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {uploading ? 'מעלה קבצים...' : 'יוצר פרויקט...'}
+                      </>
+                    ) : (
+                      'צור וסיים'
+                    )}
+                  </Button>
+                  <Button
+                    onClick={createAndGoToAdvisors}
+                    disabled={creating || uploading}
+                    className="flex items-center gap-2"
+                  >
+                    {creating || uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {uploading ? 'מעלה קבצים...' : 'יוצר פרויקט...'}
+                      </>
+                    ) : (
+                      'צור ועבור לאיתור יועצים'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
-
-export default ProjectWizard;

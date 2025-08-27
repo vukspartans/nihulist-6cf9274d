@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardStatsData {
   totalProjects: number;
-  activeRfps: number;
+  activeProposals: number;
   pendingProposals: number;
   totalBudget: number;
   projectsByStatus: Record<string, number>;
@@ -24,7 +25,7 @@ interface DashboardStatsData {
 }
 
 export const DashboardStats = () => {
-  const [stats, setStats] = useState({ totalProjects: 0, activeRfps: 0 });
+  const [stats, setStats] = useState({ totalProjects: 0, activeProposals: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export const DashboardStats = () => {
 
       setStats({
         totalProjects: projects?.length || 0,
-        activeRfps: rfps?.length || 0
+        activeProposals: rfps?.length || 0
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -93,8 +94,8 @@ export const DashboardStats = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">RFP פעילים</p>
-              <p className="text-2xl font-bold text-foreground">{stats.activeRfps}</p>
+              <p className="text-sm font-medium text-muted-foreground">בקשות הצעת מחיר פעילות</p>
+              <p className="text-2xl font-bold text-foreground">{stats.activeProposals}</p>
             </div>
             <div className="p-3 rounded-full bg-muted">
               <FileText className="w-6 h-6 text-accent" />
