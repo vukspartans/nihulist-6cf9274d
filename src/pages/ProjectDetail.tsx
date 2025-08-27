@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowRight, MapPin, Building, DollarSign, Users, Calculator } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PriceProposalManager } from '@/components/PriceProposalManager';
+import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface Project {
@@ -19,6 +21,7 @@ interface Project {
   budget: number;
   advisors_budget: number | null;
   description: string | null;
+  phase: string;
 }
 
 export const ProjectDetail = () => {
@@ -56,6 +59,43 @@ export const ProjectDetail = () => {
     }
   };
 
+  const phases = [
+    'תכנון ראשוני',
+    'אישורים', 
+    'ביצוע',
+    'גמר',
+    'הושלם'
+  ];
+
+  const handlePhaseChange = async (newPhase: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ phase: newPhase })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setProject(prev => prev ? { ...prev, phase: newPhase } : null);
+      
+      toast({
+        title: "עודכן בהצלחה",
+        description: "שלב הפרויקט עודכן",
+      });
+    } catch (error) {
+      console.error('Error updating phase:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את שלב הפרויקט",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleProjectUpdate = (updatedProject: Project) => {
+    setProject(updatedProject);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -90,7 +130,7 @@ export const ProjectDetail = () => {
   return (
     <div className="container mx-auto p-6" dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
           onClick={() => navigate('/dashboard')}
@@ -99,6 +139,29 @@ export const ProjectDetail = () => {
           <ArrowRight className="w-4 h-4 flip-rtl-180" />
           חזרה לדשבורד
         </Button>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">שלב הפרויקט:</span>
+            <Select value={project.phase} onValueChange={handlePhaseChange}>
+              <SelectTrigger className="w-auto min-w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {phases.map((phase) => (
+                  <SelectItem key={phase} value={phase}>
+                    {phase}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <EditProjectDialog 
+            project={project} 
+            onProjectUpdate={handleProjectUpdate} 
+          />
+        </div>
       </div>
 
       {/* Project Info Card */}

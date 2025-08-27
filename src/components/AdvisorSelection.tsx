@@ -107,7 +107,7 @@ export const AdvisorSelection = ({
               <SelectTrigger>
                 <SelectValue placeholder="בחר סוג פרויקט" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="end">
                 {canonicalTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -174,43 +174,56 @@ export const AdvisorSelection = ({
           )}
 
           {/* Advisors List */}
-          {data && (
+          {data && projectType && (
             <div className="space-y-4">
-              <h3 className="font-medium">יועצים נדרשים</h3>
+              <h3 className="font-medium">יועצים נדרשים לפרויקט זה</h3>
               <div className="grid gap-3">
-                {data.required_categories.map((advisor) => {
-                  const isSelected = selectedAdvisors.includes(advisor);
-                  const isMissing = validation?.Missing.includes(advisor);
-                  
-                  return (
-                    <div
-                      key={advisor}
-                      className={`flex items-center space-x-2 space-x-reverse p-3 rounded-lg border ${
-                        isMissing ? 'border-red-200 bg-red-50' : 'border-gray-200'
-                      }`}
-                    >
-                      <Checkbox
-                        id={advisor}
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleAdvisorToggle(advisor, checked as boolean)}
-                      />
-                      <label
-                        htmlFor={advisor}
-                        className={`text-sm font-medium cursor-pointer flex-1 ${
-                          isMissing ? 'text-red-700' : ''
+                {recommendedAdvisors.length > 0 ? (
+                  recommendedAdvisors.map((advisor) => {
+                    const isSelected = selectedAdvisors.includes(advisor);
+                    const isMissing = validation?.Missing.includes(advisor);
+                    
+                    return (
+                      <div
+                        key={advisor}
+                        className={`flex items-center space-x-2 space-x-reverse p-3 rounded-lg border ${
+                          isMissing ? 'border-red-200 bg-red-50' : 'border-gray-200'
                         }`}
                       >
-                        {advisor}
-                      </label>
-                      {isMissing && (
-                        <Badge variant="destructive" className="text-xs">
-                          נדרש
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })}
+                        <Checkbox
+                          id={advisor}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleAdvisorToggle(advisor, checked as boolean)}
+                        />
+                        <label
+                          htmlFor={advisor}
+                          className={`text-sm font-medium cursor-pointer flex-1 ${
+                            isMissing ? 'text-red-700' : ''
+                          }`}
+                        >
+                          {advisor}
+                        </label>
+                        {isMissing && (
+                          <Badge variant="destructive" className="text-xs">
+                            נדרש
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    לא נמצאו יועצים ספציפיים לסוג פרויקט זה
+                  </div>
+                )}
               </div>
+            </div>
+          )}
+          
+          {/* Show message when no project type selected */}
+          {!projectType && (
+            <div className="text-center py-4 text-muted-foreground">
+              בחר סוג פרויקט כדי לראות את היועצים הנדרשים
             </div>
           )}
 
