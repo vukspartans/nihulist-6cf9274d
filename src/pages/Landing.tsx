@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,7 +34,24 @@ const Landing = () => {
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [currentHeroImage, setCurrentHeroImage] = useState(0);
   const navigate = useNavigate();
+
+  // Hero images array - ready for more images
+  const heroImages = [
+    "/lovable-uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
+    // Add more images here as they're uploaded
+  ];
+
+  // Auto-switch hero images
+  useEffect(() => {
+    if (heroImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentHeroImage((prev) => (prev + 1) % heroImages.length);
+      }, 4000); // Switch every 4 seconds
+      return () => clearInterval(interval);
+    }
+  }, [heroImages.length]);
 
   const testimonials = [
     {
@@ -155,11 +172,20 @@ const Landing = () => {
               </div>
             </div>
 
-            {/* Right content - Compact Hero Image */}
+            {/* Right content - Hero Image with Auto-switching */}
             <div className="flex justify-center lg:justify-end animate-scale-in" style={{animationDelay: "0.3s"}}>
               <div className="relative">
-                <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 flex items-center justify-center hover-scale">
-                  <div className="text-4xl sm:text-6xl lg:text-7xl animate-pulse">👨‍💼📱</div>
+                <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 overflow-hidden hover-scale relative">
+                  <img 
+                    src={heroImages[currentHeroImage]} 
+                    alt="מומחה בנייה ונדל״ן עם האפליקציה"
+                    className="w-full h-full object-cover transition-all duration-1000 ease-in-out"
+                    style={{
+                      transform: currentHeroImage % 2 === 0 ? 'scale(1)' : 'scale(1.05)',
+                      opacity: 1
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent"></div>
                 </div>
                 {/* Floating elements */}
                 <div className="absolute -top-3 -right-3 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center animate-float">
