@@ -498,7 +498,7 @@ const Landing = () => {
                 variant="hero" 
                 size="xl" 
                 onClick={() => setShowUserTypeDialog(true)}
-                className="text-xl px-12 py-6 bg-white text-primary hover:bg-white/90"
+                className="text-xl px-12 py-6 bg-primary text-white hover:bg-primary/90 transition-transform duration-200 hover:scale-115"
               >
                 <Zap className="w-6 h-6 ml-2" />
                 התחל את הפרויקט הראשון היום
