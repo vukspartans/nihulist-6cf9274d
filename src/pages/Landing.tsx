@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,35 +28,29 @@ import {
   Target
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import HeroImageCarousel from "@/components/HeroImageCarousel";
+import LazySection from "@/components/LazySection";
 
-const Landing = () => {
+// Lazy load heavy components
+const OptimizedTestimonials = lazy(() => import("@/components/OptimizedTestimonials"));
+
+const Landing = memo(() => {
   // NihuList Landing Page - Cache Bust v2
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  const [currentHeroImage, setCurrentHeroImage] = useState(0);
   const navigate = useNavigate();
 
-  // Hero images array - ready for more images
+  // Hero images array - optimized for performance
   const heroImages = [
     "/lovable-uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
     // Add more images here as they're uploaded
   ];
 
-  // Auto-switch hero images
-  useEffect(() => {
-    if (heroImages.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentHeroImage((prev) => (prev + 1) % heroImages.length);
-      }, 4000); // Switch every 4 seconds
-      return () => clearInterval(interval);
-    }
-  }, [heroImages.length]);
-
+  // Optimized testimonials data
   const testimonials = [
     {
       name: "אדר' מיכל כהן",
-      role: "אדריכלית ראשית",
+      role: "אדריכלית ראשית", 
       company: "כהן אדריכלות",
       image: "👩‍💼",
       quote: "NihuList שינה לי את המשחק לחלוטין. מחברת אותי עם יזמי נדל\"ן איכותיים שמבינים את הערך של תכנון מקצועי ומוכנים לשלם עליו בהתאם."
@@ -64,7 +58,7 @@ const Landing = () => {
     {
       name: "רון אברהם",
       role: "מייסד ומנכ״ל",
-      company: "אברהם נדל\"ן",
+      company: "אברהם נדל\"ן", 
       image: "👨‍💻",
       quote: "במקום לבזבז שבועות על חיפוש קבלני בנייה ומהנדסים, מצאתי את הצוות המושלם תוך 24 שעות. הפרויקט הושלם בזמן ובתקציב."
     },
@@ -72,7 +66,7 @@ const Landing = () => {
       name: "שרה לוי",
       role: "מהנדסת אזרחית",
       company: "לוי הנדסה",
-      image: "👩‍💼",
+      image: "👩‍💼", 
       quote: "הפלטפורמה מביאה לי רק פרויקטי בנייה איכותיים עם יזמים רציניים. הכנסותיי גדלו פי 3 מאז שהצטרפתי."
     }
   ];
@@ -172,21 +166,13 @@ const Landing = () => {
               </div>
             </div>
 
-            {/* Right content - Hero Image with Auto-switching */}
+            {/* Right content - Optimized Hero Image */}
             <div className="flex justify-center lg:justify-end animate-scale-in" style={{animationDelay: "0.3s"}}>
               <div className="relative">
-                <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 overflow-hidden hover-scale relative">
-                  <img 
-                    src={heroImages[currentHeroImage]} 
-                    alt="מומחה בנייה ונדל״ן עם האפליקציה"
-                    className="w-full h-full object-cover transition-all duration-1000 ease-in-out"
-                    style={{
-                      transform: currentHeroImage % 2 === 0 ? 'scale(1)' : 'scale(1.05)',
-                      opacity: 1
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent"></div>
-                </div>
+                <HeroImageCarousel 
+                  images={heroImages}
+                  className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 overflow-hidden hover-scale relative"
+                />
                 {/* Floating elements */}
                 <div className="absolute -top-3 -right-3 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center animate-float">
                   <Trophy className="w-5 h-5 text-white" />
@@ -200,8 +186,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Trust & Credibility Section */}
-      <section className="py-24 lg:py-32 bg-muted/30 relative overflow-hidden">
+      {/* Trust & Credibility Section - Lazy Loaded */}
+      <LazySection className="py-24 lg:py-32 bg-muted/30 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-10 left-10 w-32 h-32 bg-primary rounded-full blur-3xl animate-float"></div>
@@ -243,10 +229,10 @@ const Landing = () => {
             </div>
           </div>
         </div>
-      </section>
+      </LazySection>
 
-      {/* How It Works Section */}
-      <section className="py-32 lg:py-40 bg-background relative overflow-hidden">
+      {/* How It Works Section - Lazy Loaded */}
+      <LazySection className="py-32 lg:py-40 bg-background relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 right-20 w-64 h-64 bg-tech-purple rounded-full blur-3xl animate-float" style={{animationDelay: "3s"}}></div>
@@ -319,7 +305,7 @@ const Landing = () => {
             </Card>
           </div>
         </div>
-      </section>
+      </LazySection>
 
       {/* Audience Section */}
       <section className="py-32 lg:py-40 bg-muted/30 relative overflow-hidden">
@@ -410,86 +396,44 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 lg:py-32 bg-background">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">מה אומרים</span>
-              <br />
-              <span className="gradient-text">המשתמשים שלנו</span>
+      {/* Testimonials Section - Lazy Loaded with Optimized Component */}
+      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-primary via-tech-purple to-primary relative overflow-hidden">
+        {/* Background effects */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-tech-purple-light/20 rounded-full blur-3xl animate-float" style={{animationDelay: "2s"}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 lg:px-6 relative">
+          <div className="text-center mb-20 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-black text-white mb-8">
+              מה אומרים <span className="text-tech-purple-light">הלקוחות שלנו?</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              סיפורי הצלחה אמיתיים של יזמים ויועצים שמצאו זה את זה דרך הפלטפורמה שלנו
+            <p className="text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed">
+              שמע את הסיפורים של מומחי בנייה ויזמי נדל"ן שהצליחו להגשים את החלומות שלהם
             </p>
           </div>
-
-          {/* Testimonials Carousel */}
-          <div className="max-w-4xl mx-auto">
-            <Card className="p-8 lg:p-12 text-center">
-              <CardContent>
-                <div className="space-y-8">
-                  <div className="flex justify-center text-primary text-3xl">
-                    {"★".repeat(5)}
-                  </div>
-                  
-                  <blockquote className="text-xl lg:text-2xl italic text-muted-foreground leading-relaxed">
-                    "{testimonials[currentTestimonial].quote}"
-                  </blockquote>
-                  
-                  <div className="space-y-2">
-                    <div className="text-6xl">{testimonials[currentTestimonial].image}</div>
-                    <div className="font-bold text-xl">{testimonials[currentTestimonial].name}</div>
-                    <div className="text-muted-foreground">{testimonials[currentTestimonial].role}</div>
-                    <div className="text-sm text-primary font-medium">{testimonials[currentTestimonial].company}</div>
-                  </div>
-                  
-                  {/* Navigation */}
-                  <div className="flex justify-center items-center gap-4">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setCurrentTestimonial((prev) => prev === 0 ? testimonials.length - 1 : prev - 1)}
-                    >
-                      <ChevronRight className="w-5 h-5 flip-rtl-180" />
-                    </Button>
-                    <div className="flex gap-2">
-                      {testimonials.map((_, index) => (
-                        <button
-                          key={index}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                            index === currentTestimonial ? 'bg-primary' : 'bg-muted'
-                          }`}
-                          onClick={() => setCurrentTestimonial(index)}
-                        />
-                      ))}
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setCurrentTestimonial((prev) => prev === testimonials.length - 1 ? 0 : prev + 1)}
-                    >
-                      <ChevronLeft className="w-5 h-5 flip-rtl-180" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          
+          <Suspense fallback={
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-pulse text-white text-xl">טוען עדויות...</div>
+            </div>
+          }>
+            <OptimizedTestimonials testimonials={testimonials} />
+          </Suspense>
         </div>
-      </section>
+      </LazySection>
 
-      {/* Secondary CTA Section */}
-      <section className="py-20 lg:py-32 bg-gradient-to-r from-primary via-tech-purple to-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-4 lg:px-6 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
-              מוכן לשנות
+      {/* Final CTA Section */}
+      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
+        <div className="container mx-auto px-4 lg:px-6 text-center">
+          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-black leading-tight">
+              <span className="text-foreground">מוכן לשדרג</span>
               <br />
               <span className="text-tech-purple-light">את העסק שלך?</span>
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
               הצטרף לאלפי יזמים ויועצים שכבר חווים את העתיד של שיתוף פעולה מקצועי
             </p>
             
@@ -505,34 +449,34 @@ const Landing = () => {
               </Button>
               
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="xl" 
-                onClick={() => setShowUserTypeDialog(true)}
-                className="text-xl px-12 py-6 text-white border-white/30 hover:bg-white/10"
+                onClick={() => setShowDemoVideo(true)}
+                className="text-xl px-12 py-6 border-2 hover-scale"
               >
-                <UserCheck className="w-6 h-6 ml-2" />
-                הצטרף כיועץ מאומת
+                <Play className="w-6 h-6 ml-2" />
+                צפה בהדגמה
               </Button>
             </div>
             
             {/* Trust indicators */}
-            <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-white/70 text-sm">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                <span>אבטחה ארגונית</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>רשת מאומתת</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                <span>תמיכה 24/7</span>
-              </div>
+            <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground animate-fade-in" style={{animationDelay: "0.3s"}}>
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                בטוח ומאומת
+              </span>
+              <span className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-primary" />
+                זמין 24/7
+              </span>
+              <span className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-primary" />
+                מקצועי ואיכותי
+              </span>
             </div>
           </div>
         </div>
-      </section>
+      </LazySection>
 
       {/* FAQ Preview Section */}
       <section className="py-20 bg-muted/30">
@@ -701,7 +645,9 @@ const Landing = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>;
-};
+    </div>
+});
+
+Landing.displayName = "Landing";
 
 export default Landing;
