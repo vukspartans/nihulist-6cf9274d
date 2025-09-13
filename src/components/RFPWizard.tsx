@@ -22,7 +22,6 @@ import { ProjectTypeSelector } from './ProjectTypeSelector';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PROJECT_TYPES } from '@/constants/project';
 
 interface RFPWizardProps {
   projectId: string;

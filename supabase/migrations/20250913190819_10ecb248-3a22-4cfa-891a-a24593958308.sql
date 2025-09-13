@@ -1,0 +1,2 @@
+-- Update the supabase config to include the new edge function
+-- This migration ensures the update-advisors-data function is properly configured
