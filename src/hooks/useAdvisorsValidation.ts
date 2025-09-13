@@ -126,13 +126,16 @@ export const useAdvisorsValidation = () => {
       };
     }
 
+    // Get project-specific required advisors
+    const projectAdvisors = canonicalProjects.get(normalizedProjectName) || [];
+    
     // Normalize selected advisors
     const normalizedSelected = new Set(
       selectedAdvisors.map(advisor => normalize(advisor))
     );
 
-    const requiredSet = new Set(data.required_categories);
-    const missing = data.required_categories.filter(req => !normalizedSelected.has(req));
+    const requiredSet = new Set(projectAdvisors);
+    const missing = projectAdvisors.filter(req => !normalizedSelected.has(req));
 
     const status = missing.length === 0 ? 'All Advisors Present' : 'Missing Advisors';
     const notes = status === 'Missing Advisors' 
