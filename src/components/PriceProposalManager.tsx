@@ -12,9 +12,10 @@ interface PriceProposalManagerProps {
   projectId: string;
   projectName: string;
   projectType: string;
+  onRfpSent?: () => void;
 }
 
-export const PriceProposalManager = ({ projectId, projectName, projectType }: PriceProposalManagerProps) => {
+export const PriceProposalManager = ({ projectId, projectName, projectType, onRfpSent }: PriceProposalManagerProps) => {
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
   const [currentProjectType, setCurrentProjectType] = useState(projectType);
@@ -30,6 +31,7 @@ export const PriceProposalManager = ({ projectId, projectName, projectType }: Pr
     const result = await sendRFPInvitations(projectId, selectedSuppliers);
     if (result) {
       setProposalSent(true);
+      onRfpSent?.();
     }
   };
 

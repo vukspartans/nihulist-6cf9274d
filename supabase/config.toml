@@ -1,1 +1,4 @@
 project_id = "aazakceyruefejeyhkbk"
+
+[functions.get-advisors-data]
+verify_jwt = false

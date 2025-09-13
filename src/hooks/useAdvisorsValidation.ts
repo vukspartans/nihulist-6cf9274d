@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProjectAdvisorData {
   Project: string;
@@ -21,7 +22,8 @@ interface ValidationResult {
   Notes: string;
 }
 
-const JSON_URL = 'https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/sign/json/advisors_projects_full.json?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82NzdhYzgzYy04Yjk0LTQ5NzQtYWE5My1jMzY2MmE5ODJhNTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJqc29uL2Fkdmlzb3JzX3Byb2plY3RzX2Z1bGwuanNvbiIsImlhdCI6MTc1NTgwNjExMiwiZXhwIjoxNzU2NDEwOTEyfQ.peFOxV33sTpkmrZO4n-UAYKFZlYw6OmsPBx5JI6ff8Y';
+const CACHE_KEY = 'advisors-data-cache';
+const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
 
 export const useAdvisorsValidation = () => {
   const [data, setData] = useState<AdvisorsData | null>(null);
@@ -31,14 +33,36 @@ export const useAdvisorsValidation = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(JSON_URL);
-        if (!response.ok) {
-          throw new Error('Failed to fetch advisors data');
+        // Check cache first
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data: cachedData, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            setData(cachedData);
+            setLoading(false);
+            return;
+          }
         }
-        const jsonData = await response.json();
+
+        // Fetch from Supabase Edge Function
+        const { data: response, error } = await supabase.functions.invoke('get-advisors-data');
+        
+        if (error) {
+          throw new Error(`Failed to fetch advisors data: ${error.message}`);
+        }
+
+        const jsonData = response;
         setData(jsonData);
+        
+        // Cache the data
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: jsonData,
+          timestamp: Date.now()
+        }));
+
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Error fetching advisors data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load advisors data');
       } finally {
         setLoading(false);
       }

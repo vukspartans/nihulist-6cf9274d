@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PriceProposalManager } from '@/components/PriceProposalManager';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -21,6 +21,9 @@ export const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [rfpSent, setRfpSent] = useState(false);
 
   // Check for edit mode from URL params
   useEffect(() => {
@@ -36,6 +39,7 @@ export const ProjectDetail = () => {
   useEffect(() => {
     if (id) {
       fetchProject();
+      fetchProposals();
     }
   }, [id]);
 
@@ -60,6 +64,47 @@ export const ProjectDetail = () => {
       setLoading(false);
     }
   };
+
+  const fetchProposals = async () => {
+    if (!id) return;
+    setProposalsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('*')
+        .eq('project_id', id)
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+      setProposals(data || []);
+    } catch (error) {
+      console.error('Error fetching proposals:', error);
+    } finally {
+      setProposalsLoading(false);
+    }
+  };
+
+  const checkRfpStatus = async () => {
+    if (!id) return;
+    try {
+      const { data, error } = await supabase
+        .from('rfps')
+        .select('id')
+        .eq('project_id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setRfpSent(!!data);
+    } catch (error) {
+      console.error('Error checking RFP status:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (id) {
+      checkRfpStatus();
+    }
+  }, [id]);
 
 
   const handlePhaseChange = async (newPhase: string) => {
@@ -209,11 +254,22 @@ export const ProjectDetail = () => {
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="proposals" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="proposals">שליחת בקשות הצעות מחיר</TabsTrigger>
-          <TabsTrigger value="received">הצעות מחיר שהתקבלו</TabsTrigger>
-          <TabsTrigger value="timeline">ציר זמן</TabsTrigger>
+      <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
+        <TabsList className="grid w-full grid-cols-3 h-11">
+          <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות מחיר</TabsTrigger>
+          <TabsTrigger 
+            value="received" 
+            className="text-right flex items-center gap-2"
+            disabled={!rfpSent}
+          >
+            הצעות מחיר שהתקבלו
+            {proposals.length > 0 && (
+              <Badge variant="secondary" className="mr-1">
+                {proposals.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="text-right">ציר זמן</TabsTrigger>
         </TabsList>
 
         <TabsContent value="proposals">
@@ -221,18 +277,74 @@ export const ProjectDetail = () => {
             projectId={project.id}
             projectName={project.name}
             projectType={project.type}
+            onRfpSent={() => {
+              setRfpSent(true);
+              fetchProposals();
+            }}
           />
         </TabsContent>
 
         <TabsContent value="received">
           <Card>
             <CardHeader>
-              <CardTitle>הצעות מחיר שהתקבלו</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                הצעות מחיר שהתקבלו
+                {proposals.length > 0 && (
+                  <Badge variant="secondary">{proposals.length}</Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                לא הגיעו הצעות מחיר עדיין
-              </div>
+              {proposalsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">טוען הצעות מחיר...</p>
+                </div>
+              ) : proposals.length === 0 ? (
+                <div className="text-center py-12">
+                  <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">מחכה להצעות מחיר</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    הזמנות נשלחו לספקים והם יגיבו בקרוב. 
+                    ההצעות יופיעו כאן ברגע שיתקבלו.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {proposals.map((proposal) => (
+                    <Card key={proposal.id} className="border-l-4 border-l-primary">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-semibold">{proposal.supplier_name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
+                            </p>
+                          </div>
+                          <div className="text-left">
+                            <p className="text-2xl font-bold text-primary">
+                              {new Intl.NumberFormat('he-IL', {
+                                style: 'currency',
+                                currency: 'ILS',
+                                minimumFractionDigits: 0,
+                              }).format(proposal.price)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {proposal.timeline_days} ימי עבודה
+                            </p>
+                          </div>
+                        </div>
+                        {proposal.terms && (
+                          <p className="text-sm text-muted-foreground border-t pt-3 mt-3">
+                            {proposal.terms}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
