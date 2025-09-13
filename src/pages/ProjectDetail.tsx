@@ -25,10 +25,6 @@ export const ProjectDetail = () => {
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [rfpSent, setRfpSent] = useState(false);
 
-  // Debug logging
-  console.log('ProjectDetail render - ID from params:', id);
-  console.log('ProjectDetail render - Project:', project);
-  console.log('ProjectDetail render - Loading:', loading);
 
   // Check for edit mode from URL params
   useEffect(() => {
@@ -49,7 +45,6 @@ export const ProjectDetail = () => {
   }, [id]);
 
   const fetchProject = async () => {
-    console.log('fetchProject called with ID:', id);
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -57,11 +52,9 @@ export const ProjectDetail = () => {
         .eq('id', id)
         .maybeSingle();
 
-      console.log('Project fetch result:', { data, error });
       
       if (error) throw error;
       
-      console.log('Setting project data:', data);
       setProject(data);
     } catch (error) {
       console.error('Error fetching project:', error);
@@ -71,7 +64,6 @@ export const ProjectDetail = () => {
         variant: "destructive",
       });
     } finally {
-      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -147,10 +139,7 @@ export const ProjectDetail = () => {
     setProject(updatedProject);
   };
 
-  console.log('About to render - loading:', loading, 'project:', project);
-
   if (loading) {
-    console.log('Rendering loading state');
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-4">
@@ -162,7 +151,6 @@ export const ProjectDetail = () => {
   }
 
   if (!project) {
-    console.log('Rendering project not found state');
     return (
       <div className="container mx-auto p-6 text-center">
         <h1 className="text-2xl font-bold mb-4">פרויקט לא נמצא</h1>
@@ -185,8 +173,6 @@ export const ProjectDetail = () => {
     }).format(amount);
   };
 
-  console.log('Rendering main project page for:', project.name || project.location);
-  
   return (
     <div className="container mx-auto p-6" dir="rtl">
       {/* Header */}

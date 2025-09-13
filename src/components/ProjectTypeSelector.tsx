@@ -22,7 +22,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   placeholder = "בחר סוג פרויקט...",
   showLegacyWarning = false
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
+  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredCategories = PROJECT_CATEGORIES.filter(category =>
@@ -30,7 +30,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
     getProjectTypesByCategory(category).some(type => type.includes(searchTerm))
   );
 
-  const availableTypes = selectedCategory 
+  const availableTypes = selectedCategory && selectedCategory !== 'all'
     ? getProjectTypesByCategory(selectedCategory).filter(type => type.includes(searchTerm))
     : PROJECT_CATEGORIES.flatMap(cat => getProjectTypesByCategory(cat)).filter(type => type.includes(searchTerm));
 
@@ -43,7 +43,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   const shouldShowWarning = showLegacyWarning && isLegacyType;
 
   const resetSelection = () => {
-    setSelectedCategory('');
+    setSelectedCategory('all');
     setSearchTerm('');
   };
 
@@ -109,12 +109,12 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
         {!searchTerm && (
           <div>
             <label className="text-sm font-medium mb-2 block">קטגוריה:</label>
-            <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory)}>
+            <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="בחר קטגוריה..." />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
-                <SelectItem value="">כל הקטגוריות</SelectItem>
+                <SelectItem value="all">כל הקטגוריות</SelectItem>
                 {filteredCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
@@ -134,7 +134,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
             </SelectTrigger>
             <SelectContent className="bg-background z-50 max-h-80 overflow-y-auto">
               {availableTypes.length === 0 ? (
-                <SelectItem value="" disabled>
+                <SelectItem value="no-results" disabled>
                   לא נמצאו תוצאות
                 </SelectItem>
               ) : (
@@ -142,7 +142,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
                   <SelectItem key={type} value={type}>
                     <div className="flex flex-col items-start">
                       <span>{type}</span>
-                      {!selectedCategory && (
+                      {(!selectedCategory || selectedCategory === 'all') && (
                         <Badge variant="outline" className="mt-1 text-xs">
                           {PROJECT_CATEGORIES.find(cat => getProjectTypesByCategory(cat).includes(type))}
                         </Badge>
@@ -157,7 +157,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
 
         {/* Statistics */}
         <div className="text-xs text-muted-foreground">
-          {selectedCategory 
+          {selectedCategory && selectedCategory !== 'all'
             ? `${getProjectTypesByCategory(selectedCategory).length} סוגי פרויקטים בקטגוריה זו`
             : `${availableTypes.length} סוגי פרויקטים זמינים`
           }
