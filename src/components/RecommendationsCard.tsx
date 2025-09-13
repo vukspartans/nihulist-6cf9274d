@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,14 +10,24 @@ interface RecommendationsCardProps {
   projectId: string;
   onSelectSuppliers?: (supplierIds: string[]) => void;
   selectedSuppliers?: string[];
+  autoSelectTop5?: boolean;
 }
 
 export const RecommendationsCard = ({ 
   projectId, 
   onSelectSuppliers, 
-  selectedSuppliers = [] 
+  selectedSuppliers = [],
+  autoSelectTop5 = false
 }: RecommendationsCardProps) => {
   const { recommendations, loading, error, regenerate } = useRecommendations(projectId);
+
+  // Auto-select top 5 suppliers when they load
+  React.useEffect(() => {
+    if (autoSelectTop5 && recommendations.length > 0 && selectedSuppliers.length === 0 && onSelectSuppliers) {
+      const top5 = recommendations.slice(0, 5).map(rec => rec.supplier_id);
+      onSelectSuppliers(top5);
+    }
+  }, [recommendations, autoSelectTop5, selectedSuppliers.length, onSelectSuppliers]);
 
   if (loading) {
     return (

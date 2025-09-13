@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, Building, Coins, Users, Calculator, Clock, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { PriceProposalManager } from '@/components/PriceProposalManager';
+import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
@@ -176,7 +176,7 @@ export const ProjectDetail = () => {
           onClick={() => navigate('/dashboard')}
           className="flex items-center gap-2"
         >
-          <ArrowRight className="w-4 h-4 flip-rtl-180" />
+          <ArrowLeft className="w-4 h-4" />
           חזרה לדשבורד
         </Button>
         
@@ -211,7 +211,7 @@ export const ProjectDetail = () => {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-2xl mb-2">{project.name}</CardTitle>
+              <CardTitle className="text-2xl mb-2">{project.name || project.location}</CardTitle>
               <div className="flex items-center gap-4 text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Building className="w-4 h-4" />
@@ -273,9 +273,9 @@ export const ProjectDetail = () => {
         </TabsList>
 
         <TabsContent value="proposals">
-          <PriceProposalManager
+          <RFPWizard
             projectId={project.id}
-            projectName={project.name}
+            projectName={project.name || project.location}
             projectType={project.type}
             onRfpSent={() => {
               setRfpSent(true);

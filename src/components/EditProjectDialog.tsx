@@ -39,7 +39,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
   const handleSave = async () => {
     setLoading(true);
     try {
-      const computedName = formData.name.trim() || formData.location.trim();
+      const computedName = formData.name.trim() || formData.location.trim() || 'פרויקט ללא שם';
       const updateData = {
         name: computedName,
         type: formData.type,
@@ -95,7 +95,11 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
               id="name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={formData.location || 'הכנס שם פרויקט'}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              אם יישאר ריק, נשתמש במיקום בתור שם הפרויקט
+            </p>
           </div>
 
           <div>
