@@ -15,7 +15,7 @@ import {
   Star,
   ArrowLeft,
   ArrowRight,
-  DollarSign,
+  Coins,
   Award,
   Briefcase,
   Globe,
@@ -195,7 +195,7 @@ const ForConsultants = () => {
             {/* Trust Indicators - Compact */}
             <div className="flex flex-wrap justify-center items-center gap-4 lg:gap-6 text-xs lg:text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
               <span className="flex items-center gap-2">
-                <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-green-500" />
+                <Coins className="w-3 h-3 lg:w-4 lg:h-4 text-green-500" />
                 +40% הכנסות
               </span>
               <span className="flex items-center gap-2">
@@ -438,7 +438,7 @@ const ForConsultants = () => {
                 אימות מהיר
               </span>
               <span className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
+                <Coins className="w-4 h-4" />
                 תשלומים מובטחים
               </span>
             </div>

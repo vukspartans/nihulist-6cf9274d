@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, MoreVertical, MapPin, DollarSign, Edit, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, MapPin, Coins, Edit, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -274,18 +274,18 @@ const Dashboard = () => {
                             {project.location || "לא צוין"}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <DollarSign className="w-4 h-4 ml-1 text-muted-foreground" />
-                            {formatBudget(project.budget)}
-                          </div>
-                        </TableCell>
                          <TableCell>
                            <div className="flex items-center">
-                             <DollarSign className="w-4 h-4 ml-1 text-muted-foreground" />
-                             {formatBudget(project.advisors_budget)}
+                             <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
+                             {formatBudget(project.budget)}
                            </div>
                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
+                              {formatBudget(project.advisors_budget)}
+                            </div>
+                          </TableCell>
                          <TableCell>{formatDate(project.created_at)}</TableCell>
                         <TableCell>
                           <DropdownMenu>

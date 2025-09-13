@@ -15,7 +15,7 @@ import {
   Star,
   ArrowLeft,
   ArrowRight,
-  DollarSign,
+  Coins,
   Award
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
@@ -143,7 +143,7 @@ const ForEntrepreneurs = () => {
             {/* Trust Indicators */}
             <div className="flex flex-wrap justify-center items-center gap-8 text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
               <span className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-green-500" />
+                <Coins className="w-4 h-4 text-green-500" />
                 ממוצע חיסכון: ₪250K
               </span>
               <span className="flex items-center gap-2">

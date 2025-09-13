@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, DollarSign, Users, Calculator } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PriceProposalManager } from '@/components/PriceProposalManager';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -190,7 +190,7 @@ export const ProjectDetail = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <DollarSign className="w-5 h-5 text-primary" />
+              <Coins className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">תקציב פרויקט</p>
                 <p className="font-semibold">{formatCurrency(project.budget)}</p>

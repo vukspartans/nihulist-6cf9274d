@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, TrendingUp, Users, FileText, Clock, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
+import { BarChart, TrendingUp, Users, FileText, Clock, Coins, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 interface DashboardStatsData {
   totalProjects: number;
