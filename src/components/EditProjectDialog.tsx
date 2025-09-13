@@ -9,7 +9,8 @@ import { Edit, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
-import { PROJECT_TYPES, PROJECT_PHASES } from '@/constants/project';
+import { PROJECT_PHASES } from '@/constants/project';
+import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
 
 interface EditProjectDialogProps {
   project: Project;
@@ -104,18 +105,11 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
 
           <div>
             <Label htmlFor="type">סוג פרויקט</Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {PROJECT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ProjectTypeSelector
+              selectedType={formData.type}
+              onTypeChange={(type) => setFormData(prev => ({ ...prev, type }))}
+              placeholder="בחר סוג פרויקט"
+            />
           </div>
 
           <div>

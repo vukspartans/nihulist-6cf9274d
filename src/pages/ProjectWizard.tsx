@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 import { PROJECT_PHASES } from '@/constants/project';
+import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
 
 interface FormData {
   address: string;
@@ -338,19 +339,14 @@ export const ProjectWizard = () => {
 
             {/* Project Type - Required */}
             <div className="space-y-2">
-              <Label htmlFor="projectType" className="text-base font-medium">
+              <Label className="text-base font-medium">
                 סוג פרויקט <span className="text-destructive">*</span>
               </Label>
-              <Select dir="rtl" onValueChange={(value) => handleSelectChange('projectType', value)}>
-                <SelectTrigger className="h-12 text-right justify-end">
-                  <SelectValue placeholder="בחר סוג פרויקט" className="text-right" />
-                </SelectTrigger>
-                <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
-                  {projectTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-right justify-end">{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProjectTypeSelector
+                selectedType={formData.projectType}
+                onTypeChange={(type) => handleSelectChange('projectType', type)}
+                placeholder="בחר סוג פרויקט"
+              />
             </div>
 
             {/* Project Phase - Required */}

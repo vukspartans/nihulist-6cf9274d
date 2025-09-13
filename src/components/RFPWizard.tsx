@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { AdvisorSelection } from './AdvisorSelection';
 import { RecommendationsCard } from './RecommendationsCard';
+import { ProjectTypeSelector } from './ProjectTypeSelector';
+import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PROJECT_TYPES } from '@/constants/project';
@@ -191,21 +193,12 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
               </div>
 
               <div className="max-w-md mx-auto">
-                <Label htmlFor="projectType" className="text-base font-medium">
-                  סוג פרויקט
-                </Label>
-                <Select value={selectedProjectType} onValueChange={setSelectedProjectType}>
-                  <SelectTrigger className="h-12">
-                    <SelectValue placeholder="בחר סוג פרויקט" />
-                  </SelectTrigger>
-                  <SelectContent align="end">
-                    {PROJECT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ProjectTypeSelector
+                  selectedType={selectedProjectType}
+                  onTypeChange={setSelectedProjectType}
+                  label="סוג פרויקט"
+                  placeholder="בחר סוג פרויקט"
+                />
                 {selectedProjectType && (
                   <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                     <CheckCircle className="h-4 w-4" />
