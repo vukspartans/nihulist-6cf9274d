@@ -79,6 +79,51 @@ export const useAdvisorsValidation = () => {
     return trimmed.trim();
   };
 
+  // Legacy type mapping for backward compatibility
+  const normalizeLegacyProjectType = (legacyType: string): string => {
+    if (!legacyType) return '';
+    
+    const type = legacyType.trim();
+    
+    // Map legacy types to new standardized types
+    if (type.includes('בניין מגורים') || type.includes('בניית בניין מגורים')) {
+      return 'מגורים בבנייה רוויה (5–8 קומות)';
+    }
+    if (type.includes('תמ"א') || type.includes('התחדשות עירונית')) {
+      return 'תמ"א 38 - פינוי ובינוי';
+    }
+    if (type.includes('ביוב') || type.includes('ניקוז')) {
+      return 'רשתות ביוב וניקוז';
+    }
+    if (type.includes('מגורים')) {
+      return 'מגורים בבנייה רוויה (5–8 קומות)';
+    }
+    if (type.includes('משרדים') || type.includes('משרד')) {
+      return 'בניין משרדים';
+    }
+    if (type.includes('תעשי')) {
+      return 'מבנה תעשייה';
+    }
+    if (type.includes('בריכ')) {
+      return 'מתקני ספורט ונופש';
+    }
+    if (type.includes('בית ספר') || type.includes('חינוך')) {
+      return 'בית ספר';
+    }
+    if (type.includes('בית חולים') || type.includes('רפוא')) {
+      return 'בית חולים';
+    }
+    if (type.includes('מלון')) {
+      return 'מלון';
+    }
+    if (type.includes('קניון') || type.includes('מסחר')) {
+      return 'מרכז מסחרי / קניון';
+    }
+    
+    // Return original if no mapping found
+    return type;
+  };
+
   const getCanonicalProjectTypes = (): string[] => {
     if (!data) return [];
     
@@ -108,22 +153,31 @@ export const useAdvisorsValidation = () => {
       };
     }
 
-    const normalizedProjectName = normalize(incomingProjectName);
+    // First try to normalize legacy project type
+    const legacyNormalizedType = normalizeLegacyProjectType(incomingProjectName);
+    const normalizedProjectName = normalize(legacyNormalizedType);
+    
     const canonicalProjects = new Map(
       data.projects.map(p => [normalize(p.Project), p.Advisors])
     );
 
-    // Check if project type is known
+    // Check if project type is known (after legacy normalization)
     if (!canonicalProjects.has(normalizedProjectName)) {
-      return {
-        Project: normalizedProjectName,
-        Status: 'Unknown Project Type',
-        RequiredCount: data.required_categories.length,
-        SelectedCount: selectedAdvisors.length,
-        Missing: data.required_categories,
-        ValidProjectTypes: getCanonicalProjectTypes(),
-        Notes: 'סוג הפרויקט לא מזוהה. בחר שם מדויק מהרשימה.'
-      };
+      // Try with original normalized name as fallback
+      const originalNormalized = normalize(incomingProjectName);
+      if (!canonicalProjects.has(originalNormalized)) {
+        return {
+          Project: incomingProjectName,
+          Status: 'Unknown Project Type',
+          RequiredCount: data.required_categories.length,
+          SelectedCount: selectedAdvisors.length,
+          Missing: data.required_categories,
+          ValidProjectTypes: getCanonicalProjectTypes(),
+          Notes: 'סוג הפרויקט לא מזוהה. בחר שם מדויק מהרשימה או עדכן את סוג הפרויקט.'
+        };
+      }
+      // Use original normalized name if found
+      const normalizedProjectName = originalNormalized;
     }
 
     // Get project-specific required advisors
@@ -155,8 +209,19 @@ export const useAdvisorsValidation = () => {
 
   const getRecommendedAdvisors = (projectType: string): string[] => {
     if (!data) return [];
-    const normalizedProjectType = normalize(projectType);
-    const project = data.projects.find(p => normalize(p.Project) === normalizedProjectType);
+    
+    // Try legacy normalization first, then regular normalization
+    const legacyNormalized = normalizeLegacyProjectType(projectType);
+    const normalizedProjectType = normalize(legacyNormalized);
+    
+    let project = data.projects.find(p => normalize(p.Project) === normalizedProjectType);
+    
+    // Fallback to original normalization if not found
+    if (!project) {
+      const originalNormalized = normalize(projectType);
+      project = data.projects.find(p => normalize(p.Project) === originalNormalized);
+    }
+    
     return project ? project.Advisors.sort() : [];
   };
 
@@ -167,6 +232,7 @@ export const useAdvisorsValidation = () => {
     validateAdvisorSelection,
     getCanonicalProjectTypes,
     getRecommendedAdvisors,
-    normalize
+    normalize,
+    normalizeLegacyProjectType
   };
 };

@@ -109,6 +109,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
               selectedType={formData.type}
               onTypeChange={(type) => setFormData(prev => ({ ...prev, type }))}
               placeholder="בחר סוג פרויקט"
+              showLegacyWarning={true}
             />
           </div>
 

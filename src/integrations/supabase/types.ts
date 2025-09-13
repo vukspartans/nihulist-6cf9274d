@@ -473,6 +473,10 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      normalize_project_type: {
+        Args: { legacy_type: string }
+        Returns: string
+      }
       send_rfp_invitations: {
         Args: { project_uuid: string; selected_supplier_ids?: string[] }
         Returns: {

@@ -4,20 +4,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { PROJECT_CATEGORIES, getProjectTypesByCategory, type ProjectCategory, type ProjectType } from '@/constants/project';
+import { PROJECT_CATEGORIES, PROJECT_TYPES, getProjectTypesByCategory, type ProjectCategory, type ProjectType } from '@/constants/project';
+import { Button } from '@/components/ui/button';
 
 interface ProjectTypeSelectorProps {
   selectedType: string;
   onTypeChange: (type: string) => void;
   label?: string;
   placeholder?: string;
+  showLegacyWarning?: boolean;
 }
 
 export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   selectedType,
   onTypeChange,
   label = "סוג פרויקט",
-  placeholder = "בחר סוג פרויקט..."
+  placeholder = "בחר סוג פרויקט...",
+  showLegacyWarning = false
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +37,10 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   const selectedProjectCategory = PROJECT_CATEGORIES.find(cat => 
     getProjectTypesByCategory(cat).includes(selectedType as ProjectType)
   );
+  
+  // Check if the selected type is a legacy type (not in our new system)
+  const isLegacyType = selectedType && !PROJECT_TYPES.includes(selectedType as any);
+  const shouldShowWarning = showLegacyWarning && isLegacyType;
 
   const resetSelection = () => {
     setSelectedCategory('');
@@ -59,7 +66,11 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
 
         {/* Current Selection Display */}
         {selectedType && (
-          <div className="p-3 bg-primary/5 rounded-lg border">
+          <div className={`p-3 rounded-lg border ${
+            shouldShowWarning 
+              ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800' 
+              : 'bg-primary/5 border-primary/20'
+          }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">{selectedType}</p>
@@ -68,16 +79,28 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
                     {selectedProjectCategory}
                   </Badge>
                 )}
+                {shouldShowWarning && (
+                  <div className="mt-2">
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-300 dark:text-yellow-400">
+                      סוג פרויקט ישן
+                    </Badge>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                      מומלץ לעדכן לסוג פרויקט חדש מהרשימה למטה
+                    </p>
+                  </div>
+                )}
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   onTypeChange('');
                   resetSelection();
                 }}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="text-muted-foreground hover:text-foreground"
               >
                 נקה בחירה
-              </button>
+              </Button>
             </div>
           </div>
         )}
