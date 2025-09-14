@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import { ProjectWizard } from "./pages/ProjectWizard";
 import { ProjectDetail } from "./pages/ProjectDetail";
+import Profile from "./pages/Profile";
 import SupplierSubmit from "./pages/SupplierSubmit";
 import ForEntrepreneurs from "./pages/ForEntrepreneurs";
 import ForConsultants from "./pages/ForConsultants";
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ProjectDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } 
             />
