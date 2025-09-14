@@ -17,6 +17,8 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -133,9 +135,13 @@ const Auth = () => {
 
         if (error) throw error;
 
+        // Show email confirmation message
+        setEmailSent(true);
+        setUserEmail(formData.email);
+        
         toast({
           title: "ההרשמה הושלמה בהצלחה!",
-          description: "המערכת יוצרת את הפרופיל שלכם...",
+          description: "נשלח אליכם מייל לאימות החשבון",
         });
       }
     } catch (error: any) {
@@ -152,6 +158,59 @@ const Auth = () => {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // If email confirmation is pending, show confirmation screen
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
+        <Card className="w-full max-w-lg construction-card">
+          <CardHeader className="text-center space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-primary">
+              אמתו את כתובת המייל
+            </CardTitle>
+            <CardDescription className="text-center">
+              נשלח אליכם מייל לכתובת {userEmail}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-6 text-center">
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                לחצו על הקישור במייל כדי לאמת את החשבון ולהיכנס למערכת
+              </p>
+              <p className="text-sm text-muted-foreground">
+                לא קיבלתם מייל? בדקו בתיקיית הספאם
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEmailSent(false);
+                  setIsLogin(true);
+                }}
+                className="w-full"
+              >
+                חזרה להתחברות
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/")}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                ← חזרה לדף הבית
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // If user is already authenticated, show loading
   if (session) {
