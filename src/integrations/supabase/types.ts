@@ -54,42 +54,142 @@ export type Database = {
       }
       advisors: {
         Row: {
+          availability_status: string | null
           certifications: string[] | null
+          company_id: string | null
           company_name: string | null
           created_at: string
           expertise: string[] | null
+          hourly_rate: number | null
           id: string
           is_active: boolean | null
           location: string | null
           rating: number | null
+          specialties: string[] | null
+          updated_at: string
+          user_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          availability_status?: string | null
+          certifications?: string[] | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          expertise?: string[] | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          rating?: number | null
+          specialties?: string[] | null
+          updated_at?: string
+          user_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          availability_status?: string | null
+          certifications?: string[] | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          expertise?: string[] | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          rating?: number | null
+          specialties?: string[] | null
+          updated_at?: string
+          user_id?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advisors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          location: string | null
+          name: string
+          phone: string | null
+          type: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          phone?: string | null
+          type: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          phone?: string | null
+          type?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          id: string
+          joined_at: string
+          role: string
+          status: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          certifications?: string[] | null
-          company_name?: string | null
-          created_at?: string
-          expertise?: string[] | null
+          company_id: string
           id?: string
-          is_active?: boolean | null
-          location?: string | null
-          rating?: number | null
+          joined_at?: string
+          role?: string
+          status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          certifications?: string[] | null
-          company_name?: string | null
-          created_at?: string
-          expertise?: string[] | null
+          company_id?: string
           id?: string
-          is_active?: boolean | null
-          location?: string | null
-          rating?: number | null
+          joined_at?: string
+          role?: string
+          status?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
