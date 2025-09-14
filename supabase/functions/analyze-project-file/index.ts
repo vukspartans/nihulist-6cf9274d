@@ -144,8 +144,7 @@ serve(async (req) => {
             { type: 'input_file', file_id: uploadResult.id },
             { type: 'input_text', text: analysisPrompt }
           ]
-        }],
-        modalities: ['text']
+        }]
       }),
     });
 
