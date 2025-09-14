@@ -19,6 +19,7 @@ const Auth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -133,7 +134,19 @@ const Auth = () => {
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          // Check if user already exists
+          if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+            toast({
+              title: "המשתמש כבר קיים",
+              description: "החשבון כבר קיים במערכת. עובר להתחברות...",
+            });
+            setIsLogin(true);
+            setFormData(prev => ({ ...prev, password: "" })); // Clear password for security
+            return;
+          }
+          throw error;
+        }
 
         // Show email confirmation message
         setEmailSent(true);
@@ -145,9 +158,15 @@ const Auth = () => {
         });
       }
     } catch (error: any) {
+      let errorMessage = error.message || "אירעה שגיאה בתהליך ההתחברות";
+      
+      if (isLogin && error.message?.includes('Email not confirmed')) {
+        errorMessage = "החשבון טרם אומת. אנא בדקו את המייל שלכם ולחצו על קישור האימות.";
+      }
+      
       toast({
         title: "שגיאה",
-        description: error.message || "אירעה שגיאה בתהליך ההתחברות",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -157,6 +176,34 @@ const Auth = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleResendEmail = async () => {
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "המייל נשלח מחדש",
+        description: "בדקו את תיבת הדואר שלכם לקישור האימות",
+      });
+    } catch (error: any) {
+      toast({
+        title: "שגיאה",
+        description: error.message || "לא ניתן לשלוח מייל באת זה",
+        variant: "destructive",
+      });
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   // If email confirmation is pending, show confirmation screen
@@ -179,16 +226,33 @@ const Auth = () => {
           <CardContent className="space-y-6 text-center">
             <div className="space-y-4">
               <p className="text-muted-foreground">
+                שלחנו אליכם מייל לכתובת <strong>{userEmail}</strong>
+              </p>
+              <p className="text-muted-foreground">
                 לחצו על הקישור במייל כדי לאמת את החשבון ולהיכנס למערכת
               </p>
-              <p className="text-sm text-muted-foreground">
-                לא קיבלתם מייל? בדקו בתיקיית הספאם
-              </p>
+              <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
+                <p className="mb-2">עצות:</p>
+                <ul className="text-right space-y-1">
+                  <li>• בדקו את תיקיית הספאם או ההודעות הלא רצויות</li>
+                  <li>• הקישור תקף למשך 24 שעות</li>
+                  <li>• אם לא קיבלתם מייל, לחצו על "שלח מחדש"</li>
+                </ul>
+              </div>
             </div>
             
             <div className="space-y-3">
               <Button
+                onClick={handleResendEmail}
+                disabled={resendLoading}
+                className="w-full"
                 variant="outline"
+              >
+                {resendLoading ? "שולח..." : "שלח מייל אימות מחדש"}
+              </Button>
+              
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setEmailSent(false);
                   setIsLogin(true);
