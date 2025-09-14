@@ -69,29 +69,24 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
         const fileExt = file.name.split('.').pop();
         const fileName = `${projectId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('project-files')
-          .upload(fileName, file);
+          const { error: uploadError } = await supabase.storage
+            .from('project-files')
+            .upload(fileName, file, { upsert: false, contentType: file.type });
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('project-files')
-          .getPublicUrl(fileName);
+          // Save file metadata to database (store the storage path, not a public URL)
+          const { error: dbError } = await supabase
+            .from('project_files')
+            .insert({
+              project_id: projectId,
+              file_name: file.name,
+              file_type: file.type || 'application/octet-stream',
+              file_url: fileName,
+              size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
+            });
 
-        // Save file metadata to database
-        const { error: dbError } = await supabase
-          .from('project_files')
-          .insert({
-            project_id: projectId,
-            file_name: file.name,
-            file_type: file.type,
-            file_url: publicUrl,
-            size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
-          });
-
-        if (dbError) throw dbError;
+          if (dbError) throw dbError;
       }
 
       toast({
@@ -125,6 +120,77 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     },
     maxSize: 20 * 1024 * 1024, // 20MB limit
   });
+
+  const getStoragePath = useCallback((fileUrl: string) => {
+    if (!fileUrl) return '';
+    if (/^https?:\/\//.test(fileUrl)) {
+      try {
+        const url = new URL(fileUrl);
+        const candidates = [
+          '/storage/v1/object/public/project-files/',
+          '/storage/v1/object/sign/project-files/',
+          '/storage/v1/object/project-files/',
+          '/storage/v1/object/auth/project-files/',
+        ];
+        for (const prefix of candidates) {
+          const idx = url.pathname.indexOf(prefix);
+          if (idx >= 0) {
+            return url.pathname.slice(idx + prefix.length);
+          }
+        }
+        const parts = url.pathname.split('/project-files/');
+        if (parts.length > 1) return parts[1];
+      } catch {}
+      return fileUrl;
+    }
+    return fileUrl;
+  }, []);
+
+  const openFile = async (file: ProjectFile) => {
+    const path = getStoragePath(file.file_url);
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from('project-files')
+        .createSignedUrl(path, 60 * 60);
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Open file error:', error);
+      toast({
+        title: "Failed to open file",
+        description: error instanceof Error ? error.message : "Unable to create a signed URL",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadFile = async (file: ProjectFile) => {
+    const path = getStoragePath(file.file_url);
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from('project-files')
+        .createSignedUrl(path, 60 * 60, {
+          download: file.custom_name || file.file_name,
+        });
+      if (error) throw error;
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.download = file.custom_name || file.file_name;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Download file error:', error);
+      toast({
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Unable to create a signed URL",
+        variant: "destructive",
+      });
+    }
+  };
 
   const analyzeFile = async (fileId: string) => {
     setAnalyzingFiles(prev => new Set(prev).add(fileId));
@@ -160,9 +226,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
 
   const deleteFile = async (file: ProjectFile) => {
     try {
-      // Extract file path from URL
-      const url = new URL(file.file_url);
-      const filePath = url.pathname.split('/storage/v1/object/public/project-files/')[1];
+      // Resolve storage path (supports legacy public URLs and storage paths)
+      const filePath = getStoragePath(file.file_url);
       
       // Delete from storage
       const { error: storageError } = await supabase.storage
@@ -327,19 +392,14 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(file.file_url, '_blank')}
+                          onClick={() => openFile(file)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.file_url;
-                            link.download = file.custom_name || file.file_name;
-                            link.click();
-                          }}
+                          onClick={() => downloadFile(file)}
                         >
                           <Download className="h-4 w-4" />
                         </Button>
