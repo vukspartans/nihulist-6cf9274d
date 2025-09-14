@@ -224,10 +224,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
         description: "ניתוח ה-AI הושלם ונשמר.",
       });
       
-      // Force refresh the files to show the updated analysis
-      setTimeout(() => {
-        onFilesUpdate();
-      }, 1000);
+      // Immediately refresh the files to show the updated analysis
+      onFilesUpdate();
       
     } catch (error) {
       console.error('Analysis error:', error);
