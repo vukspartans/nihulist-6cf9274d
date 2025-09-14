@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Building2, Mail, Lock, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,8 @@ const Auth = () => {
     password: "",
     name: "",
     phone: "",
-    companyName: ""
+    companyName: "",
+    role: "entrepreneur" as "entrepreneur" | "advisor"
   });
   
   const navigate = useNavigate();
@@ -30,24 +32,44 @@ const Auth = () => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Redirect authenticated users to dashboard
+        // Redirect authenticated users based on their role
         if (session?.user) {
-          navigate("/dashboard");
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          if (profile?.role === 'advisor') {
+            navigate("/advisor-dashboard");
+          } else {
+            navigate("/dashboard");
+          }
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        navigate("/dashboard");
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (profile?.role === 'advisor') {
+          navigate("/advisor-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
       }
     });
 
@@ -82,7 +104,8 @@ const Auth = () => {
             data: {
               name: formData.name,
               phone: formData.phone,
-              company_name: formData.companyName
+              company_name: formData.companyName,
+              role: formData.role
             }
           }
         });
@@ -186,6 +209,24 @@ const Auth = () => {
                       className="pr-10"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>סוג המשתמש</Label>
+                  <RadioGroup 
+                    value={formData.role} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as 'entrepreneur' | 'advisor' }))}
+                    className="flex gap-6"
+                  >
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="entrepreneur" id="entrepreneur" />
+                      <Label htmlFor="entrepreneur">יזם/חברה</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="advisor" id="advisor" />
+                      <Label htmlFor="advisor">יועץ/ספק</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </>
             )}

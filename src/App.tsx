@@ -9,6 +9,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import AdvisorDashboard from "./pages/AdvisorDashboard";
+import AdvisorProfile from "./pages/AdvisorProfile";
 import { ProjectWizard } from "./pages/ProjectWizard";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import Profile from "./pages/Profile";
@@ -61,6 +63,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/advisor-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <AdvisorDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/advisor-profile" 
+              element={
+                <ProtectedRoute>
+                  <AdvisorProfile />
                 </ProtectedRoute>
               } 
             />

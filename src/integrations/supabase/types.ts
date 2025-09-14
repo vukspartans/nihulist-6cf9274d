@@ -52,6 +52,45 @@ export type Database = {
           },
         ]
       }
+      advisors: {
+        Row: {
+          certifications: string[] | null
+          company_name: string | null
+          created_at: string
+          expertise: string[] | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          rating: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          certifications?: string[] | null
+          company_name?: string | null
+          created_at?: string
+          expertise?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          certifications?: string[] | null
+          company_name?: string | null
+          created_at?: string
+          expertise?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -188,6 +227,7 @@ export type Database = {
       }
       proposals: {
         Row: {
+          advisor_id: string | null
           ai_flags: Json | null
           attachment_url: string | null
           id: string
@@ -203,6 +243,7 @@ export type Database = {
           token_used_at: string | null
         }
         Insert: {
+          advisor_id?: string | null
           ai_flags?: Json | null
           attachment_url?: string | null
           id?: string
@@ -218,6 +259,7 @@ export type Database = {
           token_used_at?: string | null
         }
         Update: {
+          advisor_id?: string | null
           ai_flags?: Json | null
           attachment_url?: string | null
           id?: string
@@ -233,6 +275,13 @@ export type Database = {
           token_used_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposals_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposals_project_id_fkey"
             columns: ["project_id"]
@@ -299,6 +348,7 @@ export type Database = {
       }
       rfp_invites: {
         Row: {
+          advisor_id: string | null
           created_at: string
           delivered_at: string | null
           email: string
@@ -310,6 +360,7 @@ export type Database = {
           supplier_id: string | null
         }
         Insert: {
+          advisor_id?: string | null
           created_at?: string
           delivered_at?: string | null
           email: string
@@ -321,6 +372,7 @@ export type Database = {
           supplier_id?: string | null
         }
         Update: {
+          advisor_id?: string | null
           created_at?: string
           delivered_at?: string | null
           email?: string
@@ -332,6 +384,13 @@ export type Database = {
           supplier_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rfp_invites_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rfp_invites_rfp_id_fkey"
             columns: ["rfp_id"]
