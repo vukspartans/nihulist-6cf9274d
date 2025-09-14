@@ -65,51 +65,46 @@ serve(async (req) => {
       });
     }
 
-    // Download and extract text content when possible
-    let contentText = '';
-    try {
-      const { data: downloadData, error: downloadError } = await supabaseClient
-        .storage
-        .from('project-files')
-        .download(fileData.file_url);
+    // Download file from Supabase Storage
+    const { data: downloadData, error: downloadError } = await supabaseClient
+      .storage
+      .from('project-files')
+      .download(fileData.file_url);
 
-      if (downloadError) {
-        console.warn('Storage download error:', downloadError);
-      } else if (downloadData) {
-        const ab = await downloadData.arrayBuffer();
-        const bytes = new Uint8Array(ab);
-
-        if (fileData.file_type === 'application/pdf' || fileData.file_type.includes('pdf')) {
-          try {
-            const pdfjsLib = await import('https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs');
-            const loadingTask = pdfjsLib.getDocument({ data: bytes });
-            const pdf = await loadingTask.promise;
-            let textParts: string[] = [];
-            const maxPages = Math.min(pdf.numPages, 10);
-            for (let i = 1; i <= maxPages; i++) {
-              const page = await pdf.getPage(i);
-              const tc = await page.getTextContent();
-              const pageText = tc.items.map((it: any) => (it?.str ?? it?.text ?? '')).join(' ');
-              textParts.push(pageText);
-            }
-            contentText = textParts.join('\n').slice(0, 12000);
-          } catch (e) {
-            console.warn('PDF parse failed, continuing without content:', e);
-          }
-        } else if (fileData.file_type.startsWith('text/') || fileData.file_type.includes('csv')) {
-          try {
-            contentText = new TextDecoder('utf-8').decode(bytes).slice(0, 20000);
-          } catch (e) {
-            console.warn('Text decode failed:', e);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Unhandled error reading file content:', e);
+    if (downloadError || !downloadData) {
+      console.error('Failed to download file:', downloadError);
+      return new Response(JSON.stringify({ error: 'Failed to download file' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Build analysis prompt with objective and optional content excerpt
-    let analysisPrompt = `
+    console.log('File downloaded successfully, uploading to OpenAI Files API');
+
+    // Upload file to OpenAI Files API
+    const formData = new FormData();
+    formData.append('file', downloadData, fileData.file_name);
+    formData.append('purpose', 'user_data');
+
+    const uploadResponse = await fetch('https://api.openai.com/v1/files', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const uploadError = await uploadResponse.text();
+      console.error('OpenAI file upload error:', uploadError);
+      throw new Error(`OpenAI file upload failed: ${uploadResponse.status}`);
+    }
+
+    const uploadResult = await uploadResponse.json();
+    console.log('File uploaded to OpenAI:', uploadResult.id);
+
+    // Build analysis prompt with detailed objective
+    const analysisPrompt = `
 מטרה: נתח את המסמך במלואו, הבן על מה הוא, כיצד הוא משפיע/אמור להשפיע על הפרויקט, וספק תקציר תמציתי עם נקודות פעולה.
 
 הקשר פרויקט:
@@ -128,19 +123,13 @@ serve(async (req) => {
 - כתוב בעברית אם שם/תוכן המסמך בעברית, אחרת באנגלית
 - התחל ב‑TL;DR של 2–3 משפטים
 - לאחר מכן רשימת נקודות תמציתית (•) הכוללת: דרישות טכניות עיקריות, היקפים/כמויות אם קיימים, תקנים/ציות רגולטורי רלוונטיים, הנחות/סיכונים, והשפעה על בחירת ספקים והשלבים הבאים
-`;
 
-    if (contentText) {
-      analysisPrompt += `\nקטע תוכן (מוגבל):\n-----\n${contentText}\n-----\n`;
-    } else {
-      analysisPrompt += `\nהערה: לא התאפשר לחלץ תוכן מהקובץ; ניתוח יתבסס על שם הקובץ והקשר הפרויקט.\n`;
-    }
+נתח את כל תוכן המסמך לעומק ותן ניתוח מקיף ומדויק.`;
 
+    console.log('Analyzing file with OpenAI Responses API');
 
-    console.log('Sending analysis request to OpenAI');
-
-    // Call OpenAI for analysis using GPT-5
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Use OpenAI Responses API for comprehensive analysis
+    const analysisResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
@@ -148,98 +137,100 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-2025-08-07',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.'
-          },
-          {
-            role: 'user',
-            content: analysisPrompt
-          }
-        ],
-        max_completion_tokens: 300,
+        instructions: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide comprehensive, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, potential challenges, and how the document impacts the project.',
+        input: [{
+          role: 'user',
+          content: [
+            { type: 'input_file', file_id: uploadResult.id },
+            { type: 'input_text', text: analysisPrompt }
+          ]
+        }],
+        modalities: ['text']
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error (primary):', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
+    let analysis = '';
+    let cleanupFileId = uploadResult.id;
 
-    const aiResponse = await response.json();
-    console.log('OpenAI response (primary):', aiResponse);
+    try {
+      if (!analysisResponse.ok) {
+        const errorText = await analysisResponse.text();
+        console.error('OpenAI Responses API error:', errorText);
+        
+        // Fallback to Chat Completions API with basic analysis
+        console.log('Falling back to Chat Completions API');
+        const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4.1-2025-04-14',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.'
+              },
+              {
+                role: 'user',
+                content: `${analysisPrompt}\n\nהערה: לא ניתן היה לנתח את תוכן הקובץ ישירות. אנא ספק ניתוח מבוסס על שם הקובץ והקשר הפרויקט.`
+              }
+            ],
+            max_completion_tokens: 500,
+          }),
+        });
 
-    const extractContent = (res: any): string => {
-      try {
-        if (res?.choices?.[0]?.message?.content) return res.choices[0].message.content as string;
-        if (res?.choices?.[0]?.text) return res.choices[0].text as string;
-        if (Array.isArray(res?.output_text) && res.output_text.length) return res.output_text.join('\n');
-      } catch (_) {}
-      return '';
-    };
-
-    let analysis = extractContent(aiResponse)?.trim() ?? '';
-
-    // Fallback to GPT-4.1 if content is empty
-    if (!analysis) {
-      console.warn('Primary model returned empty content. Falling back to gpt-4.1-2025-04-14');
-      const fallback = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4.1-2025-04-14',
-          messages: [
-            { role: 'system', content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.' },
-            { role: 'user', content: analysisPrompt }
-          ],
-          max_completion_tokens: 300,
-        }),
-      });
-
-      if (!fallback.ok) {
-        const t = await fallback.text();
-        console.error('OpenAI API error (fallback):', t);
-        throw new Error(`OpenAI API error (fallback): ${fallback.status}`);
+        if (fallbackResponse.ok) {
+          const fallbackResult = await fallbackResponse.json();
+          analysis = fallbackResult.choices?.[0]?.message?.content?.trim() || '';
+        }
+      } else {
+        const analysisResult = await analysisResponse.json();
+        console.log('OpenAI analysis completed successfully');
+        analysis = analysisResult.output_text?.trim() || '';
       }
-      const fbJson = await fallback.json();
-      console.log('OpenAI response (fallback):', fbJson);
-      analysis = extractContent(fbJson)?.trim() ?? '';
-    }
 
-    if (!analysis) {
-      console.error('AI returned empty analysis after fallback');
-      return new Response(JSON.stringify({ success: false, error: 'Empty analysis from AI' }), {
-        status: 502,
+      if (!analysis) {
+        throw new Error('No analysis content received from OpenAI');
+      }
+
+      console.log('AI Analysis completed:', analysis.substring(0, 200) + '...');
+
+      // Update the file with AI analysis
+      const { error: updateError } = await supabaseClient
+        .from('project_files')
+        .update({ ai_summary: analysis })
+        .eq('id', fileId);
+
+      if (updateError) {
+        console.error('Failed to update file with analysis:', updateError);
+        throw updateError;
+      }
+
+      console.log('File analysis saved successfully');
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        analysis 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+
+    } finally {
+      // Clean up uploaded file from OpenAI
+      try {
+        await fetch(`https://api.openai.com/v1/files/${cleanupFileId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+          },
+        });
+        console.log('Cleaned up OpenAI file:', cleanupFileId);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup OpenAI file:', cleanupError);
+      }
     }
-
-    console.log('AI Analysis completed:', analysis);
-
-    // Update the file with AI analysis (only if non-empty)
-    const { error: updateError } = await supabaseClient
-      .from('project_files')
-      .update({ ai_summary: analysis })
-      .eq('id', fileId);
-
-    if (updateError) {
-      console.error('Failed to update file with analysis:', updateError);
-      throw updateError;
-    }
-
-    console.log('File analysis saved successfully');
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      analysis 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Error in analyze-project-file function:', error);
