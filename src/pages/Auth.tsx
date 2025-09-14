@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Mail, Lock, User as UserIcon, Phone } from "lucide-react";
+import { Building2, Mail, Lock, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Session, User } from "@supabase/supabase-js";
+import PhoneInput from 'react-phone-number-input';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -160,15 +161,14 @@ const Auth = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">טלפון</Label>
-                  <div className="relative">
-                    <Phone className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="05X-XXXXXXX"
+                  <div className="phone-input">
+                    <PhoneInput
+                      international
+                      countryCallingCodeEditable={false}
+                      defaultCountry="IL"
                       value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className="pr-10"
+                      onChange={(value) => handleInputChange("phone", value || "")}
+                      placeholder="הזן מספר טלפון"
                     />
                   </div>
                 </div>
