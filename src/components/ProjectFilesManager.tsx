@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -215,6 +215,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
         body: { fileId }
       });
 
+      console.log('Analysis response:', data, error);
+
       if (error) throw error;
 
       toast({
@@ -222,7 +224,11 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
         description: "ניתוח ה-AI הושלם ונשמר.",
       });
       
-      onFilesUpdate();
+      // Force refresh the files to show the updated analysis
+      setTimeout(() => {
+        onFilesUpdate();
+      }, 1000);
+      
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
@@ -442,6 +448,9 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>עריכת פרטי קובץ</DialogTitle>
+                              <DialogDescription>
+                                ערוך את השם המותאם והתיאור של הקובץ
+                              </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
