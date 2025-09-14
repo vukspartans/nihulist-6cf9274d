@@ -473,6 +473,10 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      is_project_owner: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       normalize_project_type: {
         Args: { legacy_type: string }
         Returns: string
