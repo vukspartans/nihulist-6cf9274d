@@ -97,8 +97,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       }
 
       toast({
-        title: "Files uploaded successfully",
-        description: `${acceptedFiles.length} file(s) uploaded to the project.`,
+        title: "הקבצים הועלו בהצלחה",
+        description: `${acceptedFiles.length} קבצים הועלו לפרויקט.`,
       });
       
       onFilesUpdate();
@@ -111,8 +111,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     } catch (error) {
       console.error('Upload error:', error);
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload files",
+        title: "העלאה נכשלה",
+        description: error instanceof Error ? error.message : "נכשל בהעלאת הקבצים",
         variant: "destructive",
       });
     } finally {
@@ -171,8 +171,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     } catch (error) {
       console.error('Open file error:', error);
       toast({
-        title: "Failed to open file",
-        description: error instanceof Error ? error.message : "Unable to create a signed URL",
+        title: "נכשל בפתיחת הקובץ",
+        description: error instanceof Error ? error.message : "לא ניתן ליצור קישור מאובטח",
         variant: "destructive",
       });
     }
@@ -198,8 +198,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     } catch (error) {
       console.error('Download file error:', error);
       toast({
-        title: "Download failed",
-        description: error instanceof Error ? error.message : "Unable to create a signed URL",
+        title: "הורדה נכשלה",
+        description: error instanceof Error ? error.message : "לא ניתן ליצור קישור מאובטח",
         variant: "destructive",
       });
     }
@@ -216,16 +216,16 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       if (error) throw error;
 
       toast({
-        title: "File analyzed successfully",
-        description: "AI analysis has been completed and saved.",
+        title: "הקובץ נותח בהצלחה",
+        description: "ניתוח ה-AI הושלם ונשמר.",
       });
       
       onFilesUpdate();
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
-        title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Failed to analyze file",
+        title: "ניתוח נכשל",
+        description: error instanceof Error ? error.message : "נכשל בניתוח הקובץ",
         variant: "destructive",
       });
     } finally {
@@ -258,16 +258,16 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       if (dbError) throw dbError;
 
       toast({
-        title: "File deleted",
-        description: "File has been removed from the project.",
+        title: "קובץ נמחק",
+        description: "הקובץ הוסר מהפרויקט.",
       });
       
       onFilesUpdate();
     } catch (error) {
       console.error('Delete error:', error);
       toast({
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "Failed to delete file",
+        title: "מחיקה נכשלה",
+        description: error instanceof Error ? error.message : "נכשל במחיקת הקובץ",
         variant: "destructive",
       });
     }
@@ -288,8 +288,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       if (error) throw error;
 
       toast({
-        title: "File updated",
-        description: "File metadata has been updated.",
+        title: "קובץ עודכן",
+        description: "פרטי הקובץ עודכנו בהצלחה.",
       });
       
       setEditingFile(null);
@@ -297,8 +297,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     } catch (error) {
       console.error('Update error:', error);
       toast({
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "Failed to update file",
+        title: "עדכון נכשל",
+        description: error instanceof Error ? error.message : "נכשל בעדכון הקובץ",
         variant: "destructive",
       });
     }
@@ -317,7 +317,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       {/* Upload Area */}
       <Card>
         <CardHeader>
-          <CardTitle>Upload Files</CardTitle>
+          <CardTitle>העלאת קבצים</CardTitle>
         </CardHeader>
         <CardContent>
           <div
@@ -333,18 +333,18 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
             {uploading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Uploading files...</span>
+                <span>מעלה קבצים...</span>
               </div>
             ) : (
               <div>
                 <p className="text-lg font-medium mb-2">
-                  {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
+                  {isDragActive ? 'שחרר קבצים כאן' : 'גרור ושחרר קבצים כאן'}
                 </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  or click to select files (max 20MB per file)
+                  או לחץ לבחירת קבצים (מקסימום 20MB לקובץ)
                 </p>
                 <Button variant="outline" disabled={uploading}>
-                  Select Files
+                  בחירת קבצים
                 </Button>
               </div>
             )}
@@ -355,12 +355,12 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       {/* Files List */}
       <Card>
         <CardHeader>
-          <CardTitle>Project Files ({files.length})</CardTitle>
+          <CardTitle>קבצי הפרויקט ({files.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {files.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No files uploaded yet. Upload files to enhance project analysis.
+              לא הועלו קבצים עדיין. העלה קבצים לשיפור ניתוח הפרויקט.
             </div>
           ) : (
             <ScrollArea className="h-[400px]">
@@ -380,7 +380,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                         </div>
                         {file.custom_name && (
                           <p className="text-sm text-muted-foreground mb-1">
-                            Original: {file.file_name}
+                            שם מקורי: {file.file_name}
                           </p>
                         )}
                         {file.description && (
@@ -392,13 +392,13 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                           <div className="bg-muted/50 rounded-md p-3 mb-2">
                             <div className="flex items-center gap-2 mb-1">
                               <Brain className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-medium">AI Analysis</span>
+                              <span className="text-sm font-medium">ניתוח AI</span>
                             </div>
                             <p className="text-sm">{file.ai_summary}</p>
                           </div>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          Uploaded {new Date(file.created_at).toLocaleDateString()}
+                          הועלה {new Date(file.created_at).toLocaleDateString('he-IL')}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -428,11 +428,11 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Edit File Details</DialogTitle>
+                              <DialogTitle>עריכת פרטי קובץ</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <Label htmlFor="custom_name">Custom Name</Label>
+                                <Label htmlFor="custom_name">שם מותאם</Label>
                                 <Input
                                   id="custom_name"
                                   value={editForm.custom_name}
@@ -441,16 +441,16 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                                 />
                               </div>
                               <div>
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">תיאור</Label>
                                 <Textarea
                                   id="description"
                                   value={editForm.description}
                                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                                  placeholder="Add a description for this file..."
+                                  placeholder="הוסף תיאור לקובץ הזה..."
                                 />
                               </div>
                               <Button onClick={updateFileMetadata} className="w-full">
-                                Update File
+                                עדכן קובץ
                               </Button>
                             </div>
                           </DialogContent>
