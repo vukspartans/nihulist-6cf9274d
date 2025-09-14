@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, MapPin, Building, Coins, Users, Calculator, Clock, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
+import { ProjectFilesManager } from '@/components/ProjectFilesManager';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -24,6 +25,8 @@ export const ProjectDetail = () => {
   const [proposals, setProposals] = useState<any[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [rfpSent, setRfpSent] = useState(false);
+  const [projectFiles, setProjectFiles] = useState<any[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
 
 
   // Check for edit mode from URL params
@@ -41,6 +44,7 @@ export const ProjectDetail = () => {
     if (id) {
       fetchProject();
       fetchProposals();
+      fetchProjectFiles();
     }
   }, [id]);
 
@@ -84,6 +88,25 @@ export const ProjectDetail = () => {
       console.error('Error fetching proposals:', error);
     } finally {
       setProposalsLoading(false);
+    }
+  };
+
+  const fetchProjectFiles = async () => {
+    if (!id) return;
+    setFilesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('project_files')
+        .select('*')
+        .eq('project_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjectFiles(data || []);
+    } catch (error) {
+      console.error('Error fetching project files:', error);
+    } finally {
+      setFilesLoading(false);
     }
   };
 
@@ -261,7 +284,7 @@ export const ProjectDetail = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
-        <TabsList className="grid w-full grid-cols-3 h-11">
+        <TabsList className="grid w-full grid-cols-4 h-11">
           <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות מחיר</TabsTrigger>
           <TabsTrigger 
             value="received" 
@@ -272,6 +295,15 @@ export const ProjectDetail = () => {
             {proposals.length > 0 && (
               <Badge variant="secondary" className="mr-1">
                 {proposals.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="files" className="text-right flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            קבצים
+            {projectFiles.length > 0 && (
+              <Badge variant="secondary" className="mr-1">
+                {projectFiles.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -350,6 +382,34 @@ export const ProjectDetail = () => {
                     </Card>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="files">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                קבצי הפרויקט
+                {projectFiles.length > 0 && (
+                  <Badge variant="secondary">{projectFiles.length}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filesLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">טוען קבצים...</p>
+                </div>
+              ) : (
+                <ProjectFilesManager
+                  projectId={project.id}
+                  files={projectFiles}
+                  onFilesUpdate={fetchProjectFiles}
+                />
               )}
             </CardContent>
           </Card>
