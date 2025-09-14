@@ -532,6 +532,19 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      get_user_profile: {
+        Args: { user_uuid?: string }
+        Returns: {
+          company_name: string
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          role: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       is_project_owner: {
         Args: { p_project_id: string }
         Returns: boolean

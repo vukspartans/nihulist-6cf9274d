@@ -30,14 +30,43 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST - avoid async callback
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Redirect authenticated users based on their role
+        // Defer profile fetch to avoid blocking auth state change
         if (session?.user) {
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (profile?.role === 'advisor') {
+                navigate("/advisor-dashboard");
+              } else {
+                navigate("/dashboard");
+              }
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+              navigate("/dashboard"); // Default fallback
+            }
+          }, 100);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        try {
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
@@ -49,26 +78,9 @@ const Auth = () => {
           } else {
             navigate("/dashboard");
           }
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (profile?.role === 'advisor') {
-          navigate("/advisor-dashboard");
-        } else {
-          navigate("/dashboard");
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+          navigate("/dashboard"); // Default fallback
         }
       }
     });
@@ -94,7 +106,16 @@ const Auth = () => {
           description: "ברוך הבא למערכת",
         });
       } else {
-        const redirectUrl = `${window.location.origin}/dashboard`;
+        // Validate required fields for signup
+        if (!formData.name || !formData.email || !formData.password || !formData.role) {
+          throw new Error('אנא מלא את כל השדות הנדרשים');
+        }
+
+        if (formData.role === 'advisor' && !formData.companyName) {
+          throw new Error('שם החברה נדרש עבור יועצים');
+        }
+
+        const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
           email: formData.email,
@@ -113,8 +134,8 @@ const Auth = () => {
         if (error) throw error;
 
         toast({
-          title: "נרשמת בהצלחה!",
-          description: "בדוק את האימייל שלך לאימות החשבון",
+          title: "ההרשמה הושלמה בהצלחה!",
+          description: "המערכת יוצרת את הפרופיל שלכם...",
         });
       }
     } catch (error: any) {
