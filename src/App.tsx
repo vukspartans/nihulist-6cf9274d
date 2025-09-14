@@ -15,6 +15,8 @@ import { ProjectWizard } from "./pages/ProjectWizard";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import Profile from "./pages/Profile";
 import SupplierSubmit from "./pages/SupplierSubmit";
+import SubmitProposal from "./pages/SubmitProposal";
+import RFPDetails from "./pages/RFPDetails";
 import ForEntrepreneurs from "./pages/ForEntrepreneurs";
 import ForConsultants from "./pages/ForConsultants";
 import NotFound from "./pages/NotFound";
@@ -79,6 +81,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AdvisorProfile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/submit-proposal/:rfp_id" 
+              element={
+                <ProtectedRoute>
+                  <SubmitProposal />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/rfp-details/:rfp_id" 
+              element={
+                <ProtectedRoute>
+                  <RFPDetails />
                 </ProtectedRoute>
               } 
             />

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { PROJECT_TYPES } from '@/constants/project';
+import { UserHeader } from '@/components/UserHeader';
 
 interface AdvisorProfile {
   id?: string;
@@ -18,6 +19,9 @@ interface AdvisorProfile {
   expertise: string[];
   certifications: string[];
   location: string;
+  years_experience?: number;
+  hourly_rate?: number;
+  availability_status?: string;
 }
 
 const AdvisorProfile = () => {
@@ -29,7 +33,10 @@ const AdvisorProfile = () => {
     company_name: '',
     expertise: [],
     certifications: [],
-    location: ''
+    location: '',
+    years_experience: undefined,
+    hourly_rate: undefined,
+    availability_status: 'available'
   });
   const [newExpertise, setNewExpertise] = useState('');
   const [newCertification, setNewCertification] = useState('');
@@ -136,15 +143,35 @@ const AdvisorProfile = () => {
     }));
   };
 
+  const completionPercentage = Math.round(
+    (Object.values(profile).filter(val => 
+      val !== '' && val !== undefined && val !== null && 
+      !(Array.isArray(val) && val.length === 0)
+    ).length / Object.keys(profile).length) * 100
+  );
+
   return (
-    <div className="min-h-screen bg-background p-6" dir="rtl">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="flex justify-between items-center p-6 border-b">
+        <UserHeader />
+      </div>
+      
+      <div className="p-6">
+        <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>פרופיל יועץ</CardTitle>
-            <CardDescription>
-              השלימו את פרטי הפרופיל שלכם כדי לקבל הזמנות להצעות מחיר
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>פרופיל יועץ</CardTitle>
+                <CardDescription>
+                  השלימו את פרטי הפרופיל שלכם כדי לקבל הזמנות להצעות מחיר
+                </CardDescription>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{completionPercentage}%</div>
+                <div className="text-xs text-muted-foreground">הושלם</div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -167,6 +194,29 @@ const AdvisorProfile = () => {
                   placeholder="למשל: תל אביב, ירושלים, חיפה"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="years_experience">שנות ניסיון</Label>
+                  <Input
+                    id="years_experience"
+                    type="number"
+                    value={profile.years_experience || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, years_experience: e.target.value ? parseInt(e.target.value) : undefined }))}
+                    placeholder="מספר שנות הניסיון"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hourly_rate">תעריף לשעה (₪)</Label>
+                  <Input
+                    id="hourly_rate"
+                    type="number"
+                    value={profile.hourly_rate || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                    placeholder="תעריף בשקלים"
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -250,7 +300,8 @@ const AdvisorProfile = () => {
               </div>
             </form>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

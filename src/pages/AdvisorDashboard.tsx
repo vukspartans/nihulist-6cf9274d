@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, DollarSign, Clock, FileText, User } from 'lucide-react';
+import { Calendar, MapPin, DollarSign, Clock, FileText, User, AlertTriangle } from 'lucide-react';
+import { UserHeader } from '@/components/UserHeader';
 
 interface RFPInvite {
   id: string;
@@ -157,15 +158,45 @@ const AdvisorDashboard = () => {
     );
   }
 
+  const isProfileIncomplete = !advisorProfile.expertise || advisorProfile.expertise.length === 0;
+
   return (
-    <div className="min-h-screen bg-background p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">לוח בקרה - יועץ</h1>
-          <p className="text-muted-foreground">
-            ברוכים הבאים {advisorProfile.company_name || 'יועץ'}
-          </p>
-        </div>
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="flex justify-between items-center p-6 border-b">
+        <UserHeader />
+      </div>
+      
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">לוח בקרה - יועץ</h1>
+                <p className="text-muted-foreground">
+                  ברוכים הבאים {advisorProfile.company_name || 'יועץ'}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm text-muted-foreground">תפקיד:</span>
+                  <span className="font-medium">יועץ מאושר</span>
+                  {advisorProfile.location && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-sm">{advisorProfile.location}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              {isProfileIncomplete && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">פרופיל לא שלם</span>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">השלימו את תחומי ההתמחות לקבלת יותר הזמנות</p>
+                </div>
+              )}
+            </div>
+          </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -325,6 +356,7 @@ const AdvisorDashboard = () => {
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
