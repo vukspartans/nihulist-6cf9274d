@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Users, Plus } from 'lucide-react';
@@ -12,7 +11,6 @@ interface AdvisorSelectionProps {
   projectType: string;
   selectedAdvisors: string[];
   onAdvisorsChange: (advisors: string[]) => void;
-  onProjectTypeChange: (projectType: string) => void;
   onValidationChange: (isValid: boolean, validation: any) => void;
 }
 
@@ -20,7 +18,6 @@ export const AdvisorSelection = ({
   projectType,
   selectedAdvisors,
   onAdvisorsChange,
-  onProjectTypeChange,
   onValidationChange
 }: AdvisorSelectionProps) => {
   const {
@@ -28,11 +25,20 @@ export const AdvisorSelection = ({
     loading,
     error,
     validateAdvisorSelection,
-    getCanonicalProjectTypes,
     getRecommendedAdvisors
   } = useAdvisorsValidation();
 
   const [validation, setValidation] = useState<any>(null);
+
+  // Auto-select all recommended advisors when project type is available
+  useEffect(() => {
+    if (data && projectType && selectedAdvisors.length === 0) {
+      const recommended = getRecommendedAdvisors(projectType);
+      if (recommended.length > 0) {
+        onAdvisorsChange(recommended);
+      }
+    }
+  }, [data, projectType, getRecommendedAdvisors]);
 
   useEffect(() => {
     if (data && projectType) {
@@ -84,7 +90,6 @@ export const AdvisorSelection = ({
     );
   }
 
-  const canonicalTypes = getCanonicalProjectTypes();
   const recommendedAdvisors = getRecommendedAdvisors(projectType);
 
   return (
@@ -100,22 +105,15 @@ export const AdvisorSelection = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Project Type Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">סוג פרויקט</label>
-            <Select value={projectType} onValueChange={onProjectTypeChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="בחר סוג פרויקט" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {canonicalTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Project Type Display */}
+          {projectType && (
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">סוג פרויקט: {projectType}</span>
+              </div>
+            </div>
+          )}
 
           {/* Validation Status */}
           {validation && (
@@ -227,26 +225,12 @@ export const AdvisorSelection = ({
             </div>
           )}
 
-          {/* Unknown Project Type Error */}
-          {validation?.Status === 'Unknown Project Type' && (
-            <Alert className="border-red-500">
-              <AlertCircle className="h-4 w-4 text-red-600" />
+          {/* Show message when no project type */}
+          {!projectType && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <div className="space-y-2">
-                  <p>סוג פרויקט לא מזוהה. בחר מהרשימה:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {validation.ValidProjectTypes?.map((type) => (
-                      <Badge
-                        key={type}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                        onClick={() => onProjectTypeChange(type)}
-                      >
-                        {type}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+                יש לבחור סוג פרויקט בשלב הקודם כדי לראות את היועצים הנדרשים
               </AlertDescription>
             </Alert>
           )}

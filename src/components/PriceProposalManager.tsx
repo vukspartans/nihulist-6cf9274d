@@ -72,7 +72,6 @@ export const PriceProposalManager = ({ projectId, projectName, projectType, onRf
         projectType={currentProjectType}
         selectedAdvisors={selectedAdvisors}
         onAdvisorsChange={setSelectedAdvisors}
-        onProjectTypeChange={setCurrentProjectType}
         onValidationChange={handleAdvisorValidationChange}
       />
 

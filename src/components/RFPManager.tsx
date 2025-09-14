@@ -69,7 +69,6 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
         projectType={currentProjectType}
         selectedAdvisors={selectedAdvisors}
         onAdvisorsChange={setSelectedAdvisors}
-        onProjectTypeChange={setCurrentProjectType}
         onValidationChange={handleAdvisorValidationChange}
       />
 

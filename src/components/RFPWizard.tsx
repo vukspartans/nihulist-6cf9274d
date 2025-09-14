@@ -17,8 +17,9 @@ import {
   Upload
 } from 'lucide-react';
 import { AdvisorSelection } from './AdvisorSelection';
-import { RecommendationsCard } from './RecommendationsCard';
+import { AdvisorRecommendationsCard } from './AdvisorRecommendationsCard';
 import { ProjectTypeSelector } from './ProjectTypeSelector';
+import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,7 +43,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
   const [advisorValidation, setAdvisorValidation] = useState<any>(null);
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
-  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
+  const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<string[]>([]);
   const [rfpContent, setRfpContent] = useState<RFPContent>({
     title: `RFP: ${projectName}`,
     content: `אנו מחפשים הצעות מחיר עבור הפרויקט "${projectName}".
@@ -91,8 +92,26 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
     }));
   };
 
+  // Save project type to database when changed
+  const handleProjectTypeChange = async (newType: string) => {
+    setSelectedProjectType(newType);
+    
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ type: newType })
+        .eq('id', projectId);
+      
+      if (error) {
+        console.error('Error updating project type:', error);
+      }
+    } catch (error) {
+      console.error('Error saving project type:', error);
+    }
+  };
+
   const handleSendRFP = async () => {
-    const result = await sendRFPInvitations(projectId, selectedSuppliers);
+    const result = await sendRFPInvitations(projectId, selectedRecommendedAdvisors);
     if (result) {
       setProposalSent(true);
       onRfpSent?.();
@@ -106,7 +125,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
       case 2:
         return isAdvisorSelectionValid;
       case 3:
-        return selectedSuppliers.length > 0;
+        return selectedRecommendedAdvisors.length > 0;
       case 4:
         return !!rfpContent.title && !!rfpContent.content;
       default:
@@ -121,7 +140,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
       case 2:
         return 'בחירת יועצים';
       case 3:
-        return 'בחירת ספקים';
+        return 'בחירת יועצים מומלצים';
       case 4:
         return 'עריכת תוכן RFP';
       default:
@@ -140,7 +159,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            בקשת הצעת המחיר עבור "{projectName}" נשלחה ל-{selectedSuppliers.length} ספקים.
+            בקשת הצעת המחיר עבור "{projectName}" נשלחה ל-{selectedRecommendedAdvisors.length} יועצים.
             תקבל הצעות ברגע שיגיעו.
           </p>
           <Button 
@@ -150,7 +169,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
             }} 
             variant="outline"
           >
-            שלח לספקים נוספים
+            שלח ליועצים נוספים
           </Button>
         </CardContent>
       </Card>
@@ -194,7 +213,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
               <div className="max-w-md mx-auto">
                 <ProjectTypeSelector
                   selectedType={selectedProjectType}
-                  onTypeChange={setSelectedProjectType}
+                  onTypeChange={handleProjectTypeChange}
                   label="סוג פרויקט"
                   placeholder="בחר סוג פרויקט"
                 />
@@ -222,7 +241,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
                 projectType={selectedProjectType}
                 selectedAdvisors={selectedAdvisors}
                 onAdvisorsChange={setSelectedAdvisors}
-                onProjectTypeChange={setSelectedProjectType}
                 onValidationChange={handleAdvisorValidationChange}
               />
             </div>
@@ -232,27 +250,20 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
             <div className="space-y-6">
               <div className="text-center">
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">בחירת ספקים</h3>
+                <h3 className="text-xl font-semibold mb-2">בחירת יועצים מומלצים</h3>
                 <p className="text-muted-foreground">
-                  הספקים המומלצים ביותר עבור הפרויקט שלך מוצגים למטה. 
-                  כולם נבחרו מראש, אך תוכל לבטל בחירה אם תרצה.
+                  בהתבסס על ניתוח הפרויקט שלך, אנו מציגים יועצים מומלצים לכל סוג שבחרת.
+                  בחר את היועצים שברצונך לשלוח אליהם בקשה.
                 </p>
               </div>
 
-              <RecommendationsCard
+              <AdvisorRecommendationsCard
                 projectId={projectId}
-                onSelectSuppliers={setSelectedSuppliers}
-                selectedSuppliers={selectedSuppliers}
-                autoSelectTop5={true}
+                selectedAdvisorTypes={selectedAdvisors}
+                selectedAdvisors={selectedRecommendedAdvisors}
+                onSelectAdvisors={setSelectedRecommendedAdvisors}
+                autoSelectTop3={true}
               />
-
-              {selectedSuppliers.length > 0 && (
-                <div className="text-center">
-                  <Badge variant="secondary" className="text-sm">
-                    {selectedSuppliers.length} ספקים נבחרו
-                  </Badge>
-                </div>
-              )}
             </div>
           )}
 
@@ -262,7 +273,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
                 <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">עריכת תוכן ה-RFP</h3>
                 <p className="text-muted-foreground">
-                  ערוך את תוכן הבקשה שתישלח לספקים
+                  ערוך את תוכן הבקשה שתישלח ליועצים הנבחרים
                 </p>
               </div>
 
