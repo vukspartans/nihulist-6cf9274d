@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,8 @@ import {
   Eye, 
   Brain,
   Loader2,
-  Edit3
+  Edit3,
+  CheckCircle2
 } from 'lucide-react';
 
 interface ProjectFile {
@@ -377,6 +379,26 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                           <Badge variant="outline" className="text-xs">
                             {formatFileSize(file.size_mb)}
                           </Badge>
+                          {file.ai_summary && (
+                            <HoverCard>
+                              <HoverCardTrigger asChild>
+                                <div className="cursor-help">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                </div>
+                              </HoverCardTrigger>
+                              <HoverCardContent className="w-80" side="top">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Brain className="h-4 w-4 text-primary" />
+                                    <span className="font-medium text-sm">תקציר ניתוח AI</span>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {file.ai_summary}
+                                  </p>
+                                </div>
+                              </HoverCardContent>
+                            </HoverCard>
+                          )}
                         </div>
                         {file.custom_name && (
                           <p className="text-sm text-muted-foreground mb-1">
@@ -387,15 +409,6 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                           <p className="text-sm text-muted-foreground mb-2">
                             {file.description}
                           </p>
-                        )}
-                        {file.ai_summary && (
-                          <div className="bg-muted/50 rounded-md p-3 mb-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Brain className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-medium">ניתוח AI</span>
-                            </div>
-                            <p className="text-sm">{file.ai_summary}</p>
-                          </div>
                         )}
                         <p className="text-xs text-muted-foreground">
                           הועלה {new Date(file.created_at).toLocaleDateString('he-IL')}
