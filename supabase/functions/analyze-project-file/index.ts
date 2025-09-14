@@ -65,46 +65,77 @@ serve(async (req) => {
       });
     }
 
-    // Enhanced analysis prompt with Hebrew context
+    // Download and extract text content when possible
+    let contentText = '';
+    try {
+      const { data: downloadData, error: downloadError } = await supabaseClient
+        .storage
+        .from('project-files')
+        .download(fileData.file_url);
+
+      if (downloadError) {
+        console.warn('Storage download error:', downloadError);
+      } else if (downloadData) {
+        const ab = await downloadData.arrayBuffer();
+        const bytes = new Uint8Array(ab);
+
+        if (fileData.file_type === 'application/pdf' || fileData.file_type.includes('pdf')) {
+          try {
+            const pdfjsLib = await import('https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs');
+            const loadingTask = pdfjsLib.getDocument({ data: bytes });
+            const pdf = await loadingTask.promise;
+            let textParts: string[] = [];
+            const maxPages = Math.min(pdf.numPages, 10);
+            for (let i = 1; i <= maxPages; i++) {
+              const page = await pdf.getPage(i);
+              const tc = await page.getTextContent();
+              const pageText = tc.items.map((it: any) => (it?.str ?? it?.text ?? '')).join(' ');
+              textParts.push(pageText);
+            }
+            contentText = textParts.join('\n').slice(0, 12000);
+          } catch (e) {
+            console.warn('PDF parse failed, continuing without content:', e);
+          }
+        } else if (fileData.file_type.startsWith('text/') || fileData.file_type.includes('csv')) {
+          try {
+            contentText = new TextDecoder('utf-8').decode(bytes).slice(0, 20000);
+          } catch (e) {
+            console.warn('Text decode failed:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Unhandled error reading file content:', e);
+    }
+
+    // Build analysis prompt with objective and optional content excerpt
     let analysisPrompt = `
-Analyze this file from an Israeli construction project management perspective.
+מטרה: נתח את המסמך במלואו, הבן על מה הוא, כיצד הוא משפיע/אמור להשפיע על הפרויקט, וספק תקציר תמציתי עם נקודות פעולה.
 
-Project Context:
-- Name: ${projectData.name}
-- Type: ${projectData.type}
-- Location: ${projectData.location}
-- Phase: ${projectData.phase}
-- Description: ${projectData.description || 'Not provided'}
+הקשר פרויקט:
+- שם: ${projectData.name}
+- סוג: ${projectData.type}
+- מיקום: ${projectData.location}
+- שלב: ${projectData.phase}
+- תיאור: ${projectData.description || 'לא סופק'}
 
-File Details:
-- Name: ${fileData.file_name}
-- Type: ${fileData.file_type}
-- Size: ${fileData.size_mb} MB
+פרטי קובץ:
+- שם: ${fileData.file_name}
+- סוג: ${fileData.file_type}
+- גודל: ${fileData.size_mb} MB
 
-Based on the Hebrew filename and Israeli construction context, please provide a comprehensive analysis (3-4 sentences) focusing on:
-
-1. **Document Type & Purpose**: What type of construction document this appears to be (specifications, tender document, technical drawings, etc.)
-2. **Technical Requirements**: Key technical specifications, standards, or requirements that vendors should be aware of
-3. **Regulatory Compliance**: Any Israeli building codes, standards (תקנים), or regulatory requirements mentioned
-4. **Vendor Selection Impact**: How this document affects supplier/vendor matching and what expertise is needed
-5. **Project Phase Alignment**: How this document relates to the current project phase and next steps
-
-Consider Israeli construction industry standards, Hebrew terminology, and local regulatory requirements. 
-Respond in Hebrew if the filename or content suggests Hebrew context, otherwise respond in English.
-Keep the analysis actionable for project managers seeking to match with appropriate suppliers.
+הנחיות לפלט:
+- כתוב בעברית אם שם/תוכן המסמך בעברית, אחרת באנגלית
+- התחל ב‑TL;DR של 2–3 משפטים
+- לאחר מכן רשימת נקודות תמציתית (•) הכוללת: דרישות טכניות עיקריות, היקפים/כמויות אם קיימים, תקנים/ציות רגולטורי רלוונטיים, הנחות/סיכונים, והשפעה על בחירת ספקים והשלבים הבאים
 `;
 
-    // For different file types, we would ideally process the content differently
-    // For now, we'll analyze based on file name and metadata
-    if (fileData.file_type.includes('pdf')) {
-      analysisPrompt += "\nThis appears to be a PDF document, likely containing detailed specifications, plans, or documentation.";
-    } else if (fileData.file_type.startsWith('image/')) {
-      analysisPrompt += "\nThis is an image file, potentially showing site conditions, architectural plans, or reference materials.";
-    } else if (fileData.file_type.includes('spreadsheet') || fileData.file_type.includes('excel')) {
-      analysisPrompt += "\nThis is a spreadsheet, likely containing calculations, budgets, timelines, or technical specifications.";
-    } else if (fileData.file_type.includes('word') || fileData.file_type.includes('document')) {
-      analysisPrompt += "\nThis is a document file, probably containing project requirements, specifications, or reports.";
+    if (contentText) {
+      analysisPrompt += `\nקטע תוכן (מוגבל):\n-----\n${contentText}\n-----\n`;
+    } else {
+      analysisPrompt += `\nהערה: לא התאפשר לחלץ תוכן מהקובץ; ניתוח יתבסס על שם הקובץ והקשר הפרויקט.\n`;
     }
+
 
     console.log('Sending analysis request to OpenAI');
 
