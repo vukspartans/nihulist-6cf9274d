@@ -172,7 +172,7 @@ export const ProjectWizard = () => {
                 custom_name: fileWithMeta.customName || fileWithMeta.file.name,
                 description: fileWithMeta.description || null,
                 file_type: fileWithMeta.file.type || 'application/octet-stream',
-                file_url: fileName,
+                file_url: fileName, // Store the storage key, not public URL
                 size_mb: Math.round((fileWithMeta.file.size / 1_000_000) * 100) / 100,
               });
 
