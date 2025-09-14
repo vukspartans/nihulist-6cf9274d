@@ -157,8 +157,37 @@ serve(async (req) => {
         const errorText = await analysisResponse.text();
         console.error('OpenAI Responses API error:', errorText);
         
-        // Fallback to Chat Completions API with basic analysis
+        // Fallback to Chat Completions API
         console.log('Falling back to Chat Completions API');
+        
+        // For the fallback, we need to extract text from the file if possible
+        // For PDFs and text files, try to get some content for analysis
+        let fileContentPreview = '';
+        
+        try {
+          // For text-based files, try to read content
+          if (fileData.file_type.includes('text') || fileData.file_type.includes('pdf')) {
+            const arrayBuffer = await downloadData.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            // For PDFs, we'll rely on filename analysis for now
+            // For text files, try to decode
+            if (fileData.file_type.includes('text')) {
+              fileContentPreview = new TextDecoder().decode(uint8Array.slice(0, 2000));
+            }
+          }
+        } catch (e) {
+          console.log('Could not extract file content preview:', e);
+        }
+        
+        const fallbackPrompt = `${analysisPrompt}
+
+נתוני קובץ נוספים:
+- סוג קובץ: ${fileData.file_type}
+- תוכן חלקי (אם זמין): ${fileContentPreview || 'לא זמין'}
+
+בצע ניתוח מבוסס על המידע הזמין.`;
+
         const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -170,14 +199,14 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.'
+                content: 'You are an expert document analyst. Analyze the provided file information and content to provide accurate insights. If the document is about software/platform specifications, focus on technical requirements, system architecture, user flows, and implementation considerations. If it\'s about construction, focus on technical requirements, regulatory compliance, and project management aspects.'
               },
               {
                 role: 'user',
-                content: `${analysisPrompt}\n\nהערה: לא ניתן היה לנתח את תוכן הקובץ ישירות. אנא ספק ניתוח מבוסס על שם הקובץ והקשר הפרויקט.`
+                content: fallbackPrompt
               }
             ],
-            max_completion_tokens: 500,
+            max_completion_tokens: 1000,
           }),
         });
 
