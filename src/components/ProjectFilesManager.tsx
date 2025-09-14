@@ -64,6 +64,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     setUploading(true);
     
     try {
+      const uploadedFileIds: string[] = [];
+      
       for (const file of acceptedFiles) {
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
@@ -76,7 +78,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
           if (uploadError) throw uploadError;
 
           // Save file metadata to database (store the storage path, not a public URL)
-          const { error: dbError } = await supabase
+          const { data: insertedFile, error: dbError } = await supabase
             .from('project_files')
             .insert({
               project_id: projectId,
@@ -84,9 +86,14 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
               file_type: file.type || 'application/octet-stream',
               file_url: fileName,
               size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
-            });
+            })
+            .select('id')
+            .single();
 
           if (dbError) throw dbError;
+          if (insertedFile) {
+            uploadedFileIds.push(insertedFile.id);
+          }
       }
 
       toast({
@@ -95,6 +102,12 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       });
       
       onFilesUpdate();
+      
+      // Automatically trigger analysis for uploaded files
+      for (const fileId of uploadedFileIds) {
+        analyzeFile(fileId);
+      }
+      
     } catch (error) {
       console.error('Upload error:', error);
       toast({

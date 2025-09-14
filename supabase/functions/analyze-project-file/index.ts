@@ -65,9 +65,9 @@ serve(async (req) => {
       });
     }
 
-    // Prepare analysis prompt based on file type
+    // Enhanced analysis prompt with Hebrew context
     let analysisPrompt = `
-Analyze this file from a construction project management perspective.
+Analyze this file from an Israeli construction project management perspective.
 
 Project Context:
 - Name: ${projectData.name}
@@ -81,12 +81,17 @@ File Details:
 - Type: ${fileData.file_type}
 - Size: ${fileData.size_mb} MB
 
-Please provide a concise analysis (2-3 sentences) focusing on:
-1. What this file contains and its relevance to the project
-2. Key technical or business insights that could help with supplier/vendor matching
-3. Any important project requirements, specifications, or constraints mentioned
+Based on the Hebrew filename and Israeli construction context, please provide a comprehensive analysis (3-4 sentences) focusing on:
 
-Keep the analysis professional and focused on actionable insights for project management and vendor selection.
+1. **Document Type & Purpose**: What type of construction document this appears to be (specifications, tender document, technical drawings, etc.)
+2. **Technical Requirements**: Key technical specifications, standards, or requirements that vendors should be aware of
+3. **Regulatory Compliance**: Any Israeli building codes, standards (תקנים), or regulatory requirements mentioned
+4. **Vendor Selection Impact**: How this document affects supplier/vendor matching and what expertise is needed
+5. **Project Phase Alignment**: How this document relates to the current project phase and next steps
+
+Consider Israeli construction industry standards, Hebrew terminology, and local regulatory requirements. 
+Respond in Hebrew if the filename or content suggests Hebrew context, otherwise respond in English.
+Keep the analysis actionable for project managers seeking to match with appropriate suppliers.
 `;
 
     // For different file types, we would ideally process the content differently
@@ -103,7 +108,7 @@ Keep the analysis professional and focused on actionable insights for project ma
 
     console.log('Sending analysis request to OpenAI');
 
-    // Call OpenAI for analysis
+    // Call OpenAI for analysis using GPT-5
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -111,19 +116,18 @@ Keep the analysis professional and focused on actionable insights for project ma
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-2025-08-07',
         messages: [
           {
             role: 'system',
-            content: 'You are an expert construction project analyst. Provide concise, actionable insights about project files that help with vendor selection and project management.'
+            content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.'
           },
           {
             role: 'user',
             content: analysisPrompt
           }
         ],
-        max_tokens: 200,
-        temperature: 0.3,
+        max_completion_tokens: 300,
       }),
     });
 
