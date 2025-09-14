@@ -146,7 +146,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
-      <Card className="w-full max-w-md construction-card">
+      <Card className="w-full max-w-lg construction-card">
         <CardHeader className="text-center space-y-4">
           <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
             <Building2 className="w-8 h-8 text-white" />
@@ -154,7 +154,7 @@ const Auth = () => {
           <CardTitle className="text-2xl font-bold text-primary">
             {isLogin ? "ברוך הבא" : "הצטרפות למערכת"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-center">
             {isLogin 
               ? "התחבר לחשבון שלך כדי להמשיך" 
               : "צור חשבון חדש וקבל המלצות AI לפרויקטים"
@@ -163,141 +163,164 @@ const Auth = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="name">שם מלא</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="הזן שם מלא..."
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      className="pr-10"
-                      required
-                    />
+              <div className="space-y-4">
+                {/* Personal Information Section */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-right">שם מלא *</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="הזן שם מלא..."
+                        value={formData.name}
+                        onChange={(e) => handleInputChange("name", e.target.value)}
+                        className="pr-10 text-right"
+                        required
+                        dir="rtl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-right">מספר טלפון</Label>
+                    <div className="phone-input" dir="ltr">
+                      <PhoneInput
+                        international
+                        countryCallingCodeEditable={false}
+                        defaultCountry="IL"
+                        value={formData.phone}
+                        onChange={(value) => handleInputChange("phone", value || "")}
+                        placeholder="הזן מספר טלפון"
+                        className="text-left"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName" className="text-right">שם החברה</Label>
+                    <div className="relative">
+                      <Building2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="companyName"
+                        type="text"
+                        placeholder="שם החברה שלך..."
+                        value={formData.companyName}
+                        onChange={(e) => handleInputChange("companyName", e.target.value)}
+                        className="pr-10 text-right"
+                        dir="rtl"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">טלפון</Label>
-                  <div className="phone-input">
-                    <PhoneInput
-                      international
-                      countryCallingCodeEditable={false}
-                      defaultCountry="IL"
-                      value={formData.phone}
-                      onChange={(value) => handleInputChange("phone", value || "")}
-                      placeholder="הזן מספר טלפון"
-                    />
-                  </div>
-                </div>
+                <Separator className="my-4" />
 
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">שם החברה</Label>
-                  <div className="relative">
-                    <Building2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="companyName"
-                      type="text"
-                      placeholder="שם החברה שלך..."
-                      value={formData.companyName}
-                      onChange={(e) => handleInputChange("companyName", e.target.value)}
-                      className="pr-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>סוג המשתמש</Label>
+                {/* User Type Selection */}
+                <div className="space-y-3">
+                  <Label className="text-right font-medium">בחר סוג משתמש *</Label>
                   <RadioGroup 
                     value={formData.role} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as 'entrepreneur' | 'advisor' }))}
-                    className="flex gap-6"
+                    className="grid grid-cols-1 gap-3"
                   >
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-3 space-x-reverse p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       <RadioGroupItem value="entrepreneur" id="entrepreneur" />
-                      <Label htmlFor="entrepreneur">יזם/חברה</Label>
+                      <div className="flex-1 text-right">
+                        <Label htmlFor="entrepreneur" className="font-medium cursor-pointer">יזם / חברה</Label>
+                        <p className="text-sm text-muted-foreground">אני מחפש יועצים ומבצעי עבודות לפרויקט שלי</p>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex items-center space-x-3 space-x-reverse p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       <RadioGroupItem value="advisor" id="advisor" />
-                      <Label htmlFor="advisor">יועץ/ספק</Label>
+                      <div className="flex-1 text-right">
+                        <Label htmlFor="advisor" className="font-medium cursor-pointer">יועץ / ספק</Label>
+                        <p className="text-sm text-muted-foreground">אני מספק שירותי ייעוץ או ביצוע פרויקטים</p>
+                      </div>
                     </div>
                   </RadioGroup>
                 </div>
-              </>
+
+                <Separator className="my-4" />
+              </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">אימייל</Label>
-              <div className="relative">
-                <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="pr-10"
-                  required
-                  dir="ltr"
-                />
+            {/* Login Credentials Section */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="pr-10"
+                    required
+                    dir="ltr"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">סיסמה</Label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  className="pr-10"
-                  required
-                  minLength={6}
-                  dir="ltr"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-right">סיסמה *</Label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className="pr-10"
+                    required
+                    minLength={6}
+                    dir="ltr"
+                  />
+                </div>
+                {!isLogin && (
+                  <p className="text-xs text-muted-foreground text-right">הסיסמה חייבת להכיל לפחות 6 תווים</p>
+                )}
               </div>
             </div>
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full h-11 text-base font-medium" 
               variant="premium"
               disabled={loading}
             >
-              {loading ? "מתבצע..." : (isLogin ? "התחברות" : "הצטרפות")}
+              {loading ? "מתבצע..." : (isLogin ? "התחברות למערכת" : "הצטרפות למערכת")}
             </Button>
           </form>
 
           <Separator />
 
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
             <p className="text-sm text-muted-foreground">
               {isLogin ? "אין לך חשבון?" : "יש לך כבר חשבון?"}
             </p>
             <Button
               variant="ghost"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:text-primary/80"
+              className="text-primary hover:text-primary/80 font-medium"
             >
-              {isLogin ? "הצטרף כעת" : "התחבר"}
+              {isLogin ? "הצטרף כעת" : "התחבר לחשבון קיים"}
             </Button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center pt-2">
             <Button
               variant="ghost"
               onClick={() => navigate("/")}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
-              חזרה לדף הבית
+              ← חזרה לדף הבית
             </Button>
           </div>
         </CardContent>
