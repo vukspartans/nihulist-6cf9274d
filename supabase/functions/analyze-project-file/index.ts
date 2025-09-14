@@ -133,16 +133,64 @@ Keep the analysis actionable for project managers seeking to match with appropri
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('OpenAI API error (primary):', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const aiResponse = await response.json();
-    const analysis = aiResponse.choices[0].message.content;
+    console.log('OpenAI response (primary):', aiResponse);
+
+    const extractContent = (res: any): string => {
+      try {
+        if (res?.choices?.[0]?.message?.content) return res.choices[0].message.content as string;
+        if (res?.choices?.[0]?.text) return res.choices[0].text as string;
+        if (Array.isArray(res?.output_text) && res.output_text.length) return res.output_text.join('\n');
+      } catch (_) {}
+      return '';
+    };
+
+    let analysis = extractContent(aiResponse)?.trim() ?? '';
+
+    // Fallback to GPT-4.1 if content is empty
+    if (!analysis) {
+      console.warn('Primary model returned empty content. Falling back to gpt-4.1-2025-04-14');
+      const fallback = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-2025-04-14',
+          messages: [
+            { role: 'system', content: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide concise, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, and potential challenges.' },
+            { role: 'user', content: analysisPrompt }
+          ],
+          max_completion_tokens: 300,
+        }),
+      });
+
+      if (!fallback.ok) {
+        const t = await fallback.text();
+        console.error('OpenAI API error (fallback):', t);
+        throw new Error(`OpenAI API error (fallback): ${fallback.status}`);
+      }
+      const fbJson = await fallback.json();
+      console.log('OpenAI response (fallback):', fbJson);
+      analysis = extractContent(fbJson)?.trim() ?? '';
+    }
+
+    if (!analysis) {
+      console.error('AI returned empty analysis after fallback');
+      return new Response(JSON.stringify({ success: false, error: 'Empty analysis from AI' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     console.log('AI Analysis completed:', analysis);
 
-    // Update the file with AI analysis
+    // Update the file with AI analysis (only if non-empty)
     const { error: updateError } = await supabaseClient
       .from('project_files')
       .update({ ai_summary: analysis })
@@ -157,7 +205,7 @@ Keep the analysis actionable for project managers seeking to match with appropri
 
     return new Response(JSON.stringify({ 
       success: true, 
-      analysis: analysis 
+      analysis 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
