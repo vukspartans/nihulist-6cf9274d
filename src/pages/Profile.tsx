@@ -21,7 +21,7 @@ interface UserProfile {
 }
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, profile: authProfile } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,11 +130,18 @@ const Profile = () => {
     setEditMode(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  const getDashboardRoute = () => {
+    const userRole = authProfile?.role || profile?.role;
+    return userRole === 'advisor' ? '/advisor-dashboard' : '/dashboard';
+  };
+
   const getRoleDisplay = (role: string | null) => {
     switch (role) {
       case 'entrepreneur':
         return 'יזם';
       case 'consultant':
+        return 'יועץ';
+      case 'advisor':
         return 'יועץ';
       case 'admin':
         return 'מנהל';
@@ -148,7 +155,7 @@ const Profile = () => {
       <div className="min-h-screen bg-background p-6" dir="rtl">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-            <Link to="/dashboard" className="hover:text-foreground transition-colors">
+            <Link to={getDashboardRoute()} className="hover:text-foreground transition-colors">
               דשבורד
             </Link>
             <ArrowRight className="h-4 w-4" />
@@ -175,7 +182,7 @@ const Profile = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/dashboard" className="hover:text-foreground transition-colors">
+          <Link to={getDashboardRoute()} className="hover:text-foreground transition-colors">
             דשבורד
           </Link>
           <ArrowRight className="h-4 w-4" />
