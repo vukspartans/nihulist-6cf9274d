@@ -209,14 +209,14 @@ export const ProjectDetail = () => {
           חזרה לדשבורד
         </Button>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4" dir="rtl">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">שלב הפרויקט:</span>
             <Select value={project.phase} onValueChange={handlePhaseChange}>
               <SelectTrigger className="w-auto min-w-[140px]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent align="start">
                 {PROJECT_PHASES.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {phase}
