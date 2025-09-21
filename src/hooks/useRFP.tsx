@@ -28,14 +28,14 @@ export const useRFP = () => {
       const result = data?.[0] as RFPResult;
       if (result) {
         toast({
-          title: "RFP Sent Successfully",
-          description: `Invitations sent to ${result.invites_sent} suppliers`,
+          title: "הצעות מחיר נשלחו בהצלחה",
+          description: `הזמנות נשלחו ל-${result.invites_sent} ספקים`,
         });
       }
 
       return result;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to send RFP invitations';
+      const message = err instanceof Error ? err.message : 'שליחת הצעות מחיר נכשלה';
       toast({
         title: "Error",
         description: message,

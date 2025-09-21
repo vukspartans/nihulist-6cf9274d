@@ -27,7 +27,7 @@ interface ProjectFiltersProps {
 const statusOptions = [
   { value: 'all', label: 'כל הסטטוסים' },
   { value: 'draft', label: 'טיוטה' },
-  { value: 'rfp_sent', label: 'RFP נשלח' },
+  { value: 'rfp_sent', label: 'הצעות מחיר נשלחו' },
   { value: 'collecting', label: 'איסוף הצעות' },
   { value: 'comparing', label: 'השוואה' },
   { value: 'selected', label: 'נבחר ספק' },

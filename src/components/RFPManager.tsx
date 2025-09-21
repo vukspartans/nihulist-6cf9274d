@@ -43,10 +43,10 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-600">
             <FileText className="h-5 w-5" />
-            RFP נשלח בהצלחה
+            הצעות מחיר נשלחו בהצלחה
           </CardTitle>
           <CardDescription>
-            ה-RFP עבור "{projectName}" נשלח ל-{selectedSuppliers.length || 'מומלצים'} ספקים.
+            הצעות המחיר עבור "{projectName}" נשלחו ל-{selectedSuppliers.length || 'מומלצים'} ספקים.
             תקבל הצעות ברגע שיגיעו.
           </CardDescription>
         </CardHeader>
@@ -77,7 +77,7 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
-            שליחת RFP עבור "{projectName}"
+            שליחת הצעות מחיר עבור "{projectName}"
           </CardTitle>
           <CardDescription>
             בחר ספקים להזמנה או השתמש בהמלצות AI
@@ -89,7 +89,7 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
             <Alert className="border-yellow-500">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
-                לא ניתן לשלוח RFP ללא השלמת בחירת היועצים הנדרשים.
+                לא ניתן לשלוח הצעות מחיר ללא השלמת בחירת היועצים הנדרשים.
                 {advisorValidation.Missing?.length > 0 && (
                   <span> חסרים: {advisorValidation.Missing.join(', ')}</span>
                 )}
@@ -107,7 +107,7 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
               disabled={loading || !isAdvisorSelectionValid}
               className="mr-auto"
             >
-              {loading ? 'שולח...' : 'שלח הזמנות RFP'}
+              {loading ? 'שולח...' : 'שלח הזמנות הצעות מחיר'}
             </Button>
           </div>
         </CardContent>

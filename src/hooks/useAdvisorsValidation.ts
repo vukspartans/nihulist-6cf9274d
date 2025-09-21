@@ -193,8 +193,8 @@ export const useAdvisorsValidation = () => {
 
     const status = missing.length === 0 ? 'All Advisors Present' : 'Missing Advisors';
     const notes = status === 'Missing Advisors' 
-      ? 'חסרים יועצים נדרשים. השלם כדי לאשר RFP.'
-      : 'כל היועצים הנדרשים סומנו. אפשר להמשיך ל-RFP.';
+      ? 'חסרים יועצים נדרשים. השלם כדי לאשר הצעות מחיר.'
+      : 'כל היועצים הנדרשים סומנו. אפשר להמשיך להצעות מחיר.';
 
     return {
       Project: normalizedProjectName,

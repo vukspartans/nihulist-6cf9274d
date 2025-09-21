@@ -178,7 +178,7 @@ export const AdvisorRecommendationsCard = ({
               <h3 className="font-semibold text-lg">מסד הנתונים של היועצים בבנייה</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
                 אנחנו עובדים על איסוף מאגר יועצים מקצועיים לסוגי פרויקטים שונים. 
-                בינתיים תוכל להמשיך ליצור את ה-RFP ולשלוח אותו ידנית ליועצים שתבחר.
+                בינתיים תוכל להמשיך ליצור את הצעות המחיר ולשלוח אותן ידנית ליועצים שתבחר.
               </p>
             </div>
             

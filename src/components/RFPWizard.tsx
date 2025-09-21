@@ -45,7 +45,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
   const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<string[]>([]);
   const [rfpContent, setRfpContent] = useState<RFPContent>({
-    title: `RFP: ${projectName}`,
+    title: `הצעת מחיר: ${projectName}`,
     content: `אנו מחפשים הצעות מחיר עבור הפרויקט "${projectName}".
 
 פרטי הפרויקט:
@@ -142,7 +142,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
       case 3:
         return 'בחירת יועצים מומלצים';
       case 4:
-        return 'עריכת תוכן RFP';
+        return 'עריכת תוכן הצעת מחיר';
       default:
         return '';
     }
@@ -271,7 +271,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
             <div className="space-y-6">
               <div className="text-center">
                 <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">עריכת תוכן ה-RFP</h3>
+                <h3 className="text-xl font-semibold mb-2">עריכת תוכן הצעת המחיר</h3>
                 <p className="text-muted-foreground">
                   ערוך את תוכן הבקשה שתישלח ליועצים הנבחרים
                 </p>
@@ -374,7 +374,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
                 className="flex items-center gap-2"
               >
                 <Send className="h-4 w-4" />
-                {loading ? 'שולח...' : 'שלח RFP'}
+                {loading ? 'שולח...' : 'שלח הצעות מחיר'}
               </Button>
             )}
           </div>

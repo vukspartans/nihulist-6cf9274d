@@ -101,7 +101,7 @@ export const AdvisorSelection = ({
             בחירת יועצים לפרויקט
           </CardTitle>
           <CardDescription>
-            בחר את סוג הפרויקט והיועצים הנדרשים לפני שליחת RFP
+            בחר את סוג הפרויקט והיועצים הנדרשים לפני שליחת הצעות מחיר
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -145,7 +145,7 @@ export const AdvisorSelection = ({
 
           {/* Quick Actions */}
           {projectType && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {recommendedAdvisors.length > 0 && (
                 <Button
                   variant="outline"
@@ -166,6 +166,16 @@ export const AdvisorSelection = ({
                 >
                   <Plus className="h-4 w-4" />
                   הוסף חסרים ({validation.Missing.length})
+                </Button>
+              )}
+              {selectedAdvisors.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAdvisorsChange([])}
+                  className="flex items-center gap-2"
+                >
+                  נקה בחירה
                 </Button>
               )}
             </div>
