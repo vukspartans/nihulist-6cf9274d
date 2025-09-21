@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X } from 'lucide-react';
+import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { SpecialtySelector } from '@/components/SpecialtySelector';
 
 interface UserProfile {
   name: string | null;
@@ -20,14 +21,25 @@ interface UserProfile {
   role: string | null;
 }
 
+interface AdvisorProfile {
+  specialties: string[];
+}
+
+interface SpecialtyData {
+  main: string | null;
+  secondary: string[];
+}
+
 const Profile = () => {
   const { user, profile: authProfile } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
-  const [editMode, setEditMode] = useState({ name: false, phone: false });
+  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false });
   const [editedData, setEditedData] = useState({ name: '', phone: '' });
+  const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -48,6 +60,25 @@ const Profile = () => {
       setProfile(data);
       if (data) {
         setEditedData({ name: data.name || '', phone: data.phone || '' });
+        
+        // Fetch advisor profile if user is an advisor
+        if (data.role === 'advisor') {
+          const { data: advisorData, error: advisorError } = await supabase
+            .from('advisors')
+            .select('specialties')
+            .eq('user_id', user?.id)
+            .maybeSingle();
+            
+          if (!advisorError && advisorData) {
+            setAdvisorProfile(advisorData);
+            // Parse specialties into main and secondary
+            const specialties = advisorData.specialties || [];
+            setSelectedSpecialties({
+              main: specialties[0] || null,
+              secondary: specialties.slice(1)
+            });
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -119,15 +150,60 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = (field: 'name' | 'phone') => {
-    if (editMode[field]) {
-      // Reset to original value if canceling
-      setEditedData(prev => ({ 
-        ...prev, 
-        [field]: field === 'name' ? (profile?.name || '') : (profile?.phone || '') 
-      }));
+  const updateSpecialties = async () => {
+    setSaving(true);
+    try {
+      const specialtiesArray = selectedSpecialties.main 
+        ? [selectedSpecialties.main, ...selectedSpecialties.secondary]
+        : selectedSpecialties.secondary;
+
+      const { error } = await supabase
+        .from('advisors')
+        .update({ specialties: specialtiesArray })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setAdvisorProfile(prev => prev ? { ...prev, specialties: specialtiesArray } : null);
+      setEditMode(prev => ({ ...prev, specialties: false }));
+      
+      toast({
+        title: "עודכן בהצלחה",
+        description: "ההתמחויות שלך עודכנו",
+      });
+    } catch (error) {
+      console.error('Error updating specialties:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את ההתמחויות",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-    setEditMode(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleEditToggle = (field: 'name' | 'phone' | 'specialties') => {
+    if (field === 'specialties') {
+      if (editMode.specialties) {
+        // Reset to original values if canceling
+        const specialties = advisorProfile?.specialties || [];
+        setSelectedSpecialties({
+          main: specialties[0] || null,
+          secondary: specialties.slice(1)
+        });
+      }
+      setEditMode(prev => ({ ...prev, specialties: !prev.specialties }));
+    } else {
+      if (editMode[field]) {
+        // Reset to original value if canceling
+        setEditedData(prev => ({ 
+          ...prev, 
+          [field]: field === 'name' ? (profile?.name || '') : (profile?.phone || '') 
+        }));
+      }
+      setEditMode(prev => ({ ...prev, [field]: !prev[field] }));
+    }
   };
 
   const getDashboardRoute = () => {
@@ -330,8 +406,41 @@ const Profile = () => {
           </Card>
         </div>
 
+        {/* Professional Specialties - Only for advisors */}
+        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  התמחויות מקצועיות
+                </CardTitle>
+                {!editMode.specialties && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditToggle('specialties')}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SpecialtySelector
+                selectedSpecialties={selectedSpecialties}
+                onSpecialtiesChange={setSelectedSpecialties}
+                isEditing={editMode.specialties}
+                onSave={updateSpecialties}
+                onCancel={() => handleEditToggle('specialties')}
+                saving={saving}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Account Actions */}
-        <Card>
+        <Card className={(authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'md:col-span-2' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5" />
