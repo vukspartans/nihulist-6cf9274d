@@ -29,16 +29,18 @@ export const AdvisorSelection = ({
   } = useAdvisorsValidation();
 
   const [validation, setValidation] = useState<any>(null);
+  const [hasAutoSelected, setHasAutoSelected] = useState<Record<string, boolean>>({});
 
-  // Auto-select all recommended advisors when project type is available
+  // Auto-select all recommended advisors when project type is available (only once per project type)
   useEffect(() => {
-    if (data && projectType && selectedAdvisors.length === 0) {
+    if (data && projectType && selectedAdvisors.length === 0 && !hasAutoSelected[projectType]) {
       const recommended = getRecommendedAdvisors(projectType);
       if (recommended.length > 0) {
         onAdvisorsChange(recommended);
+        setHasAutoSelected(prev => ({ ...prev, [projectType]: true }));
       }
     }
-  }, [data, projectType, getRecommendedAdvisors]);
+  }, [data, projectType, getRecommendedAdvisors, selectedAdvisors.length, hasAutoSelected]);
 
   useEffect(() => {
     if (data && projectType) {
