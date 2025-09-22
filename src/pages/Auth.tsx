@@ -351,8 +351,8 @@ const Auth = () => {
             </CardTitle>
             <CardDescription className="text-center">
               {isForgotPassword 
-                ? `נשלח אליכם מייל לאיפוס סיסמה לכתובת ${userEmail}` 
-                : `נשלח אליכם מייל לכתובת ${userEmail}`
+                ? "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאיפוס הסיסמה" 
+                : "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאימות החשבון"
               }
             </CardDescription>
           </CardHeader>
@@ -360,13 +360,7 @@ const Auth = () => {
           <CardContent className="space-y-6 text-center">
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                שלחנו אליכם מייל לכתובת <strong>{userEmail}</strong>
-              </p>
-              <p className="text-muted-foreground">
-                {isForgotPassword 
-                  ? "לחצו על הקישור במייל כדי לאפס את הסיסמה"
-                  : "לחצו על הקישור במייל כדי לאמת את החשבון ולהיכנס למערכת"
-                }
+                נשלח מייל לכתובת <strong>{userEmail}</strong>
               </p>
               <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
                 <p className="mb-2">עצות:</p>
