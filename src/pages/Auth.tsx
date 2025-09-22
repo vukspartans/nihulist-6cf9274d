@@ -36,29 +36,28 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if this is a password recovery request
+    console.log("Auth component mounting, checking URL params");
     const urlParams = new URLSearchParams(window.location.search);
     const type = urlParams.get('type');
     
-    if (type === 'recovery') {
-      setIsPasswordReset(true);
-      return;
-    }
+    console.log("URL type parameter:", type);
 
-    // Set up auth state listener FIRST - avoid async callback
+    // Set up auth state listener FIRST - this is critical for recovery flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state change:", event, session ? "session exists" : "no session");
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle password recovery completion
-        if (event === 'PASSWORD_RECOVERY') {
+        // Handle password recovery events
+        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && type === 'recovery')) {
+          console.log("Password recovery detected, showing reset form");
           setIsPasswordReset(true);
           return;
         }
         
-        // Defer profile fetch to avoid blocking auth state change
-        if (session?.user) {
+        // Handle normal authentication flow
+        if (session?.user && !isPasswordReset && type !== 'recovery') {
           setTimeout(async () => {
             try {
               const { data: profile } = await supabase
@@ -74,18 +73,33 @@ const Auth = () => {
               }
             } catch (error) {
               console.error('Error fetching profile:', error);
-              navigate("/dashboard"); // Default fallback
+              navigate("/dashboard");
             }
           }, 100);
         }
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("Getting existing session:", session ? "session exists" : "no session");
       setSession(session);
       setUser(session?.user ?? null);
       
+      // If this is a recovery URL and we have a session, show reset form
+      if (type === 'recovery' && session?.user) {
+        console.log("Recovery URL with existing session, showing reset form");
+        setIsPasswordReset(true);
+        return;
+      }
+      
+      // If this is a recovery URL but no session, wait for auth state change
+      if (type === 'recovery' && !session?.user) {
+        console.log("Recovery URL but no session yet, waiting for auth state change");
+        return;
+      }
+      
+      // Normal authentication flow
       if (session?.user) {
         try {
           const { data: profile } = await supabase
@@ -101,13 +115,13 @@ const Auth = () => {
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
-          navigate("/dashboard"); // Default fallback
+          navigate("/dashboard");
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isPasswordReset]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,11 +272,21 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      console.log("Attempting password reset, session:", session ? "exists" : "missing");
+      console.log("User:", user ? "exists" : "missing");
+      
+      if (!session || !user) {
+        throw new Error("Auth session missing. Please click the recovery link again.");
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Password update error:", error);
+        throw error;
+      }
 
       toast({
         title: "הסיסמה עודכנה בהצלחה",
@@ -274,6 +298,7 @@ const Auth = () => {
       setNewPassword("");
       navigate("/auth");
     } catch (error: any) {
+      console.error("Password reset error:", error);
       toast({
         title: "שגיאה",
         description: error.message || "לא ניתן לעדכן את הסיסמה",
