@@ -20,6 +20,9 @@ const Auth = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,11 +36,26 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if this is a password recovery request
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = urlParams.get('type');
+    
+    if (type === 'recovery') {
+      setIsPasswordReset(true);
+      return;
+    }
+
     // Set up auth state listener FIRST - avoid async callback
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Handle password recovery completion
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordReset(true);
+          return;
+        }
         
         // Defer profile fetch to avoid blocking auth state change
         if (session?.user) {
@@ -206,6 +224,119 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/auth?type=recovery`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "מייל לאיפוס סיסמה נשלח",
+        description: "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאיפוס הסיסמה",
+      });
+
+      setEmailSent(true);
+      setUserEmail(formData.email);
+    } catch (error: any) {
+      toast({
+        title: "שגיאה",
+        description: error.message || "לא ניתן לשלוח מייל לאיפוס סיסמה",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "הסיסמה עודכנה בהצלחה",
+        description: "הסיסמה שלכם הוחלפה בהצלחה",
+      });
+
+      // Reset states and redirect to login
+      setIsPasswordReset(false);
+      setNewPassword("");
+      navigate("/auth");
+    } catch (error: any) {
+      toast({
+        title: "שגיאה",
+        description: error.message || "לא ניתן לעדכן את הסיסמה",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // If password reset is requested, show reset form
+  if (isPasswordReset) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
+        <Card className="w-full max-w-lg construction-card">
+          <CardHeader className="text-center space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-primary">
+              איפוס סיסמה
+            </CardTitle>
+            <CardDescription className="text-center">
+              הזינו את הסיסמה החדשה שלכם
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword" className="text-right">סיסמה חדשה *</Label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pr-10"
+                    required
+                    minLength={6}
+                    dir="ltr"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-right">הסיסמה חייבת להכיל לפחות 6 תווים</p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full h-11 text-base font-medium" 
+                variant="premium"
+                disabled={loading}
+              >
+                {loading ? "מעדכן..." : "עדכן סיסמה"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // If email confirmation is pending, show confirmation screen
   if (emailSent) {
     return (
@@ -216,10 +347,13 @@ const Auth = () => {
               <Mail className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold text-primary">
-              אמתו את כתובת המייל
+              {isForgotPassword ? "מייל לאיפוס סיסמה נשלח" : "אמתו את כתובת המייל"}
             </CardTitle>
             <CardDescription className="text-center">
-              נשלח אליכם מייל לכתובת {userEmail}
+              {isForgotPassword 
+                ? `נשלח אליכם מייל לאיפוס סיסמה לכתובת ${userEmail}` 
+                : `נשלח אליכם מייל לכתובת ${userEmail}`
+              }
             </CardDescription>
           </CardHeader>
           
@@ -229,7 +363,10 @@ const Auth = () => {
                 שלחנו אליכם מייל לכתובת <strong>{userEmail}</strong>
               </p>
               <p className="text-muted-foreground">
-                לחצו על הקישור במייל כדי לאמת את החשבון ולהיכנס למערכת
+                {isForgotPassword 
+                  ? "לחצו על הקישור במייל כדי לאפס את הסיסמה"
+                  : "לחצו על הקישור במייל כדי לאמת את החשבון ולהיכנס למערכת"
+                }
               </p>
               <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
                 <p className="mb-2">עצות:</p>
@@ -255,6 +392,7 @@ const Auth = () => {
                 variant="ghost"
                 onClick={() => {
                   setEmailSent(false);
+                  setIsForgotPassword(false);
                   setIsLogin(true);
                 }}
                 className="w-full"
@@ -307,7 +445,48 @@ const Auth = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="pr-10"
+                    required
+                    dir="ltr"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  נשלח אליכם מייל עם קישור לאיפוס הסיסמה
+                </p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full h-11 text-base font-medium" 
+                variant="premium"
+                disabled={loading}
+              >
+                {loading ? "שולח..." : "שלח מייל לאיפוס סיסמה"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsForgotPassword(false)}
+                className="w-full"
+              >
+                חזרה להתחברות
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div className="space-y-4">
                 {/* Personal Information Section */}
@@ -441,7 +620,21 @@ const Auth = () => {
             >
               {loading ? "מתבצע..." : (isLogin ? "התחברות למערכת" : "הצטרפות למערכת")}
             </Button>
+
+            {isLogin && (
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  שכחת סיסמה?
+                </Button>
+              </div>
+            )}
           </form>
+          )}
 
           <Separator />
 
