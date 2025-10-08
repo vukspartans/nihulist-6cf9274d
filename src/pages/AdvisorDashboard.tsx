@@ -205,15 +205,16 @@ const AdvisorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-end items-center p-6 border-b">
+      <div className="flex justify-between items-center p-6 border-b">
+        <h1 className="text-2xl font-bold text-primary">Nihulist</h1>
         <div className="flex items-center gap-4">
-          <UserHeader />
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
               3
             </span>
           </Button>
+          <UserHeader />
         </div>
       </div>
       
