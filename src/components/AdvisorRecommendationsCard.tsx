@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, RefreshCw, AlertCircle } from 'lucide-react';
@@ -32,6 +32,8 @@ export const AdvisorRecommendationsCard = ({
   onSelectAdvisors,
   rfpContent
 }: AdvisorRecommendationsCardProps) => {
+  const [emailContentByType, setEmailContentByType] = useState<Record<string, { title: string; content: string }>>({});
+  
   const { sortedAdvisorTypes, loading, error } = useAdvisorsByExpertise(
     projectType,
     selectedAdvisorTypes,
@@ -45,6 +47,13 @@ export const AdvisorRecommendationsCard = ({
     } else {
       onSelectAdvisors([...selectedAdvisors, advisorId]);
     }
+  };
+
+  const handleEmailSave = (advisorType: string, title: string, content: string) => {
+    setEmailContentByType(prev => ({
+      ...prev,
+      [advisorType]: { title, content }
+    }));
   };
 
   if (loading) {
@@ -140,7 +149,8 @@ export const AdvisorRecommendationsCard = ({
                       projectName={projectName}
                       projectType={projectType}
                       recipientCount={selectedInType}
-                      rfpContent={rfpContent}
+                      rfpContent={emailContentByType[typeData.type] || rfpContent}
+                      onSave={(title, content) => handleEmailSave(typeData.type, title, content)}
                     />
                   </div>
                 </div>
