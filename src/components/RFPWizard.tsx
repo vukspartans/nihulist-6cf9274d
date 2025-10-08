@@ -259,10 +259,12 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
 
               <AdvisorRecommendationsCard
                 projectId={projectId}
+                projectName={projectName}
+                projectType={selectedProjectType}
                 selectedAdvisorTypes={selectedAdvisors}
                 selectedAdvisors={selectedRecommendedAdvisors}
                 onSelectAdvisors={setSelectedRecommendedAdvisors}
-                autoSelectTop3={true}
+                rfpContent={rfpContent}
               />
             </div>
           )}
