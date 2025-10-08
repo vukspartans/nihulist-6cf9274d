@@ -464,21 +464,25 @@ const Auth = () => {
   const roleConfig = formData.role === 'advisor' 
     ? {
         icon: Briefcase,
-        gradient: "from-purple-500 to-purple-600",
-        badge: "יועץ",
+        gradient: "from-tech-purple to-accent",
+        badge: "💼 יועץ מקצועי",
         badgeVariant: "secondary" as const
       }
     : {
         icon: Building2,
         gradient: "from-primary to-primary-glow",
-        badge: "יזם",
+        badge: '🏢 יזם נדל"ן',
         badgeVariant: "default" as const
       };
 
   const RoleIcon = roleConfig.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex flex-col p-4" dir="rtl">
+    <div className={`min-h-screen flex flex-col p-4 transition-all duration-500 ${
+      formData.role === 'entrepreneur'
+        ? 'bg-gradient-to-br from-background via-primary/10 to-primary/5'
+        : 'bg-gradient-to-br from-background via-tech-purple/10 to-tech-purple/5'
+    }`} dir="rtl">
       {/* Top Navigation */}
       <div className="w-full max-w-7xl mx-auto py-4 flex items-center justify-between">
         <Link to="/">
@@ -499,21 +503,35 @@ const Auth = () => {
 
       {/* Auth Card */}
       <div className="flex-1 flex items-center justify-center">
-        <Card className="w-full max-w-lg construction-card">
+        <Card className={`w-full max-w-lg construction-card relative ${
+          formData.role === 'entrepreneur' 
+            ? 'border-primary/20 shadow-lg shadow-primary/10' 
+            : 'border-tech-purple/20 shadow-lg shadow-tech-purple/10'
+        }`}>
           <CardHeader className="text-center space-y-4">
             {/* Role Badge */}
             <div className="flex justify-center">
-              <Badge variant={roleConfig.badgeVariant} className="text-sm px-3 py-1">
-                {roleConfig.badge}
+              <Badge className={`text-sm px-4 py-1.5 text-white font-medium ${
+                formData.role === 'entrepreneur'
+                  ? 'bg-gradient-to-r from-primary to-primary-glow'
+                  : 'bg-gradient-to-r from-tech-purple to-accent'
+              }`}>
+                {formData.role === 'entrepreneur' ? '🏢 יזם נדל"ן' : '💼 יועץ מקצועי'}
               </Badge>
             </div>
             
             {/* Role Icon */}
-            <div className={`w-16 h-16 bg-gradient-to-r ${roleConfig.gradient} rounded-full flex items-center justify-center mx-auto`}>
-              <RoleIcon className="w-8 h-8 text-white" />
+            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg ${
+              formData.role === 'entrepreneur'
+                ? 'bg-gradient-to-r from-primary to-primary-glow shadow-primary/30'
+                : 'bg-gradient-to-r from-tech-purple to-accent shadow-tech-purple/30'
+            }`}>
+              <RoleIcon className="w-10 h-10 text-white" />
             </div>
             
-            <CardTitle className="text-2xl font-bold text-primary">
+            <CardTitle className={`text-3xl font-bold ${
+              formData.role === 'entrepreneur' ? 'text-primary' : 'text-tech-purple'
+            }`}>
               {isLogin 
                 ? "ברוך הבא" 
                 : formData.role === 'advisor' ? "הצטרפות כיועץ" : "הצטרפות כיזם"

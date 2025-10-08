@@ -143,7 +143,7 @@ const ForConsultants = () => {
             <Button 
               variant="premium" 
               size="sm" 
-              onClick={() => navigate('/auth?type=consultant')}
+              onClick={() => navigate('/auth?type=advisor')}
               className="px-6"
             >
               הצטרף עכשיו
@@ -178,7 +178,7 @@ const ForConsultants = () => {
             <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
                 size="lg" 
-                onClick={() => navigate('/auth?type=consultant')}
+                onClick={() => navigate('/auth?type=advisor')}
                 className="text-lg px-8 py-6 hover-scale"
               >
                 <UserCheck className="w-5 h-5 ml-2" />
@@ -259,7 +259,7 @@ const ForConsultants = () => {
           <div className="text-center">
             <Button 
               size="xl" 
-              onClick={() => navigate('/auth?type=consultant')}
+              onClick={() => navigate('/auth?type=advisor')}
               className="hover-scale"
             >
               התחל את התהליך עכשיו
@@ -393,7 +393,7 @@ const ForConsultants = () => {
                   <Button 
                     className={`w-full ${plan.popular ? 'bg-tech-purple hover:bg-tech-purple/90' : ''}`}
                     variant={plan.popular ? "default" : "outline"}
-                    onClick={() => navigate('/auth?type=consultant')}
+                    onClick={() => navigate('/auth?type=advisor')}
                   >
                     {plan.cta}
                   </Button>
@@ -423,7 +423,7 @@ const ForConsultants = () => {
               <Button 
                 variant="hero" 
                 size="xl" 
-                onClick={() => navigate('/auth?type=consultant')}
+                onClick={() => navigate('/auth?type=advisor')}
                 className="text-xl px-12 py-6 bg-white text-tech-purple hover:bg-white/90 hover-scale"
               >
                 <UserCheck className="w-6 h-6 ml-2" />

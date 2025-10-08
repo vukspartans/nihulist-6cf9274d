@@ -76,7 +76,7 @@ const Landing = memo(() => {
     if (userType === 'entrepreneur') {
       navigate('/auth?type=entrepreneur');
     } else {
-      navigate('/auth?type=consultant');
+      navigate('/auth?type=advisor');
     }
   };
 
