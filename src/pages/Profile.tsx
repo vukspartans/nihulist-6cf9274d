@@ -8,11 +8,35 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target } from 'lucide-react';
+import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { SpecialtySelector } from '@/components/SpecialtySelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+
+// Activity Regions Options
+const ACTIVITY_REGIONS = [
+  'הצפון',
+  'חיפה והסביבה',
+  'השרון',
+  'גוש דן',
+  'השפלה',
+  'ירושלים והסביבה',
+  'דרום',
+  'אילת והערבה',
+];
+
+// Office Size Options
+const OFFICE_SIZES = [
+  'קטן מאוד/בוטיק - 1-2 עובדים',
+  'קטן - 3-5 עובדים',
+  'בינוני - 6-15 עובדים',
+  'גדול - 16-30 עובדים',
+  'גדול מאוד - 31+ עובדים',
+];
 
 interface UserProfile {
   name: string | null;
@@ -29,6 +53,9 @@ interface AdvisorProfile {
   hourly_rate?: number | null;
   activity_regions?: string[] | null;
   office_size?: string | null;
+  website?: string | null;
+  linkedin_url?: string | null;
+  instagram_url?: string | null;
 }
 
 interface SpecialtyData {
@@ -43,8 +70,20 @@ const Profile = () => {
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
-  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false, company: false });
-  const [editedData, setEditedData] = useState({ name: '', phone: '', companyName: '', location: '', yearsExperience: 0, hourlyRate: 0 });
+  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false, company: false, activityRegions: false, officeSize: false, socialUrls: false });
+  const [editedData, setEditedData] = useState({ 
+    name: '', 
+    phone: '', 
+    companyName: '', 
+    location: '', 
+    yearsExperience: 0, 
+    hourlyRate: 0,
+    activityRegions: [] as string[],
+    officeSize: '',
+    website: '',
+    linkedinUrl: '',
+    instagramUrl: ''
+  });
   const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
   const [saving, setSaving] = useState(false);
 
@@ -69,7 +108,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, company_name, location, years_experience, hourly_rate, activity_regions, office_size')
+            .select('specialties, company_name, location, years_experience, hourly_rate, activity_regions, office_size, website, linkedin_url, instagram_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -88,10 +127,27 @@ const Profile = () => {
               location: advisorData.location || '',
               yearsExperience: advisorData.years_experience || 0,
               hourlyRate: advisorData.hourly_rate || 0,
+              activityRegions: advisorData.activity_regions || [],
+              officeSize: advisorData.office_size || '',
+              website: advisorData.website || '',
+              linkedinUrl: advisorData.linkedin_url || '',
+              instagramUrl: advisorData.instagram_url || '',
             });
           }
         } else {
-          setEditedData({ name: data.name || '', phone: data.phone || '', companyName: '', location: '', yearsExperience: 0, hourlyRate: 0 });
+          setEditedData({ 
+            name: data.name || '', 
+            phone: data.phone || '', 
+            companyName: '', 
+            location: '', 
+            yearsExperience: 0, 
+            hourlyRate: 0,
+            activityRegions: [],
+            officeSize: '',
+            website: '',
+            linkedinUrl: '',
+            instagramUrl: ''
+          });
         }
       }
     } catch (error) {
@@ -106,7 +162,7 @@ const Profile = () => {
     }
   };
 
-  const updateProfile = async (field: 'name' | 'phone' | 'company') => {
+  const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
     setSaving(true);
     try {
       if (field === 'company') {
@@ -118,6 +174,7 @@ const Profile = () => {
             location: editedData.location,
             years_experience: editedData.yearsExperience,
             hourly_rate: editedData.hourlyRate,
+            office_size: editedData.officeSize,
           })
           .eq('user_id', user?.id);
 
@@ -129,11 +186,63 @@ const Profile = () => {
           location: editedData.location,
           years_experience: editedData.yearsExperience,
           hourly_rate: editedData.hourlyRate,
+          office_size: editedData.officeSize,
         } : null);
         setEditMode(prev => ({ ...prev, company: false }));
         toast({
           title: "עודכן בהצלחה",
           description: "פרטי החברה עודכנו",
+        });
+      } else if (field === 'activityRegions') {
+        const { error } = await supabase
+          .from('advisors')
+          .update({ activity_regions: editedData.activityRegions })
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setAdvisorProfile(prev => prev ? { ...prev, activity_regions: editedData.activityRegions } : null);
+        setEditMode(prev => ({ ...prev, activityRegions: false }));
+        toast({
+          title: "עודכן בהצלחה",
+          description: "אזורי הפעילות עודכנו",
+        });
+      } else if (field === 'officeSize') {
+        const { error } = await supabase
+          .from('advisors')
+          .update({ office_size: editedData.officeSize })
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setAdvisorProfile(prev => prev ? { ...prev, office_size: editedData.officeSize } : null);
+        setEditMode(prev => ({ ...prev, officeSize: false }));
+        toast({
+          title: "עודכן בהצלחה",
+          description: "גודל המשרד עודכן",
+        });
+      } else if (field === 'socialUrls') {
+        const { error } = await supabase
+          .from('advisors')
+          .update({
+            website: editedData.website || null,
+            linkedin_url: editedData.linkedinUrl || null,
+            instagram_url: editedData.instagramUrl || null,
+          })
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setAdvisorProfile(prev => prev ? {
+          ...prev,
+          website: editedData.website,
+          linkedin_url: editedData.linkedinUrl,
+          instagram_url: editedData.instagramUrl,
+        } : null);
+        setEditMode(prev => ({ ...prev, socialUrls: false }));
+        toast({
+          title: "עודכן בהצלחה",
+          description: "הקישורים עודכנו",
         });
       } else {
         const updateData = { [field]: editedData[field] };
@@ -225,10 +334,9 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company') => {
+  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
     if (field === 'specialties') {
       if (editMode.specialties) {
-        // Reset to original values if canceling
         const specialties = advisorProfile?.specialties || [];
         setSelectedSpecialties({
           main: specialties[0] || null,
@@ -238,19 +346,44 @@ const Profile = () => {
       setEditMode(prev => ({ ...prev, specialties: !prev.specialties }));
     } else if (field === 'company') {
       if (editMode.company) {
-        // Reset to original values if canceling
         setEditedData(prev => ({
           ...prev,
           companyName: advisorProfile?.company_name || '',
           location: advisorProfile?.location || '',
           yearsExperience: advisorProfile?.years_experience || 0,
           hourlyRate: advisorProfile?.hourly_rate || 0,
+          officeSize: advisorProfile?.office_size || '',
         }));
       }
       setEditMode(prev => ({ ...prev, company: !prev.company }));
+    } else if (field === 'activityRegions') {
+      if (editMode.activityRegions) {
+        setEditedData(prev => ({
+          ...prev,
+          activityRegions: advisorProfile?.activity_regions || [],
+        }));
+      }
+      setEditMode(prev => ({ ...prev, activityRegions: !prev.activityRegions }));
+    } else if (field === 'officeSize') {
+      if (editMode.officeSize) {
+        setEditedData(prev => ({
+          ...prev,
+          officeSize: advisorProfile?.office_size || '',
+        }));
+      }
+      setEditMode(prev => ({ ...prev, officeSize: !prev.officeSize }));
+    } else if (field === 'socialUrls') {
+      if (editMode.socialUrls) {
+        setEditedData(prev => ({
+          ...prev,
+          website: advisorProfile?.website || '',
+          linkedinUrl: advisorProfile?.linkedin_url || '',
+          instagramUrl: advisorProfile?.instagram_url || '',
+        }));
+      }
+      setEditMode(prev => ({ ...prev, socialUrls: !prev.socialUrls }));
     } else {
       if (editMode[field]) {
-        // Reset to original value if canceling
         setEditedData(prev => ({ 
           ...prev, 
           [field]: field === 'name' ? (profile?.name || '') : (profile?.phone || '') 
@@ -278,6 +411,44 @@ const Profile = () => {
       default:
         return 'לא מוגדר';
     }
+  };
+
+  const calculateProfileCompletion = () => {
+    if (profile?.role !== 'advisor' && authProfile?.role !== 'advisor') return 100;
+    
+    const requiredFields = [
+      profile?.name,
+      profile?.phone,
+      advisorProfile?.company_name,
+      advisorProfile?.location,
+      advisorProfile?.years_experience,
+      advisorProfile?.hourly_rate,
+      advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0,
+      advisorProfile?.office_size,
+      selectedSpecialties.main || selectedSpecialties.secondary.length > 0,
+    ];
+    
+    const filledFields = requiredFields.filter(field => field).length;
+    return Math.round((filledFields / requiredFields.length) * 100);
+  };
+
+  const completionPercentage = calculateProfileCompletion();
+
+  const toggleAllRegions = () => {
+    if (editedData.activityRegions.length === ACTIVITY_REGIONS.length) {
+      setEditedData(prev => ({ ...prev, activityRegions: [] }));
+    } else {
+      setEditedData(prev => ({ ...prev, activityRegions: [...ACTIVITY_REGIONS] }));
+    }
+  };
+
+  const toggleRegion = (region: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      activityRegions: prev.activityRegions.includes(region)
+        ? prev.activityRegions.filter(r => r !== region)
+        : [...prev.activityRegions, region]
+    }));
   };
 
   if (loading) {
@@ -319,10 +490,23 @@ const Profile = () => {
           <span>הפרופיל שלי</span>
         </div>
 
-        {/* Page Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">הפרופיל שלי</h1>
-          <p className="text-muted-foreground">ניהול פרטי החשבון והגדרות אישיות</p>
+        {/* Page Header with Completion */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">הפרופיל שלי</h1>
+            <p className="text-muted-foreground">ניהול פרטי החשבון והגדרות אישיות</p>
+          </div>
+          {(profile?.role === 'advisor' || authProfile?.role === 'advisor') && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary">
+              <CheckCircle className={`h-5 w-5 ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`} />
+              <div className="text-right">
+                <div className={`text-xl font-bold ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`}>
+                  {completionPercentage}%
+                </div>
+                <div className="text-xs text-muted-foreground">השלמת פרופיל</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -503,6 +687,22 @@ const Profile = () => {
                       className={!editedData.hourlyRate ? 'border-red-500' : ''}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>גודל המשרד *</Label>
+                    <Select 
+                      value={editedData.officeSize} 
+                      onValueChange={(value) => setEditedData({ ...editedData, officeSize: value })}
+                    >
+                      <SelectTrigger className={!editedData.officeSize ? 'border-red-500' : ''} dir="rtl">
+                        <SelectValue placeholder="בחר גודל משרד" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {OFFICE_SIZES.map((size) => (
+                          <SelectItem key={size} value={size}>{size}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => updateProfile('company')}
@@ -557,24 +757,13 @@ const Profile = () => {
                         </label>
                         <p className="text-foreground">{advisorProfile?.hourly_rate ? `₪${advisorProfile.hourly_rate}` : 'לא מוגדר'}</p>
                       </div>
-                      {advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0 && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground block mb-2">אזורי פעילות</label>
-                          <div className="flex flex-wrap gap-2">
-                            {advisorProfile.activity_regions.map((region: string) => (
-                              <span key={region} className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
-                                {region}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {advisorProfile?.office_size && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">גודל משרד</label>
-                          <p className="text-foreground">{advisorProfile.office_size}</p>
-                        </div>
-                      )}
+                      <div className={!advisorProfile?.office_size ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          גודל משרד
+                          {!advisorProfile?.office_size && <span className="text-red-500 mr-1">*</span>}
+                        </label>
+                        <p className="text-foreground">{advisorProfile?.office_size || 'לא מוגדר'}</p>
+                      </div>
                     </>
                   )}
                   <div>
@@ -626,6 +815,235 @@ const Profile = () => {
                 onCancel={() => handleEditToggle('specialties')}
                 saving={saving}
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Activity Regions - Only for advisors */}
+        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+          <Card dir="rtl" className={`md:col-span-2 ${(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) ? 'border-2 border-red-500' : ''}`}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  אזורי פעילות
+                  {(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
+                    <span className="text-sm text-red-500 font-normal mr-2">* שדה חובה - חסר</span>
+                  )}
+                </CardTitle>
+                {!editMode.activityRegions && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditToggle('activityRegions')}
+                  >
+                    <Edit className="h-4 w-4 ml-2" />
+                    ערוך
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {editMode.activityRegions ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <Label className="text-base font-semibold">בחר אזורי פעילות *</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAllRegions}
+                    >
+                      {editedData.activityRegions.length === ACTIVITY_REGIONS.length ? 'נקה הכל' : 'בחר הכל'}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {ACTIVITY_REGIONS.map((region) => (
+                      <div key={region} className="flex items-center space-x-2 space-x-reverse">
+                        <Checkbox
+                          id={region}
+                          checked={editedData.activityRegions.includes(region)}
+                          onCheckedChange={() => toggleRegion(region)}
+                        />
+                        <label
+                          htmlFor={region}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {region}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      onClick={() => updateProfile('activityRegions')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      {saving ? 'שומר...' : 'שמור'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleEditToggle('activityRegions')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      ביטול
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {advisorProfile.activity_regions.map((region) => (
+                        <Badge key={region} variant="secondary" className="text-sm">
+                          {region}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">לא נבחרו אזורי פעילות</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Social URLs - Only for advisors */}
+        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+          <Card dir="rtl" className="md:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  קישורים חברתיים ואתר
+                </CardTitle>
+                {!editMode.socialUrls && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditToggle('socialUrls')}
+                  >
+                    <Edit className="h-4 w-4 ml-2" />
+                    ערוך
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {editMode.socialUrls ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      אתר אינטרנט
+                    </Label>
+                    <Input
+                      type="url"
+                      value={editedData.website}
+                      onChange={(e) => setEditedData({ ...editedData, website: e.target.value })}
+                      placeholder="https://www.example.com"
+                      dir="ltr"
+                      className="text-left"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Linkedin className="h-4 w-4" />
+                      לינקדאין
+                    </Label>
+                    <Input
+                      type="url"
+                      value={editedData.linkedinUrl}
+                      onChange={(e) => setEditedData({ ...editedData, linkedinUrl: e.target.value })}
+                      placeholder="https://www.linkedin.com/in/username"
+                      dir="ltr"
+                      className="text-left"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4" />
+                      אינסטגרם
+                    </Label>
+                    <Input
+                      type="url"
+                      value={editedData.instagramUrl}
+                      onChange={(e) => setEditedData({ ...editedData, instagramUrl: e.target.value })}
+                      placeholder="https://www.instagram.com/username"
+                      dir="ltr"
+                      className="text-left"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      onClick={() => updateProfile('socialUrls')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      {saving ? 'שומר...' : 'שמור'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleEditToggle('socialUrls')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      ביטול
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {advisorProfile?.website && (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <a 
+                        href={advisorProfile.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        {advisorProfile.website}
+                      </a>
+                    </div>
+                  )}
+                  {advisorProfile?.linkedin_url && (
+                    <div className="flex items-center gap-2">
+                      <Linkedin className="h-4 w-4 text-muted-foreground" />
+                      <a 
+                        href={advisorProfile.linkedin_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        {advisorProfile.linkedin_url}
+                      </a>
+                    </div>
+                  )}
+                  {advisorProfile?.instagram_url && (
+                    <div className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4 text-muted-foreground" />
+                      <a 
+                        href={advisorProfile.instagram_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        {advisorProfile.instagram_url}
+                      </a>
+                    </div>
+                  )}
+                  {!advisorProfile?.website && !advisorProfile?.linkedin_url && !advisorProfile?.instagram_url && (
+                    <p className="text-muted-foreground">לא הוגדרו קישורים</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

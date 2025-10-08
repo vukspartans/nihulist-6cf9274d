@@ -9,9 +9,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Globe, Linkedin, Instagram } from 'lucide-react';
 import { PROJECT_TYPES } from '@/constants/project';
 import { UserHeader } from '@/components/UserHeader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+
+// Activity Regions Options
+const ACTIVITY_REGIONS = [
+  'הצפון',
+  'חיפה והסביבה',
+  'השרון',
+  'גוש דן',
+  'השפלה',
+  'ירושלים והסביבה',
+  'דרום',
+  'אילת והערבה',
+];
+
+// Office Size Options
+const OFFICE_SIZES = [
+  'קטן מאוד/בוטיק - 1-2 עובדים',
+  'קטן - 3-5 עובדים',
+  'בינוני - 6-15 עובדים',
+  'גדול - 16-30 עובדים',
+  'גדול מאוד - 31+ עובדים',
+];
 
 interface AdvisorProfile {
   id?: string;
@@ -22,6 +45,11 @@ interface AdvisorProfile {
   years_experience?: number;
   hourly_rate?: number;
   availability_status?: string;
+  activity_regions?: string[];
+  office_size?: string;
+  website?: string;
+  linkedin_url?: string;
+  instagram_url?: string;
 }
 
 const AdvisorProfile = () => {
@@ -36,7 +64,12 @@ const AdvisorProfile = () => {
     location: '',
     years_experience: undefined,
     hourly_rate: undefined,
-    availability_status: 'available'
+    availability_status: 'available',
+    activity_regions: [],
+    office_size: '',
+    website: '',
+    linkedin_url: '',
+    instagram_url: ''
   });
   const [newExpertise, setNewExpertise] = useState('');
   const [newCertification, setNewCertification] = useState('');
@@ -76,7 +109,12 @@ const AdvisorProfile = () => {
         location: profile.location,
         years_experience: profile.years_experience,
         hourly_rate: profile.hourly_rate,
-        availability_status: profile.availability_status
+        availability_status: profile.availability_status,
+        activity_regions: profile.activity_regions,
+        office_size: profile.office_size,
+        website: profile.website || null,
+        linkedin_url: profile.linkedin_url || null,
+        instagram_url: profile.instagram_url || null
       };
 
       if (profile.id) {
@@ -147,10 +185,18 @@ const AdvisorProfile = () => {
   };
 
   const completionPercentage = Math.round(
-    (Object.values(profile).filter(val => 
+    (Object.values({
+      company_name: profile.company_name,
+      location: profile.location,
+      years_experience: profile.years_experience,
+      hourly_rate: profile.hourly_rate,
+      expertise: profile.expertise,
+      activity_regions: profile.activity_regions,
+      office_size: profile.office_size
+    }).filter(val => 
       val !== '' && val !== undefined && val !== null && 
       !(Array.isArray(val) && val.length === 0)
-    ).length / Object.keys(profile).length) * 100
+    ).length / 7) * 100
   );
 
   return (
@@ -201,25 +247,102 @@ const AdvisorProfile = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="years_experience">שנות ניסיון</Label>
+                  <Label htmlFor="years_experience">שנות ניסיון *</Label>
                   <Input
                     id="years_experience"
                     type="number"
                     value={profile.years_experience || ''}
                     onChange={(e) => setProfile(prev => ({ ...prev, years_experience: e.target.value ? parseInt(e.target.value) : undefined }))}
                     placeholder="מספר שנות הניסיון"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hourly_rate">תעריף לשעה (₪)</Label>
+                  <Label htmlFor="hourly_rate">תעריף לשעה (₪) *</Label>
                   <Input
                     id="hourly_rate"
                     type="number"
                     value={profile.hourly_rate || ''}
                     onChange={(e) => setProfile(prev => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : undefined }))}
                     placeholder="תעריף בשקלים"
+                    required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>גודל המשרד *</Label>
+                <Select 
+                  value={profile.office_size} 
+                  onValueChange={(value) => setProfile(prev => ({ ...prev, office_size: value }))}
+                >
+                  <SelectTrigger dir="rtl">
+                    <SelectValue placeholder="בחר גודל משרד" />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    {OFFICE_SIZES.map((size) => (
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-semibold">אזורי פעילות *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (profile.activity_regions?.length === ACTIVITY_REGIONS.length) {
+                        setProfile(prev => ({ ...prev, activity_regions: [] }));
+                      } else {
+                        setProfile(prev => ({ ...prev, activity_regions: [...ACTIVITY_REGIONS] }));
+                      }
+                    }}
+                  >
+                    {profile.activity_regions?.length === ACTIVITY_REGIONS.length ? 'נקה הכל' : 'בחר הכל'}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ACTIVITY_REGIONS.map((region) => (
+                    <div key={region} className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox
+                        id={`region-${region}`}
+                        checked={profile.activity_regions?.includes(region)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setProfile(prev => ({ 
+                              ...prev, 
+                              activity_regions: [...(prev.activity_regions || []), region] 
+                            }));
+                          } else {
+                            setProfile(prev => ({ 
+                              ...prev, 
+                              activity_regions: (prev.activity_regions || []).filter(r => r !== region) 
+                            }));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`region-${region}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {region}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {profile.activity_regions && profile.activity_regions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {profile.activity_regions.map((region) => (
+                      <Badge key={region} variant="secondary">
+                        {region}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -287,6 +410,55 @@ const AdvisorProfile = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">קישורים חברתיים ואתר (אופציונלי)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="website" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    אתר אינטרנט
+                  </Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    value={profile.website || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="https://www.example.com"
+                    dir="ltr"
+                    className="text-left"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin" className="flex items-center gap-2">
+                    <Linkedin className="h-4 w-4" />
+                    לינקדאין
+                  </Label>
+                  <Input
+                    id="linkedin"
+                    type="url"
+                    value={profile.linkedin_url || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                    placeholder="https://www.linkedin.com/in/username"
+                    dir="ltr"
+                    className="text-left"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="instagram" className="flex items-center gap-2">
+                    <Instagram className="h-4 w-4" />
+                    אינסטגרם
+                  </Label>
+                  <Input
+                    id="instagram"
+                    type="url"
+                    value={profile.instagram_url || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, instagram_url: e.target.value }))}
+                    placeholder="https://www.instagram.com/username"
+                    dir="ltr"
+                    className="text-left"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4">

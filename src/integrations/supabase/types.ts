@@ -63,13 +63,16 @@ export type Database = {
           expertise: string[] | null
           hourly_rate: number | null
           id: string
+          instagram_url: string | null
           is_active: boolean | null
+          linkedin_url: string | null
           location: string | null
           office_size: string | null
           rating: number | null
           specialties: string[] | null
           updated_at: string
           user_id: string
+          website: string | null
           years_experience: number | null
         }
         Insert: {
@@ -82,13 +85,16 @@ export type Database = {
           expertise?: string[] | null
           hourly_rate?: number | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean | null
+          linkedin_url?: string | null
           location?: string | null
           office_size?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string
           user_id: string
+          website?: string | null
           years_experience?: number | null
         }
         Update: {
@@ -101,13 +107,16 @@ export type Database = {
           expertise?: string[] | null
           hourly_rate?: number | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean | null
+          linkedin_url?: string | null
           location?: string | null
           office_size?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string
           user_id?: string
+          website?: string | null
           years_experience?: number | null
         }
         Relationships: [
