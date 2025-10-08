@@ -28,6 +28,7 @@ interface RFPWizardProps {
   projectId: string;
   projectName: string;
   projectType: string;
+  projectLocation?: string;
   onRfpSent?: () => void;
 }
 
@@ -37,7 +38,7 @@ interface RFPContent {
   attachments: File[];
 }
 
-export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RFPWizardProps) => {
+export const RFPWizard = ({ projectId, projectName, projectType, projectLocation, onRfpSent }: RFPWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProjectType, setSelectedProjectType] = useState(projectType);
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
@@ -261,6 +262,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, onRfpSent }: RF
                 projectId={projectId}
                 projectName={projectName}
                 projectType={selectedProjectType}
+                projectLocation={projectLocation}
                 selectedAdvisorTypes={selectedAdvisors}
                 selectedAdvisors={selectedRecommendedAdvisors}
                 onSelectAdvisors={setSelectedRecommendedAdvisors}

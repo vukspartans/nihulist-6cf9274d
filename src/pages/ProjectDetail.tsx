@@ -315,6 +315,7 @@ export const ProjectDetail = () => {
             projectId={project.id}
             projectName={project.name || project.location}
             projectType={project.type}
+            projectLocation={project.location}
             onRfpSent={() => {
               setRfpSent(true);
               fetchProposals();
