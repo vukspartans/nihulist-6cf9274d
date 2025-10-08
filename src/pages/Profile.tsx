@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, CheckCircle } from 'lucide-react';
+import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, CheckCircle, Briefcase, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -16,6 +16,9 @@ import { SpecialtySelector } from '@/components/SpecialtySelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -86,6 +89,7 @@ const Profile = () => {
   });
   const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('personal');
 
   useEffect(() => {
     if (user) {
@@ -478,9 +482,11 @@ const Profile = () => {
     );
   }
 
+  const isAdvisor = profile?.role === 'advisor' || authProfile?.role === 'advisor';
+
   return (
-    <div className="min-h-screen bg-background p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-6 animate-fade-in" dir="rtl">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to={getDashboardRoute()} className="hover:text-foreground transition-colors">
@@ -491,62 +497,101 @@ const Profile = () => {
         </div>
 
         {/* Page Header with Completion */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">הפרופיל שלי</h1>
-            <p className="text-muted-foreground">ניהול פרטי החשבון והגדרות אישיות</p>
-          </div>
-          {(profile?.role === 'advisor' || authProfile?.role === 'advisor') && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary">
-              <CheckCircle className={`h-5 w-5 ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`} />
-              <div className="text-right">
-                <div className={`text-xl font-bold ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`}>
-                  {completionPercentage}%
-                </div>
-                <div className="text-xs text-muted-foreground">השלמת פרופיל</div>
+        <Card className="border-2">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold">הפרופיל שלי</h1>
+                <p className="text-muted-foreground">ניהול פרטי החשבון והגדרות אישיות</p>
               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Personal Information */}
-          <Card dir="rtl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                פרטים אישיים
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <label className="text-sm font-medium text-muted-foreground">שם מלא</label>
-                  {editMode.name ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        value={editedData.name}
-                        onChange={(e) => setEditedData(prev => ({ ...prev, name: e.target.value }))}
-                        className="flex-1"
-                        placeholder="הזן שם מלא"
-                      />
-                      <Button 
-                        size="sm" 
-                        onClick={() => updateProfile('name')} 
-                        disabled={saving}
-                        className="shrink-0"
-                      >
-                        <Save className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleEditToggle('name')}
-                        className="shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              {isAdvisor && (
+                <div className="text-center space-y-2">
+                  <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-br from-secondary to-secondary/50 border-2">
+                    <CheckCircle className={`h-6 w-6 ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`} />
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`}>
+                        {completionPercentage}%
+                      </div>
+                      <div className="text-xs text-muted-foreground font-medium">השלמת פרופיל</div>
                     </div>
+                  </div>
+                  <Progress value={completionPercentage} className="h-2" />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs for Organization */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+            <TabsTrigger value="personal" className="gap-2 py-3">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">פרטים אישיים</span>
+              <span className="sm:hidden">אישי</span>
+            </TabsTrigger>
+            {isAdvisor && (
+              <>
+                <TabsTrigger value="company" className="gap-2 py-3">
+                  <Building className="h-4 w-4" />
+                  <span className="hidden sm:inline">פרטי חברה</span>
+                  <span className="sm:hidden">חברה</span>
+                </TabsTrigger>
+                <TabsTrigger value="professional" className="gap-2 py-3">
+                  <Briefcase className="h-4 w-4" />
+                  <span className="hidden sm:inline">מקצועי</span>
+                  <span className="sm:hidden">מקצועי</span>
+                </TabsTrigger>
+              </>
+            )}
+            <TabsTrigger value="settings" className="gap-2 py-3">
+              <KeyRound className="h-4 w-4" />
+              <span className="hidden sm:inline">הגדרות</span>
+              <span className="sm:hidden">הגדרות</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Personal Info Tab */}
+          <TabsContent value="personal" className="space-y-4 mt-6 animate-fade-in">
+            {/* Personal Information */}
+            <Card dir="rtl" className="hover-scale">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  פרטים אישיים
+                </CardTitle>
+                <CardDescription>מידע בסיסי על המשתמש</CardDescription>
+              </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-muted-foreground">שם מלא</label>
+                    {editMode.name ? (
+                      <div className="flex items-center gap-2 mt-1 animate-scale-in">
+                        <Input
+                          value={editedData.name}
+                          onChange={(e) => setEditedData(prev => ({ ...prev, name: e.target.value }))}
+                          className="flex-1"
+                          placeholder="הזן שם מלא"
+                          autoFocus
+                        />
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateProfile('name')} 
+                          disabled={saving}
+                          className="shrink-0"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleEditToggle('name')}
+                          className="shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                   ) : (
                     <div className="flex items-center justify-between mt-1">
                       <p className="text-foreground">{profile?.name || 'לא מוגדר'}</p>
@@ -615,23 +660,30 @@ const Profile = () => {
               </div>
             </CardContent>
           </Card>
+          </TabsContent>
 
-          {/* Company Information */}
-          <Card dir="rtl" className={
-            (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-            (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate)
-            ? 'border-2 border-red-500' : ''
-          }>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  פרטי חברה
-                  {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                   (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
-                    <span className="text-sm text-red-500 font-normal mr-2">* מידע חסר</span>
-                  )}
-                </CardTitle>
+          {/* Company Info Tab - Only for advisors */}
+          {isAdvisor && (
+            <TabsContent value="company" className="space-y-4 mt-6 animate-fade-in">
+              {/* Company Information */}
+              <Card dir="rtl" className={`hover-scale ${
+                (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
+                (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate)
+                ? 'border-2 border-red-500 animate-pulse' : ''
+              }`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Building className="h-5 w-5 text-primary" />
+                        פרטי חברה
+                        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
+                         (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
+                          <Badge variant="destructive" className="mr-2">מידע חסר</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>פרטי החברה או העסק שלך</CardDescription>
+                    </div>
                 {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && !editMode.company && (
                   <Button 
                     size="sm" 
@@ -781,20 +833,26 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
-        </div>
+            </TabsContent>
+          )}
 
-        {/* Professional Specialties - Only for advisors */}
-        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-          <Card dir="rtl" className={`md:col-span-2 ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500' : ''}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  התמחויות מקצועיות
-                  {(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) && (
-                    <span className="text-sm text-red-500 font-normal mr-2">* שדה חובה - חסר</span>
-                  )}
-                </CardTitle>
+          {/* Professional Tab - Only for advisors */}
+          {isAdvisor && (
+            <TabsContent value="professional" className="space-y-4 mt-6 animate-fade-in">
+              {/* Professional Specialties - Only for advisors */}
+              <Card dir="rtl" className={`hover-scale ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-primary" />
+                        התמחויות מקצועיות
+                        {(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) && (
+                          <Badge variant="destructive" className="mr-2">שדה חובה</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>בחר את תחומי ההתמחות המקצועיים שלך</CardDescription>
+                    </div>
                 {!editMode.specialties && (
                   <Button 
                     size="sm" 
@@ -817,20 +875,21 @@ const Profile = () => {
               />
             </CardContent>
           </Card>
-        )}
 
-        {/* Activity Regions - Only for advisors */}
-        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-          <Card dir="rtl" className={`md:col-span-2 ${(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) ? 'border-2 border-red-500' : ''}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  אזורי פעילות
-                  {(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
-                    <span className="text-sm text-red-500 font-normal mr-2">* שדה חובה - חסר</span>
-                  )}
-                </CardTitle>
+              {/* Activity Regions */}
+              <Card dir="rtl" className={`hover-scale ${(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        אזורי פעילות
+                        {(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
+                          <Badge variant="destructive" className="mr-2">שדה חובה</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>האזורים הגיאוגרפיים בהם אתה פועל</CardDescription>
+                    </div>
                 {!editMode.activityRegions && (
                   <Button 
                     size="sm" 
@@ -909,17 +968,18 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Social URLs - Only for advisors */}
-        {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-          <Card dir="rtl" className="md:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  קישורים חברתיים ואתר
-                </CardTitle>
+              {/* Social URLs */}
+              <Card dir="rtl" className="hover-scale">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Link2 className="h-5 w-5 text-primary" />
+                        קישורים חברתיים ואתר
+                      </CardTitle>
+                      <CardDescription>הוסף קישורים לנוכחות הדיגיטלית שלך (אופציונלי)</CardDescription>
+                    </div>
                 {!editMode.socialUrls && (
                   <Button 
                     size="sm" 
@@ -1046,16 +1106,20 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
-        )}
+            </TabsContent>
+          )}
 
-        {/* Account Actions */}
-        <Card className={(authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'md:col-span-2' : ''}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              פעולות חשבון
-            </CardTitle>
-          </CardHeader>
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4 mt-6 animate-fade-in">
+            {/* Account Actions */}
+            <Card className="hover-scale">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-primary" />
+                  פעולות חשבון
+                </CardTitle>
+                <CardDescription>ניהול אבטחה והגדרות חשבון</CardDescription>
+              </CardHeader>
           <CardContent>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -1083,6 +1147,8 @@ const Profile = () => {
             </AlertDialog>
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
