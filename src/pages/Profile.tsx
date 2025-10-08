@@ -70,7 +70,15 @@ const Profile = () => {
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
-  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false, company: false, activityRegions: false, officeSize: false, socialUrls: false });
+  const [editMode, setEditMode] = useState({ 
+    name: false, 
+    phone: false, 
+    specialties: false, 
+    company: false, 
+    activityRegions: false, 
+    officeSize: false, 
+    socialUrls: false 
+  });
   const [editedData, setEditedData] = useState({ 
     name: '', 
     phone: '', 
