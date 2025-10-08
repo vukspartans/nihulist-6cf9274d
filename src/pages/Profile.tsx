@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, CheckCircle, Briefcase, Link2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { SpecialtySelector } from '@/components/SpecialtySelector';
@@ -69,6 +69,7 @@ interface SpecialtyData {
 const Profile = () => {
   const { user, profile: authProfile } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +91,29 @@ const Profile = () => {
   const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+
+  // Handle URL parameters for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const highlight = searchParams.get('highlight');
+    
+    if (tab) {
+      setActiveTab(tab);
+      
+      // Clear the URL params after navigation
+      if (highlight === 'missing') {
+        setTimeout(() => {
+          const element = document.querySelector('.border-red-500');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Add a temporary highlight effect
+            element.classList.add('animate-pulse');
+            setTimeout(() => element.classList.remove('animate-pulse'), 2000);
+          }
+        }, 300);
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) {
@@ -436,7 +460,18 @@ const Profile = () => {
     return Math.round((filledFields / requiredFields.length) * 100);
   };
 
+  const getFirstIncompleteSection = () => {
+    if (!profile?.name || !profile?.phone) return 'personal';
+    if (!advisorProfile?.company_name || !advisorProfile?.location || 
+        !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
+        !advisorProfile?.office_size) return 'company';
+    if ((!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ||
+        !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) return 'professional';
+    return null;
+  };
+
   const completionPercentage = calculateProfileCompletion();
+  const firstIncompleteSection = getFirstIncompleteSection();
 
   const toggleAllRegions = () => {
     if (editedData.activityRegions.length === ACTIVITY_REGIONS.length) {
@@ -505,14 +540,28 @@ const Profile = () => {
                 <p className="text-muted-foreground">ניהול פרטי החשבון והגדרות אישיות</p>
               </div>
               {isAdvisor && (
-                <div className="text-center space-y-2">
-                  <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-br from-secondary to-secondary/50 border-2">
+                <div 
+                  className={`text-center space-y-2 ${completionPercentage < 100 ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                  onClick={() => {
+                    if (completionPercentage < 100 && firstIncompleteSection) {
+                      setActiveTab(firstIncompleteSection);
+                      toast({
+                        title: "נווט לסעיף החסר",
+                        description: `עבור לכרטיסייה "${firstIncompleteSection === 'personal' ? 'פרטים אישיים' : firstIncompleteSection === 'company' ? 'פרטי חברה' : 'מקצועי'}"`,
+                      });
+                    }
+                  }}
+                  title={completionPercentage < 100 ? 'לחץ למעבר לסעיף החסר הראשון' : ''}
+                >
+                  <div className={`flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-br from-secondary to-secondary/50 border-2 ${completionPercentage < 100 ? 'border-yellow-400 shadow-lg' : ''}`}>
                     <CheckCircle className={`h-6 w-6 ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`} />
                     <div className="text-right">
                       <div className={`text-2xl font-bold ${completionPercentage >= 80 ? 'text-green-500' : completionPercentage >= 50 ? 'text-orange-500' : 'text-red-500'}`}>
                         {completionPercentage}%
                       </div>
-                      <div className="text-xs text-muted-foreground font-medium">השלמת פרופיל</div>
+                      <div className="text-xs text-muted-foreground font-medium">
+                        {completionPercentage < 100 ? 'לחץ להשלמה' : 'הושלם'}
+                      </div>
                     </div>
                   </div>
                   <Progress value={completionPercentage} className="h-2" />
@@ -525,22 +574,34 @@ const Profile = () => {
         {/* Tabs for Organization */}
         <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
           <TabsList className="grid w-full grid-cols-4 h-auto p-1">
-            <TabsTrigger value="personal" className="gap-2 py-3">
+            <TabsTrigger value="personal" className="gap-2 py-3 relative">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">פרטים אישיים</span>
               <span className="sm:hidden">אישי</span>
+              {(!profile?.name || !profile?.phone) && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+              )}
             </TabsTrigger>
             {isAdvisor && (
               <>
-                <TabsTrigger value="company" className="gap-2 py-3">
+                <TabsTrigger value="company" className="gap-2 py-3 relative">
                   <Building className="h-4 w-4" />
                   <span className="hidden sm:inline">פרטי חברה</span>
                   <span className="sm:hidden">חברה</span>
+                  {(!advisorProfile?.company_name || !advisorProfile?.location || 
+                    !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
+                    !advisorProfile?.office_size) && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="professional" className="gap-2 py-3">
+                <TabsTrigger value="professional" className="gap-2 py-3 relative">
                   <Briefcase className="h-4 w-4" />
                   <span className="hidden sm:inline">מקצועי</span>
                   <span className="sm:hidden">מקצועי</span>
+                  {((!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ||
+                    !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                  )}
                 </TabsTrigger>
               </>
             )}

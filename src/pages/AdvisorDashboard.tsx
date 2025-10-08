@@ -55,6 +55,8 @@ interface AdvisorProfile {
   rating: number;
   years_experience: number | null;
   hourly_rate: number | null;
+  activity_regions: string[] | null;
+  office_size: string | null;
 }
 
 const AdvisorDashboard = () => {
@@ -163,13 +165,33 @@ const AdvisorDashboard = () => {
     );
   }
 
-  const isProfileIncomplete = 
-    !advisorProfile.company_name || 
-    !advisorProfile.specialties || 
-    advisorProfile.specialties.length === 0 ||
-    !advisorProfile.location ||
-    !advisorProfile.years_experience ||
-    !advisorProfile.hourly_rate;
+  // Enhanced profile completion check with detailed tracking
+  const getFirstMissingField = () => {
+    // Check personal info first
+    // Note: name and phone are checked in Profile component, not here
+    
+    // Check company info
+    if (!advisorProfile.company_name || !advisorProfile.location || 
+        !advisorProfile.years_experience || !advisorProfile.hourly_rate || 
+        !advisorProfile.office_size) {
+      return 'company';
+    }
+    
+    // Check professional info
+    if (!advisorProfile.specialties || advisorProfile.specialties.length === 0) {
+      return 'professional';
+    }
+    
+    // Check activity regions
+    if (!advisorProfile.activity_regions || advisorProfile.activity_regions.length === 0) {
+      return 'professional';
+    }
+    
+    return null;
+  };
+
+  const firstMissingField = getFirstMissingField();
+  const isProfileIncomplete = firstMissingField !== null;
 
   const pendingInvites = rfpInvites.filter(invite => invite.status === 'pending');
   const newInvites = rfpInvites.filter(invite => {
@@ -215,14 +237,19 @@ const AdvisorDashboard = () => {
               </div>
               {isProfileIncomplete && (
                 <div 
-                  className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 cursor-pointer hover:bg-yellow-100 transition-colors"
-                  onClick={() => navigate('/profile')}
+                  className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 cursor-pointer hover:bg-yellow-100 transition-all hover:shadow-md hover:scale-[1.02] animate-fade-in"
+                  onClick={() => navigate(`/profile?tab=${firstMissingField || 'personal'}&highlight=missing`)}
                 >
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">פרופיל לא שלם - לחצו להשלמה</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 animate-pulse" />
+                    <span className="text-sm font-bold text-yellow-800">⚠️ פרופיל לא שלם - לחצו להשלמה</span>
                   </div>
-                  <p className="text-sm text-yellow-700 mt-1">השלימו את הפרטים לקבלת יותר הזמנות</p>
+                  <p className="text-sm text-yellow-700 font-medium">
+                    {firstMissingField === 'company' && '📋 חסרים פרטי חברה (שם, מיקום, ניסיון, תעריף, גודל משרד)'}
+                    {firstMissingField === 'professional' && '🎯 חסרות התמחויות מקצועיות או אזורי פעילות'}
+                    {!firstMissingField && '✨ השלימו את הפרטים לקבלת יותר הזמנות'}
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">לחצו כאן למעבר ישיר לסעיף החסר 👆</p>
                 </div>
               )}
             </div>
