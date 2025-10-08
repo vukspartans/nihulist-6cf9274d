@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Building2, Mail, Lock, User as UserIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Mail, Lock, User as UserIcon, Briefcase, Home } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Session, User } from "@supabase/supabase-js";
 import PhoneInput from 'react-phone-number-input';
+import { ExpertiseSelector } from "@/components/ExpertiseSelector";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,7 +34,8 @@ const Auth = () => {
     role: "entrepreneur" as "entrepreneur" | "advisor",
     location: "",
     activityRegions: [] as string[],
-    officeSize: ""
+    officeSize: "",
+    expertise: [] as string[]
   });
   
   const navigate = useNavigate();
@@ -149,8 +152,13 @@ const Auth = () => {
           throw new Error('אנא מלא את כל השדות הנדרשים');
         }
 
-        if (formData.role === 'advisor' && !formData.companyName) {
-          throw new Error('שם המשרד נדרש עבור יועצים');
+        if (formData.role === 'advisor') {
+          if (!formData.companyName) {
+            throw new Error('שם המשרד נדרש עבור יועצים');
+          }
+          if (!formData.expertise || formData.expertise.length === 0) {
+            throw new Error('נא לבחור לפחות תחום התמחות אחד');
+          }
         }
 
         const redirectUrl = `${window.location.origin}/`;
@@ -167,7 +175,8 @@ const Auth = () => {
               role: formData.role,
               location: formData.location,
               activity_regions: formData.activityRegions.join(','),
-              office_size: formData.officeSize
+              office_size: formData.officeSize,
+              expertise: formData.expertise.join(',')
             }
           }
         });
@@ -451,27 +460,76 @@ const Auth = () => {
     );
   }
 
+  // Determine role-specific styling
+  const roleConfig = formData.role === 'advisor' 
+    ? {
+        icon: Briefcase,
+        gradient: "from-purple-500 to-purple-600",
+        badge: "יועץ",
+        badgeVariant: "secondary" as const
+      }
+    : {
+        icon: Building2,
+        gradient: "from-primary to-primary-glow",
+        badge: "יזם",
+        badgeVariant: "default" as const
+      };
+
+  const RoleIcon = roleConfig.icon;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
-      <Card className="w-full max-w-lg construction-card">
-        <CardHeader className="text-center space-y-4">
-          <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-primary">
-            {isLogin ? "ברוך הבא" : "הצטרפות למערכת"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin 
-              ? formData.role === 'advisor' 
-                ? "התחבר כיועץ כדי לנהל את הפרופיל שלך ולקבל פרויקטים" 
-                : "התחבר כיזם כדי לנהל פרויקטים ולמצוא יועצים"
-              : formData.role === 'advisor'
-                ? "הצטרף כיועץ וקבל גישה לפרויקטים איכותיים"
-                : "הצטרף כיזם וקבל המלצות AI למומחי בנייה"
-            }
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex flex-col p-4" dir="rtl">
+      {/* Top Navigation */}
+      <div className="w-full max-w-7xl mx-auto py-4 flex items-center justify-between">
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Home className="h-4 w-4" />
+            חזרה לדף הבית
+          </Button>
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/for-entrepreneurs">
+            <Button variant="ghost" size="sm">ליזמים</Button>
+          </Link>
+          <Link to="/for-consultants">
+            <Button variant="ghost" size="sm">ליועצים</Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Auth Card */}
+      <div className="flex-1 flex items-center justify-center">
+        <Card className="w-full max-w-lg construction-card">
+          <CardHeader className="text-center space-y-4">
+            {/* Role Badge */}
+            <div className="flex justify-center">
+              <Badge variant={roleConfig.badgeVariant} className="text-sm px-3 py-1">
+                {roleConfig.badge}
+              </Badge>
+            </div>
+            
+            {/* Role Icon */}
+            <div className={`w-16 h-16 bg-gradient-to-r ${roleConfig.gradient} rounded-full flex items-center justify-center mx-auto`}>
+              <RoleIcon className="w-8 h-8 text-white" />
+            </div>
+            
+            <CardTitle className="text-2xl font-bold text-primary">
+              {isLogin 
+                ? "ברוך הבא" 
+                : formData.role === 'advisor' ? "הצטרפות כיועץ" : "הצטרפות כיזם"
+              }
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isLogin 
+                ? formData.role === 'advisor' 
+                  ? "התחבר כיועץ כדי לנהל את הפרופיל שלך ולקבל פרויקטים" 
+                  : "התחבר כיזם כדי לנהל פרויקטים ולמצוא יועצים"
+                : formData.role === 'advisor'
+                  ? "הצטרף כיועץ וקבל גישה לפרויקטים איכותיים"
+                  : "הצטרף כיזם וקבל המלצות AI למומחי בנייה"
+              }
+            </CardDescription>
+          </CardHeader>
         
         <CardContent className="space-y-6">
           {isForgotPassword ? (
@@ -600,8 +658,24 @@ const Auth = () => {
                   <>
                     <Separator className="my-4" />
                     <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-                      <p className="text-sm font-medium text-center">פרטים נוספים ליועצים</p>
-                      <p className="text-xs text-muted-foreground text-center">תוכל להשלים את כל הפרטים לאחר ההרשמה</p>
+                      <p className="text-sm font-medium text-center">פרטים ליועצים</p>
+                      <p className="text-xs text-muted-foreground text-center">שדות המסומנים ב-* הם שדות חובה</p>
+                    </div>
+
+                    {/* Expertise Selection - REQUIRED */}
+                    <div className="space-y-2">
+                      <Label className="text-right">
+                        תחומי התמחות מקצועית <span className="text-destructive">*</span>
+                      </Label>
+                      <p className="text-xs text-muted-foreground text-right mb-2">
+                        בחר לפחות תחום התמחות אחד (מקסימום 10)
+                      </p>
+                      <ExpertiseSelector
+                        selectedExpertise={formData.expertise}
+                        onExpertiseChange={(expertise) => setFormData(prev => ({ ...prev, expertise }))}
+                        isEditing={true}
+                        maxSelection={10}
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -759,17 +833,9 @@ const Auth = () => {
             </Button>
           </div>
 
-          <div className="text-center pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/")}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← חזרה לדף הבית
-            </Button>
-          </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
