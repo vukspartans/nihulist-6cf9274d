@@ -95,10 +95,10 @@ const Landing = memo(() => {
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
             <Link to="/for-entrepreneurs">
-              <Button variant="ghost" size="sm" className="hidden md:flex">ליזמים</Button>
+              <Button variant="ghost" size="sm">ליזמים</Button>
             </Link>
             <Link to="/for-consultants">
-              <Button variant="ghost" size="sm" className="hidden md:flex">ליועצים</Button>
+              <Button variant="ghost" size="sm">ליועצים</Button>
             </Link>
             <Button variant="premium" size="sm" onClick={() => setShowUserTypeDialog(true)} className="text-sm lg:text-base px-6">
               התחל עכשיו

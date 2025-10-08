@@ -463,8 +463,12 @@ const Auth = () => {
           </CardTitle>
           <CardDescription className="text-center">
             {isLogin 
-              ? "התחבר לחשבון שלך כדי להמשיך" 
-              : "צור חשבון חדש וקבל המלצות AI לפרויקטים"
+              ? formData.role === 'advisor' 
+                ? "התחבר כיועץ כדי לנהל את הפרופיל שלך ולקבל פרויקטים" 
+                : "התחבר כיזם כדי לנהל פרויקטים ולמצוא יועצים"
+              : formData.role === 'advisor'
+                ? "הצטרף כיועץ וקבל גישה לפרויקטים איכותיים"
+                : "הצטרף כיזם וקבל המלצות AI למומחי בנייה"
             }
           </CardDescription>
         </CardHeader>
@@ -594,8 +598,14 @@ const Auth = () => {
 
                 {formData.role === 'advisor' && (
                   <>
+                    <Separator className="my-4" />
+                    <div className="bg-muted/30 p-4 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-center">פרטים נוספים ליועצים</p>
+                      <p className="text-xs text-muted-foreground text-center">תוכל להשלים את כל הפרטים לאחר ההרשמה</p>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="location">מיקום</Label>
+                      <Label htmlFor="location">מיקום משרד</Label>
                       <Input
                         id="location"
                         type="text"

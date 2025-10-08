@@ -134,6 +134,9 @@ const ForConsultants = () => {
           </Link>
           
           <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm">דף הבית</Button>
+            </Link>
             <Link to="/for-entrepreneurs">
               <Button variant="ghost" size="sm">ליזמים</Button>
             </Link>

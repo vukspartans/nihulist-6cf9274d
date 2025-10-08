@@ -80,6 +80,9 @@ const ForEntrepreneurs = () => {
           </Link>
           
           <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm">דף הבית</Button>
+            </Link>
             <Link to="/for-consultants">
               <Button variant="ghost" size="sm">ליועצים</Button>
             </Link>
