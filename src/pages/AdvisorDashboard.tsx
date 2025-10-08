@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, DollarSign, Clock, FileText, User, AlertTriangle } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, User, AlertTriangle, Star, Bell } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
+import { useNavigate } from 'react-router-dom';
 
 interface RFPInvite {
   id: string;
@@ -49,13 +50,17 @@ interface AdvisorProfile {
   id: string;
   company_name: string;
   expertise: string[];
+  specialties: string[];
   location: string;
   rating: number;
+  years_experience: number | null;
+  hourly_rate: number | null;
 }
 
 const AdvisorDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [rfpInvites, setRfpInvites] = useState<RFPInvite[]>([]);
   const [proposals, setProposals] = useState<AdvisorProposal[]>([]);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
@@ -149,7 +154,7 @@ const AdvisorDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = '/advisor-profile'}>
+            <Button onClick={() => navigate('/profile')}>
               השלמת פרופיל
             </Button>
           </CardContent>
@@ -158,7 +163,23 @@ const AdvisorDashboard = () => {
     );
   }
 
-  const isProfileIncomplete = !advisorProfile.expertise || advisorProfile.expertise.length === 0;
+  const isProfileIncomplete = 
+    !advisorProfile.company_name || 
+    !advisorProfile.specialties || 
+    advisorProfile.specialties.length === 0 ||
+    !advisorProfile.location ||
+    !advisorProfile.years_experience ||
+    !advisorProfile.hourly_rate;
+
+  const pendingInvites = rfpInvites.filter(invite => invite.status === 'pending');
+  const newInvites = rfpInvites.filter(invite => {
+    const createdDate = new Date(invite.created_at);
+    const hoursSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+    return hoursSinceCreated < 24;
+  });
+  const unsubmittedInvites = pendingInvites.filter(invite => 
+    !proposals.some(p => p.id === invite.rfp_id)
+  );
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -184,29 +205,38 @@ const AdvisorDashboard = () => {
                       <span className="text-sm">{advisorProfile.location}</span>
                     </>
                   )}
+                  <span className="text-muted-foreground">•</span>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm font-medium">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+                    <span className="text-xs text-muted-foreground">(לא פעיל)</span>
+                  </div>
                 </div>
               </div>
               {isProfileIncomplete && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div 
+                  className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 cursor-pointer hover:bg-yellow-100 transition-colors"
+                  onClick={() => navigate('/profile')}
+                >
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">פרופיל לא שלם</span>
+                    <span className="text-sm font-medium text-yellow-800">פרופיל לא שלם - לחצו להשלמה</span>
                   </div>
-                  <p className="text-sm text-yellow-700 mt-1">השלימו את תחומי ההתמחות לקבלת יותר הזמנות</p>
+                  <p className="text-sm text-yellow-700 mt-1">השלימו את הפרטים לקבלת יותר הזמנות</p>
                 </div>
               )}
             </div>
           </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <FileText className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{rfpInvites.length}</p>
-                  <p className="text-sm text-muted-foreground">הזמנות להצעת מחיר</p>
+                  <p className="text-sm text-muted-foreground">כלל הצעות המחיר הפעילות</p>
                 </div>
               </div>
             </CardContent>
@@ -215,7 +245,24 @@ const AdvisorDashboard = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <DollarSign className="h-8 w-8 text-green-500" />
+                <Bell className="h-8 w-8 text-orange-500" />
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold">{newInvites.length}</p>
+                  {newInvites.length > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">חדש</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">הצעות חדשות שהתקבלו</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <Coins className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-2xl font-bold">{proposals.length}</p>
                   <p className="text-sm text-muted-foreground">הצעות שהוגשו</p>
@@ -227,19 +274,26 @@ const AdvisorDashboard = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <User className="h-8 w-8 text-blue-500" />
+                <Clock className="h-8 w-8 text-blue-500" />
                 <div>
-                  <p className="text-2xl font-bold">{advisorProfile.rating.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground">דירוג ממוצע</p>
+                  <p className="text-2xl font-bold">{unsubmittedInvites.length}</p>
+                  <p className="text-sm text-muted-foreground">הצעות שטרם הוגשו</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="rfp-invites" className="space-y-6">
+        <Tabs defaultValue="rfp-invites" className="space-y-6" dir="rtl">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="rfp-invites">הזמנות להצעת מחיר</TabsTrigger>
+            <TabsTrigger value="rfp-invites" className="flex items-center gap-2">
+              הזמנות להצעת מחיר
+              {newInvites.length > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {newInvites.length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="my-proposals">ההצעות שלי</TabsTrigger>
           </TabsList>
 
@@ -251,29 +305,36 @@ const AdvisorDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              rfpInvites.map((invite) => (
-                <Card key={invite.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{invite.rfps.projects.name}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 mt-2">
-                          <MapPin className="h-4 w-4" />
-                          {invite.rfps.projects.location}
-                        </CardDescription>
+              rfpInvites.map((invite) => {
+                const isNew = newInvites.some(newInv => newInv.id === invite.id);
+                return (
+                  <Card key={invite.id} className={`hover:shadow-md transition-shadow ${isNew ? 'border-2 border-orange-400' : ''}`}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-lg">{invite.rfps.projects.name}</CardTitle>
+                            {isNew && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">חדש</span>
+                            )}
+                          </div>
+                          <CardDescription className="flex items-center gap-2 mt-2">
+                            <MapPin className="h-4 w-4" />
+                            {invite.rfps.projects.location}
+                          </CardDescription>
+                        </div>
+                        <Badge className={getStatusColor(invite.status)}>
+                          {invite.status === 'pending' ? 'ממתין לתגובה' : 
+                           invite.status === 'responded' ? 'נענה' : invite.status}
+                        </Badge>
                       </div>
-                      <Badge className={getStatusColor(invite.status)}>
-                        {invite.status === 'pending' ? 'ממתין לתגובה' : 
-                         invite.status === 'responded' ? 'נענה' : invite.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>תקציב: ₪{invite.rfps.projects.budget?.toLocaleString()}</span>
-                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Coins className="h-4 w-4 text-muted-foreground" />
+                          <span>תקציב: ₪{invite.rfps.projects.budget?.toLocaleString()}</span>
+                        </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span>
@@ -306,7 +367,8 @@ const AdvisorDashboard = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </TabsContent>
 
@@ -338,7 +400,7 @@ const AdvisorDashboard = () => {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <Coins className="h-4 w-4 text-muted-foreground" />
                         <span>המחיר שלי: ₪{proposal.price.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-2">

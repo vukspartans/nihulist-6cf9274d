@@ -62,8 +62,6 @@ export const SpecialtySelector = ({
     return (selectedSpecialties.main ? 1 : 0) + selectedSpecialties.secondary.length;
   };
 
-  const canAddMore = () => getSelectionCount() < 3;
-
   const handleSpecialtyClick = (specialty: string) => {
     if (!isEditing) return;
 
@@ -81,9 +79,7 @@ export const SpecialtySelector = ({
         });
       }
     } else {
-      // Add specialty
-      if (!canAddMore()) return;
-
+      // Add specialty - no limit
       if (!selectedSpecialties.main) {
         // Set as main if no main exists
         onSpecialtiesChange({
@@ -177,10 +173,10 @@ export const SpecialtySelector = ({
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            בחר עד 3 התמחויות: התמחות עיקרית אחת (אדום) ועד 2 משניות (כחול)
+            בחר התמחויות: התמחות עיקרית אחת (אדום) והתמחויות משניות ללא הגבלה (כחול)
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            נבחרו: {getSelectionCount()}/3
+            נבחרו: {getSelectionCount()} התמחויות
           </p>
         </div>
         <div className="flex gap-2">
@@ -280,7 +276,6 @@ export const SpecialtySelector = ({
                 key={specialty}
                 variant={isSelected(specialty) ? (isMain(specialty) ? "destructive" : "secondary") : "outline"}
                 onClick={() => handleSpecialtyClick(specialty)}
-                disabled={!canAddMore() && !isSelected(specialty)}
                 className="justify-start h-auto p-3 text-right whitespace-normal"
               >
                 <div className="flex items-center gap-2 w-full">

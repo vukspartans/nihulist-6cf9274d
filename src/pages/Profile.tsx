@@ -23,6 +23,10 @@ interface UserProfile {
 
 interface AdvisorProfile {
   specialties: string[];
+  company_name?: string | null;
+  location?: string | null;
+  years_experience?: number | null;
+  hourly_rate?: number | null;
 }
 
 interface SpecialtyData {
@@ -65,7 +69,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties')
+            .select('specialties, company_name, location, years_experience, hourly_rate')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -379,18 +383,58 @@ const Profile = () => {
           </Card>
 
           {/* Company Information */}
-          <Card>
+          <Card className={
+            (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
+            (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate)
+            ? 'border-2 border-red-500' : ''
+          }>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
                 פרטי חברה
+                {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
+                 (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
+                  <span className="text-sm text-red-500 font-normal mr-2">* מידע חסר</span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">שם החברה</label>
-                <p className="text-foreground">{profile?.company_name || 'לא מוגדר'}</p>
+              <div className={!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                <label className="text-sm font-medium text-muted-foreground">
+                  שם החברה
+                  {!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                    <span className="text-red-500 mr-1">*</span>
+                  )}
+                </label>
+                <p className="text-foreground">{profile?.company_name || advisorProfile?.company_name || 'לא מוגדר'}</p>
               </div>
+              <div className={!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                <label className="text-sm font-medium text-muted-foreground">
+                  מיקום
+                  {!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                    <span className="text-red-500 mr-1">*</span>
+                  )}
+                </label>
+                <p className="text-foreground">{advisorProfile?.location || 'לא מוגדר'}</p>
+              </div>
+              {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                <>
+                  <div className={!advisorProfile?.years_experience ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      שנות ניסיון
+                      {!advisorProfile?.years_experience && <span className="text-red-500 mr-1">*</span>}
+                    </label>
+                    <p className="text-foreground">{advisorProfile?.years_experience || 'לא מוגדר'}</p>
+                  </div>
+                  <div className={!advisorProfile?.hourly_rate ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      תעריף לשעה
+                      {!advisorProfile?.hourly_rate && <span className="text-red-500 mr-1">*</span>}
+                    </label>
+                    <p className="text-foreground">{advisorProfile?.hourly_rate ? `₪${advisorProfile.hourly_rate}` : 'לא מוגדר'}</p>
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm font-medium text-muted-foreground">תפקיד</label>
                 <p className="text-foreground flex items-center gap-2">
@@ -408,12 +452,15 @@ const Profile = () => {
 
         {/* Professional Specialties - Only for advisors */}
         {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-          <Card className="md:col-span-2">
+          <Card className={`md:col-span-2 ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500' : ''}`}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
                   התמחויות מקצועיות
+                  {(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) && (
+                    <span className="text-sm text-red-500 font-normal mr-2">* שדה חובה - חסר</span>
+                  )}
                 </CardTitle>
                 {!editMode.specialties && (
                   <Button 
