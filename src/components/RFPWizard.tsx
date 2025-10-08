@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,10 +73,10 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     }
   };
 
-  const handleAdvisorValidationChange = (isValid: boolean, validation: any) => {
+  const handleAdvisorValidationChange = useCallback((isValid: boolean, validation: any) => {
     setIsAdvisorSelectionValid(isValid);
     setAdvisorValidation(validation);
-  };
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

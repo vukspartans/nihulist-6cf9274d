@@ -82,47 +82,6 @@ export const AdvisorRecommendationsCard = ({
     );
   }
 
-  // Check if we have any advisors across all types
-  const hasAdvisors = sortedAdvisorTypes.some(typeData => typeData.advisors.length > 0);
-
-  if (!hasAdvisors) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            יועצים מומלצים
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 space-y-4">
-            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg">מאגר היועצים בהרחבה</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                אנחנו עובדים על הרחבת מאגר היועצים שלנו. בינתיים, תוכל לשלוח הצעות מחיר ישירות 
-                ליועצים שאתה מכיר או לחפש יועצים באופן עצמאי.
-              </p>
-            </div>
-            
-            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-              <h4 className="font-medium">יועצים נדרשים לפרויקט זה:</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                {selectedAdvisorTypes.map((type, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span>{type}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
