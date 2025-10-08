@@ -48,6 +48,18 @@ const Auth = () => {
     
     console.log("URL type parameter:", type);
 
+    // Initialize role from URL parameter
+    if (type && type !== 'recovery') {
+      const advisorAliases = ['advisor', 'consultant', 'vendor', 'supplier'];
+      const entrepreneurAliases = ['entrepreneur', 'founder', 'client', 'owner'];
+      
+      if (advisorAliases.includes(type.toLowerCase())) {
+        setFormData(prev => ({ ...prev, role: 'advisor' }));
+      } else if (entrepreneurAliases.includes(type.toLowerCase())) {
+        setFormData(prev => ({ ...prev, role: 'entrepreneur' }));
+      }
+    }
+
     // Set up auth state listener FIRST - this is critical for recovery flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {

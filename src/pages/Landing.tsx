@@ -386,7 +386,7 @@ const Landing = memo(() => {
                   variant="outline" 
                   size="xl" 
                   className="w-full lg:w-auto mt-8 text-lg px-8 py-4 hover-scale border-2" 
-                  onClick={() => handleUserTypeSelection('consultant')}
+                  onClick={() => handleUserTypeSelection('advisor')}
                 >
                   הצטרף כמומחה
                 </Button>
@@ -609,7 +609,7 @@ const Landing = memo(() => {
             {/* Consultant Option */}
             <Card 
               className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-primary"
-              onClick={() => handleUserTypeSelection('consultant')}
+              onClick={() => handleUserTypeSelection('advisor')}
             >
               <div className="text-center space-y-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto">
