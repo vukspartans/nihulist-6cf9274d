@@ -12,7 +12,7 @@ import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, Ma
 import { Link, useSearchParams } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import { SpecialtySelector } from '@/components/SpecialtySelector';
+import { ExpertiseSelector } from '@/components/ExpertiseSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +50,7 @@ interface UserProfile {
 
 interface AdvisorProfile {
   specialties: string[];
+  expertise?: string[];
   company_name?: string | null;
   location?: string | null;
   years_experience?: number | null;
@@ -59,11 +60,6 @@ interface AdvisorProfile {
   website?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
-}
-
-interface SpecialtyData {
-  main: string | null;
-  secondary: string[];
 }
 
 const Profile = () => {
@@ -88,7 +84,7 @@ const Profile = () => {
     linkedinUrl: '',
     instagramUrl: ''
   });
-  const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
+  const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
 
@@ -136,18 +132,15 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, company_name, location, years_experience, hourly_rate, activity_regions, office_size, website, linkedin_url, instagram_url')
+            .select('specialties, expertise, company_name, location, years_experience, hourly_rate, activity_regions, office_size, website, linkedin_url, instagram_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
           if (!advisorError && advisorData) {
             setAdvisorProfile(advisorData);
-            // Parse specialties into main and secondary
-            const specialties = advisorData.specialties || [];
-            setSelectedSpecialties({
-              main: specialties[0] || null,
-              secondary: specialties.slice(1)
-            });
+            // Set expertise from advisors table
+            const expertise = advisorData.expertise || advisorData.specialties || [];
+            setSelectedExpertise(expertise);
             setEditedData({ 
               name: data.name || '', 
               phone: data.phone || '',
@@ -332,18 +325,14 @@ const Profile = () => {
   const updateSpecialties = async () => {
     setSaving(true);
     try {
-      const specialtiesArray = selectedSpecialties.main 
-        ? [selectedSpecialties.main, ...selectedSpecialties.secondary]
-        : selectedSpecialties.secondary;
-
       const { error } = await supabase
         .from('advisors')
-        .update({ specialties: specialtiesArray })
+        .update({ expertise: selectedExpertise })
         .eq('user_id', user?.id);
 
       if (error) throw error;
 
-      setAdvisorProfile(prev => prev ? { ...prev, specialties: specialtiesArray } : null);
+      setAdvisorProfile(prev => prev ? { ...prev, expertise: selectedExpertise } : null);
       setEditMode(prev => ({ ...prev, specialties: false }));
       
       toast({
@@ -365,11 +354,8 @@ const Profile = () => {
   const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
     if (field === 'specialties') {
       if (editMode.specialties) {
-        const specialties = advisorProfile?.specialties || [];
-        setSelectedSpecialties({
-          main: specialties[0] || null,
-          secondary: specialties.slice(1)
-        });
+        const expertise = advisorProfile?.expertise || advisorProfile?.specialties || [];
+        setSelectedExpertise(expertise);
       }
       setEditMode(prev => ({ ...prev, specialties: !prev.specialties }));
     } else if (field === 'company') {
@@ -453,7 +439,7 @@ const Profile = () => {
       advisorProfile?.hourly_rate,
       advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0,
       advisorProfile?.office_size,
-      selectedSpecialties.main || selectedSpecialties.secondary.length > 0,
+      selectedExpertise && selectedExpertise.length > 0,
     ];
     
     const filledFields = requiredFields.filter(field => field).length;
@@ -465,7 +451,7 @@ const Profile = () => {
     if (!advisorProfile?.company_name || !advisorProfile?.location || 
         !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
         !advisorProfile?.office_size) return 'company';
-    if ((!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ||
+    if ((!selectedExpertise || selectedExpertise.length === 0) ||
         !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) return 'professional';
     return null;
   };
@@ -586,8 +572,8 @@ const Profile = () => {
               <>
                 <TabsTrigger value="company" className="gap-2 py-3 relative">
                   <Building className="h-4 w-4" />
-                  <span className="hidden sm:inline">פרטי חברה</span>
-                  <span className="sm:hidden">חברה</span>
+                  <span className="hidden sm:inline">פרטי משרד</span>
+                  <span className="sm:hidden">משרד</span>
                   {(!advisorProfile?.company_name || !advisorProfile?.location || 
                     !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
                     !advisorProfile?.office_size) && (
@@ -598,7 +584,7 @@ const Profile = () => {
                   <Briefcase className="h-4 w-4" />
                   <span className="hidden sm:inline">מקצועי</span>
                   <span className="sm:hidden">מקצועי</span>
-                  {((!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ||
+                  {((!selectedExpertise || selectedExpertise.length === 0) ||
                     !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
                     <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
                   )}
@@ -737,13 +723,13 @@ const Profile = () => {
                     <div className="space-y-1">
                       <CardTitle className="flex items-center gap-2">
                         <Building className="h-5 w-5 text-primary" />
-                        פרטי חברה
+                        פרטי משרד
                         {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
                          (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
                           <Badge variant="destructive" className="mr-2">מידע חסר</Badge>
                         )}
                       </CardTitle>
-                      <CardDescription>פרטי החברה או העסק שלך</CardDescription>
+                      <CardDescription>פרטי המשרד או העסק שלך</CardDescription>
                     </div>
                 {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && !editMode.company && (
                   <Button 
@@ -761,11 +747,11 @@ const Profile = () => {
               {editMode.company ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>שם החברה *</Label>
+                    <Label>שם המשרד *</Label>
                     <Input
                       value={editedData.companyName}
                       onChange={(e) => setEditedData({ ...editedData, companyName: e.target.value })}
-                      placeholder="הזן שם חברה"
+                      placeholder="הזן שם משרד"
                       className={!editedData.companyName ? 'border-red-500' : ''}
                       dir="rtl"
                     />
@@ -838,7 +824,7 @@ const Profile = () => {
                 <>
                   <div className={!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
                     <label className="text-sm font-medium text-muted-foreground">
-                      שם החברה
+                      שם המשרד
                       {!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
                         <span className="text-red-500 mr-1">*</span>
                       )}
@@ -901,14 +887,14 @@ const Profile = () => {
           {isAdvisor && (
             <TabsContent value="professional" className="space-y-4 mt-6 animate-fade-in">
               {/* Professional Specialties - Only for advisors */}
-              <Card dir="rtl" className={`hover-scale ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
+              <Card dir="rtl" className={`hover-scale ${(!selectedExpertise || selectedExpertise.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <CardTitle className="flex items-center gap-2">
                         <Target className="h-5 w-5 text-primary" />
                         התמחויות מקצועיות
-                        {(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) && (
+                        {(!selectedExpertise || selectedExpertise.length === 0) && (
                           <Badge variant="destructive" className="mr-2">שדה חובה</Badge>
                         )}
                       </CardTitle>
@@ -926,13 +912,12 @@ const Profile = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <SpecialtySelector
-                selectedSpecialties={selectedSpecialties}
-                onSpecialtiesChange={setSelectedSpecialties}
+              <ExpertiseSelector
+                selectedExpertise={selectedExpertise}
+                onExpertiseChange={setSelectedExpertise}
                 isEditing={editMode.specialties}
                 onSave={updateSpecialties}
                 onCancel={() => handleEditToggle('specialties')}
-                saving={saving}
               />
             </CardContent>
           </Card>

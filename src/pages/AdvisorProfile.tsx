@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Globe, Linkedin, Instagram } from 'lucide-react';
-import { PROJECT_TYPES } from '@/constants/project';
+import { ADVISOR_EXPERTISE } from '@/constants/advisor';
 import { UserHeader } from '@/components/UserHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -225,12 +225,13 @@ const AdvisorProfile = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="company_name">שם החברה/היועץ *</Label>
+                <Label htmlFor="company_name">שם המשרד *</Label>
                 <Input
                   id="company_name"
                   value={profile.company_name}
                   onChange={(e) => setProfile(prev => ({ ...prev, company_name: e.target.value }))}
                   required
+                  placeholder="הזן את שם המשרד"
                 />
               </div>
 
@@ -346,18 +347,22 @@ const AdvisorProfile = () => {
               </div>
 
               <div className="space-y-4">
-                <Label>תחומי התמחות</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {PROJECT_TYPES.map((type) => (
+                <Label>התמחות מקצועית *</Label>
+                <p className="text-sm text-muted-foreground">בחר את תפקידך המקצועי (עד 5 תפקידים)</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
+                  {ADVISOR_EXPERTISE.map((type) => (
                     <Button
                       key={type}
                       type="button"
                       variant={profile.expertise.includes(type) ? "default" : "outline"}
-                      onClick={() => 
-                        profile.expertise.includes(type) 
-                          ? removeExpertise(type)
-                          : addExpertise(type)
-                      }
+                      onClick={() => {
+                        if (profile.expertise.includes(type)) {
+                          removeExpertise(type);
+                        } else if (profile.expertise.length < 5) {
+                          addExpertise(type);
+                        }
+                      }}
+                      disabled={!profile.expertise.includes(type) && profile.expertise.length >= 5}
                       className="justify-start text-sm h-auto py-2 px-3"
                     >
                       {type}
@@ -367,7 +372,7 @@ const AdvisorProfile = () => {
                 
                 {profile.expertise.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">תחומי התמחות נבחרים:</Label>
+                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.expertise.length}/5):</Label>
                     <div className="flex flex-wrap gap-2">
                       {profile.expertise.map((exp) => (
                         <Badge key={exp} variant="secondary" className="gap-1">

@@ -245,7 +245,7 @@ const AdvisorDashboard = () => {
                     <span className="text-sm font-bold text-yellow-800">⚠️ פרופיל לא שלם - לחצו להשלמה</span>
                   </div>
                   <p className="text-sm text-yellow-700 font-medium">
-                    {firstMissingField === 'company' && '📋 חסרים פרטי חברה (שם, מיקום, ניסיון, תעריף, גודל משרד)'}
+                    {firstMissingField === 'company' && '📋 חסרים פרטי משרד (שם, מיקום, ניסיון, תעריף, גודל משרד)'}
                     {firstMissingField === 'professional' && '🎯 חסרות התמחויות מקצועיות או אזורי פעילות'}
                     {!firstMissingField && '✨ השלימו את הפרטים לקבלת יותר הזמנות'}
                   </p>

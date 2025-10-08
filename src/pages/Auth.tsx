@@ -150,7 +150,7 @@ const Auth = () => {
         }
 
         if (formData.role === 'advisor' && !formData.companyName) {
-          throw new Error('שם החברה נדרש עבור יועצים');
+          throw new Error('שם המשרד נדרש עבור יועצים');
         }
 
         const redirectUrl = `${window.location.origin}/`;
@@ -549,13 +549,13 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-right">שם החברה</Label>
+                    <Label htmlFor="companyName" className="text-right">שם המשרד</Label>
                     <div className="relative">
                       <Building2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="companyName"
                         type="text"
-                        placeholder="שם החברה שלך..."
+                        placeholder="שם המשרד שלך..."
                         value={formData.companyName}
                         onChange={(e) => handleInputChange("companyName", e.target.value)}
                         className="pr-10 text-right"
