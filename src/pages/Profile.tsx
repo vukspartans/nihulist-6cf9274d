@@ -27,6 +27,8 @@ interface AdvisorProfile {
   location?: string | null;
   years_experience?: number | null;
   hourly_rate?: number | null;
+  activity_regions?: string[] | null;
+  office_size?: string | null;
 }
 
 interface SpecialtyData {
@@ -41,8 +43,8 @@ const Profile = () => {
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
-  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false });
-  const [editedData, setEditedData] = useState({ name: '', phone: '' });
+  const [editMode, setEditMode] = useState({ name: false, phone: false, specialties: false, company: false });
+  const [editedData, setEditedData] = useState({ name: '', phone: '', companyName: '', location: '', yearsExperience: 0, hourlyRate: 0 });
   const [selectedSpecialties, setSelectedSpecialties] = useState<SpecialtyData>({ main: null, secondary: [] });
   const [saving, setSaving] = useState(false);
 
@@ -63,13 +65,11 @@ const Profile = () => {
       if (error) throw error;
       setProfile(data);
       if (data) {
-        setEditedData({ name: data.name || '', phone: data.phone || '' });
-        
         // Fetch advisor profile if user is an advisor
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, company_name, location, years_experience, hourly_rate')
+            .select('specialties, company_name, location, years_experience, hourly_rate, activity_regions, office_size')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -81,7 +81,17 @@ const Profile = () => {
               main: specialties[0] || null,
               secondary: specialties.slice(1)
             });
+            setEditedData({ 
+              name: data.name || '', 
+              phone: data.phone || '',
+              companyName: advisorData.company_name || '',
+              location: advisorData.location || '',
+              yearsExperience: advisorData.years_experience || 0,
+              hourlyRate: advisorData.hourly_rate || 0,
+            });
           }
+        } else {
+          setEditedData({ name: data.name || '', phone: data.phone || '', companyName: '', location: '', yearsExperience: 0, hourlyRate: 0 });
         }
       }
     } catch (error) {
@@ -96,25 +106,53 @@ const Profile = () => {
     }
   };
 
-  const updateProfile = async (field: 'name' | 'phone') => {
+  const updateProfile = async (field: 'name' | 'phone' | 'company') => {
     setSaving(true);
     try {
-      const updateData = { [field]: editedData[field] };
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('user_id', user?.id);
+      if (field === 'company') {
+        // Update advisor table for company info
+        const { error } = await supabase
+          .from('advisors')
+          .update({
+            company_name: editedData.companyName,
+            location: editedData.location,
+            years_experience: editedData.yearsExperience,
+            hourly_rate: editedData.hourlyRate,
+          })
+          .eq('user_id', user?.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setProfile(prev => prev ? { ...prev, [field]: editedData[field] } : null);
-      setEditMode(prev => ({ ...prev, [field]: false }));
-      
-      toast({
-        title: "עודכן בהצלחה",
-        description: "הפרטים שלך עודכנו",
-      });
+        setAdvisorProfile(prev => prev ? {
+          ...prev,
+          company_name: editedData.companyName,
+          location: editedData.location,
+          years_experience: editedData.yearsExperience,
+          hourly_rate: editedData.hourlyRate,
+        } : null);
+        setEditMode(prev => ({ ...prev, company: false }));
+        toast({
+          title: "עודכן בהצלחה",
+          description: "פרטי החברה עודכנו",
+        });
+      } else {
+        const updateData = { [field]: editedData[field] };
+        
+        const { error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setProfile(prev => prev ? { ...prev, [field]: editedData[field] } : null);
+        setEditMode(prev => ({ ...prev, [field]: false }));
+        
+        toast({
+          title: "עודכן בהצלחה",
+          description: "הפרטים שלך עודכנו",
+        });
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -187,7 +225,7 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = (field: 'name' | 'phone' | 'specialties') => {
+  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company') => {
     if (field === 'specialties') {
       if (editMode.specialties) {
         // Reset to original values if canceling
@@ -198,6 +236,18 @@ const Profile = () => {
         });
       }
       setEditMode(prev => ({ ...prev, specialties: !prev.specialties }));
+    } else if (field === 'company') {
+      if (editMode.company) {
+        // Reset to original values if canceling
+        setEditedData(prev => ({
+          ...prev,
+          companyName: advisorProfile?.company_name || '',
+          location: advisorProfile?.location || '',
+          yearsExperience: advisorProfile?.years_experience || 0,
+          hourlyRate: advisorProfile?.hourly_rate || 0,
+        }));
+      }
+      setEditMode(prev => ({ ...prev, company: !prev.company }));
     } else {
       if (editMode[field]) {
         // Reset to original value if canceling
@@ -277,7 +327,7 @@ const Profile = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Personal Information */}
-          <Card>
+          <Card dir="rtl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -383,76 +433,170 @@ const Profile = () => {
           </Card>
 
           {/* Company Information */}
-          <Card className={
+          <Card dir="rtl" className={
             (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
             (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate)
             ? 'border-2 border-red-500' : ''
           }>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                פרטי חברה
-                {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                 (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
-                  <span className="text-sm text-red-500 font-normal mr-2">* מידע חסר</span>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  פרטי חברה
+                  {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
+                   (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
+                    <span className="text-sm text-red-500 font-normal mr-2">* מידע חסר</span>
+                  )}
+                </CardTitle>
+                {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && !editMode.company && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditToggle('company')}
+                  >
+                    <Edit className="h-4 w-4 ml-2" />
+                    ערוך
+                  </Button>
                 )}
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className={!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
-                <label className="text-sm font-medium text-muted-foreground">
-                  שם החברה
-                  {!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-                    <span className="text-red-500 mr-1">*</span>
-                  )}
-                </label>
-                <p className="text-foreground">{profile?.company_name || advisorProfile?.company_name || 'לא מוגדר'}</p>
-              </div>
-              <div className={!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
-                <label className="text-sm font-medium text-muted-foreground">
-                  מיקום
-                  {!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-                    <span className="text-red-500 mr-1">*</span>
-                  )}
-                </label>
-                <p className="text-foreground">{advisorProfile?.location || 'לא מוגדר'}</p>
-              </div>
-              {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-                <>
-                  <div className={!advisorProfile?.years_experience ? 'p-2 border-2 border-red-300 rounded' : ''}>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      שנות ניסיון
-                      {!advisorProfile?.years_experience && <span className="text-red-500 mr-1">*</span>}
-                    </label>
-                    <p className="text-foreground">{advisorProfile?.years_experience || 'לא מוגדר'}</p>
+              {editMode.company ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>שם החברה *</Label>
+                    <Input
+                      value={editedData.companyName}
+                      onChange={(e) => setEditedData({ ...editedData, companyName: e.target.value })}
+                      placeholder="הזן שם חברה"
+                      className={!editedData.companyName ? 'border-red-500' : ''}
+                      dir="rtl"
+                    />
                   </div>
-                  <div className={!advisorProfile?.hourly_rate ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                  <div className="space-y-2">
+                    <Label>מיקום *</Label>
+                    <Input
+                      value={editedData.location}
+                      onChange={(e) => setEditedData({ ...editedData, location: e.target.value })}
+                      placeholder="הזן מיקום"
+                      className={!editedData.location ? 'border-red-500' : ''}
+                      dir="rtl"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>שנות ניסיון *</Label>
+                    <Input
+                      type="number"
+                      value={editedData.yearsExperience}
+                      onChange={(e) => setEditedData({ ...editedData, yearsExperience: parseInt(e.target.value) || 0 })}
+                      placeholder="הזן שנות ניסיון"
+                      className={!editedData.yearsExperience ? 'border-red-500' : ''}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>תעריף לשעה (₪) *</Label>
+                    <Input
+                      type="number"
+                      value={editedData.hourlyRate}
+                      onChange={(e) => setEditedData({ ...editedData, hourlyRate: parseFloat(e.target.value) || 0 })}
+                      placeholder="הזן תעריף לשעה"
+                      className={!editedData.hourlyRate ? 'border-red-500' : ''}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => updateProfile('company')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      {saving ? 'שומר...' : 'שמור'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleEditToggle('company')}
+                      disabled={saving}
+                      className="flex-1"
+                    >
+                      ביטול
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
                     <label className="text-sm font-medium text-muted-foreground">
-                      תעריף לשעה
-                      {!advisorProfile?.hourly_rate && <span className="text-red-500 mr-1">*</span>}
+                      שם החברה
+                      {!advisorProfile?.company_name && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                        <span className="text-red-500 mr-1">*</span>
+                      )}
                     </label>
-                    <p className="text-foreground">{advisorProfile?.hourly_rate ? `₪${advisorProfile.hourly_rate}` : 'לא מוגדר'}</p>
+                    <p className="text-foreground">{profile?.company_name || advisorProfile?.company_name || 'לא מוגדר'}</p>
+                  </div>
+                  <div className={!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      מיקום
+                      {!advisorProfile?.location && (authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                        <span className="text-red-500 mr-1">*</span>
+                      )}
+                    </label>
+                    <p className="text-foreground">{advisorProfile?.location || 'לא מוגדר'}</p>
+                  </div>
+                  {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
+                    <>
+                      <div className={!advisorProfile?.years_experience ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          שנות ניסיון
+                          {!advisorProfile?.years_experience && <span className="text-red-500 mr-1">*</span>}
+                        </label>
+                        <p className="text-foreground">{advisorProfile?.years_experience || 'לא מוגדר'}</p>
+                      </div>
+                      <div className={!advisorProfile?.hourly_rate ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          תעריף לשעה
+                          {!advisorProfile?.hourly_rate && <span className="text-red-500 mr-1">*</span>}
+                        </label>
+                        <p className="text-foreground">{advisorProfile?.hourly_rate ? `₪${advisorProfile.hourly_rate}` : 'לא מוגדר'}</p>
+                      </div>
+                      {advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">אזורי פעילות</label>
+                          <div className="flex flex-wrap gap-2">
+                            {advisorProfile.activity_regions.map((region: string) => (
+                              <span key={region} className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                                {region}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {advisorProfile?.office_size && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">גודל משרד</label>
+                          <p className="text-foreground">{advisorProfile.office_size}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">תפקיד</label>
+                    <p className="text-foreground flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      {getRoleDisplay(profile?.role)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">חבילה</label>
+                    <p className="text-foreground">חבילה בסיסית</p>
                   </div>
                 </>
               )}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">תפקיד</label>
-                <p className="text-foreground flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  {getRoleDisplay(profile?.role)}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">חבילה</label>
-                <p className="text-foreground">חבילה בסיסית</p>
-              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Professional Specialties - Only for advisors */}
         {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
-          <Card className={`md:col-span-2 ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500' : ''}`}>
+          <Card dir="rtl" className={`md:col-span-2 ${(!selectedSpecialties.main && selectedSpecialties.secondary.length === 0) ? 'border-2 border-red-500' : ''}`}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">

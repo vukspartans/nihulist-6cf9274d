@@ -73,7 +73,10 @@ const AdvisorProfile = () => {
         company_name: profile.company_name,
         expertise: profile.expertise,
         certifications: profile.certifications,
-        location: profile.location
+        location: profile.location,
+        years_experience: profile.years_experience,
+        hourly_rate: profile.hourly_rate,
+        availability_status: profile.availability_status
       };
 
       if (profile.id) {

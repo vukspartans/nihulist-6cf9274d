@@ -54,6 +54,7 @@ export type Database = {
       }
       advisors: {
         Row: {
+          activity_regions: string[] | null
           availability_status: string | null
           certifications: string[] | null
           company_id: string | null
@@ -64,6 +65,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           location: string | null
+          office_size: string | null
           rating: number | null
           specialties: string[] | null
           updated_at: string
@@ -71,6 +73,7 @@ export type Database = {
           years_experience: number | null
         }
         Insert: {
+          activity_regions?: string[] | null
           availability_status?: string | null
           certifications?: string[] | null
           company_id?: string | null
@@ -81,6 +84,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           location?: string | null
+          office_size?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string
@@ -88,6 +92,7 @@ export type Database = {
           years_experience?: number | null
         }
         Update: {
+          activity_regions?: string[] | null
           availability_status?: string | null
           certifications?: string[] | null
           company_id?: string | null
@@ -98,6 +103,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           location?: string | null
+          office_size?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string

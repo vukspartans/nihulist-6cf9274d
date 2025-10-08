@@ -29,7 +29,10 @@ const Auth = () => {
     name: "",
     phone: "",
     companyName: "",
-    role: "entrepreneur" as "entrepreneur" | "advisor"
+    role: "entrepreneur" as "entrepreneur" | "advisor",
+    location: "",
+    activityRegions: [] as string[],
+    officeSize: ""
   });
   
   const navigate = useNavigate();
@@ -161,7 +164,10 @@ const Auth = () => {
               name: formData.name,
               phone: formData.phone,
               company_name: formData.companyName,
-              role: formData.role
+              role: formData.role,
+              location: formData.location,
+              activity_regions: formData.activityRegions.join(','),
+              office_size: formData.officeSize
             }
           }
         });
@@ -585,6 +591,79 @@ const Auth = () => {
                     </div>
                   </RadioGroup>
                 </div>
+
+                {formData.role === 'advisor' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">מיקום</Label>
+                      <Input
+                        id="location"
+                        type="text"
+                        placeholder="למשל: תל אביב"
+                        value={formData.location}
+                        onChange={(e) => handleInputChange("location", e.target.value)}
+                        className="text-right"
+                        dir="rtl"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>אזורי פעילות</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          'הצפון',
+                          'חיפה והסביבה',
+                          'השרון',
+                          'גוש דן',
+                          'השפלה',
+                          'ירושלים והסביבה',
+                          'דרום',
+                          'אילת והערבה'
+                        ].map((region) => (
+                          <label key={region} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.activityRegions.includes(region)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData(prev => ({ 
+                                    ...prev, 
+                                    activityRegions: [...prev.activityRegions, region] 
+                                  }));
+                                } else {
+                                  setFormData(prev => ({ 
+                                    ...prev, 
+                                    activityRegions: prev.activityRegions.filter(r => r !== region) 
+                                  }));
+                                }
+                              }}
+                              className="rounded border-input"
+                            />
+                            <span className="text-sm">{region}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="officeSize">גודל המשרד</Label>
+                      <select
+                        id="officeSize"
+                        value={formData.officeSize}
+                        onChange={(e) => handleInputChange("officeSize", e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-right"
+                        dir="rtl"
+                      >
+                        <option value="">בחר גודל משרד</option>
+                        <option value="קטן מאוד/בוטיק - 1-2 עובדים">קטן מאוד/בוטיק - 1-2 עובדים</option>
+                        <option value="קטן - 3-5 עובדים">קטן - 3-5 עובדים</option>
+                        <option value="בינוני - 6-15 עובדים">בינוני - 6-15 עובדים</option>
+                        <option value="גדול - 16-30 עובדים">גדול - 16-30 עובדים</option>
+                        <option value="גדול מאוד - 31+ עובדים">גדול מאוד - 31+ עובדים</option>
+                      </select>
+                    </div>
+                  </>
+                )}
 
                 <Separator className="my-4" />
               </div>

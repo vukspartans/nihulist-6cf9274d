@@ -229,22 +229,20 @@ const AdvisorDashboard = () => {
           </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" dir="rtl">
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center text-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{rfpInvites.length}</p>
-                  <p className="text-sm text-muted-foreground">כלל הצעות המחיר הפעילות</p>
-                </div>
+                <p className="text-2xl font-bold">{rfpInvites.length}</p>
+                <p className="text-sm text-muted-foreground">כלל הצעות המחיר הפעילות</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center text-center gap-3">
                 <Bell className="h-8 w-8 text-orange-500" />
                 <div className="flex items-center gap-2">
                   <p className="text-2xl font-bold">{newInvites.length}</p>
@@ -252,33 +250,27 @@ const AdvisorDashboard = () => {
                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">חדש</span>
                   )}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">הצעות חדשות שהתקבלו</p>
-                </div>
+                <p className="text-sm text-muted-foreground">הצעות חדשות שהתקבלו</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center text-center gap-3">
                 <Coins className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold">{proposals.length}</p>
-                  <p className="text-sm text-muted-foreground">הצעות שהוגשו</p>
-                </div>
+                <p className="text-2xl font-bold">{proposals.length}</p>
+                <p className="text-sm text-muted-foreground">הצעות שהוגשו</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center text-center gap-3">
                 <Clock className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold">{unsubmittedInvites.length}</p>
-                  <p className="text-sm text-muted-foreground">הצעות שטרם הוגשו</p>
-                </div>
+                <p className="text-2xl font-bold">{unsubmittedInvites.length}</p>
+                <p className="text-sm text-muted-foreground">הצעות שטרם הוגשו</p>
               </div>
             </CardContent>
           </Card>
