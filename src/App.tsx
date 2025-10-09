@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -20,6 +21,13 @@ import RFPDetails from "./pages/RFPDetails";
 import ForEntrepreneurs from "./pages/ForEntrepreneurs";
 import ForConsultants from "./pages/ForConsultants";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import SuppliersManagement from "./pages/admin/SuppliersManagement";
+import ProjectsManagement from "./pages/admin/ProjectsManagement";
+import RFPsManagement from "./pages/admin/RFPsManagement";
+import UsersManagement from "./pages/admin/UsersManagement";
+import AuditLog from "./pages/admin/AuditLog";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +108,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Admin Routes */}
+            <Route path="/heyadmin/login" element={<AdminLogin />} />
+            <Route path="/heyadmin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/heyadmin/suppliers" element={<AdminRoute><SuppliersManagement /></AdminRoute>} />
+            <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
+            <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
+            <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
+            <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

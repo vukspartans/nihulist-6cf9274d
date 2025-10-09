@@ -52,6 +52,45 @@ export type Database = {
           },
         ]
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          target_id: string | null
+          target_table: string
+          timestamp: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          target_id?: string | null
+          target_table: string
+          timestamp?: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          target_id?: string | null
+          target_table?: string
+          timestamp?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       advisors: {
         Row: {
           activity_regions: string[] | null
@@ -289,6 +328,7 @@ export type Database = {
       projects: {
         Row: {
           advisors_budget: number | null
+          archived: boolean | null
           awaiting_banner_until: string | null
           budget: number | null
           created_at: string
@@ -306,6 +346,7 @@ export type Database = {
         }
         Insert: {
           advisors_budget?: number | null
+          archived?: boolean | null
           awaiting_banner_until?: string | null
           budget?: number | null
           created_at?: string
@@ -323,6 +364,7 @@ export type Database = {
         }
         Update: {
           advisors_budget?: number | null
+          archived?: boolean | null
           awaiting_banner_until?: string | null
           budget?: number | null
           created_at?: string
@@ -563,6 +605,7 @@ export type Database = {
           created_at: string
           email: string | null
           expertise: string[] | null
+          field: string | null
           id: string
           is_active: boolean
           location: string | null
@@ -570,13 +613,16 @@ export type Database = {
           past_projects: string[] | null
           phone: string | null
           rating: number | null
+          region: string | null
           updated_at: string
+          verified: boolean | null
         }
         Insert: {
           certifications?: string[] | null
           created_at?: string
           email?: string | null
           expertise?: string[] | null
+          field?: string | null
           id?: string
           is_active?: boolean
           location?: string | null
@@ -584,13 +630,16 @@ export type Database = {
           past_projects?: string[] | null
           phone?: string | null
           rating?: number | null
+          region?: string | null
           updated_at?: string
+          verified?: boolean | null
         }
         Update: {
           certifications?: string[] | null
           created_at?: string
           email?: string | null
           expertise?: string[] | null
+          field?: string | null
           id?: string
           is_active?: boolean
           location?: string | null
@@ -598,7 +647,33 @@ export type Database = {
           past_projects?: string[] | null
           phone?: string | null
           rating?: number | null
+          region?: string | null
           updated_at?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -660,6 +735,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_project_owner: {
         Args: { p_project_id: string }
         Returns: boolean
@@ -677,7 +759,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -804,6 +886,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "entrepreneur", "advisor", "supplier"],
+    },
   },
 } as const
