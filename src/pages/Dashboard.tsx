@@ -167,23 +167,27 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      <div className="flex justify-between items-center p-6 border-b">
+        <h1 className="text-2xl font-bold text-primary">Nihulist</h1>
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={() => navigate("/projects/new")}
+            variant="tech"
+            size="lg"
+          >
+            <Plus className="w-5 h-5 ml-2" />
+            פרויקט חדש
+          </Button>
+          <UserHeader />
+        </div>
+      </div>
+
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">לוח הבקרה</h1>
             <p className="text-lg text-muted-foreground">ניהול פרויקטים ובחירת ספקים</p>
-          </div>
-          <div className="flex items-center gap-4 mt-4 md:mt-0">
-            <Button
-              onClick={() => navigate("/projects/new")}
-              variant="tech"
-              size="lg"
-            >
-              <Plus className="w-5 h-5 ml-2" />
-              פרויקט חדש
-            </Button>
-            <UserHeader />
           </div>
         </div>
 
@@ -251,9 +255,13 @@ const Dashboard = () => {
                      </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProjects.map((project) => (
-                      <TableRow key={project.id}>
-                         <TableCell className="font-medium">
+                     {filteredProjects.map((project) => (
+                       <TableRow 
+                         key={project.id}
+                         onClick={() => handleProjectClick(project.id)}
+                         className="cursor-pointer hover:bg-muted/50 transition-colors"
+                       >
+                          <TableCell className="font-medium">
                            <div className="flex items-center gap-3 justify-start">
                              <div 
                                className={`w-3 h-3 min-w-[12px] min-h-[12px] rounded-full shrink-0 ${getPhaseStatusColor(project.phase)}`}
@@ -287,49 +295,55 @@ const Dashboard = () => {
                             </div>
                           </TableCell>
                          <TableCell>{formatDate(project.created_at)}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditProject(project.id)}>
-                                <Edit className="w-4 h-4 ml-2" />
-                                עריכה
-                              </DropdownMenuItem>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    onSelect={(e) => e.preventDefault()}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4 ml-2" />
-                                    מחק
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      פעולה זו תמחק את הפרויקט "{project.name}" ולא ניתן לבטל אותה.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>ביטול</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteProject(project.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      מחק
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                         <TableCell onClick={(e) => e.stopPropagation()}>
+                           <DropdownMenu dir="rtl">
+                             <DropdownMenuTrigger asChild>
+                               <Button variant="ghost" size="sm">
+                                 <MoreVertical className="w-4 h-4" />
+                               </Button>
+                             </DropdownMenuTrigger>
+                             <DropdownMenuContent align="start" className="text-right">
+                               <DropdownMenuItem onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleEditProject(project.id);
+                               }}>
+                                 <Edit className="w-4 h-4 mr-2" />
+                                 עריכה
+                               </DropdownMenuItem>
+                               <AlertDialog>
+                                 <AlertDialogTrigger asChild>
+                                   <DropdownMenuItem 
+                                     onSelect={(e) => e.preventDefault()}
+                                     className="text-destructive focus:text-destructive"
+                                   >
+                                     <Trash2 className="w-4 h-4 mr-2" />
+                                     מחק
+                                   </DropdownMenuItem>
+                                 </AlertDialogTrigger>
+                                 <AlertDialogContent dir="rtl">
+                                   <AlertDialogHeader className="text-right">
+                                     <AlertDialogTitle className="text-right">האם אתה בטוח?</AlertDialogTitle>
+                                     <AlertDialogDescription className="text-right">
+                                       פעולה זו תמחק את הפרויקט "{project.name}" ולא ניתן לבטל אותה.
+                                     </AlertDialogDescription>
+                                   </AlertDialogHeader>
+                                   <AlertDialogFooter className="gap-2 sm:gap-2">
+                                     <AlertDialogAction
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         deleteProject(project.id);
+                                       }}
+                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                     >
+                                       מחק
+                                     </AlertDialogAction>
+                                     <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                   </AlertDialogFooter>
+                                 </AlertDialogContent>
+                               </AlertDialog>
+                             </DropdownMenuContent>
+                           </DropdownMenu>
+                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

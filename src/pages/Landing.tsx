@@ -88,10 +88,7 @@ const Landing = memo(() => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
-              <span className="text-sm text-muted-foreground">NihuList</span>
-            </div>
+            <span className="text-xl font-bold text-primary">ניהוליסט</span>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
             <Link to="/for-entrepreneurs">
@@ -576,7 +573,7 @@ const Landing = memo(() => {
 
       {/* User Type Selection Dialog */}
       <Dialog open={showUserTypeDialog} onOpenChange={setShowUserTypeDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold text-center mb-4">
               בחר את המסלול שלך
@@ -586,20 +583,21 @@ const Landing = memo(() => {
           <div className="grid md:grid-cols-2 gap-6 py-6">
             {/* Entrepreneur Option */}
             <Card 
-              className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-primary"
+              className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-primary group relative overflow-hidden"
               onClick={() => handleUserTypeSelection('entrepreneur')}
             >
-              <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto">
-                  <Briefcase className="w-10 h-10 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary-glow/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center space-y-6 relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-primary to-primary-glow rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                  <Building2 className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-3">אני יזם</h3>
+                  <h3 className="text-2xl font-bold mb-3 text-primary">אני יזם</h3>
                   <p className="text-muted-foreground leading-relaxed">
                     אני צריך למצוא יועצים מוכשרים לפרויקטים העסקיים שלי ולקבל הדרכה מקצועית.
                   </p>
                 </div>
-                <Button className="w-full">
+                <Button className="w-full bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
                   המשך כיזם
                   <ChevronLeft className="w-4 h-4 mr-2" />
                 </Button>
@@ -608,20 +606,21 @@ const Landing = memo(() => {
 
             {/* Consultant Option */}
             <Card 
-              className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-primary"
+              className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-tech-purple group relative overflow-hidden"
               onClick={() => handleUserTypeSelection('advisor')}
             >
-              <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto">
-                  <UserCheck className="w-10 h-10 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-tech-purple/5 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center space-y-6 relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-accent rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                  <Briefcase className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-3">אני יועץ</h3>
+                  <h3 className="text-2xl font-bold mb-3 text-tech-purple">אני יועץ</h3>
                   <p className="text-muted-foreground leading-relaxed">
                     אני רוצה להציע את שירותי הייעוץ שלי ולהתחבר עם לקוחות ופרויקטים איכותיים.
                   </p>
                 </div>
-                <Button variant="outline" className="w-full">
+                <Button className="w-full bg-gradient-to-r from-tech-purple to-accent hover:opacity-90 text-white">
                   המשך כיועץ
                   <ChevronLeft className="w-4 h-4 mr-2" />
                 </Button>
