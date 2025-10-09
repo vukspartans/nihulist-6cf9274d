@@ -69,10 +69,7 @@ const UsersManagement = () => {
       const { data: profiles, error: profilesError } = await query;
       if (profilesError) throw profilesError;
 
-      // Fetch email addresses from auth.users via RPC or join
-      const userIds = profiles.map(p => p.user_id);
-      
-      // Fetch roles and emails for each user
+      // Fetch roles for each user (we'll get emails from the database directly)
       const usersWithRoles = await Promise.all(
         profiles.map(async (profile) => {
           const { data: rolesData } = await supabase
@@ -80,13 +77,10 @@ const UsersManagement = () => {
             .select('role')
             .eq('user_id', profile.user_id);
 
-          // Get email from auth metadata (stored in profiles during signup)
-          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.user_id);
-
           return {
             ...profile,
             roles: rolesData?.map(r => r.role) || [],
-            email: authUser?.email || '',
+            email: profile.email || '', // Email will be fetched separately if needed
           };
         })
       );

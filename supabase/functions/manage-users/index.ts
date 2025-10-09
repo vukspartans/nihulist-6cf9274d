@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { Resend } from "npm:resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +10,7 @@ const corsHeaders = {
 };
 
 interface CreateUserRequest {
+  action: string;
   email: string;
   password: string;
   name?: string;
@@ -15,6 +19,7 @@ interface CreateUserRequest {
 }
 
 interface DeleteUserRequest {
+  action: string;
   userId: string;
 }
 
@@ -25,9 +30,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Starting manage-users function');
+    
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing authorization header');
       throw new Error('Missing authorization header');
     }
 
@@ -48,9 +56,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        auth: {
-          persistSession: false
-        },
         global: {
           headers: {
             Authorization: authHeader
@@ -62,8 +67,11 @@ serve(async (req) => {
     // Verify the user is authenticated
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+      console.error('User authentication failed:', userError);
       throw new Error('Unauthorized');
     }
+
+    console.log('User authenticated:', user.id);
 
     // Check if user has admin role
     const { data: roles, error: roleError } = await supabaseAdmin
@@ -74,13 +82,19 @@ serve(async (req) => {
       .maybeSingle();
 
     if (roleError || !roles) {
+      console.error('Admin check failed:', roleError);
       throw new Error('Forbidden: Admin access required');
     }
 
-    const { action } = await req.json();
+    console.log('Admin verified');
+
+    const requestData = await req.json();
+    const { action } = requestData;
 
     if (action === 'create') {
-      const { email, password, name, phone, roles: userRoles }: CreateUserRequest = await req.json();
+      const { email, password, name, phone, roles: userRoles } = requestData as CreateUserRequest;
+
+      console.log('Creating user:', email);
 
       // Create the user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -94,8 +108,11 @@ serve(async (req) => {
       });
 
       if (createError) {
+        console.error('User creation error:', createError);
         throw createError;
       }
+
+      console.log('User created:', newUser.user.id);
 
       // Create profile
       const { error: profileError } = await supabaseAdmin
@@ -128,6 +145,63 @@ serve(async (req) => {
         }
       }
 
+      // Send welcome email
+      try {
+        const isAdmin = userRoles && userRoles.includes('admin');
+        const emailResponse = await resend.emails.send({
+          from: "BidHive <onboarding@resend.dev>",
+          to: [email],
+          subject: isAdmin ? "החשבון שלך נוצר - מנהל מערכת" : "ברוך הבא ל-BidHive",
+          html: `
+            <!DOCTYPE html>
+            <html dir="rtl" lang="he">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; direction: rtl;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h1 style="color: #333; text-align: center;">${isAdmin ? 'חשבון מנהל נוצר בהצלחה' : 'ברוך הבא ל-BidHive!'}</h1>
+                
+                ${name ? `<p style="color: #666; font-size: 16px;">שלום ${name},</p>` : ''}
+                
+                <p style="color: #666; font-size: 16px;">
+                  ${isAdmin 
+                    ? 'חשבון המנהל שלך נוצר בהצלחה במערכת BidHive.'
+                    : 'חשבונך נוצר בהצלחה במערכת BidHive.'
+                  }
+                </p>
+                
+                <div style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="color: #333; margin-top: 0;">פרטי התחברות:</h3>
+                  <p style="color: #666; margin: 10px 0;"><strong>אימייל:</strong> ${email}</p>
+                  <p style="color: #666; margin: 10px 0;"><strong>סיסמה:</strong> ${password}</p>
+                </div>
+                
+                <p style="color: #d9534f; font-size: 14px; background-color: #f2dede; padding: 10px; border-radius: 5px;">
+                  <strong>חשוב:</strong> אנא שמור את הסיסמה במקום בטוח ושנה אותה לאחר הכניסה הראשונה.
+                </p>
+                
+                ${isAdmin 
+                  ? '<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר לפאנל הניהול בכתובת:</p><p style="text-align: center;"><a href="' + Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') + '/heyadmin/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר לפאנל הניהול</a></p>'
+                  : '<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר למערכת ולהתחיל להשתמש בשירותים שלנו.</p><p style="text-align: center;"><a href="' + Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') + '/auth" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר למערכת</a></p>'
+                }
+                
+                <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                  BidHive - מערכת ניהול פרויקטים והצעות מחיר
+                </p>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+
+        console.log('Welcome email sent:', emailResponse);
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // Don't fail the entire operation if email fails
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -140,7 +214,9 @@ serve(async (req) => {
         }
       );
     } else if (action === 'delete') {
-      const { userId }: DeleteUserRequest = await req.json();
+      const { userId } = requestData as DeleteUserRequest;
+
+      console.log('Deleting user:', userId);
 
       // Prevent deleting yourself
       if (userId === user.id) {
@@ -151,8 +227,11 @@ serve(async (req) => {
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (deleteError) {
+        console.error('User deletion error:', deleteError);
         throw deleteError;
       }
+
+      console.log('User deleted successfully');
 
       return new Response(
         JSON.stringify({ 
@@ -169,7 +248,7 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in manage-users:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Internal server error'
