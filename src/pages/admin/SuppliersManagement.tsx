@@ -21,6 +21,7 @@ import { Plus, Download, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
 import Papa from "papaparse";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 interface Supplier {
   id: string;
@@ -81,12 +82,12 @@ const SuppliersManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success("Supplier created successfully");
+      toast.success(adminTranslations.suppliers.created);
       setShowDialog(false);
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create supplier");
+      toast.error(error.message || adminTranslations.suppliers.createFailed);
     },
   });
 
@@ -106,12 +107,12 @@ const SuppliersManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success("Supplier updated successfully");
+      toast.success(adminTranslations.suppliers.updated);
       setShowDialog(false);
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update supplier");
+      toast.error(error.message || adminTranslations.suppliers.updateFailed);
     },
   });
 
@@ -128,10 +129,10 @@ const SuppliersManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success("Supplier deleted successfully");
+      toast.success(adminTranslations.suppliers.deleted);
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete supplier");
+      toast.error(error.message || adminTranslations.suppliers.deleteFailed);
     },
   });
 
@@ -177,38 +178,38 @@ const SuppliersManagement = () => {
     a.href = url;
     a.download = `suppliers-${new Date().toISOString()}.csv`;
     a.click();
-    toast.success("CSV exported successfully");
+    toast.success(adminTranslations.suppliers.csvExported);
   };
 
   const columns: Column<Supplier>[] = [
-    { header: "Name", accessorKey: "name" },
-    { header: "Email", accessorKey: "email" },
-    { header: "Field", accessorKey: "field" },
-    { header: "Region", accessorKey: "region" },
+    { header: adminTranslations.suppliers.name, accessorKey: "name" },
+    { header: adminTranslations.suppliers.email, accessorKey: "email" },
+    { header: adminTranslations.suppliers.field, accessorKey: "field" },
+    { header: adminTranslations.suppliers.region, accessorKey: "region" },
     {
-      header: "Rating",
-      cell: (item) => item.rating ? item.rating.toFixed(1) : "N/A",
+      header: adminTranslations.suppliers.rating,
+      cell: (item) => item.rating ? item.rating.toFixed(1) : adminTranslations.suppliers.na,
     },
     {
-      header: "Verified",
+      header: adminTranslations.suppliers.verified,
       cell: (item) => (
         <Badge variant={item.verified ? "default" : "secondary"}>
-          {item.verified ? "Yes" : "No"}
+          {item.verified ? adminTranslations.suppliers.yes : adminTranslations.suppliers.no}
         </Badge>
       ),
     },
     {
-      header: "Actions",
+      header: adminTranslations.suppliers.actions,
       cell: (item) => (
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
-            Edit
+            {adminTranslations.suppliers.edit}
           </Button>
           <Button
             size="sm"
             variant="destructive"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this supplier?")) {
+              if (confirm(adminTranslations.suppliers.deleteConfirm)) {
                 deleteMutation.mutate(item.id);
               }
             }}
@@ -225,19 +226,19 @@ const SuppliersManagement = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Suppliers Management</h1>
+            <h1 className="text-3xl font-bold">{adminTranslations.suppliers.title}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage all suppliers in the system
+              {adminTranslations.suppliers.description}
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              <Download className="w-4 h-4 ml-2" />
+              {adminTranslations.suppliers.exportCSV}
             </Button>
             <Button onClick={() => setShowDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Supplier
+              <Plus className="w-4 h-4 ml-2" />
+              {adminTranslations.suppliers.addSupplier}
             </Button>
           </div>
         </div>
@@ -246,7 +247,7 @@ const SuppliersManagement = () => {
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search suppliers by name or email..."
+            placeholder={adminTranslations.suppliers.searchPlaceholder}
           />
         </div>
 
@@ -259,17 +260,17 @@ const SuppliersManagement = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
+                {editingSupplier ? adminTranslations.suppliers.editSupplier : adminTranslations.suppliers.addSupplier}
               </DialogTitle>
               <DialogDescription>
                 {editingSupplier
-                  ? "Update supplier information"
-                  : "Add a new supplier to the system"}
+                  ? adminTranslations.suppliers.updateSupplierInfo
+                  : adminTranslations.suppliers.addNewSupplier}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{adminTranslations.suppliers.name} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -278,7 +279,7 @@ const SuppliersManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{adminTranslations.suppliers.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -287,7 +288,7 @@ const SuppliersManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{adminTranslations.suppliers.phone}</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
@@ -295,7 +296,7 @@ const SuppliersManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="field">Field/Specialty</Label>
+                <Label htmlFor="field">{adminTranslations.suppliers.field}</Label>
                 <Input
                   id="field"
                   value={formData.field}
@@ -303,7 +304,7 @@ const SuppliersManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="region">Region</Label>
+                <Label htmlFor="region">{adminTranslations.suppliers.region}</Label>
                 <Input
                   id="region"
                   value={formData.region}
@@ -318,14 +319,14 @@ const SuppliersManagement = () => {
                     setFormData({ ...formData, verified: checked as boolean })
                   }
                 />
-                <Label htmlFor="verified">Verified</Label>
+                <Label htmlFor="verified">{adminTranslations.suppliers.verified}</Label>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                  Cancel
+                  {adminTranslations.suppliers.cancel}
                 </Button>
                 <Button type="submit">
-                  {editingSupplier ? "Update" : "Create"}
+                  {editingSupplier ? adminTranslations.suppliers.update : adminTranslations.suppliers.create}
                 </Button>
               </DialogFooter>
             </form>

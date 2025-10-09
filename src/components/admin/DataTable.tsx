@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 export interface Column<T> {
   header: string;
@@ -54,7 +55,7 @@ export function DataTable<T extends { id: string }>({
                   colSpan={columns.length}
                   className="text-center text-muted-foreground"
                 >
-                  No data available
+                  {adminTranslations.common.noData}
                 </TableCell>
               </TableRow>
             ) : (
@@ -83,21 +84,10 @@ export function DataTable<T extends { id: string }>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, data.length)} of{" "}
-            {data.length} results
+            {adminTranslations.common.showing} {startIndex + 1} {adminTranslations.common.to} {Math.min(endIndex, data.length)} {adminTranslations.common.of}{" "}
+            {data.length} {adminTranslations.common.results}
           </p>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="flex items-center px-3 text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
             <Button
               variant="outline"
               size="sm"
@@ -105,6 +95,17 @@ export function DataTable<T extends { id: string }>({
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-4 h-4" />
+            </Button>
+            <span className="flex items-center px-3 text-sm">
+              {adminTranslations.common.page} {currentPage} {adminTranslations.common.of} {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
         </div>

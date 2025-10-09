@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 interface Project {
   id: string;
@@ -74,12 +75,12 @@ const ProjectsManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
       toast.success(
         variables.archived
-          ? "Project archived successfully"
-          : "Project restored successfully"
+          ? adminTranslations.projects.archived
+          : adminTranslations.projects.restored
       );
     },
     onError: (error: any) => {
-      toast.error(error.message || "Operation failed");
+      toast.error(error.message || adminTranslations.projects.operationFailed);
     },
   });
 
@@ -96,25 +97,35 @@ const ProjectsManagement = () => {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'draft': return adminTranslations.projects.draft;
+      case 'active': return adminTranslations.projects.active;
+      case 'completed': return adminTranslations.projects.completed;
+      case 'cancelled': return adminTranslations.projects.cancelled;
+      default: return status;
+    }
+  };
+
   const columns: Column<Project>[] = [
-    { header: "Name", accessorKey: "name" },
-    { header: "Type", accessorKey: "type" },
-    { header: "Location", accessorKey: "location" },
+    { header: adminTranslations.projects.name, accessorKey: "name" },
+    { header: adminTranslations.projects.type, accessorKey: "type" },
+    { header: adminTranslations.projects.location, accessorKey: "location" },
     {
-      header: "Budget",
-      cell: (item) => item.budget ? `₪${item.budget.toLocaleString()}` : "N/A",
+      header: adminTranslations.projects.budget,
+      cell: (item) => item.budget ? `₪${item.budget.toLocaleString('he-IL')}` : adminTranslations.suppliers.na,
     },
     {
-      header: "Status",
+      header: adminTranslations.projects.status,
       cell: (item) => (
         <Badge variant={statusBadgeVariant(item.status)}>
-          {item.status}
+          {getStatusText(item.status)}
         </Badge>
       ),
     },
-    { header: "Phase", accessorKey: "phase" },
+    { header: adminTranslations.projects.phase, accessorKey: "phase" },
     {
-      header: "Actions",
+      header: adminTranslations.projects.actions,
       cell: (item) => (
         <Button
           size="sm"
@@ -125,13 +136,13 @@ const ProjectsManagement = () => {
         >
           {item.archived ? (
             <>
-              <ArchiveRestore className="w-4 h-4 mr-1" />
-              Restore
+              <ArchiveRestore className="w-4 h-4 ml-1" />
+              {adminTranslations.projects.restore}
             </>
           ) : (
             <>
-              <Archive className="w-4 h-4 mr-1" />
-              Archive
+              <Archive className="w-4 h-4 ml-1" />
+              {adminTranslations.projects.archive}
             </>
           )}
         </Button>
@@ -143,9 +154,9 @@ const ProjectsManagement = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Projects Management</h1>
+          <h1 className="text-3xl font-bold">{adminTranslations.projects.title}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage all projects in the system
+            {adminTranslations.projects.description}
           </p>
         </div>
 
@@ -153,7 +164,7 @@ const ProjectsManagement = () => {
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search projects..."
+            placeholder={adminTranslations.projects.searchPlaceholder}
           />
           <div className="flex items-center space-x-2">
             <Switch
@@ -161,7 +172,7 @@ const ProjectsManagement = () => {
               checked={showArchived}
               onCheckedChange={setShowArchived}
             />
-            <Label htmlFor="show-archived">Show archived</Label>
+            <Label htmlFor="show-archived">{adminTranslations.projects.showArchived}</Label>
           </div>
         </div>
 

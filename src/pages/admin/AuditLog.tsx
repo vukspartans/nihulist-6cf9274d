@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 interface AuditLog {
   id: string;
@@ -56,30 +57,40 @@ const AuditLog = () => {
     return 'outline';
   };
 
+  const getActionText = (action: string) => {
+    if (action === 'create') return adminTranslations.auditLog.create;
+    if (action === 'update') return adminTranslations.auditLog.update;
+    if (action === 'delete') return adminTranslations.auditLog.delete;
+    if (action === 'archive') return adminTranslations.auditLog.archive;
+    if (action === 'restore') return adminTranslations.auditLog.restore;
+    if (action === 'update_roles') return adminTranslations.auditLog.update_roles;
+    return action;
+  };
+
   const columns: Column<AuditLog>[] = [
     {
-      header: "Timestamp",
-      cell: (item) => new Date(item.timestamp).toLocaleString(),
+      header: adminTranslations.auditLog.timestamp,
+      cell: (item) => new Date(item.timestamp).toLocaleString('he-IL'),
     },
     {
-      header: "Action",
+      header: adminTranslations.auditLog.action,
       cell: (item) => (
         <Badge variant={actionBadgeVariant(item.action)}>
-          {item.action}
+          {getActionText(item.action)}
         </Badge>
       ),
     },
-    { header: "Target Table", accessorKey: "target_table" },
+    { header: adminTranslations.auditLog.targetTable, accessorKey: "target_table" },
     {
-      header: "Target ID",
+      header: adminTranslations.auditLog.targetId,
       cell: (item) => (
         <span className="font-mono text-xs">
-          {item.target_id ? item.target_id.substring(0, 8) + '...' : 'N/A'}
+          {item.target_id ? item.target_id.substring(0, 8) + '...' : adminTranslations.suppliers.na}
         </span>
       ),
     },
     {
-      header: "Admin ID",
+      header: adminTranslations.auditLog.adminId,
       cell: (item) => (
         <span className="font-mono text-xs">
           {item.admin_id.substring(0, 8)}...
@@ -87,7 +98,7 @@ const AuditLog = () => {
       ),
     },
     {
-      header: "Details",
+      header: adminTranslations.auditLog.details,
       cell: (item) => (
         <Button
           size="sm"
@@ -104,9 +115,9 @@ const AuditLog = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Audit Log</h1>
+          <h1 className="text-3xl font-bold">{adminTranslations.auditLog.title}</h1>
           <p className="text-muted-foreground mt-1">
-            Complete trail of all admin actions (last 500 entries)
+            {adminTranslations.auditLog.description}
           </p>
         </div>
 
@@ -115,38 +126,38 @@ const AuditLog = () => {
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Audit Log Details</DialogTitle>
+              <DialogTitle>{adminTranslations.auditLog.detailsTitle}</DialogTitle>
               <DialogDescription>
-                Complete information about this action
+                {adminTranslations.auditLog.detailsDescription}
               </DialogDescription>
             </DialogHeader>
             {selectedLog && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2">Action Details</h3>
+                  <h3 className="font-semibold mb-2">{adminTranslations.auditLog.actionDetails}</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Action:</span>{" "}
-                      {selectedLog.action}
+                      <span className="text-muted-foreground">{adminTranslations.auditLog.action}:</span>{" "}
+                      {getActionText(selectedLog.action)}
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Table:</span>{" "}
+                      <span className="text-muted-foreground">{adminTranslations.auditLog.table}:</span>{" "}
                       {selectedLog.target_table}
                     </div>
                     <div className="col-span-2">
-                      <span className="text-muted-foreground">Target ID:</span>{" "}
-                      <span className="font-mono text-xs">{selectedLog.target_id || 'N/A'}</span>
+                      <span className="text-muted-foreground">{adminTranslations.auditLog.targetId}:</span>{" "}
+                      <span className="font-mono text-xs">{selectedLog.target_id || adminTranslations.suppliers.na}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-muted-foreground">Timestamp:</span>{" "}
-                      {new Date(selectedLog.timestamp).toLocaleString()}
+                      <span className="text-muted-foreground">{adminTranslations.auditLog.timestamp}:</span>{" "}
+                      {new Date(selectedLog.timestamp).toLocaleString('he-IL')}
                     </div>
                   </div>
                 </div>
 
                 {selectedLog.old_values && (
                   <div>
-                    <h3 className="font-semibold mb-2">Old Values</h3>
+                    <h3 className="font-semibold mb-2">{adminTranslations.auditLog.oldValues}</h3>
                     <pre className="bg-muted p-3 rounded text-xs overflow-auto max-h-40">
                       {JSON.stringify(selectedLog.old_values, null, 2)}
                     </pre>
@@ -155,7 +166,7 @@ const AuditLog = () => {
 
                 {selectedLog.new_values && (
                   <div>
-                    <h3 className="font-semibold mb-2">New Values</h3>
+                    <h3 className="font-semibold mb-2">{adminTranslations.auditLog.newValues}</h3>
                     <pre className="bg-muted p-3 rounded text-xs overflow-auto max-h-40">
                       {JSON.stringify(selectedLog.new_values, null, 2)}
                     </pre>
@@ -164,7 +175,7 @@ const AuditLog = () => {
 
                 {selectedLog.user_agent && (
                   <div>
-                    <h3 className="font-semibold mb-2">User Agent</h3>
+                    <h3 className="font-semibold mb-2">{adminTranslations.auditLog.userAgent}</h3>
                     <p className="text-xs text-muted-foreground">
                       {selectedLog.user_agent}
                     </p>

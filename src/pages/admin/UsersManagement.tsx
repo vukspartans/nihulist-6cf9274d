@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 interface Profile {
   id: string;
@@ -99,13 +100,13 @@ const UsersManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success("User roles updated successfully");
+      toast.success(adminTranslations.users.rolesUpdated);
       setShowRoleDialog(false);
       setSelectedUser(null);
       setSelectedRoles([]);
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update roles");
+      toast.error(error.message || adminTranslations.users.updateFailed);
     },
   });
 
@@ -131,39 +132,49 @@ const UsersManagement = () => {
     });
   };
 
+  const getRoleText = (role: string) => {
+    switch (role) {
+      case 'admin': return adminTranslations.users.admin;
+      case 'entrepreneur': return adminTranslations.users.entrepreneur;
+      case 'advisor': return adminTranslations.users.advisor;
+      case 'supplier': return adminTranslations.users.supplier;
+      default: return role;
+    }
+  };
+
   const columns: Column<UserWithRoles>[] = [
-    { header: "Name", accessorKey: "name" },
-    { header: "Profile Role", accessorKey: "role" },
+    { header: adminTranslations.users.name, accessorKey: "name" },
+    { header: adminTranslations.users.profileRole, accessorKey: "role" },
     {
-      header: "Assigned Roles",
+      header: adminTranslations.users.assignedRoles,
       cell: (item) => (
         <div className="flex gap-1 flex-wrap">
           {item.roles.length > 0 ? (
             item.roles.map(role => (
               <Badge key={role} variant="secondary">
-                {role}
+                {getRoleText(role)}
               </Badge>
             ))
           ) : (
-            <span className="text-muted-foreground text-sm">No roles</span>
+            <span className="text-muted-foreground text-sm">{adminTranslations.users.noRoles}</span>
           )}
         </div>
       ),
     },
     {
-      header: "Created",
-      cell: (item) => new Date(item.created_at).toLocaleDateString(),
+      header: adminTranslations.users.created,
+      cell: (item) => new Date(item.created_at).toLocaleDateString('he-IL'),
     },
     {
-      header: "Actions",
+      header: adminTranslations.users.actions,
       cell: (item) => (
         <Button
           size="sm"
           variant="outline"
           onClick={() => handleManageRoles(item)}
         >
-          <Shield className="w-4 h-4 mr-1" />
-          Manage Roles
+          <Shield className="w-4 h-4 ml-1" />
+          {adminTranslations.users.manageRoles}
         </Button>
       ),
     },
@@ -175,16 +186,16 @@ const UsersManagement = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Users Management</h1>
+          <h1 className="text-3xl font-bold">{adminTranslations.users.title}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage user roles and permissions
+            {adminTranslations.users.description}
           </p>
         </div>
 
         <SearchBar
           value={search}
           onChange={setSearch}
-          placeholder="Search users by name..."
+          placeholder={adminTranslations.users.searchPlaceholder}
         />
 
         <DataTable data={users} columns={columns} />
@@ -192,9 +203,9 @@ const UsersManagement = () => {
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Manage User Roles</DialogTitle>
+              <DialogTitle>{adminTranslations.users.manageUserRoles}</DialogTitle>
               <DialogDescription>
-                Assign or remove roles for {selectedUser?.name}
+                {adminTranslations.users.assignOrRemove} {selectedUser?.name}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -206,16 +217,16 @@ const UsersManagement = () => {
                     onCheckedChange={() => handleRoleToggle(role)}
                   />
                   <Label htmlFor={role} className="capitalize">
-                    {role}
+                    {getRoleText(role)}
                   </Label>
                 </div>
               ))}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
-                Cancel
+                {adminTranslations.users.cancel}
               </Button>
-              <Button onClick={handleSaveRoles}>Save Changes</Button>
+              <Button onClick={handleSaveRoles}>{adminTranslations.users.saveChanges}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

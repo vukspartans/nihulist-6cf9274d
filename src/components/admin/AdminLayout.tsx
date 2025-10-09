@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
+import { adminTranslations } from "@/constants/adminTranslations";
 import {
   Sidebar,
   SidebarContent,
@@ -31,12 +32,12 @@ interface AdminLayoutProps {
 }
 
 const navigationItems = [
-  { title: "Dashboard", url: "/heyadmin", icon: LayoutDashboard },
-  { title: "Suppliers", url: "/heyadmin/suppliers", icon: Building2 },
-  { title: "Projects", url: "/heyadmin/projects", icon: FolderKanban },
-  { title: "RFPs & Proposals", url: "/heyadmin/rfps", icon: FileText },
-  { title: "Users", url: "/heyadmin/users", icon: Users },
-  { title: "Audit Log", url: "/heyadmin/audit", icon: Shield },
+  { title: adminTranslations.navigation.dashboard, url: "/heyadmin", icon: LayoutDashboard },
+  { title: adminTranslations.navigation.suppliers, url: "/heyadmin/suppliers", icon: Building2 },
+  { title: adminTranslations.navigation.projects, url: "/heyadmin/projects", icon: FolderKanban },
+  { title: adminTranslations.navigation.rfps, url: "/heyadmin/rfps", icon: FileText },
+  { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
+  { title: adminTranslations.navigation.auditLog, url: "/heyadmin/audit", icon: Shield },
 ];
 
 function AdminSidebar() {
@@ -57,12 +58,12 @@ function AdminSidebar() {
       <SidebarContent className="bg-sidebar">
         <div className="p-4 border-b">
           {!isCollapsed && (
-            <h1 className="text-xl font-bold text-sidebar-foreground">Admin Panel</h1>
+            <h1 className="text-xl font-bold text-sidebar-foreground">{adminTranslations.navigation.adminPanel}</h1>
           )}
         </div>
         
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel>{adminTranslations.navigation.management}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => {
@@ -92,7 +93,7 @@ function AdminSidebar() {
             onClick={handleSignOut}
           >
             <LogOut className="w-4 h-4" />
-            {!isCollapsed && <span className="ml-2">Sign Out</span>}
+            {!isCollapsed && <span className="mr-2">{adminTranslations.navigation.signOut}</span>}
           </Button>
         </div>
       </SidebarContent>

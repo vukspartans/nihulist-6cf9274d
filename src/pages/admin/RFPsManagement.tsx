@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 interface RFP {
   id: string;
@@ -70,7 +71,7 @@ const RFPsManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-rfps'] });
-      toast.success("RFP deleted successfully");
+      toast.success(adminTranslations.rfps.deleted);
     },
   });
 
@@ -87,7 +88,7 @@ const RFPsManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-proposals'] });
-      toast.success("Proposal status updated");
+      toast.success(adminTranslations.rfps.statusUpdated);
     },
   });
 
@@ -104,25 +105,25 @@ const RFPsManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-proposals'] });
-      toast.success("Proposal deleted successfully");
+      toast.success(adminTranslations.rfps.deleted);
     },
   });
 
   const rfpColumns: Column<RFP>[] = [
-    { header: "Subject", accessorKey: "subject" },
+    { header: adminTranslations.rfps.subject, accessorKey: "subject" },
     {
-      header: "Sent At",
-      cell: (item) => new Date(item.sent_at).toLocaleDateString(),
+      header: adminTranslations.rfps.sentAt,
+      cell: (item) => new Date(item.sent_at).toLocaleDateString('he-IL'),
     },
-    { header: "Project ID", accessorKey: "project_id" },
+    { header: adminTranslations.rfps.projectId, accessorKey: "project_id" },
     {
-      header: "Actions",
+      header: adminTranslations.rfps.actions,
       cell: (item) => (
         <Button
           size="sm"
           variant="destructive"
           onClick={() => {
-            if (confirm("Delete this RFP? This will cascade to invites.")) {
+            if (confirm(adminTranslations.rfps.deleteRFPConfirm)) {
               deleteRFPMutation.mutate(item.id);
             }
           }}
@@ -133,18 +134,27 @@ const RFPsManagement = () => {
     },
   ];
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'received': return adminTranslations.rfps.received;
+      case 'approved': return adminTranslations.rfps.approved;
+      case 'rejected': return adminTranslations.rfps.rejected;
+      default: return status;
+    }
+  };
+
   const proposalColumns: Column<Proposal>[] = [
-    { header: "Supplier", accessorKey: "supplier_name" },
+    { header: adminTranslations.rfps.supplier, accessorKey: "supplier_name" },
     {
-      header: "Price",
-      cell: (item) => `₪${item.price.toLocaleString()}`,
+      header: adminTranslations.rfps.price,
+      cell: (item) => `₪${item.price.toLocaleString('he-IL')}`,
     },
     {
-      header: "Timeline",
-      cell: (item) => `${item.timeline_days} days`,
+      header: adminTranslations.rfps.timeline,
+      cell: (item) => `${item.timeline_days} ${adminTranslations.rfps.days}`,
     },
     {
-      header: "Status",
+      header: adminTranslations.rfps.status,
       cell: (item) => (
         <Badge
           variant={
@@ -155,16 +165,16 @@ const RFPsManagement = () => {
               : 'secondary'
           }
         >
-          {item.status}
+          {getStatusText(item.status)}
         </Badge>
       ),
     },
     {
-      header: "Submitted",
-      cell: (item) => new Date(item.submitted_at).toLocaleDateString(),
+      header: adminTranslations.rfps.submitted,
+      cell: (item) => new Date(item.submitted_at).toLocaleDateString('he-IL'),
     },
     {
-      header: "Actions",
+      header: adminTranslations.rfps.actions,
       cell: (item) => (
         <div className="flex gap-2">
           <Button
@@ -174,8 +184,8 @@ const RFPsManagement = () => {
               updateProposalMutation.mutate({ id: item.id, status: 'approved' })
             }
           >
-            <CheckCircle2 className="w-4 h-4 mr-1" />
-            Approve
+            <CheckCircle2 className="w-4 h-4 ml-1" />
+            {adminTranslations.rfps.approve}
           </Button>
           <Button
             size="sm"
@@ -184,14 +194,14 @@ const RFPsManagement = () => {
               updateProposalMutation.mutate({ id: item.id, status: 'rejected' })
             }
           >
-            <XCircle className="w-4 h-4 mr-1" />
-            Reject
+            <XCircle className="w-4 h-4 ml-1" />
+            {adminTranslations.rfps.reject}
           </Button>
           <Button
             size="sm"
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this proposal?")) {
+              if (confirm(adminTranslations.rfps.deleteProposalConfirm)) {
                 deleteProposalMutation.mutate(item.id);
               }
             }}
@@ -207,17 +217,17 @@ const RFPsManagement = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">RFPs & Proposals</h1>
+          <h1 className="text-3xl font-bold">{adminTranslations.rfps.title}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage RFPs and submitted proposals
+            {adminTranslations.rfps.description}
           </p>
         </div>
 
         <Tabs defaultValue="rfps">
           <TabsList>
-            <TabsTrigger value="rfps">RFPs ({rfps.length})</TabsTrigger>
+            <TabsTrigger value="rfps">{adminTranslations.rfps.rfpsTab} ({rfps.length})</TabsTrigger>
             <TabsTrigger value="proposals">
-              Proposals ({proposals.length})
+              {adminTranslations.rfps.proposalsTab} ({proposals.length})
             </TabsTrigger>
           </TabsList>
           <TabsContent value="rfps" className="mt-6">

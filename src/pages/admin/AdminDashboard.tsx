@@ -4,6 +4,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Building2, FolderKanban, FileText, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 const AdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
@@ -32,9 +33,9 @@ const AdminDashboard = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold">{adminTranslations.dashboard.title}</h1>
           <p className="text-muted-foreground mt-1">
-            Overview of your platform's key metrics
+            {adminTranslations.dashboard.description}
           </p>
         </div>
 
@@ -47,27 +48,27 @@ const AdminDashboard = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatsCard
-              title="Total Suppliers"
+              title={adminTranslations.dashboard.totalSuppliers}
               value={stats?.suppliers || 0}
-              description="Active suppliers in the system"
+              description={adminTranslations.dashboard.activeSuppliersDesc}
               icon={Building2}
             />
             <StatsCard
-              title="Total Projects"
+              title={adminTranslations.dashboard.totalProjects}
               value={stats?.projects || 0}
-              description="Projects created"
+              description={adminTranslations.dashboard.projectsCreatedDesc}
               icon={FolderKanban}
             />
             <StatsCard
-              title="RFPs Sent"
+              title={adminTranslations.dashboard.rfpsSent}
               value={stats?.rfps || 0}
-              description="Requests for proposals"
+              description={adminTranslations.dashboard.requestsForProposalsDesc}
               icon={FileText}
             />
             <StatsCard
-              title="Proposals Received"
+              title={adminTranslations.dashboard.proposalsReceived}
               value={stats?.proposals || 0}
-              description={`${stats?.approvedProposals || 0} approved`}
+              description={`${stats?.approvedProposals || 0} ${adminTranslations.dashboard.approvedCount}`}
               icon={CheckCircle2}
             />
           </div>

@@ -9,10 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Shield, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { adminTranslations } from "@/constants/adminTranslations";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email(adminTranslations.login.invalidEmail),
+  password: z.string().min(6, adminTranslations.login.passwordTooShort),
 });
 
 const AdminLogin = () => {
@@ -57,14 +58,14 @@ const AdminLogin = () => {
 
       if (!roles) {
         await supabase.auth.signOut();
-        toast.error("Access denied. Admin privileges required.");
+        toast.error(adminTranslations.login.accessDenied);
         return;
       }
 
-      toast.success("Welcome back, admin!");
+      toast.success(adminTranslations.login.welcomeBack);
       navigate("/heyadmin");
     } catch (error: any) {
-      toast.error(error.message || "Login failed");
+      toast.error(error.message || adminTranslations.login.loginFailed);
     } finally {
       setLoading(false);
     }
@@ -79,19 +80,19 @@ const AdminLogin = () => {
               <Shield className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardTitle className="text-2xl">{adminTranslations.login.title}</CardTitle>
           <CardDescription>
-            Enter your credentials to access the admin panel
+            {adminTranslations.login.description}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{adminTranslations.login.email}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder={adminTranslations.login.emailPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -99,7 +100,7 @@ const AdminLogin = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{adminTranslations.login.password}</Label>
               <Input
                 id="password"
                 type="password"
@@ -113,11 +114,11 @@ const AdminLogin = () => {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  {adminTranslations.login.signingIn}
                 </>
               ) : (
-                "Sign In"
+                adminTranslations.login.signIn
               )}
             </Button>
           </form>
