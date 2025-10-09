@@ -839,7 +839,7 @@ const Auth = () => {
                   type="button"
                   variant="ghost"
                   onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:bg-black hover:text-white transition-colors"
                 >
                   שכחת סיסמה?
                 </Button>
