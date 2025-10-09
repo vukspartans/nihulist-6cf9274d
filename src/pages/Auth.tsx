@@ -45,8 +45,17 @@ const Auth = () => {
     console.log("Auth component mounting, checking URL params");
     const urlParams = new URLSearchParams(window.location.search);
     const type = urlParams.get('type');
+    const mode = urlParams.get('mode');
     
     console.log("URL type parameter:", type);
+    console.log("URL mode parameter:", mode);
+
+    // Initialize login/signup mode from URL parameter
+    if (mode === 'login') {
+      setIsLogin(true);
+    } else if (mode === 'signup') {
+      setIsLogin(false);
+    }
 
     // Initialize role from URL parameter
     if (type && type !== 'recovery') {

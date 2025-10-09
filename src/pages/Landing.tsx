@@ -71,13 +71,26 @@ const Landing = memo(() => {
     }
   ];
 
+  // State to track which button triggered the dialog
+  const [dialogMode, setDialogMode] = useState<'signup' | 'login'>('signup');
+
   const handleUserTypeSelection = (userType: string) => {
     setShowUserTypeDialog(false);
     if (userType === 'entrepreneur') {
-      navigate('/auth?type=entrepreneur');
+      navigate(`/auth?type=entrepreneur&mode=${dialogMode}`);
     } else {
-      navigate('/auth?type=advisor');
+      navigate(`/auth?type=advisor&mode=${dialogMode}`);
     }
+  };
+
+  const handleMainCTAClick = () => {
+    setDialogMode('signup');
+    setShowUserTypeDialog(true);
+  };
+
+  const handleLoginClick = () => {
+    setDialogMode('login');
+    setShowUserTypeDialog(true);
   };
 
   return <div className="min-h-screen bg-background" dir="rtl">
@@ -97,8 +110,8 @@ const Landing = memo(() => {
             <Link to="/for-consultants">
               <Button variant="ghost" size="sm">ליועצים</Button>
             </Link>
-            <Button variant="premium" size="sm" onClick={() => setShowUserTypeDialog(true)} className="text-sm lg:text-base px-6">
-              התחל עכשיו
+            <Button variant="outline" size="sm" onClick={handleLoginClick} className="text-sm lg:text-base px-6">
+              התחברו למערכת
             </Button>
           </div>
         </div>
@@ -136,7 +149,7 @@ const Landing = memo(() => {
               <div className="animate-slide-up" style={{animationDelay: "0.4s"}}>
                 <Button 
                   size="lg" 
-                  onClick={() => setShowUserTypeDialog(true)}
+                  onClick={handleMainCTAClick}
                   className="text-lg px-8 py-6 hover-scale animate-glow"
                 >
                   <Zap className="w-5 h-5 ml-2" />
