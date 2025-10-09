@@ -308,10 +308,10 @@ const ForEntrepreneurs = () => {
                 variant="hero" 
                 size="xl" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="text-xl px-12 py-6 bg-white text-primary hover:bg-white/90 hover-scale"
+                className="text-xl px-12 py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
               >
-                <Zap className="w-6 h-6 ml-2" />
-                התחל עכשיו - חינם
+                <Zap className="w-6 h-6 ml-2 text-white/80 group-hover:text-white transition-colors" />
+                <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו - חינם</span>
               </Button>
             </div>
             
