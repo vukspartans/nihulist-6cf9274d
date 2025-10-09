@@ -156,15 +156,24 @@ export const adminTranslations = {
     searchPlaceholder: "חפש משתמשים לפי שם...",
     rolesUpdated: "תפקידי המשתמש עודכנו בהצלחה",
     updateFailed: "עדכון התפקידים נכשל",
+    userCreated: "משתמש נוצר בהצלחה",
+    userDeleted: "משתמש נמחק בהצלחה",
+    createFailed: "יצירת המשתמש נכשלה",
+    deleteFailed: "מחיקת המשתמש נכשלה",
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק את המשתמש הזה? פעולה זו אינה ניתנת לביטול.",
+    cannotDeleteSelf: "לא ניתן למחוק את החשבון שלך",
     
     // Table columns
     name: "שם",
+    email: "אימייל",
     profileRole: "תפקיד בפרופיל",
     assignedRoles: "תפקידים מוקצים",
     created: "נוצר",
     actions: "פעולות",
     manageRoles: "נהל תפקידים",
     noRoles: "אין תפקידים",
+    addUser: "הוסף משתמש",
+    delete: "מחק",
     
     // Roles
     admin: "מנהל",
@@ -172,11 +181,22 @@ export const adminTranslations = {
     advisor: "יועץ",
     supplier: "ספק",
     
-    // Dialog
+    // Dialog - Roles
     manageUserRoles: "ניהול תפקידי משתמש",
     assignOrRemove: "הקצה או הסר תפקידים עבור",
     cancel: "ביטול",
     saveChanges: "שמור שינויים",
+    
+    // Dialog - Create User
+    createUser: "צור משתמש חדש",
+    createUserDesc: "הוסף משתמש חדש למערכת והקצה לו תפקידים",
+    password: "סיסמה",
+    phone: "טלפון",
+    assignRoles: "הקצה תפקידים",
+    emailRequired: "אימייל הוא שדה חובה",
+    passwordRequired: "סיסמה היא שדה חובה",
+    passwordMinLength: "הסיסמה חייבת להכיל לפחות 6 תווים",
+    create: "צור משתמש",
   },
 
   // Audit Log
