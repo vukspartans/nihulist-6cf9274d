@@ -6,14 +6,14 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { SearchBar } from "@/components/admin/SearchBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power, Mail, Phone, MapPin, Calendar, Building } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power } from "lucide-react";
 import { logAdminAction } from "@/lib/auditLog";
 import { CreateAdvisorDialog } from "@/components/admin/CreateAdvisorDialog";
 import { EditAdvisorDialog } from "@/components/admin/EditAdvisorDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Advisor {
   id: string;
@@ -184,138 +184,6 @@ export default function AdvisorsManagement() {
     },
   });
 
-  const AdvisorCard = ({ advisor }: { advisor: Advisor }) => (
-    <Card className="hover:shadow-md transition-all duration-300 border-border/50 overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <Building className="w-5 h-5 text-primary shrink-0" />
-              <h3 className="font-bold text-lg truncate">{advisor.company_name || "ללא שם"}</h3>
-            </div>
-            {advisor.profiles?.name && (
-              <p className="text-sm text-muted-foreground truncate">{advisor.profiles.name}</p>
-            )}
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Badge variant={advisor.admin_approved ? "default" : "secondary"} className="shrink-0">
-              {advisor.admin_approved ? t.advisors.status.approved : t.advisors.status.pending}
-            </Badge>
-            <Badge variant={advisor.is_active ? "default" : "destructive"} className="shrink-0">
-              {advisor.is_active ? t.advisors.status.active : t.advisors.status.inactive}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          {advisor.profiles?.email && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Mail className="w-4 h-4 shrink-0" />
-              <span className="truncate">{advisor.profiles.email}</span>
-            </div>
-          )}
-          {advisor.profiles?.phone && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Phone className="w-4 h-4 shrink-0" />
-              <span className="truncate">{advisor.profiles.phone}</span>
-            </div>
-          )}
-          {advisor.location && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4 shrink-0" />
-              <span className="truncate">{advisor.location}</span>
-            </div>
-          )}
-          {advisor.founding_year && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="w-4 h-4 shrink-0" />
-              <span>{advisor.founding_year}</span>
-            </div>
-          )}
-        </div>
-
-        {advisor.expertise && advisor.expertise.length > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">תחומי מומחיות</p>
-              <div className="flex gap-1 flex-wrap">
-                {advisor.expertise.slice(0, 3).map((exp, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs">
-                    {exp}
-                  </Badge>
-                ))}
-                {advisor.expertise.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{advisor.expertise.length - 3}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        <Separator />
-
-        <div className="flex flex-wrap gap-2">
-          {!advisor.admin_approved ? (
-            <>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: true })}
-                className="flex-1"
-              >
-                <CheckCircle className="h-4 w-4 ml-2" />
-                {t.advisors.approve}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: false })}
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 ml-2" />
-                {t.advisors.reject}
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleActiveMutation.mutate({ advisorId: advisor.id, isActive: advisor.is_active || false })}
-              className="flex-1"
-            >
-              <Power className="h-4 w-4 ml-2" />
-              {advisor.is_active ? t.advisors.status.inactive : t.advisors.status.active}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectedAdvisor(advisor);
-              setEditDialogOpen(true);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => {
-              setSelectedAdvisor(advisor);
-              setDeleteDialogOpen(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <AdminLayout>
       <div className="space-y-6 animate-fade-in">
@@ -326,7 +194,7 @@ export default function AdvisorsManagement() {
             </h1>
             <p className="text-muted-foreground mt-1">ניהול וניטור יועצים במערכת</p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
+          <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0" size="default">
             <Plus className="h-4 w-4 ml-2" />
             {t.advisors.createButton}
           </Button>
@@ -346,7 +214,7 @@ export default function AdvisorsManagement() {
               size="sm"
             >
               {t.advisors.filters.all}
-              <Badge variant="secondary" className="mr-2">
+              <Badge variant="secondary" className="mr-2 text-xs">
                 {advisors.length}
               </Badge>
             </Button>
@@ -356,7 +224,7 @@ export default function AdvisorsManagement() {
               size="sm"
             >
               {t.advisors.filters.pending}
-              <Badge variant="secondary" className="mr-2">
+              <Badge variant="secondary" className="mr-2 text-xs">
                 {advisors.filter(a => !a.admin_approved).length}
               </Badge>
             </Button>
@@ -366,36 +234,169 @@ export default function AdvisorsManagement() {
               size="sm"
             >
               {t.advisors.filters.approved}
-              <Badge variant="secondary" className="mr-2">
+              <Badge variant="secondary" className="mr-2 text-xs">
                 {advisors.filter(a => a.admin_approved).length}
               </Badge>
             </Button>
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="h-64 animate-pulse bg-muted/20" />
-            ))}
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-semibold">חברה</TableHead>
+                  <TableHead className="font-semibold">איש קשר</TableHead>
+                  <TableHead className="font-semibold">אימייל</TableHead>
+                  <TableHead className="font-semibold">טלפון</TableHead>
+                  <TableHead className="font-semibold">מיקום</TableHead>
+                  <TableHead className="font-semibold">תחומי מומחיות</TableHead>
+                  <TableHead className="font-semibold text-center">סטטוס</TableHead>
+                  <TableHead className="font-semibold text-center w-[200px]">פעולות</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  [...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(8)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : filteredAdvisors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <p className="font-medium">אין יועצים להצגה</p>
+                        <p className="text-sm">נסה לשנות את הסינון או החיפוש</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAdvisors.map((advisor) => (
+                    <TableRow key={advisor.id} className="hover:bg-muted/50 transition-colors">
+                      <TableCell className="font-medium">
+                        {advisor.company_name || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {advisor.profiles?.name || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                        {advisor.profiles?.email || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {advisor.profiles?.phone || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {advisor.location || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap max-w-[180px]">
+                          {advisor.expertise && advisor.expertise.length > 0 ? (
+                            <>
+                              {advisor.expertise.slice(0, 2).map((exp, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs px-2 py-0">
+                                  {exp}
+                                </Badge>
+                              ))}
+                              {advisor.expertise.length > 2 && (
+                                <Badge variant="outline" className="text-xs px-2 py-0">
+                                  +{advisor.expertise.length - 2}
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 items-center">
+                          <Badge 
+                            variant={advisor.admin_approved ? "default" : "secondary"} 
+                            className="text-xs w-fit"
+                          >
+                            {advisor.admin_approved ? "מאושר" : "ממתין"}
+                          </Badge>
+                          <Badge 
+                            variant={advisor.is_active ? "default" : "destructive"} 
+                            className="text-xs w-fit"
+                          >
+                            {advisor.is_active ? "פעיל" : "לא פעיל"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-center flex-wrap">
+                          {!advisor.admin_approved ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: true })}
+                                title="אישור"
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: false })}
+                                title="דחייה"
+                              >
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => toggleActiveMutation.mutate({ advisorId: advisor.id, isActive: advisor.is_active || false })}
+                              title={advisor.is_active ? "השבת" : "הפעל"}
+                            >
+                              <Power className={`h-4 w-4 ${advisor.is_active ? 'text-orange-600' : 'text-green-600'}`} />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setSelectedAdvisor(advisor);
+                              setEditDialogOpen(true);
+                            }}
+                            title="עריכה"
+                          >
+                            <Pencil className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setSelectedAdvisor(advisor);
+                              setDeleteDialogOpen(true);
+                            }}
+                            title="מחיקה"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        ) : filteredAdvisors.length === 0 ? (
-          <Card className="p-12">
-            <div className="text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
-                <Building className="w-10 h-10 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold">אין יועצים להצגה</h3>
-              <p className="text-muted-foreground">נסה לשנות את הסינון או החיפוש</p>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAdvisors.map((advisor) => (
-              <AdvisorCard key={advisor.id} advisor={advisor} />
-            ))}
-          </div>
-        )}
+        </div>
 
         <CreateAdvisorDialog
           open={createDialogOpen}
