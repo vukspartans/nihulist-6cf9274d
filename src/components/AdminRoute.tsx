@@ -9,6 +9,8 @@ interface AdminRouteProps {
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user, loading, isAdmin } = useAuth();
 
+  console.log('AdminRoute - user:', user?.id, 'loading:', loading, 'isAdmin:', isAdmin);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -18,13 +20,16 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!user) {
+    console.log('AdminRoute - No user, redirecting to login');
     return <Navigate to="/heyadmin/login" replace />;
   }
 
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    console.log('AdminRoute - User is not admin, redirecting to login');
+    return <Navigate to="/heyadmin/login" replace />;
   }
 
+  console.log('AdminRoute - User is admin, rendering children');
   return <>{children}</>;
 };
 
