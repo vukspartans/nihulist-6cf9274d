@@ -951,7 +951,7 @@ const Profile = () => {
                     <div className="space-y-1">
                       <CardTitle className="flex items-center gap-2">
                         <Target className="h-5 w-5 text-primary" />
-                        התמחויות מקצועיות
+                        תחומי עיסוק
                         {(!selectedExpertise || selectedExpertise.length === 0) && (
                           <Badge variant="destructive" className="mr-2">שדה חובה</Badge>
                         )}
