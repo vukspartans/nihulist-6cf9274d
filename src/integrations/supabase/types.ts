@@ -94,6 +94,9 @@ export type Database = {
       advisors: {
         Row: {
           activity_regions: string[] | null
+          admin_approved: boolean
+          approved_at: string | null
+          approved_by: string | null
           availability_status: string | null
           certifications: string[] | null
           company_id: string | null
@@ -120,6 +123,9 @@ export type Database = {
         }
         Insert: {
           activity_regions?: string[] | null
+          admin_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           availability_status?: string | null
           certifications?: string[] | null
           company_id?: string | null
@@ -146,6 +152,9 @@ export type Database = {
         }
         Update: {
           activity_regions?: string[] | null
+          admin_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           availability_status?: string | null
           certifications?: string[] | null
           company_id?: string | null

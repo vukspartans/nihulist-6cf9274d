@@ -73,6 +73,7 @@ interface AdvisorProfile {
   logo_url: string | null;
   cover_image_url: string | null;
   is_active: boolean;
+  admin_approved: boolean;
 }
 
 interface UserProfile {
@@ -366,18 +367,18 @@ const AdvisorDashboard = () => {
                   {advisorProfile.company_name || 'יועץ'}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  {advisorProfile.is_active ? (
+                  {advisorProfile.admin_approved ? (
                     <>
-                      <ShieldCheck className="h-4 w-4 text-accent inline" />
-                      <span className="font-medium text-accent">יועץ מאושר</span>
+                      <ShieldCheck className="h-4 w-4 text-blue-600 inline" />
+                      <span className="font-medium text-blue-600">יועץ מאושר</span>
                     </>
                   ) : (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1.5 cursor-help">
-                            <AlertCircle className="h-4 w-4 text-yellow-600" />
-                            <span className="font-medium text-yellow-700">יועץ ממתין לאישור</span>
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <span className="font-medium text-amber-600">יועץ ממתין לאישור</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">

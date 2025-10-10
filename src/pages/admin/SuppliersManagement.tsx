@@ -42,6 +42,7 @@ interface Advisor {
   company_name: string | null;
   location: string | null;
   is_active: boolean;
+  admin_approved: boolean;
   created_at: string;
   expertise: string[];
   founding_year: number | null;
@@ -83,9 +84,9 @@ const SuppliersManagement = () => {
         .order('created_at', { ascending: false });
 
       if (statusFilter === 'pending') {
-        query = query.eq('is_active', false);
+        query = query.eq('admin_approved', false);
       } else if (statusFilter === 'approved') {
-        query = query.eq('is_active', true);
+        query = query.eq('admin_approved', true);
       }
 
       const { data, error } = await query;
@@ -197,23 +198,31 @@ const SuppliersManagement = () => {
   });
 
   // Approve/Reject advisor mutation
-  const toggleAdvisorStatusMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+  const toggleAdvisorApprovalMutation = useMutation({
+    mutationFn: async ({ id, admin_approved }: { id: string; admin_approved: boolean }) => {
       const oldData = advisors.find(a => a.id === id);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const updateData = {
+        admin_approved,
+        approved_at: admin_approved ? new Date().toISOString() : null,
+        approved_by: admin_approved ? user?.id : null,
+      };
+      
       const { data, error } = await supabase
         .from('advisors')
-        .update({ is_active })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
       
       if (error) throw error;
-      await logAdminAction('update', 'advisors', id, oldData, { is_active });
+      await logAdminAction('update', 'advisors', id, oldData, updateData);
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
-      toast.success(variables.is_active ? 'היועץ אושר בהצלחה' : 'היועץ נדחה');
+      toast.success(variables.admin_approved ? 'היועץ אושר בהצלחה' : 'היועץ נדחה');
     },
     onError: (error: any) => {
       toast.error(error.message || 'שגיאה בעדכון סטטוס היועץ');
@@ -327,10 +336,18 @@ const SuppliersManagement = () => {
       cell: (item) => item.founding_year || 'לא צוין'
     },
     {
-      header: "סטטוס",
+      header: "סטטוס אישור",
       cell: (item) => (
-        <Badge variant={item.is_active ? "default" : "secondary"}>
-          {item.is_active ? "מאושר" : "ממתין לאישור"}
+        <Badge variant={item.admin_approved ? "default" : "secondary"}>
+          {item.admin_approved ? "מאושר" : "ממתין לאישור"}
+        </Badge>
+      ),
+    },
+    {
+      header: "חשבון פעיל",
+      cell: (item) => (
+        <Badge variant={item.is_active ? "default" : "destructive"}>
+          {item.is_active ? "פעיל" : "מושהה"}
         </Badge>
       ),
     },
@@ -338,13 +355,13 @@ const SuppliersManagement = () => {
       header: "פעולות",
       cell: (item) => (
         <div className="flex gap-2">
-          {!item.is_active ? (
+          {!item.admin_approved ? (
             <Button
               size="sm"
               variant="default"
               onClick={() => {
                 if (confirm('האם לאשר את היועץ?')) {
-                  toggleAdvisorStatusMutation.mutate({ id: item.id, is_active: true });
+                  toggleAdvisorApprovalMutation.mutate({ id: item.id, admin_approved: true });
                 }
               }}
             >
@@ -357,7 +374,7 @@ const SuppliersManagement = () => {
               variant="destructive"
               onClick={() => {
                 if (confirm('האם להסיר את האישור של היועץ?')) {
-                  toggleAdvisorStatusMutation.mutate({ id: item.id, is_active: false });
+                  toggleAdvisorApprovalMutation.mutate({ id: item.id, admin_approved: false });
                 }
               }}
             >

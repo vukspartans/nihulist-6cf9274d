@@ -49,7 +49,8 @@ export const useAdvisorsByExpertise = (
         const { data, error: fetchError } = await supabase
           .from('advisors')
           .select('id, company_name, location, expertise, founding_year, rating, office_size, website, activity_regions')
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('admin_approved', true);
 
         if (fetchError) throw fetchError;
 
