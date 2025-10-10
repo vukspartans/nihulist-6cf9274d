@@ -320,7 +320,7 @@ const AdvisorDashboard = () => {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Logo and Info Section */}
-          <div className={`flex items-center gap-4 ${getCoverImage(advisorProfile?.cover_image_url) ? '-mt-16' : 'mb-8'}`}>
+          <div className={`flex items-start gap-4 ${getCoverImage(advisorProfile?.cover_image_url) ? '-mt-16' : 'mb-8'}`}>
             {/* Logo */}
             <label htmlFor="dashboard-logo-upload" className="cursor-pointer group shrink-0">
               <div className={`relative rounded-xl border-4 bg-background overflow-hidden hover:border-primary transition-all shadow-lg group-hover:shadow-xl ${
@@ -356,44 +356,44 @@ const AdvisorDashboard = () => {
               disabled={uploadingLogo}
             />
             
-            {/* Company Info */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
-                {advisorProfile.company_name || 'יועץ'}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">יועץ מאושר</span>
-                {advisorProfile.location && (
-                  <>
-                    <span>•</span>
-                    <span>{advisorProfile.location}</span>
-                  </>
-                )}
-                <span>•</span>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                  <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+            {/* Company Info and Profile Status */}
+            <div className="flex-1 flex items-start justify-between gap-4">
+              {/* Company Info */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
+                  {advisorProfile.company_name || 'יועץ'}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">יועץ מאושר</span>
+                  {advisorProfile.location && (
+                    <>
+                      <span>•</span>
+                      <span>{advisorProfile.location}</span>
+                    </>
+                  )}
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <div className="mb-8 mt-6">
-            <div className="flex items-center justify-between gap-6">
+              
+              {/* Profile Incomplete Badge - Right Side */}
               {isProfileIncomplete && (
                 <Card 
-                  className="border-l-4 border-l-yellow-500 cursor-pointer hover:shadow-md transition-all bg-yellow-50/50"
+                  className="border-l-4 border-l-yellow-500 cursor-pointer hover:shadow-md transition-all bg-yellow-50/50 shrink-0"
                   onClick={() => navigate(`/profile?tab=${profileStatus.firstMissing || 'personal'}&highlight=missing`)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-semibold text-yellow-900 mb-1">פרופיל לא שלם ({profileStatus.percentage}%)</p>
-                        <p className="text-sm text-yellow-800">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-yellow-900 text-sm whitespace-nowrap">פרופיל לא שלם ({profileStatus.percentage}%)</p>
+                        <p className="text-xs text-yellow-800 mt-0.5">
                           {profileStatus.firstMissing === 'personal' && 'חסרים פרטים אישיים'}
                           {profileStatus.firstMissing === 'company' && 'חסרים פרטי משרד'}
-                          {profileStatus.firstMissing === 'professional' && 'חסרות התמחויות או אזורי פעילות'}
+                          {profileStatus.firstMissing === 'professional' && 'חסרות התמחויות'}
                         </p>
                       </div>
                     </div>
