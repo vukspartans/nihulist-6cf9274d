@@ -9,12 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Globe, Linkedin, Instagram } from 'lucide-react';
+import { X, Plus, Globe, Linkedin, Instagram, AlertCircle } from 'lucide-react';
 import { ADVISOR_EXPERTISE } from '@/constants/advisor';
 import { UserHeader } from '@/components/UserHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInput from 'react-phone-number-input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -52,6 +53,7 @@ interface AdvisorProfile {
   website?: string;
   linkedin_url?: string;
   instagram_url?: string;
+  is_active?: boolean;
 }
 
 const AdvisorProfile = () => {
@@ -210,7 +212,16 @@ const AdvisorProfile = () => {
       </div>
       
       <div className="p-6">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-4">
+          {profile && !profile.is_active && (
+            <Alert className="bg-yellow-50 border-yellow-300">
+              <AlertCircle className="h-4 w-4 text-yellow-700" />
+              <AlertDescription className="text-yellow-800">
+                <strong>חשבונך ממתין לאישור</strong> - פרופילך לא יופיע בהמלצות ליזמים עד לאישור מנהלי המערכת. תוכל לערוך את הפרטים שלך בינתיים, והם ישמרו לאחר האישור.
+              </AlertDescription>
+            </Alert>
+          )}
+        
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

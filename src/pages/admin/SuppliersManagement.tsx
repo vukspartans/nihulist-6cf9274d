@@ -17,11 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Download, Upload, Trash2 } from "lucide-react";
+import { Plus, Download, Upload, Trash2, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
 import Papa from "papaparse";
 import { adminTranslations } from "@/constants/adminTranslations";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Supplier {
   id: string;
@@ -33,6 +34,24 @@ interface Supplier {
   rating: number | null;
   verified: boolean;
   created_at: string;
+}
+
+interface Advisor {
+  id: string;
+  user_id: string;
+  company_name: string | null;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+  expertise: string[];
+  founding_year: number | null;
+  office_size: string | null;
+  position_in_office: string | null;
+  profiles: {
+    email: string | null;
+    phone: string | null;
+    name: string | null;
+  };
 }
 
 const SuppliersManagement = () => {
@@ -47,8 +66,49 @@ const SuppliersManagement = () => {
     region: "",
     verified: false,
   });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
   const queryClient = useQueryClient();
+
+  // Fetch advisors
+  const { data: advisors = [], isLoading: advisorsLoading } = useQuery({
+    queryKey: ['admin-advisors', search, statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('advisors')
+        .select(`
+          *,
+          profiles!advisors_user_id_fkey(email, phone, name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (statusFilter === 'pending') {
+        query = query.eq('is_active', false);
+      } else if (statusFilter === 'approved') {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Type cast the data properly
+      const advisorsData = (data || []).map(advisor => ({
+        ...advisor,
+        profiles: advisor.profiles || { email: null, phone: null, name: null }
+      }));
+
+      // Apply search filter client-side if needed
+      if (search) {
+        return advisorsData.filter((advisor: any) => 
+          advisor.company_name?.toLowerCase().includes(search.toLowerCase()) ||
+          advisor.profiles?.email?.toLowerCase().includes(search.toLowerCase()) ||
+          advisor.profiles?.name?.toLowerCase().includes(search.toLowerCase())
+        ) as Advisor[];
+      }
+
+      return advisorsData as Advisor[];
+    },
+  });
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['admin-suppliers', search],
@@ -133,6 +193,30 @@ const SuppliersManagement = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || adminTranslations.suppliers.deleteFailed);
+    },
+  });
+
+  // Approve/Reject advisor mutation
+  const toggleAdvisorStatusMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const oldData = advisors.find(a => a.id === id);
+      const { data, error } = await supabase
+        .from('advisors')
+        .update({ is_active })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await logAdminAction('update', 'advisors', id, oldData, { is_active });
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
+      toast.success(variables.is_active ? 'היועץ אושר בהצלחה' : 'היועץ נדחה');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'שגיאה בעדכון סטטוס היועץ');
     },
   });
 
@@ -221,37 +305,146 @@ const SuppliersManagement = () => {
     },
   ];
 
+  const advisorColumns: Column<Advisor>[] = [
+    { 
+      header: "שם המשרד", 
+      cell: (item) => item.company_name || 'לא צוין'
+    },
+    { 
+      header: "איש קשר", 
+      cell: (item) => item.profiles?.name || 'לא צוין'
+    },
+    { 
+      header: "אימייל", 
+      cell: (item) => item.profiles?.email || 'לא צוין'
+    },
+    { 
+      header: "מיקום", 
+      cell: (item) => item.location || 'לא צוין'
+    },
+    { 
+      header: "שנת ייסוד", 
+      cell: (item) => item.founding_year || 'לא צוין'
+    },
+    {
+      header: "סטטוס",
+      cell: (item) => (
+        <Badge variant={item.is_active ? "default" : "secondary"}>
+          {item.is_active ? "מאושר" : "ממתין לאישור"}
+        </Badge>
+      ),
+    },
+    {
+      header: "פעולות",
+      cell: (item) => (
+        <div className="flex gap-2">
+          {!item.is_active ? (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => {
+                if (confirm('האם לאשר את היועץ?')) {
+                  toggleAdvisorStatusMutation.mutate({ id: item.id, is_active: true });
+                }
+              }}
+            >
+              <ShieldCheck className="w-4 h-4 ml-1" />
+              אשר
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                if (confirm('האם להסיר את האישור של היועץ?')) {
+                  toggleAdvisorStatusMutation.mutate({ id: item.id, is_active: false });
+                }
+              }}
+            >
+              <XCircle className="w-4 h-4 ml-1" />
+              בטל אישור
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">{adminTranslations.suppliers.title}</h1>
+            <h1 className="text-3xl font-bold">ניהול ספקים ויועצים</h1>
             <p className="text-muted-foreground mt-1">
-              {adminTranslations.suppliers.description}
+              נהל ספקים ויועצים, אשר או דחה בקשות
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="w-4 h-4 ml-2" />
-              {adminTranslations.suppliers.exportCSV}
-            </Button>
-            <Button onClick={() => setShowDialog(true)}>
-              <Plus className="w-4 h-4 ml-2" />
-              {adminTranslations.suppliers.addSupplier}
-            </Button>
-          </div>
         </div>
 
-        <div className="flex gap-4">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={adminTranslations.suppliers.searchPlaceholder}
-          />
-        </div>
+        <Tabs defaultValue="advisors" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="advisors">יועצים</TabsTrigger>
+            <TabsTrigger value="suppliers">ספקים</TabsTrigger>
+          </TabsList>
 
-        <DataTable data={suppliers} columns={columns} />
+          <TabsContent value="advisors" className="space-y-4">
+            <div className="flex gap-4 items-center">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="חפש יועץ..."
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  הכל
+                </Button>
+                <Button
+                  variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('pending')}
+                >
+                  ממתינים לאישור
+                </Button>
+                <Button
+                  variant={statusFilter === 'approved' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('approved')}
+                >
+                  מאושרים
+                </Button>
+              </div>
+            </div>
+
+            <DataTable data={advisors} columns={advisorColumns} />
+          </TabsContent>
+
+          <TabsContent value="suppliers" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder={adminTranslations.suppliers.searchPlaceholder}
+              />
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleExportCSV}>
+                  <Download className="w-4 h-4 ml-2" />
+                  {adminTranslations.suppliers.exportCSV}
+                </Button>
+                <Button onClick={() => setShowDialog(true)}>
+                  <Plus className="w-4 h-4 ml-2" />
+                  {adminTranslations.suppliers.addSupplier}
+                </Button>
+              </div>
+            </div>
+
+            <DataTable data={suppliers} columns={columns} />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={showDialog} onOpenChange={(open) => {
           setShowDialog(open);

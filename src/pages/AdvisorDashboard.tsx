@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2 } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -71,6 +72,7 @@ interface AdvisorProfile {
   position_in_office: string | null;
   logo_url: string | null;
   cover_image_url: string | null;
+  is_active: boolean;
 }
 
 interface UserProfile {
@@ -357,14 +359,33 @@ const AdvisorDashboard = () => {
             />
             
             {/* Company Info and Profile Status */}
-            <div className="flex-1 flex items-start justify-between gap-4">
+              <div className="flex-1 flex items-start justify-between gap-4">
               {/* Company Info */}
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
                   {advisorProfile.company_name || 'יועץ'}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">יועץ מאושר</span>
+                  {advisorProfile.is_active ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4 text-accent inline" />
+                      <span className="font-medium text-accent">יועץ מאושר</span>
+                    </>
+                  ) : (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 cursor-help">
+                            <AlertCircle className="h-4 w-4 text-yellow-600" />
+                            <span className="font-medium text-yellow-700">יועץ ממתין לאישור</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>חשבונך ממתין לאישור מנהלי המערכת. לאחר האישור תוכל להופיע בהמלצות ליזמים ולקבל הזמנות לפרויקטים.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   {advisorProfile.location && (
                     <>
                       <span>•</span>
