@@ -100,6 +100,7 @@ export type Database = {
           company_name: string | null
           created_at: string
           expertise: string[] | null
+          facebook_url: string | null
           founding_year: number | null
           id: string
           instagram_url: string | null
@@ -123,6 +124,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
+          facebook_url?: string | null
           founding_year?: number | null
           id?: string
           instagram_url?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
+          facebook_url?: string | null
           founding_year?: number | null
           id?: string
           instagram_url?: string | null

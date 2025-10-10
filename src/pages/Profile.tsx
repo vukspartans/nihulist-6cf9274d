@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, CheckCircle, Briefcase, Link2 } from 'lucide-react';
+import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -61,6 +61,7 @@ interface AdvisorProfile {
   website?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
+  facebook_url?: string | null;
 }
 
 const Profile = () => {
@@ -92,7 +93,8 @@ const Profile = () => {
     positionInOffice: '',
     website: '',
     linkedinUrl: '',
-    instagramUrl: ''
+    instagramUrl: '',
+    facebookUrl: ''
   });
   const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -142,7 +144,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url')
+            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url, facebook_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -164,6 +166,7 @@ const Profile = () => {
               website: advisorData.website || '',
               linkedinUrl: advisorData.linkedin_url || '',
               instagramUrl: advisorData.instagram_url || '',
+              facebookUrl: advisorData.facebook_url || '',
             });
           }
         } else {
@@ -179,7 +182,8 @@ const Profile = () => {
             positionInOffice: '',
             website: '',
             linkedinUrl: '',
-            instagramUrl: ''
+            instagramUrl: '',
+            facebookUrl: ''
           });
         }
       }
@@ -263,6 +267,7 @@ const Profile = () => {
             website: editedData.website || null,
             linkedin_url: editedData.linkedinUrl || null,
             instagram_url: editedData.instagramUrl || null,
+            facebook_url: editedData.facebookUrl || null,
           })
           .eq('user_id', user?.id);
 
@@ -273,6 +278,7 @@ const Profile = () => {
           website: editedData.website,
           linkedin_url: editedData.linkedinUrl,
           instagram_url: editedData.instagramUrl,
+          facebook_url: editedData.facebookUrl,
         } : null);
         setEditMode(prev => ({ ...prev, socialUrls: false }));
         toast({
@@ -408,6 +414,7 @@ const Profile = () => {
           website: advisorProfile?.website || '',
           linkedinUrl: advisorProfile?.linkedin_url || '',
           instagramUrl: advisorProfile?.instagram_url || '',
+          facebookUrl: advisorProfile?.facebook_url || '',
         }));
       }
       setEditMode(prev => ({ ...prev, socialUrls: !prev.socialUrls }));
@@ -1134,6 +1141,20 @@ const Profile = () => {
                       className="text-left"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4" />
+                      פייסבוק
+                    </Label>
+                    <Input
+                      type="url"
+                      value={editedData.facebookUrl}
+                      onChange={(e) => setEditedData({ ...editedData, facebookUrl: e.target.value })}
+                      placeholder="https://www.facebook.com/yourpage"
+                      dir="ltr"
+                      className="text-left"
+                    />
+                  </div>
                   <div className="flex gap-2 pt-4">
                     <Button
                       onClick={() => updateProfile('socialUrls')}
@@ -1196,7 +1217,21 @@ const Profile = () => {
                       </a>
                     </div>
                   )}
-                  {!advisorProfile?.website && !advisorProfile?.linkedin_url && !advisorProfile?.instagram_url && (
+                  {advisorProfile?.facebook_url && (
+                    <div className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4 text-muted-foreground" />
+                      <a 
+                        href={ensureHttpProtocol(advisorProfile.facebook_url)}
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-primary hover:underline break-all"
+                        dir="ltr"
+                      >
+                        {advisorProfile.facebook_url}
+                      </a>
+                    </div>
+                  )}
+                  {!advisorProfile?.website && !advisorProfile?.linkedin_url && !advisorProfile?.instagram_url && !advisorProfile?.facebook_url && (
                     <p className="text-muted-foreground">לא הוגדרו קישורים</p>
                   )}
                 </div>
