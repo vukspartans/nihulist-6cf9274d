@@ -917,17 +917,6 @@ const Profile = () => {
                       </div>
                     </>
                   )}
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">תפקיד</label>
-                    <p className="text-foreground flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      {getRoleDisplay(profile?.role)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">חבילה</label>
-                    <p className="text-foreground">חבילה בסיסית</p>
-                  </div>
                 </>
               )}
             </CardContent>
@@ -1209,6 +1198,35 @@ const Profile = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4 mt-6 animate-fade-in">
+            {/* Account Settings */}
+            <Card className="hover-scale" dir="rtl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  הגדרות חשבון
+                </CardTitle>
+                <CardDescription>פרטי החשבון וההגדרות שלך</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">תפקיד</label>
+                  <p className="text-foreground flex items-center gap-2 mt-1">
+                    <Shield className="h-4 w-4" />
+                    {getRoleDisplay(profile?.role)}
+                  </p>
+                </div>
+                {isAdvisor && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">חבילה</label>
+                    <p className="text-foreground flex items-center gap-2 mt-1">
+                      <Briefcase className="h-4 w-4" />
+                      חבילה בסיסית
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
             {/* Account Actions */}
             <Card className="hover-scale">
               <CardHeader>
