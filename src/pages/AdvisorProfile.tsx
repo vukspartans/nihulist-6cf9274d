@@ -43,7 +43,7 @@ interface AdvisorProfile {
   expertise: string[];
   certifications: string[];
   location: string;
-  years_experience?: number;
+  founding_year?: number;
   availability_status?: string;
   activity_regions?: string[];
   office_size?: string;
@@ -64,7 +64,7 @@ const AdvisorProfile = () => {
     expertise: [],
     certifications: [],
     location: '',
-    years_experience: undefined,
+    founding_year: undefined,
     availability_status: 'available',
     activity_regions: [],
     office_size: '',
@@ -110,7 +110,7 @@ const AdvisorProfile = () => {
         expertise: profile.expertise,
         certifications: profile.certifications,
         location: profile.location,
-        years_experience: profile.years_experience,
+        founding_year: profile.founding_year,
         availability_status: profile.availability_status,
         activity_regions: profile.activity_regions,
         office_size: profile.office_size,
@@ -192,7 +192,7 @@ const AdvisorProfile = () => {
     (Object.values({
       company_name: profile.company_name,
       location: profile.location,
-      years_experience: profile.years_experience,
+      founding_year: profile.founding_year,
       position_in_office: profile.position_in_office,
       expertise: profile.expertise,
       activity_regions: profile.activity_regions,
@@ -255,15 +255,22 @@ const AdvisorProfile = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="years_experience">שנות ניסיון *</Label>
+                    <Label htmlFor="founding_year">שנת הקמת המשרד *</Label>
                     <Input
-                      id="years_experience"
+                      id="founding_year"
                       type="number"
-                      value={profile.years_experience || ''}
-                      onChange={(e) => setProfile(prev => ({ ...prev, years_experience: e.target.value ? parseInt(e.target.value) : undefined }))}
-                      placeholder="מספר שנות הניסיון"
+                      min="1900"
+                      max={new Date().getFullYear()}
+                      value={profile.founding_year || ''}
+                      onChange={(e) => setProfile(prev => ({ ...prev, founding_year: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      placeholder={`למשל: ${new Date().getFullYear() - 10}`}
                       required
                     />
+                    {profile.founding_year && (
+                      <p className="text-xs text-muted-foreground">
+                        שנות פעילות: {new Date().getFullYear() - profile.founding_year}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="position_in_office">תפקיד הנרשם במשרד *</Label>

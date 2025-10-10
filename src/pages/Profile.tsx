@@ -53,7 +53,7 @@ interface AdvisorProfile {
   expertise?: string[];
   company_name?: string | null;
   location?: string | null;
-  years_experience?: number | null;
+  founding_year?: number | null;
   activity_regions?: string[] | null;
   office_size?: string | null;
   office_phone?: string | null;
@@ -85,7 +85,7 @@ const Profile = () => {
     phone: '', 
     companyName: '', 
     location: '', 
-    yearsExperience: 0,
+    foundingYear: new Date().getFullYear(),
     activityRegions: [] as string[],
     officeSize: '',
     officePhone: '',
@@ -142,7 +142,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, expertise, company_name, location, years_experience, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url')
+            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -156,7 +156,7 @@ const Profile = () => {
               phone: data.phone || '',
               companyName: advisorData.company_name || '',
               location: advisorData.location || '',
-              yearsExperience: advisorData.years_experience || 0,
+              foundingYear: advisorData.founding_year || new Date().getFullYear(),
               activityRegions: advisorData.activity_regions || [],
               officeSize: advisorData.office_size || '',
               officePhone: advisorData.office_phone || '',
@@ -172,7 +172,7 @@ const Profile = () => {
             phone: data.phone || '', 
             companyName: '', 
             location: '', 
-            yearsExperience: 0,
+            foundingYear: new Date().getFullYear(),
             activityRegions: [],
             officeSize: '',
             officePhone: '',
@@ -203,9 +203,9 @@ const Profile = () => {
         const { error } = await supabase
           .from('advisors')
           .update({
-          company_name: editedData.companyName,
+            company_name: editedData.companyName,
             location: editedData.location,
-            years_experience: editedData.yearsExperience,
+            founding_year: editedData.foundingYear,
             office_size: editedData.officeSize,
             office_phone: editedData.officePhone || null,
             position_in_office: editedData.positionInOffice || null,
@@ -218,7 +218,7 @@ const Profile = () => {
           ...prev,
           company_name: editedData.companyName,
           location: editedData.location,
-          years_experience: editedData.yearsExperience,
+          founding_year: editedData.foundingYear,
           office_size: editedData.officeSize,
           office_phone: editedData.officePhone || null,
           position_in_office: editedData.positionInOffice || null,
@@ -378,7 +378,7 @@ const Profile = () => {
           ...prev,
           companyName: advisorProfile?.company_name || '',
           location: advisorProfile?.location || '',
-          yearsExperience: advisorProfile?.years_experience || 0,
+          foundingYear: advisorProfile?.founding_year || new Date().getFullYear(),
           officeSize: advisorProfile?.office_size || '',
           officePhone: advisorProfile?.office_phone || '',
           positionInOffice: advisorProfile?.position_in_office || '',
@@ -450,7 +450,7 @@ const Profile = () => {
       profile?.phone,
       advisorProfile?.company_name,
       advisorProfile?.location,
-      advisorProfile?.years_experience,
+      advisorProfile?.founding_year,
       advisorProfile?.position_in_office,
       advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0,
       advisorProfile?.office_size,
@@ -464,7 +464,7 @@ const Profile = () => {
   const getFirstIncompleteSection = () => {
     if (!profile?.name || !profile?.phone) return 'personal';
     if (!advisorProfile?.company_name || !advisorProfile?.location || 
-        !advisorProfile?.years_experience || !advisorProfile?.position_in_office || 
+        !advisorProfile?.founding_year || !advisorProfile?.position_in_office || 
         !advisorProfile?.office_size) return 'company';
     if ((!selectedExpertise || selectedExpertise.length === 0) ||
         !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) return 'professional';
@@ -590,7 +590,7 @@ const Profile = () => {
                   <span className="hidden sm:inline">פרטי משרד</span>
                   <span className="sm:hidden">משרד</span>
                   {(!advisorProfile?.company_name || !advisorProfile?.location || 
-                    !advisorProfile?.years_experience || !advisorProfile?.position_in_office || 
+                    !advisorProfile?.founding_year || !advisorProfile?.position_in_office || 
                     !advisorProfile?.office_size) && (
                     <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
                   )}
@@ -733,7 +733,7 @@ const Profile = () => {
               {/* Company Information */}
               <Card dir="rtl" className={`hover-scale ${
                 (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.position_in_office)
+                (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.founding_year || !advisorProfile?.position_in_office)
                 ? 'border-2 border-red-500 animate-pulse' : ''
               }`}>
                 <CardHeader>
@@ -743,7 +743,7 @@ const Profile = () => {
                         <Building className="h-5 w-5 text-primary" />
                         פרטי משרד
                         {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                         (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.position_in_office) && (
+                         (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.founding_year || !advisorProfile?.position_in_office) && (
                           <Badge variant="destructive" className="mr-2">מידע חסר</Badge>
                         )}
                       </CardTitle>
@@ -785,14 +785,21 @@ const Profile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>שנות ניסיון *</Label>
+                    <Label>שנת הקמת המשרד *</Label>
                     <Input
                       type="number"
-                      value={editedData.yearsExperience}
-                      onChange={(e) => setEditedData({ ...editedData, yearsExperience: parseInt(e.target.value) || 0 })}
-                      placeholder="הזן שנות ניסיון"
-                      className={!editedData.yearsExperience ? 'border-red-500' : ''}
+                      min="1900"
+                      max={new Date().getFullYear()}
+                      value={editedData.foundingYear}
+                      onChange={(e) => setEditedData({ ...editedData, foundingYear: parseInt(e.target.value) || new Date().getFullYear() })}
+                      placeholder={`למשל: ${new Date().getFullYear() - 10}`}
+                      className={!editedData.foundingYear ? 'border-red-500' : ''}
                     />
+                    {editedData.foundingYear && (
+                      <p className="text-xs text-muted-foreground">
+                        שנות פעילות: {new Date().getFullYear() - editedData.foundingYear}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>תפקיד הנרשם במשרד *</Label>
@@ -870,12 +877,21 @@ const Profile = () => {
                   </div>
                   {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && (
                     <>
-                      <div className={!advisorProfile?.years_experience ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                      <div className={!advisorProfile?.founding_year ? 'p-2 border-2 border-red-300 rounded' : ''}>
                         <label className="text-sm font-medium text-muted-foreground">
-                          שנות ניסיון
-                          {!advisorProfile?.years_experience && <span className="text-red-500 mr-1">*</span>}
+                          שנת הקמת המשרד
+                          {!advisorProfile?.founding_year && <span className="text-red-500 mr-1">*</span>}
                         </label>
-                        <p className="text-foreground">{advisorProfile?.years_experience || 'לא מוגדר'}</p>
+                        <p className="text-foreground">
+                          {advisorProfile?.founding_year ? (
+                            <>
+                              {advisorProfile.founding_year}
+                              <span className="text-xs text-muted-foreground mr-2">
+                                (שנות פעילות: {new Date().getFullYear() - advisorProfile.founding_year})
+                              </span>
+                            </>
+                          ) : 'לא מוגדר'}
+                        </p>
                       </div>
                       <div className={!advisorProfile?.position_in_office ? 'p-2 border-2 border-red-300 rounded' : ''}>
                         <label className="text-sm font-medium text-muted-foreground">

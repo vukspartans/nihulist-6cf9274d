@@ -66,10 +66,10 @@ export const AdvisorTable = ({ advisors, selectedAdvisors, onToggleAdvisor }: Ad
                 </TableCell>
                 
                 <TableCell>
-                  {advisor.years_experience ? (
+                  {advisor.founding_year ? (
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      <span className="text-sm">{advisor.years_experience} שנים</span>
+                      <span className="text-sm">{new Date().getFullYear() - advisor.founding_year} שנים</span>
                     </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">לא צוין</span>

@@ -7,7 +7,7 @@ export interface AdvisorData {
   company_name: string | null;
   location: string | null;
   expertise: string[];
-  years_experience: number | null;
+  founding_year: number | null;
   rating: number | null;
   office_size: string | null;
   website: string | null;
@@ -48,7 +48,7 @@ export const useAdvisorsByExpertise = (
       try {
         const { data, error: fetchError } = await supabase
           .from('advisors')
-          .select('id, company_name, location, expertise, years_experience, rating, office_size, website, activity_regions')
+          .select('id, company_name, location, expertise, founding_year, rating, office_size, website, activity_regions')
           .eq('is_active', true);
 
         if (fetchError) throw fetchError;
@@ -92,10 +92,10 @@ export const useAdvisorsByExpertise = (
       const bRating = b.rating || 0;
       if (aRating !== bRating) return bRating - aRating;
 
-      // 4. Experience (more years is better)
-      const aExp = a.years_experience || 0;
-      const bExp = b.years_experience || 0;
-      if (aExp !== bExp) return bExp - aExp;
+      // 4. Experience (older founding year = more experience)
+      const aExp = a.founding_year || new Date().getFullYear();
+      const bExp = b.founding_year || new Date().getFullYear();
+      if (aExp !== bExp) return aExp - bExp; // Lower year = older = better
 
       return 0;
     });

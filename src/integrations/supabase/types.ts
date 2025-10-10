@@ -100,6 +100,7 @@ export type Database = {
           company_name: string | null
           created_at: string
           expertise: string[] | null
+          founding_year: number | null
           id: string
           instagram_url: string | null
           is_active: boolean | null
@@ -113,7 +114,6 @@ export type Database = {
           updated_at: string
           user_id: string
           website: string | null
-          years_experience: number | null
         }
         Insert: {
           activity_regions?: string[] | null
@@ -123,6 +123,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
+          founding_year?: number | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
@@ -136,7 +137,6 @@ export type Database = {
           updated_at?: string
           user_id: string
           website?: string | null
-          years_experience?: number | null
         }
         Update: {
           activity_regions?: string[] | null
@@ -146,6 +146,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
+          founding_year?: number | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
@@ -159,7 +160,6 @@ export type Database = {
           updated_at?: string
           user_id?: string
           website?: string | null
-          years_experience?: number | null
         }
         Relationships: [
           {
