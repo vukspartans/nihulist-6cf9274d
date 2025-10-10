@@ -320,8 +320,8 @@ const UsersManagement = () => {
         <DataTable data={users} columns={columns} />
 
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent dir="rtl">
+            <DialogHeader className="text-right">
               <DialogTitle>{adminTranslations.users.manageUserRoles}</DialogTitle>
               <DialogDescription>
                 {adminTranslations.users.assignOrRemove} {selectedUser?.name}
@@ -329,30 +329,30 @@ const UsersManagement = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               {roleOptions.map(role => (
-                <div key={role} className="flex items-center space-x-2">
+                <div key={role} className="flex items-center gap-2 flex-row-reverse justify-end">
+                  <Label htmlFor={role} className="capitalize cursor-pointer">
+                    {getRoleText(role)}
+                  </Label>
                   <Checkbox
                     id={role}
                     checked={selectedRoles.includes(role)}
                     onCheckedChange={() => handleRoleToggle(role)}
                   />
-                  <Label htmlFor={role} className="capitalize">
-                    {getRoleText(role)}
-                  </Label>
                 </div>
               ))}
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
+              <Button onClick={handleSaveRoles}>{adminTranslations.users.saveChanges}</Button>
               <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
                 {adminTranslations.users.cancel}
               </Button>
-              <Button onClick={handleSaveRoles}>{adminTranslations.users.saveChanges}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent dir="rtl">
+            <DialogHeader className="text-right">
               <DialogTitle>{adminTranslations.users.createUser}</DialogTitle>
               <DialogDescription>
                 {adminTranslations.users.createUserDesc}
@@ -400,25 +400,25 @@ const UsersManagement = () => {
                 <Label>{adminTranslations.users.assignRoles}</Label>
                 <div className="space-y-2">
                   {roleOptions.map(role => (
-                    <div key={role} className="flex items-center space-x-2">
+                    <div key={role} className="flex items-center gap-2 flex-row-reverse justify-end">
+                      <Label htmlFor={`create-${role}`} className="capitalize cursor-pointer">
+                        {getRoleText(role)}
+                      </Label>
                       <Checkbox
                         id={`create-${role}`}
                         checked={createFormData.roles.includes(role)}
                         onCheckedChange={() => handleCreateRoleToggle(role)}
                       />
-                      <Label htmlFor={`create-${role}`} className="capitalize">
-                        {getRoleText(role)}
-                      </Label>
                     </div>
                   ))}
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  {adminTranslations.users.cancel}
-                </Button>
+              <DialogFooter className="gap-2">
                 <Button type="submit">
                   {adminTranslations.users.create}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                  {adminTranslations.users.cancel}
                 </Button>
               </DialogFooter>
             </form>

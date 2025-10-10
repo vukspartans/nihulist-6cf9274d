@@ -88,8 +88,8 @@ export function CreateEntrepreneurDialog({ open, onOpenChange }: CreateEntrepren
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>{t.entrepreneurs.createDialog.title}</DialogTitle>
           <DialogDescription>
             {t.entrepreneurs.createDialog.emailPlaceholder}
@@ -153,15 +153,15 @@ export function CreateEntrepreneurDialog({ open, onOpenChange }: CreateEntrepren
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t.entrepreneurs.createDialog.cancelButton}
-          </Button>
+        <DialogFooter className="gap-2">
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!email || !password || !name || createMutation.isPending}
           >
             {createMutation.isPending ? t.common.loading : t.entrepreneurs.createDialog.submitButton}
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t.entrepreneurs.createDialog.cancelButton}
           </Button>
         </DialogFooter>
       </DialogContent>

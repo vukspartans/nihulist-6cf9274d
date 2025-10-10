@@ -179,20 +179,20 @@ export default function EntrepreneursManagement() {
         )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader className="text-right">
               <AlertDialogTitle>{t.entrepreneurs.deleteButton}</AlertDialogTitle>
               <AlertDialogDescription>
                 {t.entrepreneurs.deleteConfirm}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t.entrepreneurs.createDialog.cancelButton}</AlertDialogCancel>
+            <AlertDialogFooter className="gap-2">
               <AlertDialogAction
                 onClick={() => selectedEntrepreneur && deleteMutation.mutate(selectedEntrepreneur.user_id)}
               >
                 {t.entrepreneurs.deleteButton}
               </AlertDialogAction>
+              <AlertDialogCancel>{t.entrepreneurs.createDialog.cancelButton}</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

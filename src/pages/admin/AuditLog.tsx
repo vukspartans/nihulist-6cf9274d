@@ -124,8 +124,8 @@ const AuditLog = () => {
         <DataTable data={logs} columns={columns} />
 
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl" dir="rtl">
+            <DialogHeader className="text-right">
               <DialogTitle>{adminTranslations.auditLog.detailsTitle}</DialogTitle>
               <DialogDescription>
                 {adminTranslations.auditLog.detailsDescription}

@@ -412,20 +412,20 @@ export default function AdvisorsManagement() {
         )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader className="text-right">
               <AlertDialogTitle>{t.advisors.deleteButton}</AlertDialogTitle>
               <AlertDialogDescription>
                 {t.advisors.deleteConfirm}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t.advisors.createDialog.cancelButton}</AlertDialogCancel>
+            <AlertDialogFooter className="gap-2">
               <AlertDialogAction
                 onClick={() => selectedAdvisor && deleteMutation.mutate(selectedAdvisor.user_id)}
               >
                 {t.advisors.deleteButton}
               </AlertDialogAction>
+              <AlertDialogCancel>{t.advisors.createDialog.cancelButton}</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

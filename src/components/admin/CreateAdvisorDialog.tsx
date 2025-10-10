@@ -134,8 +134,8 @@ export function CreateAdvisorDialog({ open, onOpenChange }: CreateAdvisorDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>{t.advisors.createDialog.title}</DialogTitle>
           <DialogDescription>
             כל השדות המסומנים ב-* הם חובה
@@ -301,15 +301,15 @@ export function CreateAdvisorDialog({ open, onOpenChange }: CreateAdvisorDialogP
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t.advisors.createDialog.cancelButton}
-          </Button>
+        <DialogFooter className="gap-2">
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!email || !password || !name || !companyName || !location || expertise.length === 0 || createMutation.isPending}
           >
             {createMutation.isPending ? t.common.loading : t.advisors.createDialog.submitButton}
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t.advisors.createDialog.cancelButton}
           </Button>
         </DialogFooter>
       </DialogContent>
