@@ -54,9 +54,10 @@ interface AdvisorProfile {
   company_name?: string | null;
   location?: string | null;
   years_experience?: number | null;
-  hourly_rate?: number | null;
   activity_regions?: string[] | null;
   office_size?: string | null;
+  office_phone?: string | null;
+  position_in_office?: string | null;
   website?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
@@ -84,10 +85,11 @@ const Profile = () => {
     phone: '', 
     companyName: '', 
     location: '', 
-    yearsExperience: 0, 
-    hourlyRate: 0,
+    yearsExperience: 0,
     activityRegions: [] as string[],
     officeSize: '',
+    officePhone: '',
+    positionInOffice: '',
     website: '',
     linkedinUrl: '',
     instagramUrl: ''
@@ -140,7 +142,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, expertise, company_name, location, years_experience, hourly_rate, activity_regions, office_size, website, linkedin_url, instagram_url')
+            .select('specialties, expertise, company_name, location, years_experience, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -155,9 +157,10 @@ const Profile = () => {
               companyName: advisorData.company_name || '',
               location: advisorData.location || '',
               yearsExperience: advisorData.years_experience || 0,
-              hourlyRate: advisorData.hourly_rate || 0,
               activityRegions: advisorData.activity_regions || [],
               officeSize: advisorData.office_size || '',
+              officePhone: advisorData.office_phone || '',
+              positionInOffice: advisorData.position_in_office || '',
               website: advisorData.website || '',
               linkedinUrl: advisorData.linkedin_url || '',
               instagramUrl: advisorData.instagram_url || '',
@@ -169,10 +172,11 @@ const Profile = () => {
             phone: data.phone || '', 
             companyName: '', 
             location: '', 
-            yearsExperience: 0, 
-            hourlyRate: 0,
+            yearsExperience: 0,
             activityRegions: [],
             officeSize: '',
+            officePhone: '',
+            positionInOffice: '',
             website: '',
             linkedinUrl: '',
             instagramUrl: ''
@@ -199,11 +203,12 @@ const Profile = () => {
         const { error } = await supabase
           .from('advisors')
           .update({
-            company_name: editedData.companyName,
+          company_name: editedData.companyName,
             location: editedData.location,
             years_experience: editedData.yearsExperience,
-            hourly_rate: editedData.hourlyRate,
             office_size: editedData.officeSize,
+            office_phone: editedData.officePhone || null,
+            position_in_office: editedData.positionInOffice || null,
           })
           .eq('user_id', user?.id);
 
@@ -214,8 +219,9 @@ const Profile = () => {
           company_name: editedData.companyName,
           location: editedData.location,
           years_experience: editedData.yearsExperience,
-          hourly_rate: editedData.hourlyRate,
           office_size: editedData.officeSize,
+          office_phone: editedData.officePhone || null,
+          position_in_office: editedData.positionInOffice || null,
         } : null);
         setEditMode(prev => ({ ...prev, company: false }));
         toast({
@@ -373,8 +379,9 @@ const Profile = () => {
           companyName: advisorProfile?.company_name || '',
           location: advisorProfile?.location || '',
           yearsExperience: advisorProfile?.years_experience || 0,
-          hourlyRate: advisorProfile?.hourly_rate || 0,
           officeSize: advisorProfile?.office_size || '',
+          officePhone: advisorProfile?.office_phone || '',
+          positionInOffice: advisorProfile?.position_in_office || '',
         }));
       }
       setEditMode(prev => ({ ...prev, company: !prev.company }));
@@ -444,7 +451,7 @@ const Profile = () => {
       advisorProfile?.company_name,
       advisorProfile?.location,
       advisorProfile?.years_experience,
-      advisorProfile?.hourly_rate,
+      advisorProfile?.position_in_office,
       advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0,
       advisorProfile?.office_size,
       selectedExpertise && selectedExpertise.length > 0,
@@ -457,7 +464,7 @@ const Profile = () => {
   const getFirstIncompleteSection = () => {
     if (!profile?.name || !profile?.phone) return 'personal';
     if (!advisorProfile?.company_name || !advisorProfile?.location || 
-        !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
+        !advisorProfile?.years_experience || !advisorProfile?.position_in_office || 
         !advisorProfile?.office_size) return 'company';
     if ((!selectedExpertise || selectedExpertise.length === 0) ||
         !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) return 'professional';
@@ -583,7 +590,7 @@ const Profile = () => {
                   <span className="hidden sm:inline">פרטי משרד</span>
                   <span className="sm:hidden">משרד</span>
                   {(!advisorProfile?.company_name || !advisorProfile?.location || 
-                    !advisorProfile?.years_experience || !advisorProfile?.hourly_rate || 
+                    !advisorProfile?.years_experience || !advisorProfile?.position_in_office || 
                     !advisorProfile?.office_size) && (
                     <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
                   )}
@@ -723,7 +730,7 @@ const Profile = () => {
               {/* Company Information */}
               <Card dir="rtl" className={`hover-scale ${
                 (authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate)
+                (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.position_in_office)
                 ? 'border-2 border-red-500 animate-pulse' : ''
               }`}>
                 <CardHeader>
@@ -733,7 +740,7 @@ const Profile = () => {
                         <Building className="h-5 w-5 text-primary" />
                         פרטי משרד
                         {(authProfile?.role === 'advisor' || profile?.role === 'advisor') && 
-                         (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.hourly_rate) && (
+                         (!advisorProfile?.company_name || !advisorProfile?.location || !advisorProfile?.years_experience || !advisorProfile?.position_in_office) && (
                           <Badge variant="destructive" className="mr-2">מידע חסר</Badge>
                         )}
                       </CardTitle>
@@ -785,13 +792,23 @@ const Profile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>תעריף לשעה (₪) *</Label>
+                    <Label>תפקיד הנרשם במשרד *</Label>
                     <Input
-                      type="number"
-                      value={editedData.hourlyRate}
-                      onChange={(e) => setEditedData({ ...editedData, hourlyRate: parseFloat(e.target.value) || 0 })}
-                      placeholder="הזן תעריף לשעה"
-                      className={!editedData.hourlyRate ? 'border-red-500' : ''}
+                      value={editedData.positionInOffice}
+                      onChange={(e) => setEditedData({ ...editedData, positionInOffice: e.target.value })}
+                      placeholder="למשל: מנכ״ל, מייסד, בעלים, מנהלת משרד"
+                      className={!editedData.positionInOffice ? 'border-red-500' : ''}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>מספר טלפון במשרד</Label>
+                    <PhoneInput
+                      international
+                      defaultCountry="IL"
+                      value={editedData.officePhone}
+                      onChange={(value) => setEditedData({ ...editedData, officePhone: value || '' })}
+                      className="phone-input"
+                      dir="ltr"
                     />
                   </div>
                   <div className="space-y-2">
@@ -857,12 +874,20 @@ const Profile = () => {
                         </label>
                         <p className="text-foreground">{advisorProfile?.years_experience || 'לא מוגדר'}</p>
                       </div>
-                      <div className={!advisorProfile?.hourly_rate ? 'p-2 border-2 border-red-300 rounded' : ''}>
+                      <div className={!advisorProfile?.position_in_office ? 'p-2 border-2 border-red-300 rounded' : ''}>
                         <label className="text-sm font-medium text-muted-foreground">
-                          תעריף לשעה
-                          {!advisorProfile?.hourly_rate && <span className="text-red-500 mr-1">*</span>}
+                          תפקיד הנרשם במשרד
+                          {!advisorProfile?.position_in_office && <span className="text-red-500 mr-1">*</span>}
                         </label>
-                        <p className="text-foreground">{advisorProfile?.hourly_rate ? `₪${advisorProfile.hourly_rate}` : 'לא מוגדר'}</p>
+                        <p className="text-foreground">{advisorProfile?.position_in_office || 'לא מוגדר'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          מספר טלפון במשרד
+                        </label>
+                        <p className="text-foreground" dir="ltr" style={{ textAlign: 'left' }}>
+                          {advisorProfile?.office_phone || 'לא מוגדר'}
+                        </p>
                       </div>
                       <div className={!advisorProfile?.office_size ? 'p-2 border-2 border-red-300 rounded' : ''}>
                         <label className="text-sm font-medium text-muted-foreground">

@@ -54,9 +54,10 @@ interface AdvisorProfile {
   location: string;
   rating: number;
   years_experience: number | null;
-  hourly_rate: number | null;
   activity_regions: string[] | null;
   office_size: string | null;
+  office_phone: string | null;
+  position_in_office: string | null;
 }
 
 const AdvisorDashboard = () => {
@@ -172,7 +173,7 @@ const AdvisorDashboard = () => {
     
     // Check company info
     if (!advisorProfile.company_name || !advisorProfile.location || 
-        !advisorProfile.years_experience || !advisorProfile.hourly_rate || 
+        !advisorProfile.years_experience || !advisorProfile.position_in_office || 
         !advisorProfile.office_size) {
       return 'company';
     }

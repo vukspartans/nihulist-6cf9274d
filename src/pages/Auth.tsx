@@ -35,6 +35,7 @@ const Auth = () => {
     location: "",
     activityRegions: [] as string[],
     officeSize: "",
+    positionInOffice: "",
     expertise: [] as string[]
   });
   
@@ -197,6 +198,7 @@ const Auth = () => {
               location: formData.location,
               activity_regions: formData.activityRegions.join(','),
               office_size: formData.officeSize,
+              position_in_office: formData.positionInOffice,
               expertise: formData.expertise.join(',')
             }
           }
@@ -664,6 +666,25 @@ const Auth = () => {
                       />
                     </div>
                   </div>
+
+                  {formData.role === 'advisor' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="positionInOffice" className="text-right">תפקיד הנרשם במשרד *</Label>
+                      <div className="relative">
+                        <Briefcase className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="positionInOffice"
+                          type="text"
+                          placeholder="למשל: מנכ״ל, מייסד, בעלים, מנהלת משרד"
+                          value={formData.positionInOffice}
+                          onChange={(e) => handleInputChange("positionInOffice", e.target.value)}
+                          className="pr-10 text-right"
+                          dir="rtl"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Separator className="my-4" />

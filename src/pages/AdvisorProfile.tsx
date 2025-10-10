@@ -14,6 +14,7 @@ import { ADVISOR_EXPERTISE } from '@/constants/advisor';
 import { UserHeader } from '@/components/UserHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import PhoneInput from 'react-phone-number-input';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -43,10 +44,11 @@ interface AdvisorProfile {
   certifications: string[];
   location: string;
   years_experience?: number;
-  hourly_rate?: number;
   availability_status?: string;
   activity_regions?: string[];
   office_size?: string;
+  office_phone?: string;
+  position_in_office?: string;
   website?: string;
   linkedin_url?: string;
   instagram_url?: string;
@@ -63,10 +65,11 @@ const AdvisorProfile = () => {
     certifications: [],
     location: '',
     years_experience: undefined,
-    hourly_rate: undefined,
     availability_status: 'available',
     activity_regions: [],
     office_size: '',
+    office_phone: '',
+    position_in_office: '',
     website: '',
     linkedin_url: '',
     instagram_url: ''
@@ -108,10 +111,11 @@ const AdvisorProfile = () => {
         certifications: profile.certifications,
         location: profile.location,
         years_experience: profile.years_experience,
-        hourly_rate: profile.hourly_rate,
         availability_status: profile.availability_status,
         activity_regions: profile.activity_regions,
         office_size: profile.office_size,
+        office_phone: profile.office_phone || null,
+        position_in_office: profile.position_in_office || null,
         website: profile.website || null,
         linkedin_url: profile.linkedin_url || null,
         instagram_url: profile.instagram_url || null
@@ -189,7 +193,7 @@ const AdvisorProfile = () => {
       company_name: profile.company_name,
       location: profile.location,
       years_experience: profile.years_experience,
-      hourly_rate: profile.hourly_rate,
+      position_in_office: profile.position_in_office,
       expertise: profile.expertise,
       activity_regions: profile.activity_regions,
       office_size: profile.office_size
@@ -246,27 +250,43 @@ const AdvisorProfile = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="years_experience">שנות ניסיון *</Label>
-                  <Input
-                    id="years_experience"
-                    type="number"
-                    value={profile.years_experience || ''}
-                    onChange={(e) => setProfile(prev => ({ ...prev, years_experience: e.target.value ? parseInt(e.target.value) : undefined }))}
-                    placeholder="מספר שנות הניסיון"
-                    required
-                  />
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">פרטים אישיים</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="years_experience">שנות ניסיון *</Label>
+                    <Input
+                      id="years_experience"
+                      type="number"
+                      value={profile.years_experience || ''}
+                      onChange={(e) => setProfile(prev => ({ ...prev, years_experience: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      placeholder="מספר שנות הניסיון"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="position_in_office">תפקיד הנרשם במשרד *</Label>
+                    <Input
+                      id="position_in_office"
+                      value={profile.position_in_office || ''}
+                      onChange={(e) => setProfile(prev => ({ ...prev, position_in_office: e.target.value }))}
+                      placeholder="למשל: מנכ״ל, מייסד, בעלים, מנהלת משרד"
+                      required
+                    />
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="hourly_rate">תעריף לשעה (₪) *</Label>
-                  <Input
-                    id="hourly_rate"
-                    type="number"
-                    value={profile.hourly_rate || ''}
-                    onChange={(e) => setProfile(prev => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : undefined }))}
-                    placeholder="תעריף בשקלים"
-                    required
+                  <Label htmlFor="office_phone">מספר טלפון במשרד</Label>
+                  <PhoneInput
+                    id="office_phone"
+                    international
+                    defaultCountry="IL"
+                    value={profile.office_phone || ''}
+                    onChange={(value) => setProfile(prev => ({ ...prev, office_phone: value || '' }))}
+                    className="phone-input"
+                    dir="ltr"
                   />
                 </div>
               </div>

@@ -100,13 +100,14 @@ export type Database = {
           company_name: string | null
           created_at: string
           expertise: string[] | null
-          hourly_rate: number | null
           id: string
           instagram_url: string | null
           is_active: boolean | null
           linkedin_url: string | null
           location: string | null
+          office_phone: string | null
           office_size: string | null
+          position_in_office: string | null
           rating: number | null
           specialties: string[] | null
           updated_at: string
@@ -122,13 +123,14 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
-          hourly_rate?: number | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          office_phone?: string | null
           office_size?: string | null
+          position_in_office?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string
@@ -144,13 +146,14 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           expertise?: string[] | null
-          hourly_rate?: number | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          office_phone?: string | null
           office_size?: string | null
+          position_in_office?: string | null
           rating?: number | null
           specialties?: string[] | null
           updated_at?: string
