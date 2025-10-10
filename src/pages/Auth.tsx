@@ -25,6 +25,7 @@ const Auth = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [signupStep, setSignupStep] = useState(1); // 1 = personal info, 2 = credentials
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -150,6 +151,59 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If in signup mode and on step 1, validate and move to step 2
+    if (!isLogin && signupStep === 1) {
+      // Validate step 1 fields
+      if (!formData.name || !formData.name.trim()) {
+        toast({
+          title: "שגיאה",
+          description: "נא להזין שם מלא",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (formData.role === 'advisor') {
+        if (!formData.phone || formData.phone.trim() === '') {
+          toast({
+            title: "שגיאה",
+            description: "מספר טלפון נדרש עבור יועצים",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!formData.companyName || formData.companyName.trim() === '') {
+          toast({
+            title: "שגיאה",
+            description: "שם המשרד נדרש עבור יועצים",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!formData.positionInOffice || formData.positionInOffice.trim() === '') {
+          toast({
+            title: "שגיאה",
+            description: "תפקיד הנרשם במשרד נדרש",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!formData.expertise || formData.expertise.length === 0) {
+          toast({
+            title: "שגיאה",
+            description: "נא לבחור לפחות תחום פעילות אחד",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Move to step 2
+      setSignupStep(2);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -166,24 +220,9 @@ const Auth = () => {
           description: "ברוך הבא למערכת",
         });
       } else {
-        // Validate required fields for signup
-        if (!formData.name || !formData.email || !formData.password || !formData.role) {
+        // Validate required fields for signup step 2
+        if (!formData.email || !formData.password) {
           throw new Error('אנא מלא את כל השדות הנדרשים');
-        }
-
-        if (formData.role === 'advisor') {
-          if (!formData.phone || formData.phone.trim() === '') {
-            throw new Error('מספר טלפון נדרש עבור יועצים');
-          }
-          if (!formData.companyName || formData.companyName.trim() === '') {
-            throw new Error('שם המשרד נדרש עבור יועצים');
-          }
-          if (!formData.positionInOffice || formData.positionInOffice.trim() === '') {
-            throw new Error('תפקיד הנרשם במשרד נדרש');
-          }
-          if (!formData.expertise || formData.expertise.length === 0) {
-            throw new Error('נא לבחור לפחות תחום התמחות אחד');
-          }
         }
 
         const redirectUrl = `${window.location.origin}/`;
@@ -212,6 +251,7 @@ const Auth = () => {
               description: "החשבון כבר קיים במערכת. עובר להתחברות...",
             });
             setIsLogin(true);
+            setSignupStep(1);
             setFormData(prev => ({ ...prev, password: "" })); // Clear password for security
             return;
           }
@@ -657,7 +697,7 @@ const Auth = () => {
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
+            {!isLogin && signupStep === 1 && (
               <div className="space-y-4">
                 {/* Step 1: Personal Information */}
                 <div className="space-y-4">
@@ -714,50 +754,120 @@ const Auth = () => {
                   </div>
 
                   {formData.role === 'advisor' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="positionInOffice" className="text-right">תפקיד הנרשם במשרד *</Label>
-                      <div className="relative">
-                        <Briefcase className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="positionInOffice"
-                          type="text"
-                          placeholder="למשל: מנכ״ל, מייסד, בעלים, מנהלת משרד"
-                          value={formData.positionInOffice}
-                          onChange={(e) => handleInputChange("positionInOffice", e.target.value)}
-                          className="pr-10 text-right"
-                          dir="rtl"
-                          required
-                        />
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="positionInOffice" className="text-right">תפקיד הנרשם במשרד *</Label>
+                        <div className="relative">
+                          <Briefcase className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="positionInOffice"
+                            type="text"
+                            placeholder="למשל: מנכ״ל, מייסד, בעלים, מנהלת משרד"
+                            value={formData.positionInOffice}
+                            onChange={(e) => handleInputChange("positionInOffice", e.target.value)}
+                            className="pr-10 text-right"
+                            dir="rtl"
+                            required
+                          />
+                        </div>
                       </div>
-                    </div>
+
+                      <Separator className="my-4" />
+                      
+                      {/* Expertise Selection */}
+                      <div className="space-y-2">
+                        <Label className="text-right">
+                          תחומי פעילות <span className="text-destructive">*</span>
+                        </Label>
+                        <p className="text-xs text-muted-foreground text-right mb-2">
+                          בחר לפחות תחום פעילות אחד
+                        </p>
+                        <ExpertiseSelector
+                          selectedExpertise={formData.expertise}
+                          onExpertiseChange={(expertise) => setFormData(prev => ({ ...prev, expertise }))}
+                          isEditing={true}
+                          maxItems={null}
+                        />
+                        <p className="text-xs text-muted-foreground text-right mt-2">
+                          * פרטים נוספים כמו כתובת משרד ואזורי פעילות ניתן להוסיף לאחר ההרשמה בפרופיל
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
 
-                {formData.role === 'advisor' && (
-                  <>
-                    <Separator className="my-4" />
-                    
-                    {/* Expertise Selection - REQUIRED */}
-                    <div className="space-y-2">
-                      <Label className="text-right">
-                        תחומי התמחות מקצועית <span className="text-destructive">*</span>
-                      </Label>
-                      <p className="text-xs text-muted-foreground text-right mb-2">
-                        בחר לפחות תחום התמחות אחד (מקסימום 10)
-                      </p>
-                      <ExpertiseSelector
-                        selectedExpertise={formData.expertise}
-                        onExpertiseChange={(expertise) => setFormData(prev => ({ ...prev, expertise }))}
-                        isEditing={true}
-                      />
-                      <p className="text-xs text-muted-foreground text-right mt-2">
-                        * פרטים נוספים כמו כתובת משרד ואזורי פעילות ניתן להוסיף לאחר ההרשמה בפרופיל
-                      </p>
-                    </div>
-                  </>
-                )}
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium" 
+                  variant="premium"
+                  disabled={loading}
+                >
+                  המשיכו ליצירת משתמש
+                </Button>
+              </div>
+            )}
 
-                <Separator className="my-4" />
+            {!isLogin && signupStep === 2 && (
+              <div className="space-y-4">
+                {/* Step 2: Login Credentials */}
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <p className="text-sm text-center">שלב 2 מתוך 2: פרטי התחברות</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                  <div className="relative">
+                    <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className="pr-10"
+                      required
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-right">סיסמה *</Label>
+                  <div className="relative">
+                    <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      className="pr-10"
+                      required
+                      minLength={6}
+                      dir="ltr"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right">הסיסמה חייבת להכיל לפחות 6 תווים</p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    type="submit" 
+                    className="flex-1 h-11 text-base font-medium" 
+                    variant="premium"
+                    disabled={loading}
+                  >
+                    {loading ? "מתבצע..." : "הצטרפות למערכת"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSignupStep(1)}
+                    className="px-4"
+                  >
+                    חזרה
+                  </Button>
+                </div>
               </div>
             )}
 

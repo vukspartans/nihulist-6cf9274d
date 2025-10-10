@@ -14,6 +14,7 @@ interface ExpertiseSelectorProps {
   isEditing: boolean;
   onSave?: () => void;
   onCancel?: () => void;
+  maxItems?: number | null;
 }
 
 export const ExpertiseSelector = ({
@@ -21,7 +22,8 @@ export const ExpertiseSelector = ({
   onExpertiseChange,
   isEditing,
   onSave,
-  onCancel
+  onCancel,
+  maxItems
 }: ExpertiseSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | AdvisorExpertiseCategory>('all');
@@ -44,6 +46,9 @@ export const ExpertiseSelector = ({
     if (selectedExpertise.includes(expertise)) {
       onExpertiseChange(selectedExpertise.filter(e => e !== expertise));
     } else {
+      if (maxItems && selectedExpertise.length >= maxItems) {
+        return;
+      }
       onExpertiseChange([...selectedExpertise, expertise]);
     }
   };
@@ -62,7 +67,7 @@ export const ExpertiseSelector = ({
             </Badge>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">לא נבחרו התמחויות</p>
+          <p className="text-sm text-muted-foreground">לא נבחרו תחומי פעילות</p>
         )}
       </div>
     );
@@ -92,7 +97,7 @@ export const ExpertiseSelector = ({
       <div className="relative">
         <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="חיפוש התמחות..."
+          placeholder="חיפוש תחומי פעילות..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-9"
@@ -118,13 +123,18 @@ export const ExpertiseSelector = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
                 {filteredExpertise.map((exp) => {
                   const isSelected = selectedExpertise.includes(exp);
+                  const isDisabled = maxItems && !isSelected && selectedExpertise.length >= maxItems;
                   
                   return (
                     <Button
                       key={exp}
                       variant={isSelected ? "default" : "outline"}
-                      className="justify-between h-auto py-3 px-4 text-right"
+                      className={cn(
+                        "justify-between h-auto py-3 px-4 text-right",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                      )}
                       onClick={() => handleExpertiseToggle(exp)}
+                      disabled={isDisabled}
                     >
                       <span className="text-sm">{exp}</span>
                       {isSelected && <Check className="h-4 w-4 mr-2" />}
@@ -133,7 +143,7 @@ export const ExpertiseSelector = ({
                 })}
                 {filteredExpertise.length === 0 && (
                   <div className="col-span-2 text-center text-muted-foreground py-8">
-                    לא נמצאו התמחויות תואמות
+                    לא נמצאו תחומי פעילות תואמים
                   </div>
                 )}
               </div>
