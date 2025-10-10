@@ -86,6 +86,21 @@ const Auth = () => {
         if (session?.user && !isPasswordReset && type !== 'recovery') {
           setTimeout(async () => {
             try {
+              // Check if user has admin role
+              const { data: roles } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', session.user.id);
+              
+              const isAdmin = roles?.some(r => r.role === 'admin');
+              
+              // If admin, redirect to admin panel
+              if (isAdmin) {
+                navigate("/heyadmin");
+                return;
+              }
+              
+              // Otherwise check profile role
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('role')
@@ -128,6 +143,21 @@ const Auth = () => {
       // Normal authentication flow
       if (session?.user) {
         try {
+          // Check if user has admin role
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id);
+          
+          const isAdmin = roles?.some(r => r.role === 'admin');
+          
+          // If admin, redirect to admin panel
+          if (isAdmin) {
+            navigate("/heyadmin");
+            return;
+          }
+          
+          // Otherwise check profile role
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
