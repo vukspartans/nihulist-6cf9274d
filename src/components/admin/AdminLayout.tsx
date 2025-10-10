@@ -25,6 +25,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -143,31 +144,28 @@ function AdminSidebar() {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen w-full flex flex-col-reverse lg:flex-row bg-background">
-        {/* Main content - comes first on mobile, left on desktop */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 shrink-0">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-muted/50 transition-colors">
-                <Menu className="h-5 w-5" />
-              </SidebarTrigger>
-              <div className="h-8 w-px bg-border hidden sm:block" />
-              <div className="hidden sm:block">
-                <h1 className="text-sm font-semibold text-foreground">פאנל ניהול</h1>
-                <p className="text-xs text-muted-foreground">מערכת ניהול מתקדמת</p>
-              </div>
+      {/* Sidebar must come first so its placeholder gap positions correctly */}
+      <AdminSidebar />
+      {/* Proper inset that respects sidebar gap and prevents overlay */}
+      <SidebarInset>
+        <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="hover:bg-muted/50 transition-colors">
+              <Menu className="h-5 w-5" />
+            </SidebarTrigger>
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div className="hidden sm:block">
+              <h1 className="text-sm font-semibold text-foreground">פאנל ניהול</h1>
+              <p className="text-xs text-muted-foreground">מערכת ניהול מתקדמת</p>
             </div>
-          </header>
-          <main className="flex-1 p-4 lg:p-8 bg-gradient-to-br from-background via-background to-primary/[0.02] overflow-x-hidden">
-            <div className="max-w-7xl mx-auto w-full">
-              {children}
-            </div>
-          </main>
-        </div>
-        
-        {/* Sidebar - comes last on mobile (bottom), right on desktop */}
-        <AdminSidebar />
-      </div>
+          </div>
+        </header>
+        <main className="flex-1 p-4 lg:p-8 bg-gradient-to-br from-background via-background to-primary/[0.02] overflow-x-hidden">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
