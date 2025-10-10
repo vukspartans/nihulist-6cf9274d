@@ -420,14 +420,16 @@ const Auth = () => {
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
         <Card className="w-full max-w-lg construction-card">
           <CardHeader className="text-center space-y-4">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${
               isAdvisorSignup 
-                ? 'bg-gradient-to-r from-tech-purple to-accent'
-                : 'bg-gradient-to-r from-primary to-primary-glow'
+                ? 'bg-gradient-to-r from-tech-purple to-accent shadow-lg shadow-tech-purple/30'
+                : 'bg-gradient-to-r from-primary to-primary-glow shadow-lg shadow-primary/30'
             }`}>
-              <Mail className="w-8 h-8 text-white" />
+              <Mail className="w-10 h-10 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-primary">
+            <CardTitle className={`text-3xl font-bold ${
+              isAdvisorSignup ? 'text-tech-purple' : 'text-primary'
+            }`}>
               {isForgotPassword 
                 ? "מייל לאיפוס סיסמה נשלח" 
                 : isAdvisorSignup
@@ -435,11 +437,11 @@ const Auth = () => {
                   : "אמתו את כתובת המייל"
               }
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-base">
               {isForgotPassword 
                 ? "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאיפוס הסיסמה" 
                 : isAdvisorSignup
-                  ? "תודה שהצטרפת כיועץ! אנו בודקים את הבקשה שלך"
+                  ? "תודה שהצטרפת! נבדוק את הבקשה ונחזור אליך בקרוב"
                   : "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאימות החשבון"
               }
             </CardDescription>
@@ -447,42 +449,65 @@ const Auth = () => {
           
           <CardContent className="space-y-6 text-center">
             {isAdvisorSignup ? (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-br from-tech-purple/10 to-accent/10 p-6 rounded-lg border border-tech-purple/20">
-                  <div className="space-y-3 text-right">
-                    <h3 className="font-semibold text-lg">השלבים הבאים:</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="text-tech-purple font-bold">1.</span>
-                        <span>בדקו את תיבת הדואר שלכם ({userEmail}) ואשרו את כתובת האימייל</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-tech-purple font-bold">2.</span>
-                        <span>צוות המערכת יבדוק את הבקשה שלכם תוך 24-48 שעות</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-tech-purple font-bold">3.</span>
-                        <span>לאחר האישור, תקבלו הודעה ותוכלו להתחיל לקבל פרויקטים</span>
-                      </li>
-                    </ul>
+              <div className="space-y-5">
+                <div className="bg-gradient-to-br from-tech-purple/10 to-accent/10 p-6 rounded-xl border-2 border-tech-purple/20">
+                  <div className="space-y-4 text-right">
+                    <h3 className="font-bold text-xl text-foreground flex items-center gap-2">
+                      <span className="text-2xl">✅</span>
+                      מה הלאה?
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex gap-3 items-start p-3 bg-background/50 rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tech-purple text-white flex items-center justify-center font-bold text-sm">
+                          1
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-semibold text-foreground">אמתו את המייל</p>
+                          <p className="text-sm text-foreground/70">נשלח אליכם קישור לכתובת {userEmail}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3 items-start p-3 bg-background/50 rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tech-purple text-white flex items-center justify-center font-bold text-sm">
+                          2
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-semibold text-foreground">ממתינים לאישור</p>
+                          <p className="text-sm text-foreground/70">צוות המערכת יבדוק את הבקשה תוך 24-48 שעות</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3 items-start p-3 bg-background/50 rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tech-purple text-white flex items-center justify-center font-bold text-sm">
+                          3
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-semibold text-foreground">מתחילים לעבוד!</p>
+                          <p className="text-sm text-foreground/70">לאחר האישור תוכלו להתחיל לקבל פרויקטים</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
-                <p className="text-sm text-muted-foreground">
-                  לא קיבלתם מייל? בדקו את תיקיית הספאם או לחצו על "שלח מחדש"
+                <p className="text-sm text-foreground/60">
+                  💡 לא קיבלתם מייל? בדקו בספאם או לחצו על "שלח מחדש"
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  נשלח מייל לכתובת <strong>{userEmail}</strong>
-                </p>
-                <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
-                  <p className="mb-2">עצות:</p>
-                  <ul className="text-right space-y-1">
-                    <li>• בדקו את תיקיית הספאם או ההודעות הלא רצויות</li>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-foreground font-medium mb-1">
+                    נשלח מייל לכתובת:
+                  </p>
+                  <p className="text-foreground/80 font-semibold">{userEmail}</p>
+                </div>
+                <div className="bg-muted/30 p-4 rounded-lg text-sm space-y-2 text-right">
+                  <p className="font-medium text-foreground">💡 עצות שימושיות:</p>
+                  <ul className="space-y-1.5 text-foreground/70">
+                    <li>• בדקו את תיקיית הספאם</li>
                     <li>• הקישור תקף למשך 24 שעות</li>
-                    <li>• אם לא קיבלתם מייל, לחצו על "שלח מחדש"</li>
+                    <li>• לא קיבלתם? לחצו על "שלח מחדש"</li>
                   </ul>
                 </div>
               </div>
@@ -504,6 +529,7 @@ const Auth = () => {
                   setEmailSent(false);
                   setIsForgotPassword(false);
                   setIsLogin(true);
+                  setSignupStep(1);
                 }}
                 className="w-full"
               >
