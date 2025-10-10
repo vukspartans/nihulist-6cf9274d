@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { StatsCard } from "@/components/admin/StatsCard";
-import { Building2, FolderKanban, FileText, CheckCircle2 } from "lucide-react";
+import { Building2, FolderKanban, FileText, CheckCircle2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminTranslations } from "@/constants/adminTranslations";
 
@@ -10,8 +10,9 @@ const AdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const [advisors, projects, rfps, proposals] = await Promise.all([
+      const [advisors, entrepreneurs, projects, rfps, proposals] = await Promise.all([
         supabase.from('advisors').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'entrepreneur'),
         supabase.from('projects').select('*', { count: 'exact', head: true }),
         supabase.from('rfps').select('*', { count: 'exact', head: true }),
         supabase.from('proposals').select('status', { count: 'exact' }),
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
 
       return {
         advisors: advisors.count || 0,
+        entrepreneurs: entrepreneurs.count || 0,
         projects: projects.count || 0,
         rfps: rfps.count || 0,
         proposals: proposals.count || 0,
@@ -42,18 +44,24 @@ const AdminDashboard = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+            {[...Array(5)].map((_, i) => (
               <Skeleton key={i} className="h-36 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             <StatsCard
               title="סך יועצים"
               value={stats?.advisors || 0}
               description="יועצים רשומים במערכת"
               icon={Building2}
+            />
+            <StatsCard
+              title="סך יזמים"
+              value={stats?.entrepreneurs || 0}
+              description="יזמים רשומים במערכת"
+              icon={Users}
             />
             <StatsCard
               title={adminTranslations.dashboard.totalProjects}
