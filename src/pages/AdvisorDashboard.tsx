@@ -14,6 +14,7 @@ import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
 
 const COVER_OPTIONS = [
+  { id: '0', image: '' },
   { id: '1', image: coverOption1 },
   { id: '2', image: coverOption2 },
   { id: '3', image: coverOption3 },
@@ -197,8 +198,9 @@ const AdvisorDashboard = () => {
   };
 
   const getCoverImage = (coverId: string | null | undefined): string => {
+    if (!coverId || coverId === '0') return ''; // No cover
     const option = COVER_OPTIONS.find(opt => opt.id === coverId);
-    return option ? option.image : coverOption1; // Default to option 1
+    return option ? option.image : ''; // Default to no cover
   };
 
 
@@ -303,78 +305,80 @@ const AdvisorDashboard = () => {
         </div>
       </div>
       
-      {/* Cover Image Banner */}
-      <div className="relative h-36 md:h-48 overflow-hidden">
-        <img 
-          src={getCoverImage(advisorProfile?.cover_image_url)}
-          alt="Cover"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80"></div>
-        
-        {/* Logo and Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-end gap-4">
-              {/* Logo */}
-              <label htmlFor="dashboard-logo-upload" className="cursor-pointer group shrink-0">
-                <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-xl border-4 border-background bg-background overflow-hidden hover:border-primary transition-all shadow-lg group-hover:shadow-xl">
-                  {advisorProfile?.logo_url ? (
-                    <img 
-                      src={advisorProfile.logo_url} 
-                      alt="Logo" 
-                      className="w-full h-full object-contain p-2"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
-                      <Building2 className="h-8 w-8 text-muted-foreground mb-1 group-hover:text-primary transition-colors" />
-                      <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                  )}
-                  {uploadingLogo && (
-                    <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  )}
-                </div>
-              </label>
-              <input
-                id="dashboard-logo-upload"
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                onChange={handleLogoUpload}
-                className="hidden"
-                disabled={uploadingLogo}
-              />
-              
-              {/* Company Info */}
-              <div className="flex-1 pb-2">
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
-                  {advisorProfile.company_name || 'יועץ'}
-                </h1>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">יועץ מאושר</span>
-                  {advisorProfile.location && (
-                    <>
-                      <span>•</span>
-                      <span>{advisorProfile.location}</span>
-                    </>
-                  )}
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                    <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+      {/* Cover Image Banner - Only show if cover is selected */}
+      {getCoverImage(advisorProfile?.cover_image_url) && (
+        <div className="relative h-36 md:h-48 overflow-hidden">
+          <img 
+            src={getCoverImage(advisorProfile?.cover_image_url)}
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80"></div>
+        </div>
+      )}
+      
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Logo and Info Section */}
+          <div className={`flex items-center gap-4 ${getCoverImage(advisorProfile?.cover_image_url) ? '-mt-16' : 'mb-8'}`}>
+            {/* Logo */}
+            <label htmlFor="dashboard-logo-upload" className="cursor-pointer group shrink-0">
+              <div className={`relative rounded-xl border-4 bg-background overflow-hidden hover:border-primary transition-all shadow-lg group-hover:shadow-xl ${
+                getCoverImage(advisorProfile?.cover_image_url) 
+                  ? 'w-24 h-24 md:w-32 md:h-32 border-background' 
+                  : 'w-20 h-20 border-border'
+              }`}>
+                {advisorProfile?.logo_url ? (
+                  <img 
+                    src={advisorProfile.logo_url} 
+                    alt="Logo" 
+                    className="w-full h-full object-contain p-2"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
+                    <Building2 className="h-8 w-8 text-muted-foreground mb-1 group-hover:text-primary transition-colors" />
+                    <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
+                )}
+                {uploadingLogo && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
+            </label>
+            <input
+              id="dashboard-logo-upload"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              onChange={handleLogoUpload}
+              className="hidden"
+              disabled={uploadingLogo}
+            />
+            
+            {/* Company Info */}
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
+                {advisorProfile.company_name || 'יועץ'}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">יועץ מאושר</span>
+                {advisorProfile.location && (
+                  <>
+                    <span>•</span>
+                    <span>{advisorProfile.location}</span>
+                  </>
+                )}
+                <span>•</span>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
+          
+          <div className="mb-8 mt-6">
             <div className="flex items-center justify-between gap-6">
               {isProfileIncomplete && (
                 <Card 

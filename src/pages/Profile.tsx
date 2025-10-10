@@ -24,6 +24,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 
 const COVER_OPTIONS = [
+  { id: '0', image: '', name: 'ללא תמונת רקע' },
   { id: '1', image: coverOption1, name: 'כחול-תכלת' },
   { id: '2', image: coverOption2, name: 'כתום-סגול' },
   { id: '3', image: coverOption3, name: 'ירוק-כהה' },
@@ -458,8 +459,9 @@ const Profile = () => {
   };
 
   const getCoverImage = (coverId: string | null | undefined): string => {
+    if (!coverId || coverId === '0') return ''; // No cover
     const option = COVER_OPTIONS.find(opt => opt.id === coverId);
-    return option ? option.image : coverOption1; // Default to option 1
+    return option ? option.image : ''; // Default to no cover
   };
 
 
@@ -1416,26 +1418,35 @@ const Profile = () => {
                     {/* Cover Image Selection */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">תמונת רקע</Label>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {COVER_OPTIONS.map((option) => (
                           <button
                             key={option.id}
                             onClick={() => handleCoverSelect(option.id)}
                             disabled={saving}
                             className={`relative rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                              advisorProfile?.cover_image_url === option.id
+                              (advisorProfile?.cover_image_url || '0') === option.id
                                 ? 'border-primary ring-2 ring-primary ring-offset-2'
                                 : 'border-border hover:border-primary'
                             }`}
                           >
                             <div className="aspect-video w-full">
-                              <img
-                                src={option.image}
-                                alt={option.name}
-                                className="w-full h-full object-cover"
-                              />
+                              {option.id === '0' ? (
+                                <div className="w-full h-full flex items-center justify-center bg-muted">
+                                  <div className="text-center">
+                                    <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                    <p className="text-xs text-muted-foreground">ללא תמונה</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <img
+                                  src={option.image}
+                                  alt={option.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
                             </div>
-                            {advisorProfile?.cover_image_url === option.id && (
+                            {(advisorProfile?.cover_image_url || '0') === option.id && (
                               <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
                                 <CheckCircle className="h-4 w-4" />
                               </div>
