@@ -775,11 +775,11 @@ const Profile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>מיקום *</Label>
+                    <Label>כתובת משרד *</Label>
                     <Input
                       value={editedData.location}
                       onChange={(e) => setEditedData({ ...editedData, location: e.target.value })}
-                      placeholder="הזן מיקום"
+                      placeholder="רחוב, מספר, עיר"
                       className={!editedData.location ? 'border-red-500' : ''}
                       dir="rtl"
                     />

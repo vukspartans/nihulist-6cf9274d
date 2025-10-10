@@ -734,16 +734,15 @@ const Auth = () => {
                         selectedExpertise={formData.expertise}
                         onExpertiseChange={(expertise) => setFormData(prev => ({ ...prev, expertise }))}
                         isEditing={true}
-                        maxSelection={10}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="location">מיקום משרד</Label>
+                      <Label htmlFor="location">כתובת משרד</Label>
                       <Input
                         id="location"
                         type="text"
-                        placeholder="למשל: תל אביב"
+                        placeholder="רחוב, מספר, עיר"
                         value={formData.location}
                         onChange={(e) => handleInputChange("location", e.target.value)}
                         className="text-right"

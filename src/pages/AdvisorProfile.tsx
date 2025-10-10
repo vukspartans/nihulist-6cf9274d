@@ -240,12 +240,12 @@ const AdvisorProfile = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">מיקום *</Label>
+                <Label htmlFor="location">כתובת משרד *</Label>
                 <Input
                   id="location"
                   value={profile.location}
                   onChange={(e) => setProfile(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="למשל: תל אביב, ירושלים, חיפה"
+                  placeholder="רחוב, מספר, עיר"
                   required
                 />
               </div>
@@ -368,7 +368,7 @@ const AdvisorProfile = () => {
 
               <div className="space-y-4">
                 <Label>התמחות מקצועית *</Label>
-                <p className="text-sm text-muted-foreground">בחר את תפקידך המקצועי (עד 5 תפקידים)</p>
+                <p className="text-sm text-muted-foreground">בחר את תפקידך המקצועי</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
                   {ADVISOR_EXPERTISE.map((type) => (
                     <Button
@@ -378,11 +378,10 @@ const AdvisorProfile = () => {
                       onClick={() => {
                         if (profile.expertise.includes(type)) {
                           removeExpertise(type);
-                        } else if (profile.expertise.length < 5) {
+                        } else {
                           addExpertise(type);
                         }
                       }}
-                      disabled={!profile.expertise.includes(type) && profile.expertise.length >= 5}
                       className="justify-start text-sm h-auto py-2 px-3"
                     >
                       {type}
@@ -392,7 +391,7 @@ const AdvisorProfile = () => {
                 
                 {profile.expertise.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.expertise.length}/5):</Label>
+                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.expertise.length}):</Label>
                     <div className="flex flex-wrap gap-2">
                       {profile.expertise.map((exp) => (
                         <Badge key={exp} variant="secondary" className="gap-1">

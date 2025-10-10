@@ -14,7 +14,6 @@ interface ExpertiseSelectorProps {
   isEditing: boolean;
   onSave?: () => void;
   onCancel?: () => void;
-  maxSelection?: number;
 }
 
 export const ExpertiseSelector = ({
@@ -22,8 +21,7 @@ export const ExpertiseSelector = ({
   onExpertiseChange,
   isEditing,
   onSave,
-  onCancel,
-  maxSelection = 10
+  onCancel
 }: ExpertiseSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | AdvisorExpertiseCategory>('all');
@@ -46,9 +44,7 @@ export const ExpertiseSelector = ({
     if (selectedExpertise.includes(expertise)) {
       onExpertiseChange(selectedExpertise.filter(e => e !== expertise));
     } else {
-      if (selectedExpertise.length < maxSelection) {
-        onExpertiseChange([...selectedExpertise, expertise]);
-      }
+      onExpertiseChange([...selectedExpertise, expertise]);
     }
   };
 
@@ -77,7 +73,7 @@ export const ExpertiseSelector = ({
       {/* Selected Expertise */}
       {selectedExpertise.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
-          <div className="w-full text-sm font-medium mb-1">נבחרו ({selectedExpertise.length}/{maxSelection}):</div>
+          <div className="w-full text-sm font-medium mb-1">נבחרו ({selectedExpertise.length}):</div>
           {selectedExpertise.map((exp) => (
             <Badge key={exp} variant="default" className="gap-1">
               {exp}
@@ -122,18 +118,13 @@ export const ExpertiseSelector = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
                 {filteredExpertise.map((exp) => {
                   const isSelected = selectedExpertise.includes(exp);
-                  const canSelect = selectedExpertise.length < maxSelection;
                   
                   return (
                     <Button
                       key={exp}
                       variant={isSelected ? "default" : "outline"}
-                      className={cn(
-                        "justify-between h-auto py-3 px-4 text-right",
-                        !isSelected && !canSelect && "opacity-50 cursor-not-allowed"
-                      )}
+                      className="justify-between h-auto py-3 px-4 text-right"
                       onClick={() => handleExpertiseToggle(exp)}
-                      disabled={!isSelected && !canSelect}
                     >
                       <span className="text-sm">{exp}</span>
                       {isSelected && <Check className="h-4 w-4 mr-2" />}
