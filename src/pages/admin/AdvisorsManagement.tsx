@@ -19,6 +19,7 @@ interface Advisor {
   user_id: string;
   company_name: string | null;
   location: string | null;
+  phone: string | null;
   founding_year: number | null;
   expertise: string[] | null;
   specialties: string[] | null;
@@ -46,25 +47,38 @@ export default function AdvisorsManagement() {
   const queryClient = useQueryClient();
 
   // Fetch advisors with profile data
-  const { data: advisors = [], isLoading } = useQuery({
+  const { data: advisorsData = [], isLoading } = useQuery({
     queryKey: ["advisors", "admin"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("advisors")
-        .select(`
-          *,
-          profiles:user_id (
-            name,
-            email,
-            phone
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Advisor[];
+
+      // Fetch profile data separately for each advisor
+      const advisorsWithProfiles = await Promise.all(
+        data.map(async (advisor) => {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("name, email, phone")
+            .eq("user_id", advisor.user_id)
+            .maybeSingle();
+
+          return {
+            ...advisor,
+            phone: profileData?.phone || advisor.office_phone || null,
+            profiles: profileData || { name: null, email: null, phone: null },
+          };
+        })
+      );
+
+      return advisorsWithProfiles as Advisor[];
     },
   });
+
+  const advisors = advisorsData;
 
   // Filter advisors
   const filteredAdvisors = advisors.filter((advisor) => {

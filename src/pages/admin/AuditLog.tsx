@@ -85,7 +85,7 @@ const AuditLog = () => {
       header: adminTranslations.auditLog.targetId,
       cell: (item) => (
         <span className="font-mono text-xs">
-          {item.target_id ? item.target_id.substring(0, 8) + '...' : adminTranslations.suppliers.na}
+          {item.target_id ? item.target_id.substring(0, 8) + '...' : adminTranslations.common.na}
         </span>
       ),
     },
@@ -146,7 +146,7 @@ const AuditLog = () => {
                     </div>
                     <div className="col-span-2">
                       <span className="text-muted-foreground">{adminTranslations.auditLog.targetId}:</span>{" "}
-                      <span className="font-mono text-xs">{selectedLog.target_id || adminTranslations.suppliers.na}</span>
+                      <span className="font-mono text-xs">{selectedLog.target_id || adminTranslations.common.na}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-muted-foreground">{adminTranslations.auditLog.timestamp}:</span>{" "}

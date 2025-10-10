@@ -113,7 +113,7 @@ const ProjectsManagement = () => {
     { header: adminTranslations.projects.location, accessorKey: "location" },
     {
       header: adminTranslations.projects.budget,
-      cell: (item) => item.budget ? `₪${item.budget.toLocaleString('he-IL')}` : adminTranslations.suppliers.na,
+      cell: (item) => item.budget ? `₪${item.budget.toLocaleString('he-IL')}` : adminTranslations.common.na,
     },
     {
       header: adminTranslations.projects.status,

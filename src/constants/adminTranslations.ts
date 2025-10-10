@@ -211,20 +211,41 @@ export const adminTranslations = {
     // Table columns
     subject: "נושא",
     project: "פרויקט",
+    projectId: "מזהה פרויקט",
     sentBy: "נשלח על ידי",
     sentAt: "תאריך שליחה",
     invitesSent: "הזמנות שנשלחו",
     proposalsReceived: "הצעות שהתקבלו",
     actions: "פעולות",
+    supplier: "ספק",
+    price: "מחיר",
+    timeline: "לוח זמנים",
+    days: "ימים",
+    status: "סטטוס",
+    submitted: "תאריך הגשה",
+    
+    // Status
+    received: "התקבלה",
+    approved: "אושרה",
+    rejected: "נדחתה",
     
     // Actions
     view: "צפה",
     delete: "מחק",
+    approve: "אשר",
+    reject: "דחה",
+    
+    // Tabs
+    rfpsTab: "קריאות להצעות מחיר",
+    proposalsTab: "הצעות מחיר",
     
     // Dialog
     deleteConfirm: "האם אתה בטוח שברצונך למחוק קריאה להצעות מחיר זו?",
+    deleteRFPConfirm: "האם אתה בטוח שברצונך למחוק RFP זה?",
+    deleteProposalConfirm: "האם אתה בטוח שברצונך למחוק הצעה זו?",
     deleted: "קריאה להצעות מחיר נמחקה בהצלחה",
     deleteFailed: "מחיקת קריאה להצעות מחיר נכשלה",
+    statusUpdated: "סטטוס עודכן בהצלחה",
   },
 
   // Users Management
@@ -238,18 +259,52 @@ export const adminTranslations = {
     email: "אימייל",
     role: "תפקיד",
     createdAt: "תאריך רישום",
+    created: "נוצר ב",
     actions: "פעולות",
     
     // Roles
     entrepreneur: "יזם",
     advisor: "יועץ",
+    supplier: "ספק",
     admin: "מנהל",
     
     // Actions
     viewProfile: "צפה בפרופיל",
     manageRoles: "נהל תפקידים",
+    manageUserRoles: "נהל הרשאות משתמש",
     suspend: "השעה",
     delete: "מחק",
+    addUser: "הוסף משתמש",
+    createUser: "צור משתמש חדש",
+    createUserDesc: "צור משתמש חדש והגדר הרשאות",
+    
+    // Form labels
+    password: "סיסמה",
+    phone: "טלפון",
+    assignRoles: "הקצה הרשאות",
+    assignOrRemove: "הקצה או הסר הרשאות למשתמש זה",
+    profileRole: "תפקיד בפרופיל",
+    assignedRoles: "הרשאות מוקצות",
+    noRoles: "אין הרשאות",
+    
+    // Validation
+    emailRequired: "אימייל נדרש",
+    passwordMinLength: "סיסמה חייבת להכיל לפחות 6 תווים",
+    
+    // Dialogs
+    deleteConfirm: "האם למחוק משתמש זה?",
+    cancel: "ביטול",
+    saveChanges: "שמור שינויים",
+    create: "צור",
+    
+    // Messages
+    rolesUpdated: "הרשאות עודכנו בהצלחה",
+    updateFailed: "עדכון נכשל",
+    userCreated: "משתמש נוצר בהצלחה",
+    createFailed: "יצירת משתמש נכשלה",
+    userDeleted: "משתמש נמחק בהצלחה",
+    cannotDeleteSelf: "לא ניתן למחוק את עצמך",
+    deleteFailed: "מחיקה נכשלה",
   },
 
   // Audit Log
@@ -261,13 +316,30 @@ export const adminTranslations = {
     // Table columns
     timestamp: "זמן",
     admin: "מנהל",
+    adminId: "מזהה מנהל",
     action: "פעולה",
     targetTable: "טבלה",
+    table: "טבלה",
     targetId: "מזהה יעד",
     changes: "שינויים",
     
     // Actions
     viewDetails: "צפה בפרטים",
+    details: "פרטים",
+    detailsTitle: "פרטי פעולה",
+    detailsDescription: "פרטים מלאים על הפעולה שבוצעה",
+    actionDetails: "פרטי הפעולה",
+    oldValues: "ערכים ישנים",
+    newValues: "ערכים חדשים",
+    userAgent: "דפדפן",
+    
+    // Action types
+    create: "יצירה",
+    update: "עדכון",
+    delete: "מחיקה",
+    archive: "ארכוב",
+    restore: "שחזור",
+    update_roles: "עדכון הרשאות",
     
     // Time format
     dateFormat: "dd/MM/yyyy HH:mm",
@@ -291,5 +363,11 @@ export const adminTranslations = {
     confirmDelete: "האם אתה בטוח?",
     yes: "כן",
     no: "לא",
+    showing: "מציג",
+    to: "עד",
+    of: "מתוך",
+    results: "תוצאות",
+    page: "עמוד",
+    na: "לא זמין",
   },
 };

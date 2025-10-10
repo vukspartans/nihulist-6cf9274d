@@ -10,8 +10,8 @@ const AdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const [suppliers, projects, rfps, proposals] = await Promise.all([
-        supabase.from('suppliers').select('*', { count: 'exact', head: true }),
+      const [advisors, projects, rfps, proposals] = await Promise.all([
+        supabase.from('advisors').select('*', { count: 'exact', head: true }),
         supabase.from('projects').select('*', { count: 'exact', head: true }),
         supabase.from('rfps').select('*', { count: 'exact', head: true }),
         supabase.from('proposals').select('status', { count: 'exact' }),
@@ -20,7 +20,7 @@ const AdminDashboard = () => {
       const approvedProposals = proposals.data?.filter(p => p.status === 'approved').length || 0;
 
       return {
-        suppliers: suppliers.count || 0,
+        advisors: advisors.count || 0,
         projects: projects.count || 0,
         rfps: rfps.count || 0,
         proposals: proposals.count || 0,
@@ -48,9 +48,9 @@ const AdminDashboard = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatsCard
-              title={adminTranslations.dashboard.totalSuppliers}
-              value={stats?.suppliers || 0}
-              description={adminTranslations.dashboard.activeSuppliersDesc}
+              title="סך יועצים"
+              value={stats?.advisors || 0}
+              description="יועצים רשומים במערכת"
               icon={Building2}
             />
             <StatsCard
