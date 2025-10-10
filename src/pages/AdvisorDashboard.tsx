@@ -304,7 +304,7 @@ const AdvisorDashboard = () => {
       </div>
       
       {/* Cover Image Banner */}
-      <div className="relative h-48 md:h-64 overflow-hidden">
+      <div className="relative h-36 md:h-48 overflow-hidden">
         <img 
           src={getCoverImage(advisorProfile?.cover_image_url)}
           alt="Cover"
