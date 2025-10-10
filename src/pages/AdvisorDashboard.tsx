@@ -60,6 +60,11 @@ interface AdvisorProfile {
   position_in_office: string | null;
 }
 
+interface UserProfile {
+  name: string | null;
+  phone: string | null;
+}
+
 const AdvisorDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -67,6 +72,7 @@ const AdvisorDashboard = () => {
   const [rfpInvites, setRfpInvites] = useState<RFPInvite[]>([]);
   const [proposals, setProposals] = useState<AdvisorProposal[]>([]);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +83,15 @@ const AdvisorDashboard = () => {
 
   const fetchAdvisorData = async () => {
     try {
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, phone')
+        .eq('user_id', user?.id)
+        .single();
+
+      setUserProfile(profile);
+
       // Fetch advisor profile
       const { data: advisor } = await supabase
         .from('advisors')
@@ -166,33 +181,40 @@ const AdvisorDashboard = () => {
     );
   }
 
-  // Enhanced profile completion check with detailed tracking
-  const getFirstMissingField = () => {
-    // Check personal info first
-    // Note: name and phone are checked in Profile component, not here
+  // Profile completion check aligned with Profile page logic
+  const checkRequiredFields = () => {
+    const requiredFields = [
+      userProfile?.name,
+      userProfile?.phone,
+      advisorProfile?.company_name,
+      advisorProfile?.location,
+      advisorProfile?.founding_year,
+      advisorProfile?.position_in_office,
+      advisorProfile?.activity_regions && advisorProfile.activity_regions.length > 0,
+      advisorProfile?.office_size,
+      (advisorProfile?.expertise && advisorProfile.expertise.length > 0) || 
+      (advisorProfile?.specialties && advisorProfile.specialties.length > 0),
+    ];
     
-    // Check company info
-    if (!advisorProfile.company_name || !advisorProfile.location || 
-        !advisorProfile.founding_year || !advisorProfile.position_in_office || 
-        !advisorProfile.office_size) {
-      return 'company';
-    }
+    const filledFields = requiredFields.filter(field => field).length;
+    const percentage = Math.round((filledFields / requiredFields.length) * 100);
     
-    // Check professional info
-    if (!advisorProfile.specialties || advisorProfile.specialties.length === 0) {
-      return 'professional';
-    }
-    
-    // Check activity regions
-    if (!advisorProfile.activity_regions || advisorProfile.activity_regions.length === 0) {
-      return 'professional';
-    }
-    
-    return null;
+    return {
+      percentage,
+      isComplete: percentage === 100,
+      firstMissing: !userProfile?.name || !userProfile?.phone ? 'personal' :
+                    !advisorProfile?.company_name || !advisorProfile?.location || 
+                    !advisorProfile?.founding_year || !advisorProfile?.position_in_office || 
+                    !advisorProfile?.office_size ? 'company' :
+                    ((!advisorProfile?.expertise || advisorProfile.expertise.length === 0) && 
+                     (!advisorProfile?.specialties || advisorProfile.specialties.length === 0)) ||
+                    !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0 ? 'professional' :
+                    null
+    };
   };
 
-  const firstMissingField = getFirstMissingField();
-  const isProfileIncomplete = firstMissingField !== null;
+  const profileStatus = checkRequiredFields();
+  const isProfileIncomplete = !profileStatus.isComplete;
 
   const pendingInvites = rfpInvites.filter(invite => invite.status === 'pending');
   const newInvites = rfpInvites.filter(invite => {
@@ -246,21 +268,24 @@ const AdvisorDashboard = () => {
                 </div>
               </div>
               {isProfileIncomplete && (
-                <div 
-                  className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 cursor-pointer hover:bg-yellow-100 transition-all hover:shadow-md hover:scale-[1.02] animate-fade-in"
-                  onClick={() => navigate(`/profile?tab=${firstMissingField || 'personal'}&highlight=missing`)}
+                <Card 
+                  className="border-l-4 border-l-yellow-500 cursor-pointer hover:shadow-md transition-all bg-yellow-50/50"
+                  onClick={() => navigate(`/profile?tab=${profileStatus.firstMissing || 'personal'}&highlight=missing`)}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 animate-pulse" />
-                    <span className="text-sm font-bold text-yellow-800">⚠️ פרופיל לא שלם - לחצו להשלמה</span>
-                  </div>
-                  <p className="text-sm text-yellow-700 font-medium">
-                    {firstMissingField === 'company' && '📋 חסרים פרטי משרד (שם, מיקום, ניסיון, תעריף, גודל משרד)'}
-                    {firstMissingField === 'professional' && '🎯 חסרות התמחויות מקצועיות או אזורי פעילות'}
-                    {!firstMissingField && '✨ השלימו את הפרטים לקבלת יותר הזמנות'}
-                  </p>
-                  <p className="text-xs text-yellow-600 mt-1">לחצו כאן למעבר ישיר לסעיף החסר 👆</p>
-                </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-yellow-900 mb-1">פרופיל לא שלם ({profileStatus.percentage}%)</p>
+                        <p className="text-sm text-yellow-800">
+                          {profileStatus.firstMissing === 'personal' && 'חסרים פרטים אישיים'}
+                          {profileStatus.firstMissing === 'company' && 'חסרים פרטי משרד'}
+                          {profileStatus.firstMissing === 'professional' && 'חסרות התמחויות או אזורי פעילות'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>
