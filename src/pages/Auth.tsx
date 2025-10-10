@@ -152,54 +152,8 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If in signup mode and on step 1, validate and move to step 2
+    // If in signup mode and on step 1, move to step 2
     if (!isLogin && signupStep === 1) {
-      // Validate step 1 fields
-      if (!formData.name || !formData.name.trim()) {
-        toast({
-          title: "שגיאה",
-          description: "נא להזין שם מלא",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (formData.role === 'advisor') {
-        if (!formData.phone || formData.phone.trim() === '') {
-          toast({
-            title: "שגיאה",
-            description: "מספר טלפון נדרש עבור יועצים",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (!formData.companyName || formData.companyName.trim() === '') {
-          toast({
-            title: "שגיאה",
-            description: "שם המשרד נדרש עבור יועצים",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (!formData.positionInOffice || formData.positionInOffice.trim() === '') {
-          toast({
-            title: "שגיאה",
-            description: "תפקיד הנרשם במשרד נדרש",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (!formData.expertise || formData.expertise.length === 0) {
-          toast({
-            title: "שגיאה",
-            description: "נא לבחור לפחות תחום פעילות אחד",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      // Move to step 2
       setSignupStep(2);
       return;
     }
@@ -220,11 +174,7 @@ const Auth = () => {
           description: "ברוך הבא למערכת",
         });
       } else {
-        // Validate required fields for signup step 2
-        if (!formData.email || !formData.password) {
-          throw new Error('אנא מלא את כל השדות הנדרשים');
-        }
-
+        // Signup - step 2
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
@@ -252,7 +202,7 @@ const Auth = () => {
             });
             setIsLogin(true);
             setSignupStep(1);
-            setFormData(prev => ({ ...prev, password: "" })); // Clear password for security
+            setFormData(prev => ({ ...prev, password: "" }));
             return;
           }
           throw error;
@@ -282,6 +232,27 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Validation for step 1 button
+  const isStep1Valid = () => {
+    if (!formData.name || !formData.name.trim()) return false;
+    
+    if (formData.role === 'advisor') {
+      if (!formData.phone || formData.phone.trim() === '') return false;
+      if (!formData.companyName || formData.companyName.trim() === '') return false;
+      if (!formData.positionInOffice || formData.positionInOffice.trim() === '') return false;
+      if (!formData.expertise || formData.expertise.length === 0) return false;
+    }
+    
+    return true;
+  };
+
+  // Validation for step 2 button
+  const isStep2Valid = () => {
+    if (!formData.email || !formData.email.trim()) return false;
+    if (!formData.password || formData.password.length < 6) return false;
+    return true;
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -800,7 +771,7 @@ const Auth = () => {
                   type="submit" 
                   className="w-full h-11 text-base font-medium" 
                   variant="premium"
-                  disabled={loading}
+                  disabled={!isStep1Valid()}
                 >
                   המשיכו ליצירת משתמש
                 </Button>
@@ -855,7 +826,7 @@ const Auth = () => {
                     type="submit" 
                     className="flex-1 h-11 text-base font-medium" 
                     variant="premium"
-                    disabled={loading}
+                    disabled={loading || !isStep2Valid()}
                   >
                     {loading ? "מתבצע..." : "הצטרפות למערכת"}
                   </Button>
@@ -864,6 +835,7 @@ const Auth = () => {
                     variant="outline"
                     onClick={() => setSignupStep(1)}
                     className="px-4"
+                    disabled={loading}
                   >
                     חזרה
                   </Button>
@@ -871,55 +843,56 @@ const Auth = () => {
               </div>
             )}
 
-            {/* Login Credentials Section */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
-                <div className="relative">
-                  <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="pr-10"
-                    required
-                    dir="ltr"
-                  />
-                </div>
-              </div>
+            {isLogin && (
+              <>
+                {/* Login Form */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                    <div className="relative">
+                      <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        className="pr-10"
+                        required
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-right">סיסמה *</Label>
-                <div className="relative">
-                  <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    className="pr-10"
-                    required
-                    minLength={6}
-                    dir="ltr"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-right">סיסמה *</Label>
+                    <div className="relative">
+                      <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange("password", e.target.value)}
+                        className="pr-10"
+                        required
+                        minLength={6}
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
                 </div>
-                {!isLogin && (
-                  <p className="text-xs text-muted-foreground text-right">הסיסמה חייבת להכיל לפחות 6 תווים</p>
-                )}
-              </div>
-            </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base font-medium" 
-              variant="premium"
-              disabled={loading}
-            >
-              {loading ? "מתבצע..." : (isLogin ? "התחברות למערכת" : "הצטרפות למערכת")}
-            </Button>
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium" 
+                  variant="premium"
+                  disabled={loading}
+                >
+                  {loading ? "מתחבר..." : "התחברות למערכת"}
+                </Button>
+              </>
+            )}
 
             {isLogin && (
               <div className="text-center">
@@ -944,7 +917,10 @@ const Auth = () => {
             </p>
             <Button
               variant="ghost"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setSignupStep(1);
+              }}
               className="text-primary hover:text-primary/80 font-medium"
             >
               {isLogin ? "הצטרף כעת" : "התחבר לחשבון קיים"}
