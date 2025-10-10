@@ -686,6 +686,7 @@ const Profile = () => {
                           value={editedData.phone}
                           onChange={(value) => setEditedData(prev => ({ ...prev, phone: value || '' }))}
                           className="phone-input"
+                          dir="ltr"
                         />
                       </div>
                       <Button 
@@ -707,7 +708,9 @@ const Profile = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-foreground">{profile?.phone || 'לא מוגדר'}</p>
+                      <div className="text-foreground" dir="ltr" style={{ textAlign: 'left' }}>
+                        {profile?.phone || 'לא מוגדר'}
+                      </div>
                       <Button 
                         size="sm" 
                         variant="ghost" 
