@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import coverOption1 from '@/assets/cover-option-1.jpg';
+import coverOption2 from '@/assets/cover-option-2.jpg';
+import coverOption3 from '@/assets/cover-option-3.jpg';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,6 +22,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+
+const COVER_OPTIONS = [
+  { id: '1', image: coverOption1, name: 'כחול-תכלת' },
+  { id: '2', image: coverOption2, name: 'כתום-סגול' },
+  { id: '3', image: coverOption3, name: 'ירוק-כהה' },
+];
+
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -103,7 +113,6 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Handle URL parameters for tab navigation
   useEffect(() => {
@@ -419,48 +428,40 @@ const Profile = () => {
     }
   };
 
-  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
+  const handleCoverSelect = async (coverId: string) => {
+    if (!user) return;
 
-    setUploadingCover(true);
+    setSaving(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/cover.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('advisor-assets')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('advisor-assets')
-        .getPublicUrl(fileName);
-
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('advisors')
-        .update({ cover_image_url: publicUrl })
+        .update({ cover_image_url: coverId })
         .eq('user_id', user.id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      setAdvisorProfile(prev => prev ? { ...prev, cover_image_url: publicUrl } : null);
+      setAdvisorProfile(prev => prev ? { ...prev, cover_image_url: coverId } : null);
       toast({
         title: "תמונת הרקע עודכנה",
-        description: "תמונת הרקע שלך הועלתה בהצלחה",
+        description: "תמונת הרקע שלך שונתה בהצלחה",
       });
     } catch (error) {
-      console.error('Error uploading cover:', error);
+      console.error('Error updating cover:', error);
       toast({
         title: "שגיאה",
-        description: "לא ניתן להעלות את תמונת הרקע",
+        description: "לא ניתן לעדכן את תמונת הרקע",
         variant: "destructive",
       });
     } finally {
-      setUploadingCover(false);
+      setSaving(false);
     }
   };
+
+  const getCoverImage = (coverId: string | null | undefined): string => {
+    const option = COVER_OPTIONS.find(opt => opt.id === coverId);
+    return option ? option.image : coverOption1; // Default to option 1
+  };
+
 
 
   const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'branding') => {
@@ -1412,38 +1413,39 @@ const Profile = () => {
                       />
                     </div>
 
-                    {/* Cover Image Upload */}
+                    {/* Cover Image Selection */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">תמונת רקע</Label>
-                      <label htmlFor="cover-upload" className="cursor-pointer block">
-                        <div className="relative border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors group">
-                          {advisorProfile?.cover_image_url ? (
-                            <div className="aspect-square w-full rounded overflow-hidden">
-                              <img 
-                                src={advisorProfile.cover_image_url} 
-                                alt="Cover" 
+                      <div className="grid grid-cols-3 gap-3">
+                        {COVER_OPTIONS.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleCoverSelect(option.id)}
+                            disabled={saving}
+                            className={`relative rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                              advisorProfile?.cover_image_url === option.id
+                                ? 'border-primary ring-2 ring-primary ring-offset-2'
+                                : 'border-border hover:border-primary'
+                            }`}
+                          >
+                            <div className="aspect-video w-full">
+                              <img
+                                src={option.image}
+                                alt={option.name}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                          ) : (
-                            <div className="aspect-square w-full flex flex-col items-center justify-center">
-                              <ImageIcon className="h-10 w-10 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                              <p className="text-sm font-medium text-center">
-                                {uploadingCover ? 'מעלה...' : 'העלה תמונת רקע'}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">PNG/JPG 1200px</p>
+                            {advisorProfile?.cover_image_url === option.id && (
+                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                <CheckCircle className="h-4 w-4" />
+                              </div>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                              <p className="text-xs text-white font-medium text-center">{option.name}</p>
                             </div>
-                          )}
-                        </div>
-                      </label>
-                      <input
-                        id="cover-upload"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        onChange={handleCoverUpload}
-                        className="hidden"
-                        disabled={uploadingCover}
-                      />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
