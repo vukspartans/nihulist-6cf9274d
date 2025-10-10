@@ -32,9 +32,6 @@ const Auth = () => {
     phone: "",
     companyName: "",
     role: "entrepreneur" as "entrepreneur" | "advisor",
-    location: "",
-    activityRegions: [] as string[],
-    officeSize: "",
     positionInOffice: "",
     expertise: [] as string[]
   });
@@ -175,8 +172,14 @@ const Auth = () => {
         }
 
         if (formData.role === 'advisor') {
-          if (!formData.companyName) {
+          if (!formData.phone || formData.phone.trim() === '') {
+            throw new Error('מספר טלפון נדרש עבור יועצים');
+          }
+          if (!formData.companyName || formData.companyName.trim() === '') {
             throw new Error('שם המשרד נדרש עבור יועצים');
+          }
+          if (!formData.positionInOffice || formData.positionInOffice.trim() === '') {
+            throw new Error('תפקיד הנרשם במשרד נדרש');
           }
           if (!formData.expertise || formData.expertise.length === 0) {
             throw new Error('נא לבחור לפחות תחום התמחות אחד');
@@ -195,9 +198,6 @@ const Auth = () => {
               phone: formData.phone,
               company_name: formData.companyName,
               role: formData.role,
-              location: formData.location,
-              activity_regions: formData.activityRegions.join(','),
-              office_size: formData.officeSize,
               position_in_office: formData.positionInOffice,
               expertise: formData.expertise.join(',')
             }
@@ -402,38 +402,80 @@ const Auth = () => {
 
   // If email confirmation is pending, show confirmation screen
   if (emailSent) {
+    // Check if it's an advisor signup to show application review message
+    const isAdvisorSignup = !isForgotPassword && formData.role === 'advisor';
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
         <Card className="w-full max-w-lg construction-card">
           <CardHeader className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+              isAdvisorSignup 
+                ? 'bg-gradient-to-r from-tech-purple to-accent'
+                : 'bg-gradient-to-r from-primary to-primary-glow'
+            }`}>
               <Mail className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold text-primary">
-              {isForgotPassword ? "מייל לאיפוס סיסמה נשלח" : "אמתו את כתובת המייל"}
+              {isForgotPassword 
+                ? "מייל לאיפוס סיסמה נשלח" 
+                : isAdvisorSignup
+                  ? "הבקשה התקבלה בהצלחה!"
+                  : "אמתו את כתובת המייל"
+              }
             </CardTitle>
             <CardDescription className="text-center">
               {isForgotPassword 
                 ? "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאיפוס הסיסמה" 
-                : "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאימות החשבון"
+                : isAdvisorSignup
+                  ? "תודה שהצטרפת כיועץ! אנו בודקים את הבקשה שלך"
+                  : "בדקו את תיבת הדואר שלכם ולחצו על הקישור לאימות החשבון"
               }
             </CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6 text-center">
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                נשלח מייל לכתובת <strong>{userEmail}</strong>
-              </p>
-              <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
-                <p className="mb-2">עצות:</p>
-                <ul className="text-right space-y-1">
-                  <li>• בדקו את תיקיית הספאם או ההודעות הלא רצויות</li>
-                  <li>• הקישור תקף למשך 24 שעות</li>
-                  <li>• אם לא קיבלתם מייל, לחצו על "שלח מחדש"</li>
-                </ul>
+            {isAdvisorSignup ? (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-tech-purple/10 to-accent/10 p-6 rounded-lg border border-tech-purple/20">
+                  <div className="space-y-3 text-right">
+                    <h3 className="font-semibold text-lg">השלבים הבאים:</h3>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-tech-purple font-bold">1.</span>
+                        <span>בדקו את תיבת הדואר שלכם ({userEmail}) ואשרו את כתובת האימייל</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-tech-purple font-bold">2.</span>
+                        <span>צוות המערכת יבדוק את הבקשה שלכם תוך 24-48 שעות</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-tech-purple font-bold">3.</span>
+                        <span>לאחר האישור, תקבלו הודעה ותוכלו להתחיל לקבל פרויקטים</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-muted-foreground">
+                  לא קיבלתם מייל? בדקו את תיקיית הספאם או לחצו על "שלח מחדש"
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-muted-foreground">
+                  נשלח מייל לכתובת <strong>{userEmail}</strong>
+                </p>
+                <div className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
+                  <p className="mb-2">עצות:</p>
+                  <ul className="text-right space-y-1">
+                    <li>• בדקו את תיקיית הספאם או ההודעות הלא רצויות</li>
+                    <li>• הקישור תקף למשך 24 שעות</li>
+                    <li>• אם לא קיבלתם מייל, לחצו על "שלח מחדש"</li>
+                  </ul>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-3">
               <Button
@@ -617,7 +659,7 @@ const Auth = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div className="space-y-4">
-                {/* Personal Information Section */}
+                {/* Step 1: Personal Information */}
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-right">שם מלא *</Label>
@@ -637,7 +679,9 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-right">מספר טלפון</Label>
+                    <Label htmlFor="phone" className="text-right">
+                      מספר טלפון {formData.role === 'advisor' && <span className="text-destructive">*</span>}
+                    </Label>
                     <div className="phone-input" dir="ltr">
                       <PhoneInput
                         international
@@ -652,7 +696,9 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-right">שם המשרד</Label>
+                    <Label htmlFor="companyName" className="text-right">
+                      שם המשרד {formData.role === 'advisor' && <span className="text-destructive">*</span>}
+                    </Label>
                     <div className="relative">
                       <Building2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -687,41 +733,10 @@ const Auth = () => {
                   )}
                 </div>
 
-                <Separator className="my-4" />
-
-                {/* User Type Selection */}
-                <div className="space-y-3">
-                  <Label className="text-right font-medium">בחר סוג משתמש *</Label>
-                  <RadioGroup 
-                    value={formData.role} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as 'entrepreneur' | 'advisor' }))}
-                    className="grid grid-cols-1 gap-3"
-                  >
-                    <div className="flex items-center space-x-3 space-x-reverse p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <RadioGroupItem value="entrepreneur" id="entrepreneur" />
-                      <div className="flex-1 text-right">
-                        <Label htmlFor="entrepreneur" className="font-medium cursor-pointer">יזם / חברה</Label>
-                        <p className="text-sm text-muted-foreground">אני מחפש יועצים ומבצעי עבודות לפרויקט שלי</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3 space-x-reverse p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <RadioGroupItem value="advisor" id="advisor" />
-                      <div className="flex-1 text-right">
-                        <Label htmlFor="advisor" className="font-medium cursor-pointer">יועץ / ספק</Label>
-                        <p className="text-sm text-muted-foreground">אני מספק שירותי ייעוץ או ביצוע פרויקטים</p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </div>
-
                 {formData.role === 'advisor' && (
                   <>
                     <Separator className="my-4" />
-                    <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-                      <p className="text-sm font-medium text-center">פרטים ליועצים</p>
-                      <p className="text-xs text-muted-foreground text-center">שדות המסומנים ב-* הם שדות חובה</p>
-                    </div>
-
+                    
                     {/* Expertise Selection - REQUIRED */}
                     <div className="space-y-2">
                       <Label className="text-right">
@@ -735,75 +750,9 @@ const Auth = () => {
                         onExpertiseChange={(expertise) => setFormData(prev => ({ ...prev, expertise }))}
                         isEditing={true}
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location">כתובת משרד</Label>
-                      <Input
-                        id="location"
-                        type="text"
-                        placeholder="רחוב, מספר, עיר"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange("location", e.target.value)}
-                        className="text-right"
-                        dir="rtl"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>אזורי פעילות</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          'הצפון',
-                          'חיפה והסביבה',
-                          'השרון',
-                          'גוש דן',
-                          'השפלה',
-                          'ירושלים והסביבה',
-                          'דרום',
-                          'אילת והערבה'
-                        ].map((region) => (
-                          <label key={region} className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.activityRegions.includes(region)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData(prev => ({ 
-                                    ...prev, 
-                                    activityRegions: [...prev.activityRegions, region] 
-                                  }));
-                                } else {
-                                  setFormData(prev => ({ 
-                                    ...prev, 
-                                    activityRegions: prev.activityRegions.filter(r => r !== region) 
-                                  }));
-                                }
-                              }}
-                              className="rounded border-input"
-                            />
-                            <span className="text-sm">{region}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="officeSize">גודל המשרד</Label>
-                      <select
-                        id="officeSize"
-                        value={formData.officeSize}
-                        onChange={(e) => handleInputChange("officeSize", e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-right"
-                        dir="rtl"
-                      >
-                        <option value="">בחר גודל משרד</option>
-                        <option value="קטן מאוד/בוטיק - 1-2 עובדים">קטן מאוד/בוטיק - 1-2 עובדים</option>
-                        <option value="קטן - 3-5 עובדים">קטן - 3-5 עובדים</option>
-                        <option value="בינוני - 6-15 עובדים">בינוני - 6-15 עובדים</option>
-                        <option value="גדול - 16-30 עובדים">גדול - 16-30 עובדים</option>
-                        <option value="גדול מאוד - 31+ עובדים">גדול מאוד - 31+ עובדים</option>
-                      </select>
+                      <p className="text-xs text-muted-foreground text-right mt-2">
+                        * פרטים נוספים כמו כתובת משרד ואזורי פעילות ניתן להוסיף לאחר ההרשמה בפרופיל
+                      </p>
                     </div>
                   </>
                 )}
