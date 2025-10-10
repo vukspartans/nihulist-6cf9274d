@@ -4,15 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminTranslations as t } from "@/constants/adminTranslations";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { SearchBar } from "@/components/admin/SearchBar";
-import { DataTable, Column } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power, Mail, Phone, MapPin, Calendar, Building } from "lucide-react";
 import { logAdminAction } from "@/lib/auditLog";
 import { CreateAdvisorDialog } from "@/components/admin/CreateAdvisorDialog";
 import { EditAdvisorDialog } from "@/components/admin/EditAdvisorDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 
 interface Advisor {
   id: string;
@@ -57,7 +58,6 @@ export default function AdvisorsManagement() {
 
       if (error) throw error;
 
-      // Fetch profile data separately for each advisor
       const advisorsWithProfiles = await Promise.all(
         data.map(async (advisor) => {
           const { data: profileData } = await supabase
@@ -184,77 +184,88 @@ export default function AdvisorsManagement() {
     },
   });
 
-  const columns: Column<Advisor>[] = [
-    {
-      header: t.advisors.columns.companyName,
-      accessorKey: "company_name",
-    },
-    {
-      header: t.advisors.columns.contactPerson,
-      cell: (advisor) => advisor.profiles?.name || "-",
-    },
-    {
-      header: t.advisors.columns.email,
-      cell: (advisor) => advisor.profiles?.email || "-",
-    },
-    {
-      header: t.advisors.columns.phone,
-      cell: (advisor) => advisor.profiles?.phone || "-",
-    },
-    {
-      header: t.advisors.columns.location,
-      accessorKey: "location",
-    },
-    {
-      header: t.advisors.columns.foundingYear,
-      accessorKey: "founding_year",
-    },
-    {
-      header: t.advisors.columns.expertise,
-      cell: (advisor) => (
-        <div className="flex gap-1 flex-wrap max-w-xs">
-          {advisor.expertise?.slice(0, 2).map((exp, i) => (
-            <Badge key={i} variant="secondary" className="text-xs">
-              {exp}
+  const AdvisorCard = ({ advisor }: { advisor: Advisor }) => (
+    <Card className="hover:shadow-md transition-all duration-300 border-border/50 overflow-hidden">
+      <CardHeader className="pb-3 bg-gradient-to-br from-primary/5 to-accent/5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <Building className="w-5 h-5 text-primary shrink-0" />
+              <h3 className="font-bold text-lg truncate">{advisor.company_name || "ללא שם"}</h3>
+            </div>
+            {advisor.profiles?.name && (
+              <p className="text-sm text-muted-foreground truncate">{advisor.profiles.name}</p>
+            )}
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Badge variant={advisor.admin_approved ? "default" : "secondary"} className="shrink-0">
+              {advisor.admin_approved ? t.advisors.status.approved : t.advisors.status.pending}
             </Badge>
-          ))}
-          {advisor.expertise && advisor.expertise.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{advisor.expertise.length - 2}
+            <Badge variant={advisor.is_active ? "default" : "destructive"} className="shrink-0">
+              {advisor.is_active ? t.advisors.status.active : t.advisors.status.inactive}
             </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          {advisor.profiles?.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="w-4 h-4 shrink-0" />
+              <span className="truncate">{advisor.profiles.email}</span>
+            </div>
+          )}
+          {advisor.profiles?.phone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="w-4 h-4 shrink-0" />
+              <span className="truncate">{advisor.profiles.phone}</span>
+            </div>
+          )}
+          {advisor.location && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="w-4 h-4 shrink-0" />
+              <span className="truncate">{advisor.location}</span>
+            </div>
+          )}
+          {advisor.founding_year && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Calendar className="w-4 h-4 shrink-0" />
+              <span>{advisor.founding_year}</span>
+            </div>
           )}
         </div>
-      ),
-    },
-    {
-      header: t.advisors.columns.approvalStatus,
-      cell: (advisor) => (
-        <Badge variant={advisor.admin_approved ? "default" : "secondary"}>
-          {advisor.admin_approved ? t.advisors.status.approved : t.advisors.status.pending}
-        </Badge>
-      ),
-    },
-    {
-      header: t.advisors.columns.activeStatus,
-      cell: (advisor) => (
-        <Badge variant={advisor.is_active ? "default" : "destructive"}>
-          {advisor.is_active ? t.advisors.status.active : t.advisors.status.inactive}
-        </Badge>
-      ),
-    },
-    {
-      header: t.advisors.columns.actions,
-      cell: (advisor) => (
-        <div className="flex gap-2 flex-wrap">
+
+        {advisor.expertise && advisor.expertise.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">תחומי מומחיות</p>
+              <div className="flex gap-1 flex-wrap">
+                {advisor.expertise.slice(0, 3).map((exp, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">
+                    {exp}
+                  </Badge>
+                ))}
+                {advisor.expertise.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{advisor.expertise.length - 3}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        <Separator />
+
+        <div className="flex flex-wrap gap-2">
           {!advisor.admin_approved ? (
             <>
               <Button
                 variant="default"
                 size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: true });
-                }}
+                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: true })}
+                className="flex-1"
               >
                 <CheckCircle className="h-4 w-4 ml-2" />
                 {t.advisors.approve}
@@ -262,10 +273,8 @@ export default function AdvisorsManagement() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: false });
-                }}
+                onClick={() => toggleApprovalMutation.mutate({ advisorId: advisor.id, approve: false })}
+                className="flex-1"
               >
                 <XCircle className="h-4 w-4 ml-2" />
                 {t.advisors.reject}
@@ -275,10 +284,8 @@ export default function AdvisorsManagement() {
             <Button
               variant="outline"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleActiveMutation.mutate({ advisorId: advisor.id, isActive: advisor.is_active || false });
-              }}
+              onClick={() => toggleActiveMutation.mutate({ advisorId: advisor.id, isActive: advisor.is_active || false })}
+              className="flex-1"
             >
               <Power className="h-4 w-4 ml-2" />
               {advisor.is_active ? t.advisors.status.inactive : t.advisors.status.active}
@@ -287,31 +294,27 @@ export default function AdvisorsManagement() {
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               setSelectedAdvisor(advisor);
               setEditDialogOpen(true);
             }}
           >
-            <Pencil className="h-4 w-4 ml-2" />
-            {t.advisors.editButton}
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="destructive"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               setSelectedAdvisor(advisor);
               setDeleteDialogOpen(true);
             }}
           >
-            <Trash2 className="h-4 w-4 ml-2" />
-            {t.advisors.deleteButton}
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      ),
-    },
-  ];
+      </CardContent>
+    </Card>
+  );
 
   return (
     <AdminLayout>
@@ -321,7 +324,7 @@ export default function AdvisorsManagement() {
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
               {t.advisors.title}
             </h1>
-            <p className="text-muted-foreground mt-1">ניהול יועצים במערכת</p>
+            <p className="text-muted-foreground mt-1">ניהול וניטור יועצים במערכת</p>
           </div>
           <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
             <Plus className="h-4 w-4 ml-2" />
@@ -329,42 +332,70 @@ export default function AdvisorsManagement() {
           </Button>
         </div>
 
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t.advisors.searchPlaceholder}
-        />
-
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={statusFilter === "all" ? "default" : "outline"}
-            onClick={() => setStatusFilter("all")}
-            size="sm"
-          >
-            {t.advisors.filters.all}
-          </Button>
-          <Button
-            variant={statusFilter === "pending" ? "default" : "outline"}
-            onClick={() => setStatusFilter("pending")}
-            size="sm"
-          >
-            {t.advisors.filters.pending}
-          </Button>
-          <Button
-            variant={statusFilter === "approved" ? "default" : "outline"}
-            onClick={() => setStatusFilter("approved")}
-            size="sm"
-          >
-            {t.advisors.filters.approved}
-          </Button>
-        </div>
-
-        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
-          <DataTable
-            data={filteredAdvisors}
-            columns={columns}
+        <div className="space-y-4">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t.advisors.searchPlaceholder}
           />
+
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={statusFilter === "all" ? "default" : "outline"}
+              onClick={() => setStatusFilter("all")}
+              size="sm"
+            >
+              {t.advisors.filters.all}
+              <Badge variant="secondary" className="mr-2">
+                {advisors.length}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === "pending" ? "default" : "outline"}
+              onClick={() => setStatusFilter("pending")}
+              size="sm"
+            >
+              {t.advisors.filters.pending}
+              <Badge variant="secondary" className="mr-2">
+                {advisors.filter(a => !a.admin_approved).length}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === "approved" ? "default" : "outline"}
+              onClick={() => setStatusFilter("approved")}
+              size="sm"
+            >
+              {t.advisors.filters.approved}
+              <Badge variant="secondary" className="mr-2">
+                {advisors.filter(a => a.admin_approved).length}
+              </Badge>
+            </Button>
+          </div>
         </div>
+
+        {isLoading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="h-64 animate-pulse bg-muted/20" />
+            ))}
+          </div>
+        ) : filteredAdvisors.length === 0 ? (
+          <Card className="p-12">
+            <div className="text-center space-y-3">
+              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                <Building className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">אין יועצים להצגה</h3>
+              <p className="text-muted-foreground">נסה לשנות את הסינון או החיפוש</p>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredAdvisors.map((advisor) => (
+              <AdvisorCard key={advisor.id} advisor={advisor} />
+            ))}
+          </div>
+        )}
 
         <CreateAdvisorDialog
           open={createDialogOpen}
