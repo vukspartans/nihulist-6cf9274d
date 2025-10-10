@@ -31,22 +31,24 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{adminTranslations.dashboard.title}</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="space-y-8 animate-fade-in">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+            {adminTranslations.dashboard.title}
+          </h1>
+          <p className="text-muted-foreground text-lg">
             {adminTranslations.dashboard.description}
           </p>
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
+              <Skeleton key={i} className="h-36 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatsCard
               title="סך יועצים"
               value={stats?.advisors || 0}

@@ -11,6 +11,7 @@ import {
   FileText,
   Shield,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import {
@@ -55,28 +56,62 @@ function AdminSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
-      <SidebarContent className="bg-sidebar">
-        <div className="p-4 border-b">
+    <Sidebar 
+      side="right" 
+      className={isCollapsed ? "w-16" : "w-64"} 
+      collapsible="icon"
+    >
+      <SidebarContent className="bg-gradient-to-b from-primary/5 to-accent/5 border-l">
+        <div className="p-6 border-b border-border/50">
           {!isCollapsed && (
-            <h2 className="text-xl font-bold">{adminTranslations.navigation.adminPanel}</h2>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  {adminTranslations.navigation.adminPanel}
+                </h2>
+                <p className="text-xs text-muted-foreground">ניהול מערכת</p>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
+              <Shield className="w-5 h-5 text-primary" />
+            </div>
           )}
         </div>
         
-        <SidebarGroup>
-          <SidebarGroupLabel>{adminTranslations.navigation.management}</SidebarGroupLabel>
+        <SidebarGroup className="px-3 py-4">
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
+            {!isCollapsed && adminTranslations.navigation.management}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.url;
                 
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.url} className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        {!isCollapsed && <span>{item.title}</span>}
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive}
+                      className={`
+                        relative rounded-lg transition-all duration-200
+                        ${isActive 
+                          ? 'bg-primary/10 text-primary font-medium shadow-sm' 
+                          : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                        }
+                      `}
+                    >
+                      <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                        {isActive && !isCollapsed && (
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -86,13 +121,17 @@ function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mt-auto p-4 border-t">
+        <div className="mt-auto p-4 border-t border-border/50">
           <Button
             variant="ghost"
-            className="w-full justify-start"
+            className={`
+              w-full justify-start gap-3 text-muted-foreground hover:text-foreground
+              hover:bg-destructive/10 hover:text-destructive transition-colors
+              ${isCollapsed ? 'px-0 justify-center' : ''}
+            `}
             onClick={handleSignOut}
           >
-            <LogOut className="h-4 w-4 ml-2" />
+            <LogOut className="h-5 w-5" />
             {!isCollapsed && <span>{adminTranslations.navigation.signOut}</span>}
           </Button>
         </div>
@@ -103,17 +142,28 @@ function AdminSidebar() {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AdminSidebar />
-        <div className="flex-1">
-          <header className="h-14 border-b flex items-center px-6">
-            <SidebarTrigger />
+    <SidebarProvider defaultOpen>
+      <div className="min-h-screen flex w-full bg-background">
+        <div className="flex-1 flex flex-col">
+          <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="hover:bg-muted/50 transition-colors">
+                <Menu className="h-5 w-5" />
+              </SidebarTrigger>
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <h1 className="text-sm font-semibold text-foreground">פאנל ניהול</h1>
+                <p className="text-xs text-muted-foreground">מערכת ניהול מתקדמת</p>
+              </div>
+            </div>
           </header>
-          <main className="p-6">
-            {children}
+          <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-primary/[0.02]">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
           </main>
         </div>
+        <AdminSidebar />
       </div>
     </SidebarProvider>
   );
