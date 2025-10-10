@@ -152,31 +152,39 @@ const ProjectsManagement = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold">{adminTranslations.projects.title}</h1>
+          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+            {adminTranslations.projects.title}
+          </h1>
           <p className="text-muted-foreground mt-1">
             {adminTranslations.projects.description}
           </p>
         </div>
 
-        <div className="flex gap-4 items-center">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={adminTranslations.projects.searchPlaceholder}
-          />
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="flex-1 w-full">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder={adminTranslations.projects.searchPlaceholder}
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <Switch
               id="show-archived"
               checked={showArchived}
               onCheckedChange={setShowArchived}
             />
-            <Label htmlFor="show-archived">{adminTranslations.projects.showArchived}</Label>
+            <Label htmlFor="show-archived" className="whitespace-nowrap">
+              {adminTranslations.projects.showArchived}
+            </Label>
           </div>
         </div>
 
-        <DataTable data={projects} columns={columns} />
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+          <DataTable data={projects} columns={columns} />
+        </div>
       </div>
     </AdminLayout>
   );

@@ -215,26 +215,34 @@ const RFPsManagement = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold">{adminTranslations.rfps.title}</h1>
+          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+            {adminTranslations.rfps.title}
+          </h1>
           <p className="text-muted-foreground mt-1">
             {adminTranslations.rfps.description}
           </p>
         </div>
 
-        <Tabs defaultValue="rfps">
-          <TabsList>
-            <TabsTrigger value="rfps">{adminTranslations.rfps.rfpsTab} ({rfps.length})</TabsTrigger>
+        <Tabs defaultValue="rfps" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="rfps">
+              {adminTranslations.rfps.rfpsTab} ({rfps.length})
+            </TabsTrigger>
             <TabsTrigger value="proposals">
               {adminTranslations.rfps.proposalsTab} ({proposals.length})
             </TabsTrigger>
           </TabsList>
           <TabsContent value="rfps" className="mt-6">
-            <DataTable data={rfps} columns={rfpColumns} />
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+              <DataTable data={rfps} columns={rfpColumns} />
+            </div>
           </TabsContent>
           <TabsContent value="proposals" className="mt-6">
-            <DataTable data={proposals} columns={proposalColumns} />
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+              <DataTable data={proposals} columns={proposalColumns} />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

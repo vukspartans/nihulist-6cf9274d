@@ -38,67 +38,68 @@ export function DataTable<T extends { id: string }>({
   const currentData = data.slice(startIndex, endIndex);
 
   return (
-    <div className="space-y-4">
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column, index) => (
-                <TableHead key={index}>{column.header}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentData.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center text-muted-foreground"
-                >
-                  {adminTranslations.common.noData}
-                </TableCell>
+    <div className="space-y-4 w-full">
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                {columns.map((column, index) => (
+                  <TableHead key={index} className="font-semibold whitespace-nowrap">
+                    {column.header}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : (
-              currentData.map((item) => (
-                <TableRow
-                  key={item.id}
-                  onClick={() => onRowClick?.(item)}
-                  className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
-                >
-                  {columns.map((column, colIndex) => (
-                    <TableCell key={colIndex}>
-                      {column.cell
-                        ? column.cell(item)
-                        : column.accessorKey
-                        ? String(item[column.accessorKey] || "")
-                        : ""}
-                    </TableCell>
-                  ))}
+            </TableHeader>
+            <TableBody>
+              {currentData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="text-center text-muted-foreground py-12"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                        <span className="text-2xl">📊</span>
+                      </div>
+                      <p className="font-medium">{adminTranslations.common.noData}</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                currentData.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    onClick={() => onRowClick?.(item)}
+                    className={`
+                      ${onRowClick ? "cursor-pointer hover:bg-muted/50" : ""} 
+                      transition-colors
+                    `}
+                  >
+                    {columns.map((column, colIndex) => (
+                      <TableCell key={colIndex} className="whitespace-nowrap">
+                        {column.cell
+                          ? column.cell(item)
+                          : column.accessorKey
+                          ? String(item[column.accessorKey] || "")
+                          : ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+          <p className="text-sm text-muted-foreground order-2 sm:order-1">
             {adminTranslations.common.showing} {startIndex + 1} {adminTranslations.common.to} {Math.min(endIndex, data.length)} {adminTranslations.common.of}{" "}
             {data.length} {adminTranslations.common.results}
           </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <span className="flex items-center px-3 text-sm">
-              {adminTranslations.common.page} {currentPage} {adminTranslations.common.of} {totalPages}
-            </span>
+          <div className="flex gap-2 items-center order-1 sm:order-2">
             <Button
               variant="outline"
               size="sm"
@@ -106,6 +107,17 @@ export function DataTable<T extends { id: string }>({
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="flex items-center px-3 text-sm whitespace-nowrap">
+              {adminTranslations.common.page} {currentPage} {adminTranslations.common.of} {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>

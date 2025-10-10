@@ -315,10 +315,15 @@ export default function AdvisorsManagement() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">{t.advisors.title}</h1>
-          <Button onClick={() => setCreateDialogOpen(true)}>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+              {t.advisors.title}
+            </h1>
+            <p className="text-muted-foreground mt-1">ניהול יועצים במערכת</p>
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
             <Plus className="h-4 w-4 ml-2" />
             {t.advisors.createButton}
           </Button>
@@ -330,31 +335,36 @@ export default function AdvisorsManagement() {
           placeholder={t.advisors.searchPlaceholder}
         />
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant={statusFilter === "all" ? "default" : "outline"}
             onClick={() => setStatusFilter("all")}
+            size="sm"
           >
             {t.advisors.filters.all}
           </Button>
           <Button
             variant={statusFilter === "pending" ? "default" : "outline"}
             onClick={() => setStatusFilter("pending")}
+            size="sm"
           >
             {t.advisors.filters.pending}
           </Button>
           <Button
             variant={statusFilter === "approved" ? "default" : "outline"}
             onClick={() => setStatusFilter("approved")}
+            size="sm"
           >
             {t.advisors.filters.approved}
           </Button>
         </div>
 
-        <DataTable
-          data={filteredAdvisors}
-          columns={columns}
-        />
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+          <DataTable
+            data={filteredAdvisors}
+            columns={columns}
+          />
+        </div>
 
         <CreateAdvisorDialog
           open={createDialogOpen}
