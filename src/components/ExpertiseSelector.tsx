@@ -128,6 +128,7 @@ export const ExpertiseSelector = ({
                   return (
                     <Button
                       key={exp}
+                      type="button"
                       variant={isSelected ? "default" : "outline"}
                       className={cn(
                         "justify-between h-auto py-3 px-4 text-right",
@@ -156,12 +157,12 @@ export const ExpertiseSelector = ({
       {(onSave || onCancel) && (
         <div className="flex gap-2 justify-end">
           {onCancel && (
-            <Button variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel}>
               ביטול
             </Button>
           )}
           {onSave && (
-            <Button onClick={onSave}>
+            <Button type="button" onClick={onSave}>
               שמירה
             </Button>
           )}
