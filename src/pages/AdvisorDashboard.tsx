@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import coverOption1 from '@/assets/cover-option-1.jpg';
+import coverOption2 from '@/assets/cover-option-2.jpg';
+import coverOption3 from '@/assets/cover-option-3.jpg';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, MapPin, Coins, Clock, FileText, User, AlertTriangle, Star, Bell, Upload, Building2 } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
+
+const COVER_OPTIONS = [
+  { id: '1', image: coverOption1 },
+  { id: '2', image: coverOption2 },
+  { id: '3', image: coverOption3 },
+];
+
 
 interface RFPInvite {
   id: string;
@@ -186,6 +196,12 @@ const AdvisorDashboard = () => {
     }
   };
 
+  const getCoverImage = (coverId: string | null | undefined): string => {
+    const option = COVER_OPTIONS.find(opt => opt.id === coverId);
+    return option ? option.image : coverOption1; // Default to option 1
+  };
+
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -287,65 +303,79 @@ const AdvisorDashboard = () => {
         </div>
       </div>
       
+      {/* Cover Image Banner */}
+      <div className="relative h-48 md:h-64 overflow-hidden">
+        <img 
+          src={getCoverImage(advisorProfile?.cover_image_url)}
+          alt="Cover"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80"></div>
+        
+        {/* Logo and Info Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end gap-4">
+              {/* Logo */}
+              <label htmlFor="dashboard-logo-upload" className="cursor-pointer group shrink-0">
+                <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-xl border-4 border-background bg-background overflow-hidden hover:border-primary transition-all shadow-lg group-hover:shadow-xl">
+                  {advisorProfile?.logo_url ? (
+                    <img 
+                      src={advisorProfile.logo_url} 
+                      alt="Logo" 
+                      className="w-full h-full object-contain p-2"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
+                      <Building2 className="h-8 w-8 text-muted-foreground mb-1 group-hover:text-primary transition-colors" />
+                      <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                  )}
+                  {uploadingLogo && (
+                    <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                </div>
+              </label>
+              <input
+                id="dashboard-logo-upload"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleLogoUpload}
+                className="hidden"
+                disabled={uploadingLogo}
+              />
+              
+              {/* Company Info */}
+              <div className="flex-1 pb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
+                  {advisorProfile.company_name || 'יועץ'}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">יועץ מאושר</span>
+                  {advisorProfile.location && (
+                    <>
+                      <span>•</span>
+                      <span>{advisorProfile.location}</span>
+                    </>
+                  )}
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <div className="flex items-center justify-between gap-6">
-              <div className="flex items-center gap-4 flex-1">
-                {/* Logo Section */}
-                <label htmlFor="dashboard-logo-upload" className="cursor-pointer group">
-                  <div className="relative w-20 h-20 rounded-lg border-2 border-border bg-background overflow-hidden hover:border-primary transition-all group-hover:shadow-md">
-                    {advisorProfile?.logo_url ? (
-                      <img 
-                        src={advisorProfile.logo_url} 
-                        alt="Logo" 
-                        className="w-full h-full object-contain p-2"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <Building2 className="h-6 w-6 text-muted-foreground mb-1 group-hover:text-primary transition-colors" />
-                        <Upload className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    )}
-                    {uploadingLogo && (
-                      <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    )}
-                  </div>
-                </label>
-                <input
-                  id="dashboard-logo-upload"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                  disabled={uploadingLogo}
-                />
-                
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">לוח בקרה - יועץ</h1>
-                  <p className="text-muted-foreground">
-                    ברוכים הבאים {advisorProfile.company_name || 'יועץ'}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-muted-foreground">תפקיד:</span>
-                    <span className="font-medium">יועץ מאושר</span>
-                    {advisorProfile.location && (
-                      <>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-sm">{advisorProfile.location}</span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground">•</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm font-medium">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
-                      <span className="text-xs text-muted-foreground">(לא פעיל)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
               {isProfileIncomplete && (
                 <Card 
                   className="border-l-4 border-l-yellow-500 cursor-pointer hover:shadow-md transition-all bg-yellow-50/50"
