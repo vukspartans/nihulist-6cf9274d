@@ -422,6 +422,16 @@ const Profile = () => {
     }
   };
 
+  const ensureHttpProtocol = (url: string | null | undefined): string => {
+    if (!url) return '';
+    const trimmedUrl = url.trim();
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      return trimmedUrl;
+    }
+    return `https://${trimmedUrl}`;
+  };
+
+
   const getDashboardRoute = () => {
     const userRole = authProfile?.role || profile?.role;
     return userRole === 'advisor' ? '/advisor-dashboard' : '/dashboard';
@@ -1148,10 +1158,10 @@ const Profile = () => {
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <a 
-                        href={advisorProfile.website} 
+                        href={ensureHttpProtocol(advisorProfile.website)}
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all"
                         dir="ltr"
                       >
                         {advisorProfile.website}
@@ -1162,10 +1172,10 @@ const Profile = () => {
                     <div className="flex items-center gap-2">
                       <Linkedin className="h-4 w-4 text-muted-foreground" />
                       <a 
-                        href={advisorProfile.linkedin_url} 
+                        href={ensureHttpProtocol(advisorProfile.linkedin_url)}
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all"
                         dir="ltr"
                       >
                         {advisorProfile.linkedin_url}
@@ -1176,10 +1186,10 @@ const Profile = () => {
                     <div className="flex items-center gap-2">
                       <Instagram className="h-4 w-4 text-muted-foreground" />
                       <a 
-                        href={advisorProfile.instagram_url} 
+                        href={ensureHttpProtocol(advisorProfile.instagram_url)}
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all"
                         dir="ltr"
                       >
                         {advisorProfile.instagram_url}
