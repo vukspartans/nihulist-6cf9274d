@@ -6,11 +6,11 @@ import {
   LayoutDashboard,
   Users,
   Building2,
+  Briefcase,
   FolderKanban,
   FileText,
   Shield,
   LogOut,
-  Menu,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import {
@@ -33,7 +33,8 @@ interface AdminLayoutProps {
 
 const navigationItems = [
   { title: adminTranslations.navigation.dashboard, url: "/heyadmin", icon: LayoutDashboard },
-  { title: adminTranslations.navigation.suppliers, url: "/heyadmin/suppliers", icon: Building2 },
+  { title: adminTranslations.navigation.entrepreneurs, url: "/heyadmin/entrepreneurs", icon: Building2 },
+  { title: adminTranslations.navigation.advisors, url: "/heyadmin/advisors", icon: Briefcase },
   { title: adminTranslations.navigation.projects, url: "/heyadmin/projects", icon: FolderKanban },
   { title: adminTranslations.navigation.rfps, url: "/heyadmin/rfps", icon: FileText },
   { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
@@ -58,7 +59,7 @@ function AdminSidebar() {
       <SidebarContent className="bg-sidebar">
         <div className="p-4 border-b">
           {!isCollapsed && (
-            <h1 className="text-xl font-bold text-sidebar-foreground">{adminTranslations.navigation.adminPanel}</h1>
+            <h2 className="text-xl font-bold">{adminTranslations.navigation.adminPanel}</h2>
           )}
         </div>
         
@@ -67,15 +68,14 @@ function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => {
+                const Icon = item.icon;
                 const isActive = location.pathname === item.url;
+                
                 return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <Link
-                        to={item.url}
-                        className={isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""}
-                      >
-                        <item.icon className="w-4 h-4" />
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
                         {!isCollapsed && <span>{item.title}</span>}
                       </Link>
                     </SidebarMenuButton>
@@ -92,8 +92,8 @@ function AdminSidebar() {
             className="w-full justify-start"
             onClick={handleSignOut}
           >
-            <LogOut className="w-4 h-4" />
-            {!isCollapsed && <span className="mr-2">{adminTranslations.navigation.signOut}</span>}
+            <LogOut className="h-4 w-4 ml-2" />
+            {!isCollapsed && <span>{adminTranslations.navigation.signOut}</span>}
           </Button>
         </div>
       </SidebarContent>
@@ -101,20 +101,20 @@ function AdminSidebar() {
   );
 }
 
-const AdminLayout = ({ children }: AdminLayoutProps) => {
+export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background" dir="rtl">
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b bg-card flex items-center px-4 sticky top-0 z-10">
+      <div className="min-h-screen flex w-full">
+        <AdminSidebar />
+        <div className="flex-1">
+          <header className="h-14 border-b flex items-center px-6">
             <SidebarTrigger />
           </header>
-          <main className="flex-1 p-6">{children}</main>
+          <main className="p-6">
+            {children}
+          </main>
         </div>
-        <AdminSidebar />
       </div>
     </SidebarProvider>
   );
-};
-
-export default AdminLayout;
+}

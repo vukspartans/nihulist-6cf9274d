@@ -18,7 +18,8 @@ export const adminTranslations = {
   // Navigation
   navigation: {
     dashboard: "לוח בקרה",
-    suppliers: "ספקים",
+    entrepreneurs: "יזמים",
+    advisors: "יועצים",
     projects: "פרויקטים",
     rfps: "קריאות להצעות מחיר",
     users: "משתמשים",
@@ -42,49 +43,128 @@ export const adminTranslations = {
     approvedCount: "אושרו",
   },
 
-  // Suppliers Management
-  suppliers: {
-    title: "ניהול ספקים",
-    description: "ניהול כל הספקים במערכת",
-    searchPlaceholder: "חפש ספקים לפי שם או אימייל...",
-    addSupplier: "הוסף ספק",
-    editSupplier: "ערוך ספק",
-    deleteConfirm: "האם אתה בטוח שברצונך למחוק את הספק הזה?",
-    exportCSV: "ייצא CSV",
-    uploadCSV: "ייבא CSV",
-    created: "נוצר בהצלחה",
-    updated: "עודכן בהצלחה",
-    deleted: "נמחק בהצלחה",
-    createFailed: "יצירת הספק נכשלה",
-    updateFailed: "עדכון הספק נכשל",
-    deleteFailed: "מחיקת הספק נכשלה",
-    csvExported: "קובץ CSV יוצא בהצלחה",
-    csvImported: "קובץ CSV יובא בהצלחה",
-    
-    // Form fields
-    name: "שם",
-    email: "אימייל",
-    phone: "טלפון",
-    field: "תחום / התמחות",
-    region: "אזור",
-    verified: "מאומת",
-    rating: "דירוג",
-    
-    // Table columns
-    actions: "פעולות",
-    edit: "ערוך",
-    delete: "מחק",
-    yes: "כן",
-    no: "לא",
-    na: "לא זמין",
-    
-    // Dialog
-    addNewSupplier: "הוסף ספק חדש למערכת",
-    updateSupplierInfo: "עדכן את פרטי הספק",
-    cancel: "ביטול",
-    create: "צור",
-    update: "עדכן",
-    nameRequired: "שם הוא שדה חובה",
+  // Entrepreneurs Management
+  entrepreneurs: {
+    title: "ניהול יזמים",
+    searchPlaceholder: "חיפוש לפי שם, אימייל או חברה...",
+    createButton: "צור יזם חדש",
+    editButton: "ערוך",
+    deleteButton: "מחק",
+    toggleActiveButton: "שנה סטטוס",
+    columns: {
+      name: "שם",
+      email: "אימייל",
+      phone: "טלפון",
+      company: "חברה",
+      createdAt: "תאריך הרשמה",
+      actions: "פעולות",
+    },
+    createDialog: {
+      title: "צור יזם חדש",
+      emailLabel: "אימייל",
+      emailPlaceholder: "email@example.com",
+      passwordLabel: "סיסמה",
+      passwordPlaceholder: "הזן סיסמה",
+      nameLabel: "שם מלא",
+      namePlaceholder: "הזן שם מלא",
+      phoneLabel: "טלפון",
+      phonePlaceholder: "050-1234567",
+      companyLabel: "שם חברה",
+      companyPlaceholder: "הזן שם חברה",
+      submitButton: "צור חשבון",
+      cancelButton: "ביטול",
+    },
+    editDialog: {
+      title: "ערוך יזם",
+      submitButton: "שמור שינויים",
+      cancelButton: "ביטול",
+    },
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק יזם זה?",
+    messages: {
+      created: "יזם נוצר בהצלחה",
+      updated: "יזם עודכן בהצלחה",
+      deleted: "יזם נמחק בהצלחה",
+      error: "אירעה שגיאה",
+    },
+  },
+
+  // Advisors Management
+  advisors: {
+    title: "ניהול יועצים",
+    searchPlaceholder: "חיפוש לפי שם משרד, איש קשר או אימייל...",
+    createButton: "צור יועץ חדש",
+    editButton: "ערוך",
+    deleteButton: "מחק",
+    toggleActiveButton: "שנה סטטוס פעילות",
+    filters: {
+      all: "הכל",
+      pending: "ממתינים לאישור",
+      approved: "מאושרים",
+    },
+    columns: {
+      companyName: "שם המשרד",
+      contactPerson: "איש קשר",
+      email: "אימייל",
+      phone: "טלפון",
+      location: "מיקום",
+      foundingYear: "שנת ייסוד",
+      expertise: "התמחויות",
+      approvalStatus: "סטטוס אישור",
+      activeStatus: "חשבון פעיל",
+      actions: "פעולות",
+    },
+    status: {
+      approved: "מאושר",
+      pending: "ממתין לאישור",
+      active: "פעיל",
+      inactive: "מושהה",
+    },
+    createDialog: {
+      title: "צור יועץ חדש",
+      emailLabel: "אימייל",
+      emailPlaceholder: "email@example.com",
+      passwordLabel: "סיסמה",
+      passwordPlaceholder: "הזן סיסמה",
+      nameLabel: "שם איש קשר",
+      namePlaceholder: "הזן שם מלא",
+      companyNameLabel: "שם המשרד",
+      companyNamePlaceholder: "הזן שם משרד",
+      phoneLabel: "טלפון",
+      phonePlaceholder: "050-1234567",
+      locationLabel: "מיקום",
+      locationPlaceholder: "בחר עיר",
+      foundingYearLabel: "שנת ייסוד",
+      foundingYearPlaceholder: "2020",
+      officeSizeLabel: "גודל משרד",
+      officeSizePlaceholder: "בחר גודל משרד",
+      positionLabel: "תפקיד במשרד",
+      positionPlaceholder: "בחר תפקיד",
+      expertiseLabel: "התמחויות",
+      expertisePlaceholder: "בחר לפחות התמחות אחת",
+      specialtiesLabel: "תחומי מומחיות נוספים",
+      specialtiesPlaceholder: "בחר תחומי מומחיות",
+      activityRegionsLabel: "אזורי פעילות",
+      activityRegionsPlaceholder: "בחר אזורי פעילות",
+      submitButton: "צור חשבון",
+      cancelButton: "ביטול",
+    },
+    editDialog: {
+      title: "ערוך יועץ",
+      submitButton: "שמור שינויים",
+      cancelButton: "ביטול",
+    },
+    approve: "אשר",
+    reject: "דחה",
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק יועץ זה?",
+    messages: {
+      created: "יועץ נוצר בהצלחה",
+      updated: "יועץ עודכן בהצלחה",
+      deleted: "יועץ נמחק בהצלחה",
+      approved: "יועץ אושר בהצלחה",
+      rejected: "יועץ נדחה",
+      toggled: "סטטוס פעילות עודכן",
+      error: "אירעה שגיאה",
+    },
   },
 
   // Projects Management
@@ -98,17 +178,24 @@ export const adminTranslations = {
     operationFailed: "הפעולה נכשלה",
     
     // Table columns
-    name: "שם",
+    name: "שם הפרויקט",
+    owner: "בעלים",
     type: "סוג",
     location: "מיקום",
     budget: "תקציב",
     status: "סטטוס",
     phase: "שלב",
+    createdAt: "תאריך יצירה",
     actions: "פעולות",
+    
+    // Actions
     archive: "ארכב",
     restore: "שחזר",
+    view: "צפה",
+    edit: "ערוך",
+    delete: "מחק",
     
-    // Status
+    // Status values
     draft: "טיוטה",
     active: "פעיל",
     completed: "הושלם",
@@ -117,129 +204,92 @@ export const adminTranslations = {
 
   // RFPs Management
   rfps: {
-    title: "קריאות להצעות מחיר והצעות",
-    description: "ניהול קריאות להצעות מחיר והצעות שהוגשו",
-    rfpsTab: "קריאות להצעות מחיר",
-    proposalsTab: "הצעות מחיר",
-    deleted: "נמחק בהצלחה",
-    statusUpdated: "הסטטוס עודכן",
-    deleteRFPConfirm: "למחוק את קריאת ההצעות הזו? הפעולה תמחק גם את ההזמנות הקשורות.",
-    deleteProposalConfirm: "למחוק את ההצעה הזו?",
+    title: "ניהול קריאות להצעות מחיר",
+    description: "ניהול כל קריאות להצעות המחיר במערכת",
+    searchPlaceholder: "חפש לפי נושא או פרויקט...",
     
-    // RFP columns
+    // Table columns
     subject: "נושא",
-    sentAt: "נשלח ב",
-    projectId: "מזהה פרויקט",
-    
-    // Proposal columns
-    supplier: "ספק",
-    price: "מחיר",
-    timeline: "לוח זמנים",
-    status: "סטטוס",
-    submitted: "הוגש",
+    project: "פרויקט",
+    sentBy: "נשלח על ידי",
+    sentAt: "תאריך שליחה",
+    invitesSent: "הזמנות שנשלחו",
+    proposalsReceived: "הצעות שהתקבלו",
     actions: "פעולות",
-    approve: "אשר",
-    reject: "דחה",
-    delete: "מחק",
-    days: "ימים",
     
-    // Status
-    received: "התקבל",
-    approved: "אושר",
-    rejected: "נדחה",
+    // Actions
+    view: "צפה",
+    delete: "מחק",
+    
+    // Dialog
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק קריאה להצעות מחיר זו?",
+    deleted: "קריאה להצעות מחיר נמחקה בהצלחה",
+    deleteFailed: "מחיקת קריאה להצעות מחיר נכשלה",
   },
 
   // Users Management
   users: {
     title: "ניהול משתמשים",
-    description: "ניהול תפקידי משתמשים והרשאות",
-    searchPlaceholder: "חפש משתמשים לפי שם...",
-    rolesUpdated: "תפקידי המשתמש עודכנו בהצלחה",
-    updateFailed: "עדכון התפקידים נכשל",
-    userCreated: "משתמש נוצר בהצלחה",
-    userDeleted: "משתמש נמחק בהצלחה",
-    createFailed: "יצירת המשתמש נכשלה",
-    deleteFailed: "מחיקת המשתמש נכשלה",
-    deleteConfirm: "האם אתה בטוח שברצונך למחוק את המשתמש הזה? פעולה זו אינה ניתנת לביטול.",
-    cannotDeleteSelf: "לא ניתן למחוק את החשבון שלך",
+    description: "ניהול כל המשתמשים במערכת",
+    searchPlaceholder: "חפש משתמשים...",
     
     // Table columns
     name: "שם",
     email: "אימייל",
-    profileRole: "תפקיד בפרופיל",
-    assignedRoles: "תפקידים מוקצים",
-    created: "נוצר",
+    role: "תפקיד",
+    createdAt: "תאריך רישום",
     actions: "פעולות",
-    manageRoles: "נהל תפקידים",
-    noRoles: "אין תפקידים",
-    addUser: "הוסף משתמש",
-    delete: "מחק",
     
     // Roles
-    admin: "מנהל",
     entrepreneur: "יזם",
     advisor: "יועץ",
-    supplier: "ספק",
+    admin: "מנהל",
     
-    // Dialog - Roles
-    manageUserRoles: "ניהול תפקידי משתמש",
-    assignOrRemove: "הקצה או הסר תפקידים עבור",
-    cancel: "ביטול",
-    saveChanges: "שמור שינויים",
-    
-    // Dialog - Create User
-    createUser: "צור משתמש חדש",
-    createUserDesc: "הוסף משתמש חדש למערכת והקצה לו תפקידים",
-    password: "סיסמה",
-    phone: "טלפון",
-    assignRoles: "הקצה תפקידים",
-    emailRequired: "אימייל הוא שדה חובה",
-    passwordRequired: "סיסמה היא שדה חובה",
-    passwordMinLength: "הסיסמה חייבת להכיל לפחות 6 תווים",
-    create: "צור משתמש",
+    // Actions
+    viewProfile: "צפה בפרופיל",
+    manageRoles: "נהל תפקידים",
+    suspend: "השעה",
+    delete: "מחק",
   },
 
   // Audit Log
   auditLog: {
     title: "יומן ביקורת",
-    description: "מעקב מלא אחר כל פעולות המנהל (500 רשומות אחרונות)",
-    viewDetails: "הצג פרטים",
+    description: "מעקב אחר כל הפעולות במערכת",
+    searchPlaceholder: "חפש לפי פעולה או משתמש...",
     
     // Table columns
-    timestamp: "חותמת זמן",
+    timestamp: "זמן",
+    admin: "מנהל",
     action: "פעולה",
-    targetTable: "טבלת יעד",
+    targetTable: "טבלה",
     targetId: "מזהה יעד",
-    adminId: "מזהה מנהל",
-    details: "פרטים",
+    changes: "שינויים",
     
     // Actions
-    create: "יצירה",
-    update: "עדכון",
-    delete: "מחיקה",
-    archive: "ארכוב",
-    restore: "שחזור",
-    update_roles: "עדכון תפקידים",
+    viewDetails: "צפה בפרטים",
     
-    // Dialog
-    detailsTitle: "פרטי יומן ביקורת",
-    detailsDescription: "מידע מלא על פעולה זו",
-    actionDetails: "פרטי פעולה",
-    table: "טבלה",
-    oldValues: "ערכים ישנים",
-    newValues: "ערכים חדשים",
-    userAgent: "User Agent",
+    // Time format
+    dateFormat: "dd/MM/yyyy HH:mm",
   },
 
-  // Common/Shared
+  // Common
   common: {
-    noData: "אין נתונים זמינים",
-    showing: "מציג",
-    to: "עד",
-    of: "מתוך",
-    results: "תוצאות",
-    page: "עמוד",
     loading: "טוען...",
-    search: "חיפוש...",
+    error: "שגיאה",
+    success: "הצלחה",
+    cancel: "ביטול",
+    save: "שמור",
+    delete: "מחק",
+    edit: "ערוך",
+    view: "צפה",
+    search: "חפש",
+    filter: "סנן",
+    export: "ייצא",
+    import: "ייבא",
+    noData: "אין נתונים להצגה",
+    confirmDelete: "האם אתה בטוח?",
+    yes: "כן",
+    no: "לא",
   },
 };

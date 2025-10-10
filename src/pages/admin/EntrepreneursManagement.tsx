@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { adminTranslations as t } from "@/constants/adminTranslations";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { SearchBar } from "@/components/admin/SearchBar";
+import { DataTable, Column } from "@/components/admin/DataTable";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { logAdminAction } from "@/lib/auditLog";
+import { CreateEntrepreneurDialog } from "@/components/admin/CreateEntrepreneurDialog";
+import { EditEntrepreneurDialog } from "@/components/admin/EditEntrepreneurDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+interface Entrepreneur {
+  id: string;
+  user_id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  company_name: string | null;
+  created_at: string;
+}
+
+export default function EntrepreneursManagement() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedEntrepreneur, setSelectedEntrepreneur] = useState<Entrepreneur | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch entrepreneurs
+  const { data: entrepreneurs = [], isLoading } = useQuery({
+    queryKey: ["entrepreneurs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("role", "entrepreneur")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as Entrepreneur[];
+    },
+  });
+
+  // Filter entrepreneurs by search
+  const filteredEntrepreneurs = entrepreneurs.filter((entrepreneur) => {
+    const search = searchQuery.toLowerCase();
+    return (
+      entrepreneur.name?.toLowerCase().includes(search) ||
+      entrepreneur.email?.toLowerCase().includes(search) ||
+      entrepreneur.company_name?.toLowerCase().includes(search)
+    );
+  });
+
+  // Delete entrepreneur mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete auth user (will cascade to profiles)
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    },
+    onSuccess: async (_, userId) => {
+      await logAdminAction("delete", "profiles", userId);
+      queryClient.invalidateQueries({ queryKey: ["entrepreneurs"] });
+      toast({
+        title: t.entrepreneurs.messages.deleted,
+      });
+      setDeleteDialogOpen(false);
+      setSelectedEntrepreneur(null);
+    },
+    onError: (error) => {
+      console.error("Error deleting entrepreneur:", error);
+      toast({
+        title: t.entrepreneurs.messages.error,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const columns: Column<Entrepreneur>[] = [
+    {
+      header: t.entrepreneurs.columns.name,
+      accessorKey: "name",
+    },
+    {
+      header: t.entrepreneurs.columns.email,
+      accessorKey: "email",
+    },
+    {
+      header: t.entrepreneurs.columns.phone,
+      accessorKey: "phone",
+    },
+    {
+      header: t.entrepreneurs.columns.company,
+      accessorKey: "company_name",
+    },
+    {
+      header: t.entrepreneurs.columns.createdAt,
+      cell: (entrepreneur) => new Date(entrepreneur.created_at).toLocaleDateString("he-IL"),
+    },
+    {
+      header: t.entrepreneurs.columns.actions,
+      cell: (entrepreneur) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedEntrepreneur(entrepreneur);
+              setEditDialogOpen(true);
+            }}
+          >
+            <Pencil className="h-4 w-4 ml-2" />
+            {t.entrepreneurs.editButton}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedEntrepreneur(entrepreneur);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 ml-2" />
+            {t.entrepreneurs.deleteButton}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">{t.entrepreneurs.title}</h1>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 ml-2" />
+            {t.entrepreneurs.createButton}
+          </Button>
+        </div>
+
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t.entrepreneurs.searchPlaceholder}
+        />
+
+        <DataTable
+          data={filteredEntrepreneurs}
+          columns={columns}
+        />
+
+        <CreateEntrepreneurDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+        />
+
+        {selectedEntrepreneur && (
+          <EditEntrepreneurDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            entrepreneur={selectedEntrepreneur}
+          />
+        )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t.entrepreneurs.deleteButton}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t.entrepreneurs.deleteConfirm}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t.entrepreneurs.createDialog.cancelButton}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => selectedEntrepreneur && deleteMutation.mutate(selectedEntrepreneur.user_id)}
+              >
+                {t.entrepreneurs.deleteButton}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </AdminLayout>
+  );
+}

@@ -23,7 +23,8 @@ import ForConsultants from "./pages/ForConsultants";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import SuppliersManagement from "./pages/admin/SuppliersManagement";
+import EntrepreneursManagement from "./pages/admin/EntrepreneursManagement";
+import AdvisorsManagement from "./pages/admin/AdvisorsManagement";
 import ProjectsManagement from "./pages/admin/ProjectsManagement";
 import RFPsManagement from "./pages/admin/RFPsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
@@ -111,7 +112,8 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/heyadmin/login" element={<AdminLogin />} />
             <Route path="/heyadmin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/heyadmin/suppliers" element={<AdminRoute><SuppliersManagement /></AdminRoute>} />
+            <Route path="/heyadmin/entrepreneurs" element={<AdminRoute><EntrepreneursManagement /></AdminRoute>} />
+            <Route path="/heyadmin/advisors" element={<AdminRoute><AdvisorsManagement /></AdminRoute>} />
             <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
