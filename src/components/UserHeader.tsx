@@ -67,7 +67,7 @@ export const UserHeader = () => {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu dir="rtl">
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
@@ -77,27 +77,51 @@ export const UserHeader = () => {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 text-right" align="start" forceMount>
-        <div className="flex items-center justify-start gap-2 p-2">
-          <div className="flex flex-col space-y-1 leading-none text-right">
-            <p className="font-medium">{displayName}</p>
-            <p className="text-xs text-muted-foreground">{profile.email}</p>
+      <DropdownMenuContent 
+        className="w-64 bg-background border-border shadow-lg z-50" 
+        align="end" 
+        sideOffset={8}
+      >
+        <div className="flex items-start gap-3 p-3 border-b border-border">
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {getInitials(profile.name, profile.email)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col space-y-1 text-right overflow-hidden">
+            <p className="font-semibold text-sm truncate">{displayName}</p>
+            <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
           </div>
         </div>
+        
+        <div className="p-1">
+          <DropdownMenuItem 
+            onClick={() => navigate('/profile')} 
+            className="text-right cursor-pointer py-2.5 px-3 rounded-md"
+          >
+            <User className="ml-2 h-4 w-4 shrink-0" />
+            <span>הפרופיל שלי</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => navigate('/profile?tab=settings')}
+            className="text-right cursor-pointer py-2.5 px-3 rounded-md"
+          >
+            <Settings className="ml-2 h-4 w-4 shrink-0" />
+            <span>הגדרות</span>
+          </DropdownMenuItem>
+        </div>
+        
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/profile')} className="text-right">
-          <User className="ml-2 h-4 w-4" />
-          הפרופיל שלי
-        </DropdownMenuItem>
-        <DropdownMenuItem className="text-right">
-          <Settings className="ml-2 h-4 w-4" />
-          הגדרות
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-right">
-          <LogOut className="ml-2 h-4 w-4" />
-          התנתק
-        </DropdownMenuItem>
+        
+        <div className="p-1">
+          <DropdownMenuItem 
+            onClick={handleSignOut} 
+            className="text-right cursor-pointer py-2.5 px-3 rounded-md text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+          >
+            <LogOut className="ml-2 h-4 w-4 shrink-0" />
+            <span>התנתק</span>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
