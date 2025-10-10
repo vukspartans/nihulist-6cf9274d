@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, User, AlertTriangle, Star, Bell } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, User, AlertTriangle, Star, Bell, Upload, Building2 } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
 
@@ -58,6 +58,8 @@ interface AdvisorProfile {
   office_size: string | null;
   office_phone: string | null;
   position_in_office: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
 }
 
 interface UserProfile {
@@ -74,6 +76,7 @@ const AdvisorDashboard = () => {
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -137,6 +140,49 @@ const AdvisorDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/logo.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('advisor-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('advisor-assets')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('advisors')
+        .update({ logo_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAdvisorProfile(prev => prev ? { ...prev, logo_url: publicUrl } : null);
+      toast({
+        title: "הלוגו עודכן",
+        description: "הלוגו שלך הועלה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן להעלות את הלוגו",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -244,26 +290,59 @@ const AdvisorDashboard = () => {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">לוח בקרה - יועץ</h1>
-                <p className="text-muted-foreground">
-                  ברוכים הבאים {advisorProfile.company_name || 'יועץ'}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground">תפקיד:</span>
-                  <span className="font-medium">יועץ מאושר</span>
-                  {advisorProfile.location && (
-                    <>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-sm">{advisorProfile.location}</span>
-                    </>
-                  )}
-                  <span className="text-muted-foreground">•</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm font-medium">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
-                    <span className="text-xs text-muted-foreground">(לא פעיל)</span>
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-4 flex-1">
+                {/* Logo Section */}
+                <label htmlFor="dashboard-logo-upload" className="cursor-pointer group">
+                  <div className="relative w-20 h-20 rounded-lg border-2 border-border bg-background overflow-hidden hover:border-primary transition-all group-hover:shadow-md">
+                    {advisorProfile?.logo_url ? (
+                      <img 
+                        src={advisorProfile.logo_url} 
+                        alt="Logo" 
+                        className="w-full h-full object-contain p-2"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center">
+                        <Building2 className="h-6 w-6 text-muted-foreground mb-1 group-hover:text-primary transition-colors" />
+                        <Upload className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    )}
+                    {uploadingLogo && (
+                      <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <input
+                  id="dashboard-logo-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  disabled={uploadingLogo}
+                />
+                
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">לוח בקרה - יועץ</h1>
+                  <p className="text-muted-foreground">
+                    ברוכים הבאים {advisorProfile.company_name || 'יועץ'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm text-muted-foreground">תפקיד:</span>
+                    <span className="font-medium">יועץ מאושר</span>
+                    {advisorProfile.location && (
+                      <>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-sm">{advisorProfile.location}</span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+                      <span className="text-xs text-muted-foreground">(לא פעיל)</span>
+                    </div>
                   </div>
                 </div>
               </div>

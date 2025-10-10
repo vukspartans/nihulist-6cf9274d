@@ -1165,88 +1165,6 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-              {/* Branding - Logo & Cover Image */}
-              <Card dir="rtl" className="hover-scale">
-                <CardHeader>
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="h-5 w-5 text-primary" />
-                      מיתוג ועיצוב
-                    </CardTitle>
-                    <CardDescription>העלה לוגו ותמונת רקע למשרד שלך</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Logo Upload */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">לוגו המשרד</Label>
-                    <div className="flex items-center gap-4">
-                      {advisorProfile?.logo_url && (
-                        <div className="relative w-24 h-24 rounded-lg border-2 border-border overflow-hidden bg-background">
-                          <img 
-                            src={advisorProfile.logo_url} 
-                            alt="Logo" 
-                            className="w-full h-full object-contain p-2"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <label htmlFor="logo-upload" className="cursor-pointer">
-                          <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors text-center">
-                            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-sm font-medium mb-1">
-                              {uploadingLogo ? 'מעלה...' : advisorProfile?.logo_url ? 'החלף לוגו' : 'העלה לוגו'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG עד 2MB</p>
-                          </div>
-                        </label>
-                        <input
-                          id="logo-upload"
-                          type="file"
-                          accept="image/png,image/jpeg,image/jpg"
-                          onChange={handleLogoUpload}
-                          className="hidden"
-                          disabled={uploadingLogo}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cover Image Upload */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">תמונת רקע לדשבורד</Label>
-                    <div className="space-y-3">
-                      {advisorProfile?.cover_image_url && (
-                        <div className="relative w-full h-32 rounded-lg border-2 border-border overflow-hidden bg-background">
-                          <img 
-                            src={advisorProfile.cover_image_url} 
-                            alt="Cover" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <label htmlFor="cover-upload" className="cursor-pointer block">
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors text-center">
-                          <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm font-medium mb-1">
-                            {uploadingCover ? 'מעלה...' : advisorProfile?.cover_image_url ? 'החלף תמונת רקע' : 'העלה תמונת רקע'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">PNG, JPG ברוחב 1200px מומלץ</p>
-                        </div>
-                      </label>
-                      <input
-                        id="cover-upload"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        onChange={handleCoverUpload}
-                        className="hidden"
-                        disabled={uploadingCover}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Social URLs */}
               <Card dir="rtl" className="hover-scale">
                 <CardHeader>
@@ -1445,6 +1363,92 @@ const Profile = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Branding - Logo & Cover (Advisors Only) */}
+            {isAdvisor && (
+              <Card className="hover-scale" dir="rtl">
+                <CardHeader>
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-primary" />
+                      מיתוג ועיצוב
+                    </CardTitle>
+                    <CardDescription>לוגו ותמונת רקע למשרד שלך</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Logo Upload */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">לוגו המשרד</Label>
+                      <label htmlFor="logo-upload" className="cursor-pointer block">
+                        <div className="relative border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors group">
+                          {advisorProfile?.logo_url ? (
+                            <div className="aspect-square w-full flex items-center justify-center bg-background rounded">
+                              <img 
+                                src={advisorProfile.logo_url} 
+                                alt="Logo" 
+                                className="max-w-full max-h-full object-contain p-2"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-square w-full flex flex-col items-center justify-center">
+                              <Upload className="h-10 w-10 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <p className="text-sm font-medium text-center">
+                                {uploadingLogo ? 'מעלה...' : 'העלה לוגו'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG/JPG עד 2MB</p>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        disabled={uploadingLogo}
+                      />
+                    </div>
+
+                    {/* Cover Image Upload */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">תמונת רקע</Label>
+                      <label htmlFor="cover-upload" className="cursor-pointer block">
+                        <div className="relative border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors group">
+                          {advisorProfile?.cover_image_url ? (
+                            <div className="aspect-square w-full rounded overflow-hidden">
+                              <img 
+                                src={advisorProfile.cover_image_url} 
+                                alt="Cover" 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-square w-full flex flex-col items-center justify-center">
+                              <ImageIcon className="h-10 w-10 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <p className="text-sm font-medium text-center">
+                                {uploadingCover ? 'מעלה...' : 'העלה תמונת רקע'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG/JPG 1200px</p>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                      <input
+                        id="cover-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleCoverUpload}
+                        className="hidden"
+                        disabled={uploadingCover}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Account Actions */}
             <Card className="hover-scale">
