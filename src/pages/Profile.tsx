@@ -401,18 +401,21 @@ const Profile = () => {
 
       if (uploadError) throw uploadError;
 
+      // Add timestamp to prevent caching
       const { data: { publicUrl } } = supabase.storage
         .from('advisor-assets')
         .getPublicUrl(fileName);
+      
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
 
       const { error: updateError } = await supabase
         .from('advisors')
-        .update({ logo_url: publicUrl })
+        .update({ logo_url: cacheBustedUrl })
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
-      setAdvisorProfile(prev => prev ? { ...prev, logo_url: publicUrl } : null);
+      setAdvisorProfile(prev => prev ? { ...prev, logo_url: cacheBustedUrl } : null);
       toast({
         title: "הלוגו עודכן",
         description: "הלוגו שלך הועלה בהצלחה",
@@ -422,6 +425,35 @@ const Profile = () => {
       toast({
         title: "שגיאה",
         description: "לא ניתן להעלות את הלוגו",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    if (!user) return;
+
+    setUploadingLogo(true);
+    try {
+      const { error: updateError } = await supabase
+        .from('advisors')
+        .update({ logo_url: null })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAdvisorProfile(prev => prev ? { ...prev, logo_url: null } : null);
+      toast({
+        title: "הלוגו הוסר",
+        description: "הלוגו שלך הוסר בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן להסיר את הלוגו",
         variant: "destructive",
       });
     } finally {
@@ -1413,6 +1445,28 @@ const Profile = () => {
                         className="hidden"
                         disabled={uploadingLogo}
                       />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => document.getElementById('logo-upload')?.click()}
+                          disabled={uploadingLogo}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Upload className="h-4 w-4 ml-2" />
+                          {advisorProfile?.logo_url ? 'החלף לוגו' : 'העלה לוגו'}
+                        </Button>
+                        {advisorProfile?.logo_url && (
+                          <Button
+                            onClick={handleLogoRemove}
+                            disabled={uploadingLogo}
+                            variant="destructive"
+                            className="flex-1"
+                          >
+                            <X className="h-4 w-4 ml-2" />
+                            הסר לוגו
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Cover Image Selection */}
