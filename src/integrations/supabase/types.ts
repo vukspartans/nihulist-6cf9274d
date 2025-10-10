@@ -98,6 +98,7 @@ export type Database = {
           certifications: string[] | null
           company_id: string | null
           company_name: string | null
+          cover_image_url: string | null
           created_at: string
           expertise: string[] | null
           facebook_url: string | null
@@ -107,6 +108,7 @@ export type Database = {
           is_active: boolean | null
           linkedin_url: string | null
           location: string | null
+          logo_url: string | null
           office_phone: string | null
           office_size: string | null
           position_in_office: string | null
@@ -122,6 +124,7 @@ export type Database = {
           certifications?: string[] | null
           company_id?: string | null
           company_name?: string | null
+          cover_image_url?: string | null
           created_at?: string
           expertise?: string[] | null
           facebook_url?: string | null
@@ -131,6 +134,7 @@ export type Database = {
           is_active?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          logo_url?: string | null
           office_phone?: string | null
           office_size?: string | null
           position_in_office?: string | null
@@ -146,6 +150,7 @@ export type Database = {
           certifications?: string[] | null
           company_id?: string | null
           company_name?: string | null
+          cover_image_url?: string | null
           created_at?: string
           expertise?: string[] | null
           facebook_url?: string | null
@@ -155,6 +160,7 @@ export type Database = {
           is_active?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          logo_url?: string | null
           office_phone?: string | null
           office_size?: string | null
           position_in_office?: string | null

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2 } from 'lucide-react';
+import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -62,6 +62,8 @@ interface AdvisorProfile {
   linkedin_url?: string | null;
   instagram_url?: string | null;
   facebook_url?: string | null;
+  logo_url?: string | null;
+  cover_image_url?: string | null;
 }
 
 const Profile = () => {
@@ -79,7 +81,8 @@ const Profile = () => {
     company: false, 
     activityRegions: false, 
     officeSize: false, 
-    socialUrls: false 
+    socialUrls: false,
+    branding: false
   });
   const [editedData, setEditedData] = useState({ 
     name: '', 
@@ -99,6 +102,8 @@ const Profile = () => {
   const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Handle URL parameters for tab navigation
   useEffect(() => {
@@ -144,7 +149,7 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url, facebook_url')
+            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url, facebook_url, logo_url, cover_image_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
@@ -371,7 +376,94 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/logo.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('advisor-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('advisor-assets')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('advisors')
+        .update({ logo_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAdvisorProfile(prev => prev ? { ...prev, logo_url: publicUrl } : null);
+      toast({
+        title: "הלוגו עודכן",
+        description: "הלוגו שלך הועלה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן להעלות את הלוגו",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingCover(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/cover.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('advisor-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('advisor-assets')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('advisors')
+        .update({ cover_image_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAdvisorProfile(prev => prev ? { ...prev, cover_image_url: publicUrl } : null);
+      toast({
+        title: "תמונת הרקע עודכנה",
+        description: "תמונת הרקע שלך הועלתה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error uploading cover:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן להעלות את תמונת הרקע",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+
+  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'branding') => {
     if (field === 'specialties') {
       if (editMode.specialties) {
         const expertise = advisorProfile?.expertise || advisorProfile?.specialties || [];
@@ -1072,6 +1164,88 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
+
+              {/* Branding - Logo & Cover Image */}
+              <Card dir="rtl" className="hover-scale">
+                <CardHeader>
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-primary" />
+                      מיתוג ועיצוב
+                    </CardTitle>
+                    <CardDescription>העלה לוגו ותמונת רקע למשרד שלך</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Logo Upload */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">לוגו המשרד</Label>
+                    <div className="flex items-center gap-4">
+                      {advisorProfile?.logo_url && (
+                        <div className="relative w-24 h-24 rounded-lg border-2 border-border overflow-hidden bg-background">
+                          <img 
+                            src={advisorProfile.logo_url} 
+                            alt="Logo" 
+                            className="w-full h-full object-contain p-2"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <label htmlFor="logo-upload" className="cursor-pointer">
+                          <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors text-center">
+                            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm font-medium mb-1">
+                              {uploadingLogo ? 'מעלה...' : advisorProfile?.logo_url ? 'החלף לוגו' : 'העלה לוגו'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG עד 2MB</p>
+                          </div>
+                        </label>
+                        <input
+                          id="logo-upload"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                          disabled={uploadingLogo}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cover Image Upload */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">תמונת רקע לדשבורד</Label>
+                    <div className="space-y-3">
+                      {advisorProfile?.cover_image_url && (
+                        <div className="relative w-full h-32 rounded-lg border-2 border-border overflow-hidden bg-background">
+                          <img 
+                            src={advisorProfile.cover_image_url} 
+                            alt="Cover" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <label htmlFor="cover-upload" className="cursor-pointer block">
+                        <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors text-center">
+                          <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium mb-1">
+                            {uploadingCover ? 'מעלה...' : advisorProfile?.cover_image_url ? 'החלף תמונת רקע' : 'העלה תמונת רקע'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">PNG, JPG ברוחב 1200px מומלץ</p>
+                        </div>
+                      </label>
+                      <input
+                        id="cover-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleCoverUpload}
+                        className="hidden"
+                        disabled={uploadingCover}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Social URLs */}
               <Card dir="rtl" className="hover-scale">
