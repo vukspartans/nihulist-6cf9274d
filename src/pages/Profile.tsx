@@ -888,7 +888,7 @@ const Profile = () => {
                         <label className="text-sm font-medium text-muted-foreground">
                           מספר טלפון במשרד
                         </label>
-                        <p className="text-foreground" dir="ltr" style={{ textAlign: 'left' }}>
+                        <p className="text-foreground" dir="ltr" style={{ textAlign: 'right' }}>
                           {advisorProfile?.office_phone || 'לא מוגדר'}
                         </p>
                       </div>
