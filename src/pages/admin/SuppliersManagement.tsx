@@ -6,33 +6,18 @@ import { DataTable, Column } from "@/components/admin/DataTable";
 import { SearchBar } from "@/components/admin/SearchBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Download, Upload, Trash2, ShieldCheck, XCircle } from "lucide-react";
+import { ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
-import Papa from "papaparse";
-import { adminTranslations } from "@/constants/adminTranslations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface Supplier {
+interface Entrepreneur {
   id: string;
-  name: string;
+  user_id: string;
+  name: string | null;
   email: string | null;
   phone: string | null;
-  field: string | null;
-  region: string | null;
-  rating: number | null;
-  verified: boolean;
+  company_name: string | null;
   created_at: string;
 }
 
@@ -57,16 +42,6 @@ interface Advisor {
 
 const SuppliersManagement = () => {
   const [search, setSearch] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    field: "",
-    region: "",
-    verified: false,
-  });
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
   const queryClient = useQueryClient();
@@ -111,89 +86,29 @@ const SuppliersManagement = () => {
     },
   });
 
-  const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ['admin-suppliers', search],
+  // Fetch entrepreneurs
+  const { data: entrepreneurs = [], isLoading: entrepreneursLoading } = useQuery({
+    queryKey: ['admin-entrepreneurs', search],
     queryFn: async () => {
       let query = supabase
-        .from('suppliers')
+        .from('profiles')
         .select('*')
+        .eq('role', 'entrepreneur')
         .order('created_at', { ascending: false });
-
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-      }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Supplier[];
-    },
-  });
 
-  const createMutation = useMutation({
-    mutationFn: async (supplier: typeof formData) => {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .insert([supplier])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      await logAdminAction('create', 'suppliers', data.id, null, supplier);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success(adminTranslations.suppliers.created);
-      setShowDialog(false);
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || adminTranslations.suppliers.createFailed);
-    },
-  });
+      // Apply search filter client-side if needed
+      if (search) {
+        return (data || []).filter((entrepreneur: any) => 
+          entrepreneur.name?.toLowerCase().includes(search.toLowerCase()) ||
+          entrepreneur.email?.toLowerCase().includes(search.toLowerCase()) ||
+          entrepreneur.company_name?.toLowerCase().includes(search.toLowerCase())
+        ) as Entrepreneur[];
+      }
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data: updateData }: { id: string; data: typeof formData }) => {
-      const oldData = suppliers.find(s => s.id === id);
-      const { data, error } = await supabase
-        .from('suppliers')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      await logAdminAction('update', 'suppliers', id, oldData, updateData);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success(adminTranslations.suppliers.updated);
-      setShowDialog(false);
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || adminTranslations.suppliers.updateFailed);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const oldData = suppliers.find(s => s.id === id);
-      const { error } = await supabase
-        .from('suppliers')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      await logAdminAction('delete', 'suppliers', id, oldData, null);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
-      toast.success(adminTranslations.suppliers.deleted);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || adminTranslations.suppliers.deleteFailed);
+      return data as Entrepreneur[];
     },
   });
 
@@ -229,88 +144,26 @@ const SuppliersManagement = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingSupplier) {
-      updateMutation.mutate({ id: editingSupplier.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      field: "",
-      region: "",
-      verified: false,
-    });
-    setEditingSupplier(null);
-  };
-
-  const handleEdit = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    setFormData({
-      name: supplier.name,
-      email: supplier.email || "",
-      phone: supplier.phone || "",
-      field: supplier.field || "",
-      region: supplier.region || "",
-      verified: supplier.verified,
-    });
-    setShowDialog(true);
-  };
-
-  const handleExportCSV = () => {
-    const csv = Papa.unparse(suppliers);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `suppliers-${new Date().toISOString()}.csv`;
-    a.click();
-    toast.success(adminTranslations.suppliers.csvExported);
-  };
-
-  const columns: Column<Supplier>[] = [
-    { header: adminTranslations.suppliers.name, accessorKey: "name" },
-    { header: adminTranslations.suppliers.email, accessorKey: "email" },
-    { header: adminTranslations.suppliers.field, accessorKey: "field" },
-    { header: adminTranslations.suppliers.region, accessorKey: "region" },
-    {
-      header: adminTranslations.suppliers.rating,
-      cell: (item) => item.rating ? item.rating.toFixed(1) : adminTranslations.suppliers.na,
+  const entrepreneurColumns: Column<Entrepreneur>[] = [
+    { 
+      header: "שם", 
+      cell: (item) => item.name || 'לא צוין'
     },
-    {
-      header: adminTranslations.suppliers.verified,
-      cell: (item) => (
-        <Badge variant={item.verified ? "default" : "secondary"}>
-          {item.verified ? adminTranslations.suppliers.yes : adminTranslations.suppliers.no}
-        </Badge>
-      ),
+    { 
+      header: "אימייל", 
+      cell: (item) => item.email || 'לא צוין'
     },
-    {
-      header: adminTranslations.suppliers.actions,
-      cell: (item) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
-            {adminTranslations.suppliers.edit}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => {
-              if (confirm(adminTranslations.suppliers.deleteConfirm)) {
-                deleteMutation.mutate(item.id);
-              }
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+    { 
+      header: "טלפון", 
+      cell: (item) => item.phone || 'לא צוין'
+    },
+    { 
+      header: "שם החברה", 
+      cell: (item) => item.company_name || 'לא צוין'
+    },
+    { 
+      header: "תאריך הרשמה", 
+      cell: (item) => new Date(item.created_at).toLocaleDateString('he-IL')
     },
   ];
 
@@ -392,9 +245,9 @@ const SuppliersManagement = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">ניהול ספקים ויועצים</h1>
+            <h1 className="text-3xl font-bold">ניהול משתמשים</h1>
             <p className="text-muted-foreground mt-1">
-              נהל ספקים ויועצים, אשר או דחה בקשות
+              נהל יועצים ויזמים, אשר או דחה בקשות
             </p>
           </div>
         </div>
@@ -402,7 +255,7 @@ const SuppliersManagement = () => {
         <Tabs defaultValue="advisors" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="advisors">יועצים</TabsTrigger>
-            <TabsTrigger value="suppliers">ספקים</TabsTrigger>
+            <TabsTrigger value="entrepreneurs">יזמים</TabsTrigger>
           </TabsList>
 
           <TabsContent value="advisors" className="space-y-4">
@@ -440,108 +293,16 @@ const SuppliersManagement = () => {
             <DataTable data={advisors} columns={advisorColumns} />
           </TabsContent>
 
-          <TabsContent value="suppliers" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <SearchBar
-                value={search}
-                onChange={setSearch}
-                placeholder={adminTranslations.suppliers.searchPlaceholder}
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleExportCSV}>
-                  <Download className="w-4 h-4 ml-2" />
-                  {adminTranslations.suppliers.exportCSV}
-                </Button>
-                <Button onClick={() => setShowDialog(true)}>
-                  <Plus className="w-4 h-4 ml-2" />
-                  {adminTranslations.suppliers.addSupplier}
-                </Button>
-              </div>
-            </div>
+          <TabsContent value="entrepreneurs" className="space-y-4">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="חפש יזם..."
+            />
 
-            <DataTable data={suppliers} columns={columns} />
+            <DataTable data={entrepreneurs} columns={entrepreneurColumns} />
           </TabsContent>
         </Tabs>
-
-        <Dialog open={showDialog} onOpenChange={(open) => {
-          setShowDialog(open);
-          if (!open) resetForm();
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingSupplier ? adminTranslations.suppliers.editSupplier : adminTranslations.suppliers.addSupplier}
-              </DialogTitle>
-              <DialogDescription>
-                {editingSupplier
-                  ? adminTranslations.suppliers.updateSupplierInfo
-                  : adminTranslations.suppliers.addNewSupplier}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">{adminTranslations.suppliers.name} *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">{adminTranslations.suppliers.email}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">{adminTranslations.suppliers.phone}</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="field">{adminTranslations.suppliers.field}</Label>
-                <Input
-                  id="field"
-                  value={formData.field}
-                  onChange={(e) => setFormData({ ...formData, field: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="region">{adminTranslations.suppliers.region}</Label>
-                <Input
-                  id="region"
-                  value={formData.region}
-                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="verified"
-                  checked={formData.verified}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, verified: checked as boolean })
-                  }
-                />
-                <Label htmlFor="verified">{adminTranslations.suppliers.verified}</Label>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                  {adminTranslations.suppliers.cancel}
-                </Button>
-                <Button type="submit">
-                  {editingSupplier ? adminTranslations.suppliers.update : adminTranslations.suppliers.create}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
     </AdminLayout>
   );
