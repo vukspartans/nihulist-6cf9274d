@@ -311,6 +311,94 @@ export type Database = {
         }
         Relationships: []
       }
+      project_advisors: {
+        Row: {
+          advisor_id: string
+          agreement_url: string | null
+          created_at: string | null
+          deliverables: string[] | null
+          end_date: string | null
+          fee_amount: number
+          fee_currency: string | null
+          fee_type: string
+          id: string
+          notes: string | null
+          payment_terms: string | null
+          project_id: string
+          proposal_id: string | null
+          scope_of_work: string | null
+          selected_at: string | null
+          selected_by: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_id: string
+          agreement_url?: string | null
+          created_at?: string | null
+          deliverables?: string[] | null
+          end_date?: string | null
+          fee_amount: number
+          fee_currency?: string | null
+          fee_type: string
+          id?: string
+          notes?: string | null
+          payment_terms?: string | null
+          project_id: string
+          proposal_id?: string | null
+          scope_of_work?: string | null
+          selected_at?: string | null
+          selected_by?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_id?: string
+          agreement_url?: string | null
+          created_at?: string | null
+          deliverables?: string[] | null
+          end_date?: string | null
+          fee_amount?: number
+          fee_currency?: string | null
+          fee_type?: string
+          id?: string
+          notes?: string | null
+          payment_terms?: string | null
+          project_id?: string
+          proposal_id?: string | null
+          scope_of_work?: string | null
+          selected_at?: string | null
+          selected_by?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_advisors_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_advisors_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_advisors_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_files: {
         Row: {
           ai_summary: string | null

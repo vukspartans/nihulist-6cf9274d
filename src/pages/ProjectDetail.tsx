@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { ProjectFilesManager } from '@/components/ProjectFilesManager';
+import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -307,7 +308,10 @@ export const ProjectDetail = () => {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="timeline" className="text-right">ציר זמן</TabsTrigger>
+          <TabsTrigger value="advisors" className="text-right flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            יועצים שנבחרו
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="proposals">
@@ -416,17 +420,8 @@ export const ProjectDetail = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="timeline">
-          <Card>
-            <CardHeader>
-              <CardTitle>ציר זמן של הפרויקט</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                ציר הזמן יוצג כאן
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="advisors">
+          <SelectedAdvisorsTab projectId={project.id} />
         </TabsContent>
       </Tabs>
     </div>
