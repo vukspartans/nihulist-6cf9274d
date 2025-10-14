@@ -62,18 +62,44 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
             logo_url,
             office_phone,
             expertise,
-            user:profiles!inner (
-              name,
-              email,
-              phone
-            )
+            user_id
           )
         `)
         .eq('project_id', projectId)
         .order('selected_at', { ascending: false });
 
       if (error) throw error;
-      setAdvisors(data as any || []);
+
+      // Fetch user profiles separately
+      const advisorData = data || [];
+      const userIds = advisorData.map((item: any) => item.advisor.user_id).filter(Boolean);
+      
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, name, email, phone')
+          .in('user_id', userIds);
+
+        if (!profilesError && profiles) {
+          // Merge profile data with advisor data
+          const enrichedData = advisorData.map((item: any) => ({
+            ...item,
+            advisor: {
+              ...item.advisor,
+              user: profiles.find((p: any) => p.user_id === item.advisor.user_id) || {
+                name: '',
+                email: '',
+                phone: ''
+              }
+            }
+          }));
+          setAdvisors(enrichedData as any);
+        } else {
+          setAdvisors(advisorData as any);
+        }
+      } else {
+        setAdvisors(advisorData as any);
+      }
     } catch (error) {
       console.error('Error fetching advisors:', error);
       toast({

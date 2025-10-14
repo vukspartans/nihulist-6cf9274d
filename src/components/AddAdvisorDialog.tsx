@@ -44,20 +44,28 @@ export const AddAdvisorDialog = ({ projectId, open, onOpenChange, onSuccess }: A
 
   const fetchAdvisors = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: advisorsData, error } = await supabase
         .from('advisors')
-        .select(`
-          id,
-          company_name,
-          user:profiles!inner (
-            name
-          )
-        `)
+        .select('id, company_name, user_id')
         .eq('is_active', true)
         .eq('admin_approved', true);
 
       if (error) throw error;
-      setAdvisors(data as any || []);
+
+      // Fetch profiles for these advisors
+      const userIds = advisorsData?.map(a => a.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, name')
+        .in('user_id', userIds);
+
+      // Merge the data
+      const enrichedAdvisors = advisorsData?.map(advisor => ({
+        ...advisor,
+        user: profiles?.find(p => p.user_id === advisor.user_id) || { name: '' }
+      })) || [];
+
+      setAdvisors(enrichedAdvisors as any);
     } catch (error) {
       console.error('Error fetching advisors:', error);
     }
