@@ -84,14 +84,14 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
       {/* Category Selection */}
       <div>
         <label className="text-sm font-medium mb-2 block">בחר קטגוריה:</label>
-        <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory | 'all')}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="בחר קטגוריה..." />
+        <Select dir="rtl" value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory | 'all')}>
+          <SelectTrigger className="bg-background text-right justify-end">
+            <SelectValue placeholder="בחר קטגוריה..." className="text-right" />
           </SelectTrigger>
-          <SelectContent className="bg-background border z-50">
-            <SelectItem value="all">כל הקטגוריות</SelectItem>
+          <SelectContent dir="rtl" align="end" className="bg-background border z-50">
+            <SelectItem value="all" className="text-right justify-end">כל הקטגוריות</SelectItem>
             {PROJECT_CATEGORIES.map((category) => (
-              <SelectItem key={category} value={category}>
+              <SelectItem key={category} value={category} className="text-right justify-end">
                 {category}
               </SelectItem>
             ))}
@@ -102,19 +102,19 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
       {/* Project Type Selection */}
       <div>
         <label className="text-sm font-medium mb-2 block">בחר סוג פרויקט:</label>
-        <Select value={selectedType} onValueChange={onTypeChange}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder={placeholder} />
+        <Select dir="rtl" value={selectedType} onValueChange={onTypeChange}>
+          <SelectTrigger className="bg-background text-right justify-end">
+            <SelectValue placeholder={placeholder} className="text-right" />
           </SelectTrigger>
-          <SelectContent className="bg-background border z-50 max-h-80 overflow-y-auto">
+          <SelectContent dir="rtl" align="end" className="bg-background border z-50 max-h-80 overflow-y-auto">
             {availableTypes.length === 0 ? (
-              <SelectItem value="no-results" disabled>
+              <SelectItem value="no-results" disabled className="text-right justify-end">
                 לא נמצאו תוצאות
               </SelectItem>
             ) : (
               availableTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  <div className="flex flex-col items-start">
+                <SelectItem key={type} value={type} className="text-right justify-end">
+                  <div className="flex flex-col items-end">
                     <span>{type}</span>
                     {(!selectedCategory || selectedCategory === 'all') && (
                       <Badge variant="outline" className="mt-1 text-xs">

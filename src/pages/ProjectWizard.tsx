@@ -94,8 +94,8 @@ export const ProjectWizard = () => {
     setCreating(true);
     try {
       // Validate and safely parse budget (remove commas for parsing)
-      const budget = Number(formData.budget.replace(/,/g, ''));
-      if (!formData.budget || isNaN(budget)) {
+      const budget = formData.budget ? Number(formData.budget.replace(/,/g, '')) : null;
+      if (formData.budget && isNaN(budget!)) {
         toast({
           title: "שגיאה בתקציב",
           description: "אנא הכנס תקציב פרויקט תקין",
@@ -285,7 +285,7 @@ export const ProjectWizard = () => {
 
   const isStepValid = (step: number): boolean => {
     if (step === 1) {
-      return !!formData.address && !!formData.projectType && !!formData.phase && !!formData.budget;
+      return !!formData.address && !!formData.projectType && !!formData.phase;
     }
     return true;
   };
@@ -366,10 +366,10 @@ export const ProjectWizard = () => {
               </Select>
             </div>
 
-            {/* Budget - Required */}
+            {/* Budget - Optional */}
             <div className="space-y-2">
               <Label htmlFor="budget" className="text-base font-medium">
-                תקציב פרויקט <span className="text-destructive">*</span>
+                תקציב פרויקט (אופציונלי)
               </Label>
               <div className="relative">
                 <Input
@@ -746,7 +746,7 @@ export const ProjectWizard = () => {
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto"
+            className="flex items-center gap-2 text-muted-foreground hover:text-white mx-auto"
           >
             <Home className="w-4 h-4" />
             חזרה ללוח הבקרה
