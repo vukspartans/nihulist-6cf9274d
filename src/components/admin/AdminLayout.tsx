@@ -12,6 +12,7 @@ import {
   Shield,
   LogOut,
   Menu,
+  Bell,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import {
@@ -149,6 +150,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Proper inset that respects sidebar gap and prevents overlay */}
       <SidebarInset>
         <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-muted/50 transition-colors"
+              title="התראות (בקרוב)"
+            >
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <span className="absolute top-1 left-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+            </Button>
+          </div>
           <div className="flex items-center gap-4">
             <SidebarTrigger className="hover:bg-muted/50 transition-colors">
               <Menu className="h-5 w-5" />

@@ -60,24 +60,28 @@ const AdminDashboard = () => {
               value={stats?.advisors || 0}
               description={`${stats?.pendingAdvisors || 0} יועצים מחכים לאישור`}
               icon={Building2}
+              href="/heyadmin/advisors"
             />
             <StatsCard
               title="סך יזמים"
               value={stats?.entrepreneurs || 0}
               description={`${stats?.pendingEntrepreneurs || 0} יזמים מחכים לאישור`}
               icon={Users}
+              href="/heyadmin/entrepreneurs"
             />
             <StatsCard
               title={adminTranslations.dashboard.totalProjects}
               value={stats?.projects || 0}
               description={adminTranslations.dashboard.projectsCreatedDesc}
               icon={FolderKanban}
+              href="/heyadmin/projects"
             />
             <StatsCard
               title={adminTranslations.dashboard.rfpsSent}
               value={stats?.rfps || 0}
               description={adminTranslations.dashboard.requestsForProposalsDesc}
               icon={FileText}
+              href="/heyadmin/rfps"
             />
             <StatsCard
               title={adminTranslations.dashboard.proposalsReceived}

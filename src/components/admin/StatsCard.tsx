@@ -11,11 +11,16 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
+  href?: string;
 }
 
-export function StatsCard({ title, value, description, icon: Icon, trend }: StatsCardProps) {
+export function StatsCard({ title, value, description, icon: Icon, trend, href }: StatsCardProps) {
+  const CardWrapper = href ? "a" : "div";
+  const cardProps = href ? { href } : {};
+
   return (
-    <Card className="relative overflow-hidden border-border/50 bg-gradient-to-br from-card via-card to-primary/[0.02] hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <CardWrapper {...cardProps} className={href ? "block" : ""}>
+      <Card className="relative overflow-hidden border-border/50 bg-gradient-to-br from-card via-card to-primary/[0.02] hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-l from-primary via-accent to-primary/50" />
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -50,5 +55,6 @@ export function StatsCard({ title, value, description, icon: Icon, trend }: Stat
         </div>
       </CardContent>
     </Card>
+    </CardWrapper>
   );
 }

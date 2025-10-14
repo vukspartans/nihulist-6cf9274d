@@ -235,12 +235,12 @@ const RFPsManagement = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="rfps" className="mt-6">
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto" dir="rtl">
               <DataTable data={rfps} columns={rfpColumns} />
             </div>
           </TabsContent>
           <TabsContent value="proposals" className="mt-6">
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto" dir="rtl">
               <DataTable data={proposals} columns={proposalColumns} />
             </div>
           </TabsContent>
