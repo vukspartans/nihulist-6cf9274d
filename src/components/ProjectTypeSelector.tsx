@@ -21,7 +21,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   placeholder = "בחר סוג פרויקט...",
   showLegacyWarning = false
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('התחדשות עירונית');
 
   const availableTypes = selectedCategory && selectedCategory !== 'all'
     ? getProjectTypesByCategory(selectedCategory)
@@ -89,12 +89,24 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
             <SelectValue placeholder="בחר קטגוריה..." className="text-right" />
           </SelectTrigger>
           <SelectContent dir="rtl" align="end" className="bg-background border z-50">
-            <SelectItem value="all" className="text-right justify-end">כל הקטגוריות</SelectItem>
-            {PROJECT_CATEGORIES.map((category) => (
-              <SelectItem key={category} value={category} className="text-right justify-end">
-                {category}
-              </SelectItem>
-            ))}
+            {PROJECT_CATEGORIES.map((category) => {
+              const isEnabled = category === 'התחדשות עירונית';
+              return (
+                <SelectItem 
+                  key={category} 
+                  value={category} 
+                  disabled={!isEnabled}
+                  className={`text-right justify-end ${!isEnabled ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-center gap-2 flex-row-reverse">
+                    <span>{category}</span>
+                    {!isEnabled && (
+                      <Badge variant="outline" className="text-xs">בקרוב</Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
