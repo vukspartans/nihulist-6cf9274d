@@ -151,6 +151,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <SidebarInset>
         <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
           <div className="flex items-center gap-4">
+            <SidebarTrigger className="hover:bg-muted/50 transition-colors">
+              <Menu className="h-5 w-5" />
+            </SidebarTrigger>
+          </div>
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
@@ -160,16 +165,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span className="absolute top-1 left-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
             </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <SidebarTrigger className="hover:bg-muted/50 transition-colors">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
-            <div className="h-8 w-px bg-border hidden sm:block" />
-            <div className="hidden sm:block">
-              <h1 className="text-sm font-semibold text-foreground">פאנל ניהול</h1>
-              <p className="text-xs text-muted-foreground">מערכת ניהול מתקדמת</p>
-            </div>
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-8 bg-gradient-to-br from-background via-background to-primary/[0.02] overflow-x-hidden">
