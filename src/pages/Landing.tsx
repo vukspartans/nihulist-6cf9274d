@@ -104,6 +104,11 @@ const Landing = memo(() => {
             <span className="text-xl font-bold text-primary">ניהוליסט</span>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
+            <Button variant="ghost" size="sm">אודות</Button>
+            <Button variant="ghost" size="sm">הפתרונות שלנו</Button>
+            <Button variant="ghost" size="sm">עולם התוכן</Button>
+            <Button variant="ghost" size="sm">תמיכה</Button>
+            <Button variant="ghost" size="sm">צור קשר</Button>
             <Link to="/for-entrepreneurs">
               <Button variant="ghost" size="sm">ליזמים</Button>
             </Link>
