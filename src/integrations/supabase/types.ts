@@ -268,6 +268,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_approved: boolean
+          approved_at: string | null
+          approved_by: string | null
           company_name: string | null
           created_at: string
           email: string | null
@@ -279,6 +282,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -290,6 +296,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null

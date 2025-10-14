@@ -10,9 +10,11 @@ const AdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const [advisors, entrepreneurs, projects, rfps, proposals] = await Promise.all([
+      const [advisors, pendingAdvisors, entrepreneurs, pendingEntrepreneurs, projects, rfps, proposals] = await Promise.all([
         supabase.from('advisors').select('*', { count: 'exact', head: true }),
+        supabase.from('advisors').select('*', { count: 'exact', head: true }).eq('admin_approved', false),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'entrepreneur'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'entrepreneur').eq('admin_approved', false),
         supabase.from('projects').select('*', { count: 'exact', head: true }),
         supabase.from('rfps').select('*', { count: 'exact', head: true }),
         supabase.from('proposals').select('status', { count: 'exact' }),
@@ -22,7 +24,9 @@ const AdminDashboard = () => {
 
       return {
         advisors: advisors.count || 0,
+        pendingAdvisors: pendingAdvisors.count || 0,
         entrepreneurs: entrepreneurs.count || 0,
+        pendingEntrepreneurs: pendingEntrepreneurs.count || 0,
         projects: projects.count || 0,
         rfps: rfps.count || 0,
         proposals: proposals.count || 0,
@@ -54,13 +58,13 @@ const AdminDashboard = () => {
             <StatsCard
               title="סך יועצים"
               value={stats?.advisors || 0}
-              description="יועצים רשומים במערכת"
+              description={`${stats?.pendingAdvisors || 0} יועצים מחכים לאישור`}
               icon={Building2}
             />
             <StatsCard
               title="סך יזמים"
               value={stats?.entrepreneurs || 0}
-              description="יזמים רשומים במערכת"
+              description={`${stats?.pendingEntrepreneurs || 0} יזמים מחכים לאישור`}
               icon={Users}
             />
             <StatsCard
