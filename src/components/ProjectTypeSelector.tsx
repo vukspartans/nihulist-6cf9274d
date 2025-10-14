@@ -96,13 +96,13 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
                   key={category} 
                   value={category} 
                   disabled={!isEnabled}
-                  className={`text-right justify-end ${!isEnabled ? 'opacity-50' : ''}`}
+                  className={`text-right ${!isEnabled ? 'opacity-50' : ''}`}
                 >
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <span>{category}</span>
+                  <div className="flex items-center gap-2 w-full justify-end">
                     {!isEnabled && (
                       <Badge variant="outline" className="text-xs">בקרוב</Badge>
                     )}
+                    <span>{category}</span>
                   </div>
                 </SelectItem>
               );
@@ -120,14 +120,14 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
           </SelectTrigger>
           <SelectContent dir="rtl" align="end" className="bg-background border z-50 max-h-80 overflow-y-auto">
             {availableTypes.length === 0 ? (
-              <SelectItem value="no-results" disabled className="text-right justify-end">
+              <SelectItem value="no-results" disabled className="text-right">
                 לא נמצאו תוצאות
               </SelectItem>
             ) : (
               availableTypes.map((type) => (
-                <SelectItem key={type} value={type} className="text-right justify-end">
-                  <div className="flex flex-col items-end">
-                    <span>{type}</span>
+                <SelectItem key={type} value={type} className="text-right">
+                  <div className="flex flex-col items-end w-full">
+                    <span className="text-right">{type}</span>
                     {(!selectedCategory || selectedCategory === 'all') && (
                       <Badge variant="outline" className="mt-1 text-xs">
                         {PROJECT_CATEGORIES.find(cat => getProjectTypesByCategory(cat).includes(type))}

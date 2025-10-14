@@ -360,7 +360,9 @@ export const ProjectWizard = () => {
                 </SelectTrigger>
                 <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50">
                   {PROJECT_PHASES.map((phase) => (
-                    <SelectItem key={phase} value={phase} className="text-right justify-end">{phase}</SelectItem>
+                    <SelectItem key={phase} value={phase} className="text-right">
+                      <span className="block w-full text-right">{phase}</span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
