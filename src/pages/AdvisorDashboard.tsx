@@ -323,7 +323,7 @@ const AdvisorDashboard = () => {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Logo and Info Section */}
-          <div className={`flex items-start gap-4 ${getCoverImage(advisorProfile?.cover_image_url) ? '-mt-16' : 'mb-8'}`}>
+          <div className={`flex items-start gap-4 ${getCoverImage(advisorProfile?.cover_image_url) ? '-mt-16' : 'mb-8'} relative z-10`}>
             {/* Logo */}
             <label htmlFor="dashboard-logo-upload" className="cursor-pointer group shrink-0">
               <div className={`relative rounded-xl border-4 bg-background overflow-hidden hover:border-primary transition-all shadow-lg group-hover:shadow-xl ${
