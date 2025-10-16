@@ -876,7 +876,14 @@ export type Database = {
         Returns: string
       }
       send_rfp_invitations: {
-        Args: { project_uuid: string; selected_supplier_ids?: string[] }
+        Args:
+          | {
+              email_body_html?: string
+              email_subject?: string
+              project_uuid: string
+              selected_supplier_ids?: string[]
+            }
+          | { project_uuid: string; selected_supplier_ids?: string[] }
         Returns: {
           invites_sent: number
           rfp_id: string

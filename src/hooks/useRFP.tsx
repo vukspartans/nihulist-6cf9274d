@@ -13,14 +13,18 @@ export const useRFP = () => {
 
   const sendRFPInvitations = async (
     projectId: string,
-    selectedSupplierIds?: string[]
+    selectedSupplierIds?: string[],
+    emailSubject?: string,
+    emailBodyHtml?: string
   ): Promise<RFPResult | null> => {
     setLoading(true);
 
     try {
       const { data, error } = await supabase.rpc('send_rfp_invitations', {
         project_uuid: projectId,
-        selected_supplier_ids: selectedSupplierIds || null
+        selected_supplier_ids: selectedSupplierIds || null,
+        email_subject: emailSubject || null,
+        email_body_html: emailBodyHtml || null
       });
 
       if (error) throw error;

@@ -114,7 +114,20 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const handleSendRFP = async () => {
     // Flatten the Record structure to array of advisor IDs
     const allAdvisorIds = Object.values(selectedRecommendedAdvisors).flat();
-    const result = await sendRFPInvitations(projectId, allAdvisorIds);
+    
+    // Prepare email content - convert newlines to HTML
+    const emailBodyHtml = rfpContent.content
+      .split('\n')
+      .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
+      .join('');
+    
+    const result = await sendRFPInvitations(
+      projectId, 
+      allAdvisorIds,
+      rfpContent.title,
+      emailBodyHtml
+    );
+    
     if (result) {
       setProposalSent(true);
       onRfpSent?.();
