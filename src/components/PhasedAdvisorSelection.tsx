@@ -43,18 +43,33 @@ export const PhasedAdvisorSelection = ({
 
   // Auto-select Phase 1 advisors when project type is available (only once)
   useEffect(() => {
-    if (data && projectType && selectedAdvisors.length === 0 && !hasAutoSelected) {
+    if (data && projectType && !hasAutoSelected) {
       const recommended = getRecommendedAdvisors(projectType);
       const phase1Advisors = recommended.filter(advisor => 
         getAdvisorPhase(projectType, advisor) === 1
       );
       
       if (phase1Advisors.length > 0) {
-        onAdvisorsChange(phase1Advisors);
+        // Check if all Phase 1 advisors are already selected (using canonical comparison)
+        const canonicalSelectedSet = new Set(selectedAdvisors.map(canonicalizeAdvisor));
+        const missingPhase1 = phase1Advisors.filter(
+          advisor => !canonicalSelectedSet.has(canonicalizeAdvisor(advisor))
+        );
+        
+        // Only auto-select if there are missing Phase 1 advisors
+        if (missingPhase1.length > 0) {
+          // Merge existing selections with Phase 1 advisors (all canonicalized)
+          const allCanonical = new Set([
+            ...selectedAdvisors.map(canonicalizeAdvisor),
+            ...phase1Advisors.map(canonicalizeAdvisor)
+          ]);
+          onAdvisorsChange(Array.from(allCanonical));
+        }
+        
         setHasAutoSelected(true);
       }
     }
-  }, [data, projectType, selectedAdvisors.length, hasAutoSelected]);
+  }, [data, projectType, hasAutoSelected]);
 
   useEffect(() => {
     if (data && projectType) {
@@ -86,8 +101,15 @@ export const PhasedAdvisorSelection = ({
     const phaseAdvisors = recommended.filter(advisor => 
       getAdvisorPhase(projectType, advisor) === phaseId
     );
-    const newAdvisors = [...selectedAdvisors, ...phaseAdvisors];
-    onAdvisorsChange(Array.from(new Set(newAdvisors)));
+    
+    // Canonicalize both existing and new advisors before merging
+    const canonicalSelected = selectedAdvisors.map(canonicalizeAdvisor);
+    const canonicalPhase = phaseAdvisors.map(canonicalizeAdvisor);
+    
+    // Use Set for deduplication on canonicalized names
+    const mergedCanonical = new Set([...canonicalSelected, ...canonicalPhase]);
+    
+    onAdvisorsChange(Array.from(mergedCanonical));
   };
 
   const togglePhase = (phaseId: number) => {
