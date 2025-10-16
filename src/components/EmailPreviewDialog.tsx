@@ -34,7 +34,7 @@ export const EmailPreviewDialog = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
-  const defaultTitle = `בקשה להצעת מחיר ${projectName}`;
+  const defaultTitle = 'בקשה להצעת מחיר {{שם_הפרויקט}}';
   const defaultContent = `שלום {{שם_המשרד}},
 קיבלת אפשרות להגיש הצעת מחיר לפרויקט חדש דרך מערכת ניהוליסט – הפלטפורמה המחברת בין יזמים ליועצים ומנהלת את כל תהליך העבודה במקום אחד.
 במערכת תוכלו:
@@ -74,7 +74,10 @@ export const EmailPreviewDialog = ({
           צפה באימייל
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh]" dir="rtl">
+      <DialogContent className="max-w-3xl max-h-[90vh]" dir="rtl" aria-describedby="email-preview-desc">
+        <p id="email-preview-desc" className="sr-only">
+          תצוגה מקדימה של תוכן האימייל שיישלח ליועצים
+        </p>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">

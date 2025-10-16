@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,18 +46,55 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
   const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<Record<string, string[]>>({});
   const [rfpContent, setRfpContent] = useState<RFPContent>({
-    title: `הצעת מחיר: ${projectName}`,
-    content: `אנו מחפשים הצעות מחיר עבור הפרויקט "${projectName}".
-
-פרטי הפרויקט:
-- סוג פרויקט: ${projectType}
-- יועצים נדרשים: ${selectedAdvisors.join(', ')}
-
-אנא צרו קשר להגשת הצעה מפורטת.`,
+    title: 'בקשה להצעת מחיר {{שם_הפרויקט}}',
+    content: `שלום {{שם_המשרד}},
+קיבלת אפשרות להגיש הצעת מחיר לפרויקט חדש דרך מערכת ניהוליסט – הפלטפורמה המחברת בין יזמים ליועצים ומנהלת את כל תהליך העבודה במקום אחד.
+במערכת תוכלו:
+✅ להגיש הצעות מחיר בצורה מסודרת.
+✅ לעקוב אחרי סטטוס הפניות וההצעות שלך.
+✅ לקבל התראות בזמן אמת על פניות חדשות מפרויקטים רלוונטיים.
+כדי לצפות בפרטי הפרויקט ולהגיש הצעת מחיר –
+היכנס/י עכשיו למערכת ניהוליסט ›
+)אם זו הפעם הראשונה שלך – ההרשמה קצרה ולוקחת פחות מדקה(.
+בהצלחה,
+צוות ניהוליסט`,
     attachments: []
   });
   const [proposalSent, setProposalSent] = useState(false);
   const { sendRFPInvitations, loading } = useRFP();
+
+  // Load existing RFP from database
+  useEffect(() => {
+    const loadExistingRfp = async () => {
+      const { data, error } = await supabase
+        .from('rfps')
+        .select('subject, body_html')
+        .eq('project_id', projectId)
+        .order('sent_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        // Convert HTML to plain text
+        const htmlToPlainText = (html: string): string => {
+          return html
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<p[^>]*>/gi, '')
+            .replace(/<[^>]+>/g, '')
+            .trim();
+        };
+
+        setRfpContent(prev => ({
+          ...prev,
+          title: data.subject || prev.title,
+          content: data.body_html ? htmlToPlainText(data.body_html) : prev.content
+        }));
+      }
+    };
+
+    loadExistingRfp();
+  }, [projectId]);
 
   const totalSteps = 4;
 
