@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Globe, Linkedin, Instagram, AlertCircle } from 'lucide-react';
+import { X, Plus, Globe, Linkedin, Instagram, AlertCircle, ArrowRight } from 'lucide-react';
 import { ADVISOR_EXPERTISE } from '@/constants/advisor';
+import { PROJECT_TYPES } from '@/constants/project';
 import { UserHeader } from '@/components/UserHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -42,6 +43,7 @@ interface AdvisorProfile {
   id?: string;
   company_name: string;
   expertise: string[];
+  specialties: string[];
   certifications: string[];
   location: string;
   founding_year?: number;
@@ -65,6 +67,7 @@ const AdvisorProfile = () => {
   const [profile, setProfile] = useState<AdvisorProfile>({
     company_name: '',
     expertise: [],
+    specialties: [],
     certifications: [],
     location: '',
     founding_year: undefined,
@@ -111,6 +114,7 @@ const AdvisorProfile = () => {
         user_id: user?.id,
         company_name: profile.company_name,
         expertise: profile.expertise,
+        specialties: profile.specialties,
         certifications: profile.certifications,
         location: profile.location,
         founding_year: profile.founding_year,
@@ -191,6 +195,22 @@ const AdvisorProfile = () => {
     }));
   };
 
+  const addSpecialty = (specialty: string) => {
+    if (specialty && !profile.specialties.includes(specialty)) {
+      setProfile(prev => ({
+        ...prev,
+        specialties: [...prev.specialties, specialty]
+      }));
+    }
+  };
+
+  const removeSpecialty = (specialtyToRemove: string) => {
+    setProfile(prev => ({
+      ...prev,
+      specialties: prev.specialties.filter(spec => spec !== specialtyToRemove)
+    }));
+  };
+
   const completionPercentage = Math.round(
     (Object.values({
       company_name: profile.company_name,
@@ -198,17 +218,26 @@ const AdvisorProfile = () => {
       founding_year: profile.founding_year,
       position_in_office: profile.position_in_office,
       expertise: profile.expertise,
+      specialties: profile.specialties,
       activity_regions: profile.activity_regions,
       office_size: profile.office_size
     }).filter(val => 
       val !== '' && val !== undefined && val !== null && 
       !(Array.isArray(val) && val.length === 0)
-    ).length / 7) * 100
+    ).length / 8) * 100
   );
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="flex justify-between items-center p-6 border-b">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/advisor-dashboard')}
+          className="gap-2"
+        >
+          <ArrowRight className="h-4 w-4" />
+          חזרה לדשבורד
+        </Button>
         <UserHeader />
       </div>
       
@@ -418,6 +447,47 @@ const AdvisorProfile = () => {
                           <X 
                             className="h-3 w-3 cursor-pointer" 
                             onClick={() => removeExpertise(exp)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <Label>התמחויות המשרד *</Label>
+                <p className="text-sm text-muted-foreground">בחר את סוגי הפרויקטים שהמשרד שלך מתמחה בהם</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
+                  {PROJECT_TYPES.map((type) => (
+                    <Button
+                      key={type}
+                      type="button"
+                      variant={profile.specialties.includes(type) ? "default" : "outline"}
+                      onClick={() => {
+                        if (profile.specialties.includes(type)) {
+                          removeSpecialty(type);
+                        } else {
+                          addSpecialty(type);
+                        }
+                      }}
+                      className="justify-start text-sm h-auto py-2 px-3"
+                    >
+                      {type}
+                    </Button>
+                  ))}
+                </div>
+                
+                {profile.specialties.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.specialties.length}):</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.specialties.map((spec) => (
+                        <Badge key={spec} variant="secondary" className="gap-1">
+                          {spec}
+                          <X 
+                            className="h-3 w-3 cursor-pointer" 
+                            onClick={() => removeSpecialty(spec)}
                           />
                         </Badge>
                       ))}
