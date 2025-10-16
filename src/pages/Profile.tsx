@@ -12,10 +12,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { ExpertiseSelector } from '@/components/ExpertiseSelector';
+import { PROJECT_TYPES } from '@/constants/project';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +81,7 @@ interface AdvisorProfile {
 const Profile = () => {
   const { user, profile: authProfile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
@@ -102,6 +104,7 @@ const Profile = () => {
     location: '', 
     foundingYear: new Date().getFullYear(),
     activityRegions: [] as string[],
+    specialties: [] as string[],
     officeSize: '',
     officePhone: '',
     positionInOffice: '',
@@ -175,6 +178,7 @@ const Profile = () => {
               location: advisorData.location || '',
               foundingYear: advisorData.founding_year || new Date().getFullYear(),
               activityRegions: advisorData.activity_regions || [],
+              specialties: advisorData.specialties || [],
               officeSize: advisorData.office_size || '',
               officePhone: advisorData.office_phone || '',
               positionInOffice: advisorData.position_in_office || '',
@@ -192,6 +196,7 @@ const Profile = () => {
             location: '', 
             foundingYear: new Date().getFullYear(),
             activityRegions: [],
+            specialties: [],
             officeSize: '',
             officePhone: '',
             positionInOffice: '',
@@ -214,7 +219,7 @@ const Profile = () => {
     }
   };
 
-  const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
+  const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'specialties') => {
     setSaving(true);
     try {
       if (field === 'company') {
@@ -274,6 +279,20 @@ const Profile = () => {
         toast({
           title: "עודכן בהצלחה",
           description: "גודל המשרד עודכן",
+        });
+      } else if (field === 'specialties') {
+        const { error } = await supabase
+          .from('advisors')
+          .update({ specialties: editedData.specialties })
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setAdvisorProfile(prev => prev ? { ...prev, specialties: editedData.specialties } : null);
+        setEditMode(prev => ({ ...prev, specialties: false }));
+        toast({
+          title: "עודכן בהצלחה",
+          description: "ההתמחויות עודכנו",
         });
       } else if (field === 'socialUrls') {
         const { error } = await supabase
@@ -667,13 +686,16 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background p-6 animate-fade-in" dir="rtl">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to={getDashboardRoute()} className="hover:text-foreground transition-colors">
-            דשבורד
-          </Link>
-          <ArrowRight className="h-4 w-4" />
-          <span>הפרופיל שלי</span>
+        {/* Dashboard Button */}
+        <div className="mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(getDashboardRoute())}
+            className="gap-2"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה לדשבורד
+          </Button>
         </div>
 
         {/* Page Header with Completion */}
@@ -1106,6 +1128,120 @@ const Profile = () => {
               />
             </CardContent>
           </Card>
+
+              {/* Office Specializations */}
+              <Card dir="rtl" className={`hover-scale ${(!advisorProfile?.specialties || advisorProfile.specialties.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-primary" />
+                        התמחויות המשרד
+                        {(!advisorProfile?.specialties || advisorProfile.specialties.length === 0) && (
+                          <Badge variant="destructive" className="mr-2">שדה חובה</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>בחר את סוגי הפרויקטים שהמשרד שלך מתמחה בהם</CardDescription>
+                    </div>
+                    {!editMode.specialties && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleEditToggle('specialties')}
+                      >
+                        <Edit className="h-4 w-4 ml-2" />
+                        ערוך
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {editMode.specialties ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
+                        {PROJECT_TYPES.map((type) => (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={editedData.specialties?.includes(type) ? "default" : "outline"}
+                            onClick={() => {
+                              const currentSpecialties = editedData.specialties || [];
+                              if (currentSpecialties.includes(type)) {
+                                setEditedData(prev => ({
+                                  ...prev,
+                                  specialties: currentSpecialties.filter(s => s !== type)
+                                }));
+                              } else {
+                                setEditedData(prev => ({
+                                  ...prev,
+                                  specialties: [...currentSpecialties, type]
+                                }));
+                              }
+                            }}
+                            className="justify-start text-sm h-auto py-2 px-3"
+                          >
+                            {type}
+                          </Button>
+                        ))}
+                      </div>
+                      {editedData.specialties && editedData.specialties.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            התמחויות נבחרות ({editedData.specialties.length}):
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {editedData.specialties.map((spec) => (
+                              <Badge key={spec} variant="secondary" className="gap-1">
+                                {spec}
+                                <X 
+                                  className="h-3 w-3 cursor-pointer" 
+                                  onClick={() => {
+                                    setEditedData(prev => ({
+                                      ...prev,
+                                      specialties: prev.specialties?.filter(s => s !== spec) || []
+                                    }));
+                                  }}
+                                />
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          onClick={() => updateProfile('specialties')}
+                          disabled={saving}
+                          className="flex-1"
+                        >
+                          {saving ? 'שומר...' : 'שמור'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleEditToggle('specialties')}
+                          disabled={saving}
+                          className="flex-1"
+                        >
+                          ביטול
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {advisorProfile?.specialties && advisorProfile.specialties.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {advisorProfile.specialties.map((spec) => (
+                            <Badge key={spec} variant="secondary" className="text-sm">
+                              {spec}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">לא נבחרו התמחויות משרד</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Activity Regions */}
               <Card dir="rtl" className={`hover-scale ${(!advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) ? 'border-2 border-red-500 animate-pulse' : ''}`}>
