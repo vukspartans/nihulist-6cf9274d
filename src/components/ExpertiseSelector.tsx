@@ -67,7 +67,7 @@ export const ExpertiseSelector = ({
             </Badge>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">לא נבחרו תחומי פעילות</p>
+          <p className="text-sm text-muted-foreground">לא נבחרו תחומי עיסוק</p>
         )}
       </div>
     );
@@ -97,7 +97,7 @@ export const ExpertiseSelector = ({
       <div className="relative">
         <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="חיפוש תחומי פעילות..."
+          placeholder="חיפוש תחומי עיסוק..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-9"
@@ -144,7 +144,7 @@ export const ExpertiseSelector = ({
                 })}
                 {filteredExpertise.length === 0 && (
                   <div className="col-span-2 text-center text-muted-foreground py-8">
-                    לא נמצאו תחומי פעילות תואמים
+                    לא נמצאו תחומי עיסוק תואמים
                   </div>
                 )}
               </div>

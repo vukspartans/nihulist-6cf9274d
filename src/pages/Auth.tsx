@@ -804,10 +804,10 @@ const Auth = () => {
                       {/* Expertise Selection */}
                       <div className="space-y-2">
                         <Label className="text-right">
-                          תחומי פעילות <span className="text-destructive">*</span>
+                          תחומי עיסוק <span className="text-destructive">*</span>
                         </Label>
                         <p className="text-xs text-muted-foreground text-right mb-2">
-                          בחר לפחות תחום פעילות אחד
+                          בחר לפחות תחום עיסוק אחד
                         </p>
                         <ExpertiseSelector
                           selectedExpertise={formData.expertise}
