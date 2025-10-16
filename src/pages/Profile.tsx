@@ -90,7 +90,8 @@ const Profile = () => {
   const [editMode, setEditMode] = useState({ 
     name: false, 
     phone: false, 
-    specialties: false, 
+    expertise: false,
+    officeSpecialties: false, 
     company: false, 
     activityRegions: false, 
     officeSize: false, 
@@ -219,7 +220,7 @@ const Profile = () => {
     }
   };
 
-  const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'specialties') => {
+  const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
     setSaving(true);
     try {
       if (field === 'company') {
@@ -279,20 +280,6 @@ const Profile = () => {
         toast({
           title: "עודכן בהצלחה",
           description: "גודל המשרד עודכן",
-        });
-      } else if (field === 'specialties') {
-        const { error } = await supabase
-          .from('advisors')
-          .update({ specialties: editedData.specialties })
-          .eq('user_id', user?.id);
-
-        if (error) throw error;
-
-        setAdvisorProfile(prev => prev ? { ...prev, specialties: editedData.specialties } : null);
-        setEditMode(prev => ({ ...prev, specialties: false }));
-        toast({
-          title: "עודכן בהצלחה",
-          description: "ההתמחויות עודכנו",
         });
       } else if (field === 'socialUrls') {
         const { error } = await supabase
@@ -376,7 +363,7 @@ const Profile = () => {
     }
   };
 
-  const updateSpecialties = async () => {
+  const updateExpertise = async () => {
     setSaving(true);
     try {
       const { error } = await supabase
@@ -387,17 +374,46 @@ const Profile = () => {
       if (error) throw error;
 
       setAdvisorProfile(prev => prev ? { ...prev, expertise: selectedExpertise } : null);
-      setEditMode(prev => ({ ...prev, specialties: false }));
+      setEditMode(prev => ({ ...prev, expertise: false }));
       
       toast({
         title: "עודכן בהצלחה",
-        description: "ההתמחויות שלך עודכנו",
+        description: "תחומי העיסוק שלך עודכנו",
       });
     } catch (error) {
-      console.error('Error updating specialties:', error);
+      console.error('Error updating expertise:', error);
       toast({
         title: "שגיאה",
-        description: "לא ניתן לעדכן את ההתמחויות",
+        description: "לא ניתן לעדכן את תחומי העיסוק",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateOfficeSpecialties = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('advisors')
+        .update({ specialties: editedData.specialties })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setAdvisorProfile(prev => prev ? { ...prev, specialties: editedData.specialties } : null);
+      setEditMode(prev => ({ ...prev, officeSpecialties: false }));
+      
+      toast({
+        title: "עודכן בהצלחה",
+        description: "התמחויות המשרד עודכנו",
+      });
+    } catch (error) {
+      console.error('Error updating office specialties:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את התמחויות המשרד",
         variant: "destructive",
       });
     } finally {
@@ -517,13 +533,21 @@ const Profile = () => {
 
 
 
-  const handleEditToggle = (field: 'name' | 'phone' | 'specialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'branding') => {
-    if (field === 'specialties') {
-      if (editMode.specialties) {
-        const expertise = advisorProfile?.expertise || advisorProfile?.specialties || [];
+  const handleEditToggle = (field: 'name' | 'phone' | 'expertise' | 'officeSpecialties' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls' | 'branding') => {
+    if (field === 'expertise') {
+      if (editMode.expertise) {
+        const expertise = advisorProfile?.expertise || [];
         setSelectedExpertise(expertise);
       }
-      setEditMode(prev => ({ ...prev, specialties: !prev.specialties }));
+      setEditMode(prev => ({ ...prev, expertise: !prev.expertise }));
+    } else if (field === 'officeSpecialties') {
+      if (editMode.officeSpecialties) {
+        setEditedData(prev => ({
+          ...prev,
+          specialties: advisorProfile?.specialties || [],
+        }));
+      }
+      setEditMode(prev => ({ ...prev, officeSpecialties: !prev.officeSpecialties }));
     } else if (field === 'company') {
       if (editMode.company) {
         setEditedData(prev => ({
@@ -1107,11 +1131,11 @@ const Profile = () => {
                       </CardTitle>
                       <CardDescription>בחר את תחומי ההתמחות המקצועיים שלך</CardDescription>
                     </div>
-                {!editMode.specialties && (
+                {!editMode.expertise && (
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    onClick={() => handleEditToggle('specialties')}
+                    onClick={() => handleEditToggle('expertise')}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -1122,9 +1146,9 @@ const Profile = () => {
               <ExpertiseSelector
                 selectedExpertise={selectedExpertise}
                 onExpertiseChange={setSelectedExpertise}
-                isEditing={editMode.specialties}
-                onSave={updateSpecialties}
-                onCancel={() => handleEditToggle('specialties')}
+                isEditing={editMode.expertise}
+                onSave={updateExpertise}
+                onCancel={() => handleEditToggle('expertise')}
               />
             </CardContent>
           </Card>
@@ -1143,11 +1167,11 @@ const Profile = () => {
                       </CardTitle>
                       <CardDescription>בחר את סוגי הפרויקטים שהמשרד שלך מתמחה בהם</CardDescription>
                     </div>
-                    {!editMode.specialties && (
+                    {!editMode.officeSpecialties && (
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        onClick={() => handleEditToggle('specialties')}
+                        onClick={() => handleEditToggle('officeSpecialties')}
                       >
                         <Edit className="h-4 w-4 ml-2" />
                         ערוך
@@ -1156,7 +1180,7 @@ const Profile = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {editMode.specialties ? (
+                  {editMode.officeSpecialties ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
                         {PROJECT_TYPES.map((type) => (
@@ -1209,7 +1233,7 @@ const Profile = () => {
                       )}
                       <div className="flex gap-2 pt-4">
                         <Button
-                          onClick={() => updateProfile('specialties')}
+                          onClick={updateOfficeSpecialties}
                           disabled={saving}
                           className="flex-1"
                         >
@@ -1217,7 +1241,7 @@ const Profile = () => {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => handleEditToggle('specialties')}
+                          onClick={() => handleEditToggle('officeSpecialties')}
                           disabled={saving}
                           className="flex-1"
                         >
