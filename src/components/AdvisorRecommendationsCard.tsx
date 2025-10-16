@@ -13,8 +13,8 @@ interface AdvisorRecommendationsCardProps {
   projectType: string;
   projectLocation?: string;
   selectedAdvisorTypes: string[];
-  selectedAdvisors: string[];
-  onSelectAdvisors: (advisors: string[]) => void;
+  selectedAdvisors: Record<string, string[]>;
+  onSelectAdvisors: (advisors: Record<string, string[]>) => void;
   rfpContent?: {
     title: string;
     content: string;
@@ -40,12 +40,20 @@ export const AdvisorRecommendationsCard = ({
     projectLocation
   );
 
-  const handleAdvisorToggle = (advisorId: string) => {
-    const isSelected = selectedAdvisors.includes(advisorId);
+  const handleAdvisorToggle = (advisorId: string, advisorType: string) => {
+    const typeSelections = selectedAdvisors[advisorType] || [];
+    const isSelected = typeSelections.includes(advisorId);
+    
     if (isSelected) {
-      onSelectAdvisors(selectedAdvisors.filter(id => id !== advisorId));
+      onSelectAdvisors({
+        ...selectedAdvisors,
+        [advisorType]: typeSelections.filter(id => id !== advisorId)
+      });
     } else {
-      onSelectAdvisors([...selectedAdvisors, advisorId]);
+      onSelectAdvisors({
+        ...selectedAdvisors,
+        [advisorType]: [...typeSelections, advisorId]
+      });
     }
   };
 
@@ -110,21 +118,22 @@ export const AdvisorRecommendationsCard = ({
   const getPhaseSummary = (phaseId: number) => {
     const phaseTypes = advisorsByPhase[phaseId] || [];
     const totalTypes = phaseTypes.length;
-    const selectedTypes = phaseTypes.filter(t => 
-      t.advisors.some(a => selectedAdvisors.includes(a.id))
-    ).length;
+    const selectedTypes = phaseTypes.filter(t => {
+      const typeSelections = selectedAdvisors[t.type] || [];
+      return t.advisors.some(a => typeSelections.includes(a.id));
+    }).length;
     const totalAdvisors = phaseTypes.reduce((sum, t) => sum + t.advisors.length, 0);
-    const selectedAdvisorsCount = phaseTypes.reduce((sum, t) => 
-      sum + t.advisors.filter(a => selectedAdvisors.includes(a.id)).length, 0
-    );
+    const selectedAdvisorsCount = phaseTypes.reduce((sum, t) => {
+      const typeSelections = selectedAdvisors[t.type] || [];
+      return sum + t.advisors.filter(a => typeSelections.includes(a.id)).length;
+    }, 0);
     return { totalTypes, selectedTypes, totalAdvisors, selectedAdvisorsCount };
   };
 
   // Render advisor type card
   const renderAdvisorTypeCard = (typeData: typeof sortedAdvisorTypes[0]) => {
-    const selectedInType = typeData.advisors.filter(advisor => 
-      selectedAdvisors.includes(advisor.id)
-    ).length;
+    const typeSelections = selectedAdvisors[typeData.type] || [];
+    const selectedInType = typeSelections.length;
 
     return (
       <Card key={typeData.type} className="border-2">
@@ -164,7 +173,8 @@ export const AdvisorRecommendationsCard = ({
         <CardContent>
           <AdvisorTable
             advisors={typeData.advisors}
-            selectedAdvisors={selectedAdvisors}
+            selectedAdvisors={typeSelections}
+            advisorType={typeData.type}
             onToggleAdvisor={handleAdvisorToggle}
           />
         </CardContent>
@@ -181,7 +191,7 @@ export const AdvisorRecommendationsCard = ({
             יועצים מומלצים לפרויקט - לפי שלבים
           </div>
           <Badge variant="secondary">
-            {selectedAdvisors.length} נבחרו
+            {Object.values(selectedAdvisors).flat().length} נבחרו
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -259,10 +269,10 @@ export const AdvisorRecommendationsCard = ({
         )}
 
         {/* Summary */}
-        {selectedAdvisors.length > 0 && (
+        {Object.values(selectedAdvisors).flat().length > 0 && (
           <Alert>
             <AlertDescription className="flex items-center justify-between">
-              <span>סה"כ {selectedAdvisors.length} יועצים נבחרו לקבלת הצעת מחיר</span>
+              <span>סה"כ {Object.values(selectedAdvisors).flat().length} יועצים נבחרו לקבלת הצעת מחיר</span>
               <Badge variant="default" className="text-sm">
                 מוכן לשליחה
               </Badge>

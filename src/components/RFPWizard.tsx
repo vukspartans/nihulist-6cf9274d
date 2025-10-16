@@ -44,7 +44,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
   const [advisorValidation, setAdvisorValidation] = useState<any>(null);
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
-  const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<string[]>([]);
+  const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<Record<string, string[]>>({});
   const [rfpContent, setRfpContent] = useState<RFPContent>({
     title: `הצעת מחיר: ${projectName}`,
     content: `אנו מחפשים הצעות מחיר עבור הפרויקט "${projectName}".
@@ -112,7 +112,9 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   };
 
   const handleSendRFP = async () => {
-    const result = await sendRFPInvitations(projectId, selectedRecommendedAdvisors);
+    // Flatten the Record structure to array of advisor IDs
+    const allAdvisorIds = Object.values(selectedRecommendedAdvisors).flat();
+    const result = await sendRFPInvitations(projectId, allAdvisorIds);
     if (result) {
       setProposalSent(true);
       onRfpSent?.();
@@ -126,7 +128,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       case 2:
         return isAdvisorSelectionValid;
       case 3:
-        return selectedRecommendedAdvisors.length > 0;
+        return Object.values(selectedRecommendedAdvisors).some(ids => ids.length > 0);
       case 4:
         return !!rfpContent.title && !!rfpContent.content;
       default:
@@ -160,7 +162,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            בקשת הצעת המחיר עבור "{projectName}" נשלחה ל-{selectedRecommendedAdvisors.length} יועצים.
+            בקשת הצעת המחיר עבור "{projectName}" נשלחה ל-{Object.values(selectedRecommendedAdvisors).flat().length} יועצים.
             תקבל הצעות ברגע שיגיעו.
           </p>
           <Button 

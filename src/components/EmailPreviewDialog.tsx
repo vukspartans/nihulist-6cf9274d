@@ -34,24 +34,22 @@ export const EmailPreviewDialog = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
-  const defaultTitle = `הזמנה להצעת מחיר - ${projectName}`;
-  const defaultContent = `שלום רב,
+  const defaultTitle = `בקשה להצעת מחיר ${projectName}`;
+  const defaultContent = `שלום [שם המשרד],
 
-אנו מעוניינים לקבל הצעת מחיר עבור הפרויקט "${projectName}".
+קיבלת אפשרות להגיש הצעת מחיר לפרויקט חדש דרך מערכת ניהוליסט – הפלטפורמה המחברת בין יזמים ליועצים ומנהלת את כל תהליך העבודה במקום אחד.
 
-פרטי הפרויקט:
-• סוג פרויקט: ${projectType}
-• יועץ נדרש: ${advisorType}
+במערכת תוכלו:
+✅ להגיש הצעות מחיר בצורה מסודרת.
+✅ לעקוב אחרי סטטוס הפניות וההצעות שלך.
+✅ לקבל התראות בזמן אמת על פניות חדשות מפרויקטים רלוונטיים.
 
-אנא שלחו הצעת מחיר מפורטת הכוללת:
-1. עלות השירות
-2. לוחות זמנים משוערים
-3. תנאי התקשרות
+כדי לצפות בפרטי הפרויקט ולהגיש הצעת מחיר –
+היכנס/י עכשיו למערכת ניהוליסט ›
+(אם זו הפעם הראשונה שלך – ההרשמה קצרה ולוקחת פחות מדקה).
 
-נשמח לקבל את הצעתכם בהקדם.
-
-בברכה,
-צוות הפרויקט`;
+בהצלחה,
+צוות ניהוליסט`;
 
   const [emailTitle, setEmailTitle] = useState(rfpContent?.title || defaultTitle);
   const [emailContent, setEmailContent] = useState(rfpContent?.content || defaultContent);

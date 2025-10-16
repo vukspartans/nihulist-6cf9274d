@@ -7,10 +7,11 @@ import { AdvisorData } from '@/hooks/useAdvisorsByExpertise';
 interface AdvisorTableProps {
   advisors: AdvisorData[];
   selectedAdvisors: string[];
-  onToggleAdvisor: (advisorId: string) => void;
+  advisorType: string;
+  onToggleAdvisor: (advisorId: string, advisorType: string) => void;
 }
 
-export const AdvisorTable = ({ advisors, selectedAdvisors, onToggleAdvisor }: AdvisorTableProps) => {
+export const AdvisorTable = ({ advisors, selectedAdvisors, advisorType, onToggleAdvisor }: AdvisorTableProps) => {
   if (advisors.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -44,12 +45,12 @@ export const AdvisorTable = ({ advisors, selectedAdvisors, onToggleAdvisor }: Ad
                 className={`cursor-pointer transition-colors ${
                   isSelected ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'
                 }`}
-                onClick={() => onToggleAdvisor(advisor.id)}
+                onClick={() => onToggleAdvisor(advisor.id, advisorType)}
               >
                 <TableCell>
                   <Checkbox 
                     checked={isSelected}
-                    onCheckedChange={() => onToggleAdvisor(advisor.id)}
+                    onCheckedChange={() => onToggleAdvisor(advisor.id, advisorType)}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </TableCell>
