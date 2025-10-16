@@ -51,10 +51,13 @@ export const UserHeader = () => {
 
   const handleSignOut = async () => {
     try {
+      // Mark that we just logged out to prevent redirect loop
+      sessionStorage.setItem('just_logged_out', 'true');
       await signOut();
       navigate('/auth');
     } catch (error) {
       console.error('Error during logout:', error);
+      sessionStorage.removeItem('just_logged_out');
     }
   };
 

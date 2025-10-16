@@ -72,6 +72,14 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change:", event, session ? "session exists" : "no session");
+        
+        // If user signed out, don't redirect
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -82,8 +90,8 @@ const Auth = () => {
           return;
         }
         
-        // Handle normal authentication flow
-        if (session?.user && !isPasswordReset && type !== 'recovery') {
+        // Handle normal authentication flow - only on SIGNED_IN event
+        if (event === 'SIGNED_IN' && session?.user && !isPasswordReset && type !== 'recovery') {
           setTimeout(async () => {
             try {
               // Check if user has admin role
@@ -121,7 +129,7 @@ const Auth = () => {
       }
     );
 
-    // Check for existing session
+    // Check for existing session - only redirect on page load, not after logout
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log("Getting existing session:", session ? "session exists" : "no session");
       setSession(session);
@@ -137,6 +145,14 @@ const Auth = () => {
       // If this is a recovery URL but no session, wait for auth state change
       if (type === 'recovery' && !session?.user) {
         console.log("Recovery URL but no session yet, waiting for auth state change");
+        return;
+      }
+      
+      // Only redirect if coming from external link, not after logout
+      // Check if we were just redirected from logout
+      const wasLoggedOut = sessionStorage.getItem('just_logged_out');
+      if (wasLoggedOut) {
+        sessionStorage.removeItem('just_logged_out');
         return;
       }
       
