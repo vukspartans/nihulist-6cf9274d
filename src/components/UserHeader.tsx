@@ -51,12 +51,17 @@ export const UserHeader = () => {
 
   const handleSignOut = async () => {
     try {
-      // Determine redirect target based on current user role
+      // Capture role information BEFORE any state changes
+      const userIsAdmin = isAdmin;
+      const userIsAdvisor = roles.includes('advisor');
+      const isAdminRoute = window.location.pathname.startsWith('/heyadmin');
+      
+      // Determine redirect target based on captured role info
       let redirectTarget = '/auth?mode=login&type=entrepreneur&logged_out=1';
       
-      if (window.location.pathname.startsWith('/heyadmin') || isAdmin) {
+      if (isAdminRoute || userIsAdmin) {
         redirectTarget = '/heyadmin/login';
-      } else if (roles.includes('advisor')) {
+      } else if (userIsAdvisor) {
         redirectTarget = '/auth?mode=login&type=advisor&logged_out=1';
       }
       
