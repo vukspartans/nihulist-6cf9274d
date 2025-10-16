@@ -48,14 +48,19 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const [rfpContent, setRfpContent] = useState<RFPContent>({
     title: 'בקשה להצעת מחיר {{שם_הפרויקט}}',
     content: `שלום {{שם_המשרד}},
+
 קיבלת אפשרות להגיש הצעת מחיר לפרויקט חדש דרך מערכת ניהוליסט – הפלטפורמה המחברת בין יזמים ליועצים ומנהלת את כל תהליך העבודה במקום אחד.
+
 במערכת תוכלו:
 ✅ להגיש הצעות מחיר בצורה מסודרת.
 ✅ לעקוב אחרי סטטוס הפניות וההצעות שלך.
 ✅ לקבל התראות בזמן אמת על פניות חדשות מפרויקטים רלוונטיים.
+
 כדי לצפות בפרטי הפרויקט ולהגיש הצעת מחיר –
 היכנס/י עכשיו למערכת ניהוליסט ›
+
 )אם זו הפעם הראשונה שלך – ההרשמה קצרה ולוקחת פחות מדקה(.
+
 בהצלחה,
 צוות ניהוליסט`,
     attachments: []
@@ -152,11 +157,31 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     // Flatten the Record structure to array of advisor IDs
     const allAdvisorIds = Object.values(selectedRecommendedAdvisors).flat();
     
-    // Prepare email content - convert newlines to HTML
-    const emailBodyHtml = rfpContent.content
-      .split('\n')
-      .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
-      .join('');
+    // Prepare email content with RTL support, proper spacing, and clickable links
+    const loginUrl = `${window.location.origin}/auth`;
+    const emailBodyHtml = `
+<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: right; line-height: 1.6;">
+  ${rfpContent.content
+    .split('\n')
+    .map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '<div style="height: 12px;"></div>';
+      
+      // Convert login link line to clickable link
+      if (trimmed.includes('היכנס/י עכשיו למערכת ניהוליסט')) {
+        return `<p style="margin: 16px 0;"><a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 500;">${trimmed}</a></p>`;
+      }
+      
+      // Add indentation for list items starting with ✅
+      if (trimmed.startsWith('✅')) {
+        return `<p style="margin: 8px 0 8px 20px;">${trimmed}</p>`;
+      }
+      
+      return `<p style="margin: 12px 0;">${trimmed}</p>`;
+    })
+    .join('')}
+</div>
+`;
     
     const result = await sendRFPInvitations(
       projectId, 

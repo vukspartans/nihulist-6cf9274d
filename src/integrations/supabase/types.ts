@@ -632,6 +632,7 @@ export type Database = {
           email: string
           id: string
           opened_at: string | null
+          personalized_body_html: string | null
           rfp_id: string
           status: string
           submit_token: string
@@ -644,6 +645,7 @@ export type Database = {
           email: string
           id?: string
           opened_at?: string | null
+          personalized_body_html?: string | null
           rfp_id: string
           status?: string
           submit_token: string
@@ -656,6 +658,7 @@ export type Database = {
           email?: string
           id?: string
           opened_at?: string | null
+          personalized_body_html?: string | null
           rfp_id?: string
           status?: string
           submit_token?: string
