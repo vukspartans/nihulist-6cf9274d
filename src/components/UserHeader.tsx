@@ -13,15 +13,15 @@ import { User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-interface UserProfile {
+interface LocalProfile {
   name: string | null;
   email: string;
 }
 
 export const UserHeader = () => {
-  const { user, signOut, roles, isAdmin } = useAuth();
+  const { user, signOut, roles, isAdmin, profile: authProfile } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [localProfile, setLocalProfile] = useState<LocalProfile | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -37,12 +37,12 @@ export const UserHeader = () => {
         .eq('user_id', user?.id)
         .single();
 
-      setProfile({
+      setLocalProfile({
         name: data?.name || null,
         email: user?.email || ''
       });
     } catch (error) {
-      setProfile({
+      setLocalProfile({
         name: null,
         email: user?.email || ''
       });
@@ -53,8 +53,10 @@ export const UserHeader = () => {
     try {
       // Capture role information BEFORE any state changes
       const userIsAdmin = isAdmin;
-      const userIsAdvisor = roles.includes('advisor');
+      const userIsAdvisor = authProfile?.role === 'advisor'; // Check authProfile.role from useAuth
       const isAdminRoute = window.location.pathname.startsWith('/heyadmin');
+      
+      console.log('Logout - userIsAdmin:', userIsAdmin, 'userIsAdvisor:', userIsAdvisor, 'authProfile.role:', authProfile?.role);
       
       // Determine redirect target based on captured role info
       let redirectTarget = '/auth?mode=login&type=entrepreneur&logged_out=1';
@@ -82,9 +84,9 @@ export const UserHeader = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const displayName = profile?.name || profile?.email?.split('@')[0] || 'משתמש';
+  const displayName = localProfile?.name || localProfile?.email?.split('@')[0] || 'משתמש';
 
-  if (!user || !profile) {
+  if (!user || !localProfile) {
     return null;
   }
 
@@ -94,7 +96,7 @@ export const UserHeader = () => {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(profile.name, profile.email)}
+              {getInitials(localProfile.name, localProfile.email)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -107,12 +109,12 @@ export const UserHeader = () => {
         <div className="flex items-start gap-3 p-3 border-b border-border">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(profile.name, profile.email)}
+              {getInitials(localProfile.name, localProfile.email)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col space-y-1 text-right overflow-hidden">
             <p className="font-semibold text-sm truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+            <p className="text-xs text-muted-foreground truncate">{localProfile.email}</p>
           </div>
         </div>
         
