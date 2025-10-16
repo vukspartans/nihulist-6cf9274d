@@ -48,6 +48,38 @@ export const ADVISOR_PHASES: Record<number, AdvisorPhase> = {
 
 // Mapping of advisor types to phases for each project category
 export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, number>> = {
+  // Primary mapping - used by the JSON data source
+  'תמ"א 38 - פינוי ובינוי': {
+    // Phase 1 - Must have
+    'אדריכל': 1,
+    'עורך דין מקרקעין': 1,
+    
+    // Phase 2 - Important
+    'אגרונום': 2,
+    'מודד מוסמך': 2,
+    
+    // Phase 3 - Recommended
+    'יועץ אינסטלציה': 3,
+    'יועץ מיזוג אוויר': 3,
+    'יועץ כבישים תנועה וחניה': 3,
+    'יועץ פיתוח': 3,
+    'יועץ חשמל': 3,
+    'יועץ קרקע': 3,
+    'יועץ אקוסטיקה': 3,
+    'יועץ בנייה ירוקה': 3,
+    'יועץ איטום': 3,
+    'יועץ בטיחות אש': 3,
+    'יועץ קונסטרוקציה': 3,
+    'יועץ נגישות': 3,
+    'יועץ מיגון': 3,
+    'יועץ מעליות': 3,
+    'יועץ תרמי': 3,
+    'יועץ הידרולוגיה': 3,
+    'יועץ אלומיניום': 3,
+    'יועץ קרינה': 3,
+    'סוקר אסבסט': 3
+  },
+  // Fallback mapping - alternate naming convention
   'פינוי־בינוי (מתחמים)': {
     // Phase 1 - Must have
     'אדריכל': 1,
@@ -140,8 +172,67 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
   }
 };
 
+// Normalization helpers (copied from useAdvisorsValidation for consistency)
+const normalize = (str: string): string => {
+  if (!str) return '';
+  let trimmed = str.trim();
+  // Remove leading checkbox symbols
+  trimmed = trimmed.replace(/^[☐✔✅]\s*/, '');
+  return trimmed.trim();
+};
+
+const normalizeLegacyProjectType = (legacyType: string): string => {
+  if (!legacyType) return '';
+  
+  const type = legacyType.trim();
+  
+  // Map legacy types to new standardized types
+  if (type.includes('בניין מגורים') || type.includes('בניית בניין מגורים')) {
+    return 'מגורים בבנייה רוויה (5–8 קומות)';
+  }
+  if (type.includes('תמ"א') || type.includes('התחדשות עירונית')) {
+    return 'תמ"א 38 - פינוי ובינוי';
+  }
+  if (type.includes('פינוי') && type.includes('בינוי')) {
+    return 'תמ"א 38 - פינוי ובינוי';
+  }
+  if (type.includes('ביוב') || type.includes('ניקוז')) {
+    return 'רשתות ביוב וניקוז';
+  }
+  if (type.includes('מגורים')) {
+    return 'מגורים בבנייה רוויה (5–8 קומות)';
+  }
+  if (type.includes('משרדים') || type.includes('משרד')) {
+    return 'בניין משרדים';
+  }
+  if (type.includes('תעשי')) {
+    return 'מבנה תעשייה';
+  }
+  
+  // Return original if no mapping found
+  return type;
+};
+
 export const getAdvisorPhase = (projectType: string, advisorType: string): number | undefined => {
-  return ADVISOR_PHASES_BY_PROJECT_TYPE[projectType]?.[advisorType];
+  // Normalize the project type using same logic as advisors validation
+  const legacyNormalized = normalizeLegacyProjectType(projectType);
+  const normalizedProjectType = normalize(legacyNormalized);
+  
+  // Try with normalized type first
+  let phases = ADVISOR_PHASES_BY_PROJECT_TYPE[normalizedProjectType];
+  
+  // Fallback to original normalization
+  if (!phases) {
+    const originalNormalized = normalize(projectType);
+    phases = ADVISOR_PHASES_BY_PROJECT_TYPE[originalNormalized];
+  }
+  
+  // Fallback to exact match as last resort
+  if (!phases) {
+    phases = ADVISOR_PHASES_BY_PROJECT_TYPE[projectType];
+  }
+  
+  return phases?.[advisorType];
 };
 
 export const getPhaseInfo = (phaseId: number): AdvisorPhase | undefined => {
