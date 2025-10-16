@@ -41,11 +41,19 @@ export const PhasedAdvisorSelection = ({
     [selectedAdvisors]
   );
 
+  // Unified advisor list: combine required_categories and recommended advisors
+  const displayedAdvisors = useMemo(() => {
+    if (!data || !projectType) return [];
+    return Array.from(new Set([
+      ...(data.required_categories || []).map(canonicalizeAdvisor),
+      ...getRecommendedAdvisors(projectType).map(canonicalizeAdvisor),
+    ]));
+  }, [data, projectType]);
+
   // Auto-select Phase 1 advisors when project type is available (only once)
   useEffect(() => {
     if (data && projectType && !hasAutoSelected) {
-      const recommended = getRecommendedAdvisors(projectType);
-      const phase1Advisors = recommended.filter(advisor => 
+      const phase1Advisors = displayedAdvisors.filter(advisor => 
         getAdvisorPhase(projectType, advisor) === 1
       );
       
@@ -69,23 +77,25 @@ export const PhasedAdvisorSelection = ({
         setHasAutoSelected(true);
       }
     }
-  }, [data, projectType, hasAutoSelected]);
+  }, [data, projectType, hasAutoSelected, displayedAdvisors]);
 
   useEffect(() => {
     if (data && projectType) {
       const result = validateAdvisorSelection(projectType, selectedAdvisors);
       setValidation(result);
       
-      // Consider valid if Phase 1 is complete
-      const recommended = getRecommendedAdvisors(projectType);
-      const phase1Advisors = recommended.filter(advisor => 
+      // Consider valid if Phase 1 is complete (using canonical comparison)
+      const phase1Advisors = displayedAdvisors.filter(advisor => 
         getAdvisorPhase(projectType, advisor) === 1
       );
-      const phase1Complete = phase1Advisors.every(advisor => selectedAdvisors.includes(advisor));
+      const canonicalSelectedSet = new Set(selectedAdvisors.map(canonicalizeAdvisor));
+      const phase1Complete = phase1Advisors.every(advisor => 
+        canonicalSelectedSet.has(canonicalizeAdvisor(advisor))
+      );
       
       onValidationChange(phase1Complete, result);
     }
-  }, [data, projectType, selectedAdvisors]);
+  }, [data, projectType, selectedAdvisors, displayedAdvisors]);
 
   const handleAdvisorToggle = (advisor: string, checked: boolean) => {
     const canonical = canonicalizeAdvisor(advisor);
@@ -97,17 +107,15 @@ export const PhasedAdvisorSelection = ({
   };
 
   const handleSelectPhase = (phaseId: number) => {
-    const recommended = getRecommendedAdvisors(projectType);
-    const phaseAdvisors = recommended.filter(advisor => 
+    const phaseAdvisors = displayedAdvisors.filter(advisor => 
       getAdvisorPhase(projectType, advisor) === phaseId
     );
     
     // Canonicalize both existing and new advisors before merging
-    const canonicalSelected = selectedAdvisors.map(canonicalizeAdvisor);
-    const canonicalPhase = phaseAdvisors.map(canonicalizeAdvisor);
-    
-    // Use Set for deduplication on canonicalized names
-    const mergedCanonical = new Set([...canonicalSelected, ...canonicalPhase]);
+    const mergedCanonical = new Set([
+      ...selectedAdvisors.map(canonicalizeAdvisor),
+      ...phaseAdvisors.map(canonicalizeAdvisor),
+    ]);
     
     onAdvisorsChange(Array.from(mergedCanonical));
   };
@@ -137,12 +145,8 @@ export const PhasedAdvisorSelection = ({
     );
   }
 
-  // Include both required categories (must-have Phase 1) and recommended advisors
-  // Canonicalize all advisor names to ensure consistency
-  const recommendedAdvisors = Array.from(new Set([
-    ...(data?.required_categories || []).map(canonicalizeAdvisor), 
-    ...getRecommendedAdvisors(projectType).map(canonicalizeAdvisor)
-  ]));
+  // Use the unified displayedAdvisors list
+  const recommendedAdvisors = displayedAdvisors;
 
   // Group advisors by phase
   const advisorsByPhase: Record<number, string[]> = {};
