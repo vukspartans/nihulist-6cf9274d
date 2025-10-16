@@ -89,8 +89,16 @@ export const useAdvisorsValidation = () => {
     if (type.includes('בניין מגורים') || type.includes('בניית בניין מגורים')) {
       return 'מגורים בבנייה רוויה (5–8 קומות)';
     }
-    if (type.includes('תמ"א') || type.includes('התחדשות עירונית')) {
-      return 'תמ"א 38 - פינוי ובינוי';
+    // Check for specific תמ"א subtypes first (before generic check)
+    if (type.includes('תמ"א 38/1') || type.includes('חיזוק ותוספות')) {
+      return 'תמ"א 38/1 – חיזוק ותוספות';
+    }
+    if (type.includes('תמ"א 38/2') || type.includes('הריסה ובנייה מחדש')) {
+      return 'תמ"א 38/2 – הריסה ובנייה מחדש';
+    }
+    // Generic תמ"א / פינוי-בינוי (only if not caught by above)
+    if (type.includes('תמ"א') || type.includes('התחדשות עירונית') || (type.includes('פינוי') && type.includes('בינוי'))) {
+      return 'פינוי־בינוי (מתחמים)';
     }
     if (type.includes('ביוב') || type.includes('ניקוז')) {
       return 'רשתות ביוב וניקוז';
