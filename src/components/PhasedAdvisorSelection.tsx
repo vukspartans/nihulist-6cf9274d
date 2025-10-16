@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CheckCircle, AlertCircle, Users, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 import { ADVISOR_PHASES, getAdvisorPhase } from '@/constants/advisorPhases';
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
 interface PhasedAdvisorSelectionProps {
   projectType: string;
@@ -108,9 +109,10 @@ export const PhasedAdvisorSelection = ({
   }
 
   // Include both required categories (must-have Phase 1) and recommended advisors
+  // Canonicalize all advisor names to ensure consistency
   const recommendedAdvisors = Array.from(new Set([
-    ...(data?.required_categories || []), 
-    ...getRecommendedAdvisors(projectType)
+    ...(data?.required_categories || []).map(canonicalizeAdvisor), 
+    ...getRecommendedAdvisors(projectType).map(canonicalizeAdvisor)
   ]));
 
   // Group advisors by phase

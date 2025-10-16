@@ -172,6 +172,8 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
   }
 };
 
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
+
 // Normalization helpers (copied from useAdvisorsValidation for consistency)
 const normalize = (str: string): string => {
   if (!str) return '';
@@ -190,11 +192,16 @@ const normalizeLegacyProjectType = (legacyType: string): string => {
   if (type.includes('בניין מגורים') || type.includes('בניית בניין מגורים')) {
     return 'מגורים בבנייה רוויה (5–8 קומות)';
   }
-  if (type.includes('תמ"א') || type.includes('התחדשות עירונית')) {
-    return 'תמ"א 38 - פינוי ובינוי';
+  // Check for specific תמ"א subtypes first (before generic check)
+  if (type.includes('תמ"א 38/1') || type.includes('חיזוק ותוספות')) {
+    return 'תמ"א 38/1 – חיזוק ותוספות';
   }
-  if (type.includes('פינוי') && type.includes('בינוי')) {
-    return 'תמ"א 38 - פינוי ובינוי';
+  if (type.includes('תמ"א 38/2') || type.includes('הריסה ובנייה מחדש')) {
+    return 'תמ"א 38/2 – הריסה ובנייה מחדש';
+  }
+  // Generic תמ"א / פינוי-בינוי (only if not caught by above)
+  if (type.includes('תמ"א') || type.includes('התחדשות עירונית') || (type.includes('פינוי') && type.includes('בינוי'))) {
+    return 'פינוי־בינוי (מתחמים)';
   }
   if (type.includes('ביוב') || type.includes('ניקוז')) {
     return 'רשתות ביוב וניקוז';
@@ -218,6 +225,9 @@ export const getAdvisorPhase = (projectType: string, advisorType: string): numbe
   const legacyNormalized = normalizeLegacyProjectType(projectType);
   const normalizedProjectType = normalize(legacyNormalized);
   
+  // Canonicalize the advisor type to handle variations like "אדריכל ראשי" → "אדריכל"
+  const canonicalAdvisorType = canonicalizeAdvisor(advisorType);
+  
   // Try with normalized type first
   let phases = ADVISOR_PHASES_BY_PROJECT_TYPE[normalizedProjectType];
   
@@ -232,7 +242,7 @@ export const getAdvisorPhase = (projectType: string, advisorType: string): numbe
     phases = ADVISOR_PHASES_BY_PROJECT_TYPE[projectType];
   }
   
-  return phases?.[advisorType];
+  return phases?.[canonicalAdvisorType];
 };
 
 export const getPhaseInfo = (phaseId: number): AdvisorPhase | undefined => {

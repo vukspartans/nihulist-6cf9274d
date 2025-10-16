@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
 interface ProjectAdvisorData {
   Project: string;
@@ -188,16 +189,16 @@ export const useAdvisorsValidation = () => {
       const normalizedProjectName = originalNormalized;
     }
 
-    // Get project-specific required advisors
-    const projectAdvisors = canonicalProjects.get(normalizedProjectName) || [];
+    // Get project-specific required advisors and canonicalize them
+    const projectAdvisors = (canonicalProjects.get(normalizedProjectName) || []).map(canonicalizeAdvisor);
     
-    // Normalize selected advisors
-    const normalizedSelected = new Set(
-      selectedAdvisors.map(advisor => normalize(advisor))
+    // Canonicalize selected advisors for comparison
+    const canonicalSelected = new Set(
+      selectedAdvisors.map(advisor => canonicalizeAdvisor(advisor))
     );
 
     const requiredSet = new Set(projectAdvisors);
-    const missing = projectAdvisors.filter(req => !normalizedSelected.has(req));
+    const missing = projectAdvisors.filter(req => !canonicalSelected.has(req));
 
     const status = missing.length === 0 ? 'All Advisors Present' : 'Missing Advisors';
     const notes = status === 'Missing Advisors' 
@@ -208,9 +209,9 @@ export const useAdvisorsValidation = () => {
       Project: normalizedProjectName,
       Status: status,
       RequiredCount: requiredSet.size,
-      SelectedCount: normalizedSelected.size,
+      SelectedCount: canonicalSelected.size,
       Missing: missing.sort(),
-      RecommendedBaseline: canonicalProjects.get(normalizedProjectName)?.sort(),
+      RecommendedBaseline: canonicalProjects.get(normalizedProjectName)?.map(canonicalizeAdvisor).sort(),
       Notes: notes
     };
   };
@@ -230,7 +231,8 @@ export const useAdvisorsValidation = () => {
       project = data.projects.find(p => normalize(p.Project) === originalNormalized);
     }
     
-    return project ? project.Advisors.sort() : [];
+    // Canonicalize all advisor names before returning
+    return project ? Array.from(new Set(project.Advisors.map(canonicalizeAdvisor))).sort() : [];
   };
 
   return {
