@@ -50,7 +50,12 @@ export const UserHeader = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   const getInitials = (name: string | null, email: string) => {

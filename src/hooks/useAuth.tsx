@@ -135,7 +135,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setRoles([]);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const isAdmin = roles.includes('admin');
