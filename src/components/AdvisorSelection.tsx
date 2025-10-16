@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Users, Plus } from 'lucide-react';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
 interface AdvisorSelectionProps {
   projectType: string;
@@ -51,10 +52,11 @@ export const AdvisorSelection = ({
   }, [data, projectType, selectedAdvisors, validateAdvisorSelection, onValidationChange]);
 
   const handleAdvisorToggle = (advisor: string, checked: boolean) => {
+    const canonical = canonicalizeAdvisor(advisor);
     if (checked) {
-      onAdvisorsChange([...selectedAdvisors, advisor]);
+      onAdvisorsChange([...selectedAdvisors, canonical]);
     } else {
-      onAdvisorsChange(selectedAdvisors.filter(a => a !== advisor));
+      onAdvisorsChange(selectedAdvisors.filter(a => canonicalizeAdvisor(a) !== canonical));
     }
   };
 
@@ -190,8 +192,10 @@ export const AdvisorSelection = ({
               <div className="grid gap-3">
                 {recommendedAdvisors.length > 0 ? (
                   recommendedAdvisors.map((advisor) => {
-                    const isSelected = selectedAdvisors.includes(advisor);
-                    const isMissing = validation?.Missing.includes(advisor);
+                    const canonicalSelected = new Set(selectedAdvisors.map(canonicalizeAdvisor));
+                    const canonicalMissing = new Set(validation?.Missing?.map(canonicalizeAdvisor) || []);
+                    const isSelected = canonicalSelected.has(canonicalizeAdvisor(advisor));
+                    const isMissing = canonicalMissing.has(canonicalizeAdvisor(advisor));
                     
                     return (
                       <div

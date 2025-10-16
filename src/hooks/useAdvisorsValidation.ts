@@ -25,7 +25,7 @@ interface ValidationResult {
 
 const CACHE_KEY = 'advisors-data-cache';
 const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
-const CACHE_VERSION = '2'; // Increment when canonical data changes
+const CACHE_VERSION = '3'; // Increment when canonical data changes
 
 export const useAdvisorsValidation = () => {
   const [data, setData] = useState<AdvisorsData | null>(null);

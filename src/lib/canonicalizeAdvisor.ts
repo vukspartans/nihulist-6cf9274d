@@ -9,8 +9,8 @@ export const canonicalizeAdvisor = (raw: string): string => {
   // Remove Unicode direction marks and trim
   let s = raw.replace(/[\u200e\u200f]/g, '').trim();
   
-  // Remove leading symbols (☐, ✔, ✅, •, -, >, arrows) and trailing symbols (*, :, >)
-  s = s.replace(/^[\s☐✔✅•\-\u2013\u2014>]+/, '').replace(/[*:>]+$/, '').trim();
+  // Remove leading symbols (☐, ✔, ✅, •, -, >, arrows, *) and trailing symbols (*, :, >)
+  s = s.replace(/^[\s☐✔✅•\-\u2013\u2014>\*]+/, '').replace(/[*:>]+$/, '').trim();
   
   // Collapse multiple spaces
   s = s.replace(/\s{2,}/g, ' ');

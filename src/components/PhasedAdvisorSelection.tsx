@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +34,12 @@ export const PhasedAdvisorSelection = ({
   const [validation, setValidation] = useState<any>(null);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [openPhases, setOpenPhases] = useState<Record<number, boolean>>({ 1: true });
+  
+  // Create canonical set for O(1) lookup
+  const canonicalSelected = useMemo(() => 
+    new Set(selectedAdvisors.map(canonicalizeAdvisor)), 
+    [selectedAdvisors]
+  );
 
   // Auto-select Phase 1 advisors when project type is available (only once)
   useEffect(() => {
@@ -67,10 +73,11 @@ export const PhasedAdvisorSelection = ({
   }, [data, projectType, selectedAdvisors, validateAdvisorSelection, onValidationChange, getRecommendedAdvisors]);
 
   const handleAdvisorToggle = (advisor: string, checked: boolean) => {
+    const canonical = canonicalizeAdvisor(advisor);
     if (checked) {
-      onAdvisorsChange([...selectedAdvisors, advisor]);
+      onAdvisorsChange([...selectedAdvisors, canonical]);
     } else {
-      onAdvisorsChange(selectedAdvisors.filter(a => a !== advisor));
+      onAdvisorsChange(selectedAdvisors.filter(a => canonicalizeAdvisor(a) !== canonical));
     }
   };
 
@@ -134,7 +141,7 @@ export const PhasedAdvisorSelection = ({
   // Calculate phase progress
   const getPhaseProgress = (phaseId: number) => {
     const phaseAdvisors = advisorsByPhase[phaseId] || [];
-    const selectedCount = phaseAdvisors.filter(a => selectedAdvisors.includes(a)).length;
+    const selectedCount = phaseAdvisors.filter(a => canonicalSelected.has(canonicalizeAdvisor(a))).length;
     return { total: phaseAdvisors.length, selected: selectedCount };
   };
 
@@ -233,7 +240,7 @@ export const PhasedAdvisorSelection = ({
                           {/* Advisors list */}
                           <div className="grid gap-2">
                             {phaseAdvisors.map((advisor) => {
-                          const isSelected = selectedAdvisors.includes(advisor);
+                          const isSelected = canonicalSelected.has(canonicalizeAdvisor(advisor));
                           
                           return (
                             <div
@@ -290,7 +297,7 @@ export const PhasedAdvisorSelection = ({
                         <Badge variant="outline">אופציונלי</Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {advisorsNoPhase.filter(a => selectedAdvisors.includes(a)).length} / {advisorsNoPhase.length}
+                        {advisorsNoPhase.filter(a => canonicalSelected.has(canonicalizeAdvisor(a))).length} / {advisorsNoPhase.length}
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground text-right mt-1">
@@ -303,7 +310,7 @@ export const PhasedAdvisorSelection = ({
                   <CardContent className="pt-0">
                     <div className="grid gap-2">
                       {advisorsNoPhase.map((advisor) => {
-                        const isSelected = selectedAdvisors.includes(advisor);
+                        const isSelected = canonicalSelected.has(canonicalizeAdvisor(advisor));
                         
                         return (
                           <div
