@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInput from 'react-phone-number-input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -113,8 +114,8 @@ const AdvisorProfile = () => {
       const advisorData = {
         user_id: user?.id,
         company_name: profile.company_name,
-        expertise: profile.expertise,
-        specialties: profile.specialties,
+        expertise: profile.expertise.map(canonicalizeAdvisor),
+        specialties: profile.specialties.map(canonicalizeAdvisor),
         certifications: profile.certifications,
         location: profile.location,
         founding_year: profile.founding_year,

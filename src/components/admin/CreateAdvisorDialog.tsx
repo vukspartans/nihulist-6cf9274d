@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminTranslations as t } from "@/constants/adminTranslations";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminAction } from "@/lib/auditLog";
+import { canonicalizeAdvisor } from "@/lib/canonicalizeAdvisor";
 const ISRAEL_CITIES = ["תל אביב", "ירושלים", "חיפה", "באר שבע", "רעננה"];
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -74,8 +75,8 @@ export function CreateAdvisorDialog({ open, onOpenChange }: CreateAdvisorDialogP
           company_name: companyName,
           location,
           founding_year: foundingYear ? parseInt(foundingYear) : null,
-          expertise,
-          specialties,
+          expertise: expertise.map(canonicalizeAdvisor),
+          specialties: specialties.map(canonicalizeAdvisor),
           activity_regions: activityRegions,
           office_size: officeSize || null,
           position_in_office: position || null,

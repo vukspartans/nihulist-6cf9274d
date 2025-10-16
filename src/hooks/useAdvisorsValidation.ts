@@ -25,6 +25,7 @@ interface ValidationResult {
 
 const CACHE_KEY = 'advisors-data-cache';
 const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+const CACHE_VERSION = '2'; // Increment when canonical data changes
 
 export const useAdvisorsValidation = () => {
   const [data, setData] = useState<AdvisorsData | null>(null);
@@ -37,11 +38,17 @@ export const useAdvisorsValidation = () => {
         // Check cache first
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
-          const { data: cachedData, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
+          const { data: cachedData, timestamp, version } = JSON.parse(cached);
+          // Use cache only if version matches and not expired
+          if (version === CACHE_VERSION && Date.now() - timestamp < CACHE_DURATION) {
             setData(cachedData);
             setLoading(false);
             return;
+          }
+          // Clear cache if version mismatch
+          if (version !== CACHE_VERSION) {
+            console.log('[useAdvisorsValidation] Cache version mismatch, clearing cache');
+            localStorage.removeItem(CACHE_KEY);
           }
         }
 
@@ -55,10 +62,11 @@ export const useAdvisorsValidation = () => {
         const jsonData = response;
         setData(jsonData);
         
-        // Cache the data
+        // Cache the data with version
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           data: jsonData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          version: CACHE_VERSION
         }));
 
       } catch (err) {

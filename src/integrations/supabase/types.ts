@@ -833,6 +833,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      canonicalize_advisor_name: {
+        Args: { name: string }
+        Returns: string
+      }
       generate_project_recommendations: {
         Args: { project_uuid: string }
         Returns: {
