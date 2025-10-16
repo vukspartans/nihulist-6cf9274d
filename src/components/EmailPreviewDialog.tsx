@@ -51,6 +51,12 @@ export const EmailPreviewDialog = ({
   const [emailContent, setEmailContent] = useState(rfpContent?.content || defaultContent);
   const attachments = rfpContent?.attachments || [];
 
+  // Replace placeholders for display only
+  const displayTitle = emailTitle.replace(/\{\{שם_הפרויקט\}\}/g, projectName);
+  const displayContent = emailContent
+    .replace(/\{\{שם_הפרויקט\}\}/g, projectName)
+    .replace(/\{\{שם_המשרד\}\}/g, '[שם המשרד]');
+
   const handleSave = () => {
     onSave?.(emailTitle, emailContent);
     setIsEditing(false);
@@ -125,7 +131,7 @@ export const EmailPreviewDialog = ({
                 />
               ) : (
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="font-semibold text-right">{emailTitle}</p>
+                  <p className="font-semibold text-right">{displayTitle}</p>
                 </div>
               )}
             </div>
@@ -145,7 +151,7 @@ export const EmailPreviewDialog = ({
               ) : (
                 <div className="p-4 bg-muted/50 rounded-lg border">
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-right" dir="rtl">
-                    {emailContent}
+                    {displayContent}
                   </pre>
                 </div>
               )}

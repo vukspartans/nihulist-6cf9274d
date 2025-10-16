@@ -54,7 +54,7 @@ export const PhasedAdvisorSelection = ({
         setHasAutoSelected(true);
       }
     }
-  }, [data, projectType, getRecommendedAdvisors, selectedAdvisors.length, hasAutoSelected, onAdvisorsChange]);
+  }, [data, projectType, selectedAdvisors.length, hasAutoSelected]);
 
   useEffect(() => {
     if (data && projectType) {
@@ -70,7 +70,7 @@ export const PhasedAdvisorSelection = ({
       
       onValidationChange(phase1Complete, result);
     }
-  }, [data, projectType, selectedAdvisors, validateAdvisorSelection, onValidationChange, getRecommendedAdvisors]);
+  }, [data, projectType, selectedAdvisors]);
 
   const handleAdvisorToggle = (advisor: string, checked: boolean) => {
     const canonical = canonicalizeAdvisor(advisor);
