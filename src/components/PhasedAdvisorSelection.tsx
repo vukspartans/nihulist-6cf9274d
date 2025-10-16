@@ -107,7 +107,11 @@ export const PhasedAdvisorSelection = ({
     );
   }
 
-  const recommendedAdvisors = getRecommendedAdvisors(projectType);
+  // Include both required categories (must-have Phase 1) and recommended advisors
+  const recommendedAdvisors = Array.from(new Set([
+    ...(data?.required_categories || []), 
+    ...getRecommendedAdvisors(projectType)
+  ]));
 
   // Group advisors by phase
   const advisorsByPhase: Record<number, string[]> = {};
@@ -160,8 +164,6 @@ export const PhasedAdvisorSelection = ({
             const isComplete = progress.selected === progress.total && progress.total > 0;
             const isOpen = openPhases[phaseId] ?? false;
 
-            if (phaseAdvisors.length === 0) return null;
-
             return (
               <Collapsible key={phaseId} open={isOpen} onOpenChange={() => togglePhase(phaseId)}>
                 <Card className={`border-2 ${phaseInfo.borderClass} ${phaseInfo.bgClass}`}>
@@ -204,25 +206,31 @@ export const PhasedAdvisorSelection = ({
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0 space-y-3">
-                      {/* Quick action to select all in phase */}
-                      {progress.selected < progress.total && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectPhase(phaseId);
-                          }}
-                          className="w-full"
-                        >
-                          <Plus className="h-4 w-4 ml-2" />
-                          בחר את כל היועצים בשלב זה
-                        </Button>
-                      )}
+                      {progress.total === 0 ? (
+                        <div className="text-sm text-muted-foreground p-3 rounded-md border border-dashed">
+                          אין סוגי יועצים לשלב זה עבור סוג הפרויקט שנבחר.
+                        </div>
+                      ) : (
+                        <>
+                          {/* Quick action to select all in phase */}
+                          {progress.selected < progress.total && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectPhase(phaseId);
+                              }}
+                              className="w-full"
+                            >
+                              <Plus className="h-4 w-4 ml-2" />
+                              בחר את כל היועצים בשלב זה
+                            </Button>
+                          )}
 
-                      {/* Advisors list */}
-                      <div className="grid gap-2">
-                        {phaseAdvisors.map((advisor) => {
+                          {/* Advisors list */}
+                          <div className="grid gap-2">
+                            {phaseAdvisors.map((advisor) => {
                           const isSelected = selectedAdvisors.includes(advisor);
                           
                           return (
@@ -251,7 +259,9 @@ export const PhasedAdvisorSelection = ({
                             </div>
                           );
                         })}
-                      </div>
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
