@@ -111,10 +111,12 @@ const Auth = () => {
         
         // Handle normal authentication flow - only on SIGNED_IN event
         if (event === 'SIGNED_IN' && session?.user && !isPasswordReset && type !== 'recovery') {
-          // Suppress auto-redirect if forced login (after logout)
+          // Clear forced login flags on successful login to allow redirect
           if (forced || justLoggedOut) {
-            console.log('Forced login active, skipping auto-redirect after SIGNED_IN');
-            return;
+            console.log('Successful login detected, clearing forced login flags');
+            setIsForcedLogin(false);
+            setJustLoggedOut(false);
+            sessionStorage.removeItem('just_logged_out');
           }
           setTimeout(async () => {
             try {
