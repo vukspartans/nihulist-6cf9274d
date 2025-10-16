@@ -19,7 +19,7 @@ interface UserProfile {
 }
 
 export const UserHeader = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -51,10 +51,19 @@ export const UserHeader = () => {
 
   const handleSignOut = async () => {
     try {
+      // Determine redirect target based on current user role
+      let redirectTarget = '/auth?mode=login&type=entrepreneur';
+      
+      if (window.location.pathname.startsWith('/heyadmin') || isAdmin) {
+        redirectTarget = '/heyadmin/login';
+      } else if (roles.includes('advisor')) {
+        redirectTarget = '/auth?mode=login&type=advisor';
+      }
+      
       // Mark that we just logged out to prevent redirect loop
       sessionStorage.setItem('just_logged_out', 'true');
       await signOut();
-      navigate('/auth');
+      navigate(redirectTarget, { replace: true });
     } catch (error) {
       console.error('Error during logout:', error);
       sessionStorage.removeItem('just_logged_out');

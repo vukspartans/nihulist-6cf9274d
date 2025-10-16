@@ -26,6 +26,7 @@ const Auth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [signupStep, setSignupStep] = useState(1); // 1 = personal info, 2 = credentials
+  const [justLoggedOut, setJustLoggedOut] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,6 +43,14 @@ const Auth = () => {
 
   useEffect(() => {
     console.log("Auth component mounting, checking URL params");
+    
+    // Check if we just logged out
+    const wasLoggedOut = sessionStorage.getItem('just_logged_out');
+    if (wasLoggedOut) {
+      sessionStorage.removeItem('just_logged_out');
+      setJustLoggedOut(true);
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
     const type = urlParams.get('type');
     const mode = urlParams.get('mode');
@@ -132,6 +141,17 @@ const Auth = () => {
     // Check for existing session - only redirect on page load, not after logout
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log("Getting existing session:", session ? "session exists" : "no session");
+      
+      // Check if we were just redirected from logout BEFORE setting session
+      const wasLoggedOut = sessionStorage.getItem('just_logged_out');
+      if (wasLoggedOut) {
+        sessionStorage.removeItem('just_logged_out');
+        setSession(null);
+        setUser(null);
+        setJustLoggedOut(true);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -145,14 +165,6 @@ const Auth = () => {
       // If this is a recovery URL but no session, wait for auth state change
       if (type === 'recovery' && !session?.user) {
         console.log("Recovery URL but no session yet, waiting for auth state change");
-        return;
-      }
-      
-      // Only redirect if coming from external link, not after logout
-      // Check if we were just redirected from logout
-      const wasLoggedOut = sessionStorage.getItem('just_logged_out');
-      if (wasLoggedOut) {
-        sessionStorage.removeItem('just_logged_out');
         return;
       }
       
@@ -596,8 +608,8 @@ const Auth = () => {
     );
   }
 
-  // If user is already authenticated, show loading
-  if (session) {
+  // If user is already authenticated, show loading (but not after logout)
+  if (session && !justLoggedOut) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center" dir="rtl">
         <div className="text-center">
