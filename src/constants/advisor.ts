@@ -1,6 +1,6 @@
 // Professional Advisor Expertise Types
 export const ADVISOR_EXPERTISE = [
-  'אדריכל ראשי',
+  'אדריכל',
   'עורך דין מקרקעין',
   'יועץ אינסטלציה',
   'יועץ מיזוג אוויר',
@@ -65,7 +65,7 @@ export type AdvisorExpertise = typeof ADVISOR_EXPERTISE[number];
 // Group by category for better UX
 export const ADVISOR_EXPERTISE_CATEGORIES = {
   'אדריכלות ותכנון': [
-    'אדריכל ראשי',
+    'אדריכל',
     'אדריכל נוף',
     'עיצוב פנים',
     'עיצוב לובאים',
