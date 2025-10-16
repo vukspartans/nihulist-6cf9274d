@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from './useAdvisorsValidation';
+import { getAdvisorPhase, getPhaseInfo, type AdvisorPhase } from '@/constants/advisorPhases';
 
 export interface AdvisorData {
   id: string;
@@ -21,6 +22,8 @@ export interface AdvisorsByType {
 export interface AdvisorTypeMetadata {
   type: string;
   priority: 'critical' | 'recommended' | 'optional';
+  phase?: number;
+  phaseInfo?: AdvisorPhase;
   advisors: AdvisorData[];
 }
 
@@ -116,26 +119,37 @@ export const useAdvisorsByExpertise = (
     return grouped;
   }, [advisors, selectedAdvisorTypes, projectLocation]);
 
-  // Categorize and sort advisor types by priority
+  // Categorize and sort advisor types by priority and phase
   const sortedAdvisorTypes: AdvisorTypeMetadata[] = useMemo(() => {
     const recommendedAdvisors = getRecommendedAdvisors(projectType);
     
     return selectedAdvisorTypes.map(type => {
       const isRequired = recommendedAdvisors.includes(type);
       const advisorsForType = advisorsByType[type] || [];
+      const phase = getAdvisorPhase(projectType, type);
+      const phaseInfo = phase ? getPhaseInfo(phase) : undefined;
       
       return {
         type,
         priority: (isRequired ? 'critical' : 'recommended') as 'critical' | 'recommended' | 'optional',
+        phase,
+        phaseInfo,
         advisors: advisorsForType
       };
     }).sort((a, b) => {
-      // Sort by priority first (critical > recommended > optional)
+      // Sort by phase first (1 > 2 > 3 > undefined)
+      if (a.phase !== b.phase) {
+        if (a.phase === undefined) return 1;
+        if (b.phase === undefined) return -1;
+        return a.phase - b.phase;
+      }
+      
+      // Then by priority (critical > recommended > optional)
       const priorityOrder = { critical: 0, recommended: 1, optional: 2 };
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
       if (priorityDiff !== 0) return priorityDiff;
       
-      // Then alphabetically within same priority
+      // Then alphabetically within same priority and phase
       return a.type.localeCompare(b.type, 'he');
     });
   }, [selectedAdvisorTypes, advisorsByType, projectType, getRecommendedAdvisors]);

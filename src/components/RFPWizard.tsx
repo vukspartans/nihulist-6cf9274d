@@ -16,7 +16,7 @@ import {
   CheckCircle,
   Upload
 } from 'lucide-react';
-import { AdvisorSelection } from './AdvisorSelection';
+import { PhasedAdvisorSelection } from './PhasedAdvisorSelection';
 import { AdvisorRecommendationsCard } from './AdvisorRecommendationsCard';
 import { ProjectTypeSelector } from './ProjectTypeSelector';
 import { supabase } from '@/integrations/supabase/client';
@@ -232,13 +232,13 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
             <div className="space-y-6">
               <div className="text-center">
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">בחירת יועצים</h3>
+                <h3 className="text-xl font-semibold mb-2">בחירת יועצים לפי שלבים</h3>
                 <p className="text-muted-foreground">
-                  בחר את היועצים הנדרשים לפרויקט זה
+                  בחר את היועצים לפי סדר עדיפות - התחל משלב 1 (חובה), המשך לשלב 2 ו-3 לפי הצורך
                 </p>
               </div>
 
-              <AdvisorSelection
+              <PhasedAdvisorSelection
                 projectType={selectedProjectType}
                 selectedAdvisors={selectedAdvisors}
                 onAdvisorsChange={setSelectedAdvisors}
