@@ -27,6 +27,7 @@ const Auth = () => {
   const [newPassword, setNewPassword] = useState("");
   const [signupStep, setSignupStep] = useState(1); // 1 = personal info, 2 = credentials
   const [justLoggedOut, setJustLoggedOut] = useState(false);
+  const [isForcedLogin, setIsForcedLogin] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -54,9 +55,18 @@ const Auth = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const type = urlParams.get('type');
     const mode = urlParams.get('mode');
+    const loggedOutParam = urlParams.get('logged_out');
     
     console.log("URL type parameter:", type);
     console.log("URL mode parameter:", mode);
+    console.log("URL logged_out parameter:", loggedOutParam);
+
+    // Determine if we should force the login UI (after logout or explicit login mode)
+    const forced = (mode === 'login') || (loggedOutParam === '1');
+    setIsForcedLogin(forced);
+    if (forced) {
+      setJustLoggedOut(true);
+    }
 
     // Initialize login/signup mode from URL parameter
     if (mode === 'login') {
@@ -101,6 +111,11 @@ const Auth = () => {
         
         // Handle normal authentication flow - only on SIGNED_IN event
         if (event === 'SIGNED_IN' && session?.user && !isPasswordReset && type !== 'recovery') {
+          // Suppress auto-redirect if forced login (after logout)
+          if (forced || justLoggedOut) {
+            console.log('Forced login active, skipping auto-redirect after SIGNED_IN');
+            return;
+          }
           setTimeout(async () => {
             try {
               // Check if user has admin role
@@ -108,22 +123,16 @@ const Auth = () => {
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', session.user.id);
-              
               const isAdmin = roles?.some(r => r.role === 'admin');
-              
-              // If admin, redirect to admin panel
               if (isAdmin) {
                 navigate("/heyadmin");
                 return;
               }
-              
-              // Otherwise check profile role
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('role')
                 .eq('user_id', session.user.id)
                 .single();
-              
               if (profile?.role === 'advisor') {
                 navigate("/advisor-dashboard");
               } else {
@@ -165,6 +174,14 @@ const Auth = () => {
       // If this is a recovery URL but no session, wait for auth state change
       if (type === 'recovery' && !session?.user) {
         console.log("Recovery URL but no session yet, waiting for auth state change");
+        return;
+      }
+      
+      // If forced login, do not auto-redirect; clear session to show login UI
+      if (forced) {
+        setSession(null);
+        setUser(null);
+        setJustLoggedOut(true);
         return;
       }
       
@@ -609,7 +626,7 @@ const Auth = () => {
   }
 
   // If user is already authenticated, show loading (but not after logout)
-  if (session && !justLoggedOut) {
+  if (session && !justLoggedOut && !isForcedLogin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center" dir="rtl">
         <div className="text-center">

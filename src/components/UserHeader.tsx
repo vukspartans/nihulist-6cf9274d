@@ -52,12 +52,12 @@ export const UserHeader = () => {
   const handleSignOut = async () => {
     try {
       // Determine redirect target based on current user role
-      let redirectTarget = '/auth?mode=login&type=entrepreneur';
+      let redirectTarget = '/auth?mode=login&type=entrepreneur&logged_out=1';
       
       if (window.location.pathname.startsWith('/heyadmin') || isAdmin) {
         redirectTarget = '/heyadmin/login';
       } else if (roles.includes('advisor')) {
-        redirectTarget = '/auth?mode=login&type=advisor';
+        redirectTarget = '/auth?mode=login&type=advisor&logged_out=1';
       }
       
       // Mark that we just logged out to prevent redirect loop
