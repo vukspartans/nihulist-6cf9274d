@@ -12,6 +12,7 @@ import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { ProjectFilesManager } from '@/components/ProjectFilesManager';
 import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
+import { SentRFPsTab } from '@/components/SentRFPsTab';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -285,8 +286,14 @@ export const ProjectDetail = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
-        <TabsList className="grid w-full grid-cols-4 h-11">
+        <TabsList className="grid w-full grid-cols-5 h-11">
           <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות מחיר</TabsTrigger>
+          <TabsTrigger 
+            value="sent-rfps" 
+            className="text-right flex items-center gap-2"
+          >
+            בקשות להצעות מחיר נשלחו
+          </TabsTrigger>
           <TabsTrigger 
             value="received" 
             className="text-right flex items-center gap-2"
@@ -299,6 +306,10 @@ export const ProjectDetail = () => {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="advisors" className="text-right flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            יועצים שנבחרו
+          </TabsTrigger>
           <TabsTrigger value="files" className="text-right flex items-center gap-2">
             <FileText className="w-4 h-4" />
             קבצים
@@ -307,10 +318,6 @@ export const ProjectDetail = () => {
                 {projectFiles.length}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="advisors" className="text-right flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            יועצים שנבחרו
           </TabsTrigger>
         </TabsList>
 
@@ -325,6 +332,10 @@ export const ProjectDetail = () => {
               fetchProposals();
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="sent-rfps">
+          <SentRFPsTab projectId={project.id} />
         </TabsContent>
 
         <TabsContent value="received">
@@ -392,6 +403,10 @@ export const ProjectDetail = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="advisors">
+          <SelectedAdvisorsTab projectId={project.id} />
+        </TabsContent>
+
         <TabsContent value="files">
           <Card>
             <CardHeader>
@@ -418,10 +433,6 @@ export const ProjectDetail = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="advisors">
-          <SelectedAdvisorsTab projectId={project.id} />
         </TabsContent>
       </Tabs>
     </div>
