@@ -144,6 +144,7 @@ export const ProjectWizard = () => {
       if (error) throw error;
 
       // Upload files if any and create project_files records
+      const uploadedFileIds: string[] = [];
       if (filesWithMetadata.length > 0) {
         setUploading(true);
         for (const fileWithMeta of filesWithMetadata) {
@@ -164,7 +165,7 @@ export const ProjectWizard = () => {
             }
 
             // Create project_files record
-            const { error: dbError } = await supabase
+            const { data: insertedFile, error: dbError } = await supabase
               .from('project_files')
               .insert({
                 project_id: project.id,
@@ -174,10 +175,14 @@ export const ProjectWizard = () => {
                 file_type: fileWithMeta.file.type || 'application/octet-stream',
                 file_url: fileName, // Store the storage key, not public URL
                 size_mb: Math.round((fileWithMeta.file.size / 1_000_000) * 100) / 100,
-              });
+              })
+              .select('id')
+              .single();
 
             if (dbError) {
               console.error('Error creating project_files record:', dbError);
+            } else if (insertedFile) {
+              uploadedFileIds.push(insertedFile.id);
             }
           } catch (fileError) {
             console.error('File processing error:', fileError);
@@ -189,6 +194,21 @@ export const ProjectWizard = () => {
           }
         }
         setUploading(false);
+      }
+
+      // Trigger AI analysis for uploaded files in background
+      if (uploadedFileIds.length > 0) {
+        toast({
+          title: "ניתוח AI מתבצע ברקע",
+          description: `מנתח ${uploadedFileIds.length} קבצים. התוצאות יופיעו בעמוד הפרויקט.`,
+        });
+
+        // Analyze files in background (don't await)
+        uploadedFileIds.forEach(fileId => {
+          supabase.functions.invoke('analyze-project-file', {
+            body: { fileId }
+          }).catch(err => console.error('AI analysis failed:', err));
+        });
       }
 
       // Clear localStorage draft

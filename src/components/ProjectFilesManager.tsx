@@ -319,11 +319,11 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       {/* Upload Area */}
       <Card>
         <CardHeader>
-          <CardTitle>העלאת קבצים</CardTitle>
+          <CardTitle className="text-right">העלאת קבצים</CardTitle>
         </CardHeader>
         <CardContent>
           <div
@@ -361,7 +361,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
       {/* Files List */}
       <Card>
         <CardHeader>
-          <CardTitle>קבצי הפרויקט ({files.length})</CardTitle>
+          <CardTitle className="text-right">קבצי הפרויקט ({files.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {files.length === 0 ? (
@@ -369,56 +369,77 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
               לא הועלו קבצים עדיין. העלה קבצים לשיפור ניתוח הפרויקט.
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[400px]" dir="rtl">
               <div className="space-y-4">
                 {files.map((file) => (
                   <div key={file.id} className="border rounded-lg p-4">
                     <div className="flex items-start gap-4">
-                      {getFileIcon(file.file_type)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium truncate">
-                            {file.custom_name || file.file_name}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">
-                            {formatFileSize(file.size_mb)}
-                          </Badge>
-                          {file.ai_summary && (
-                            <HoverCard>
-                              <HoverCardTrigger asChild>
-                                <div className="cursor-help">
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                </div>
-                              </HoverCardTrigger>
-                              <HoverCardContent className="w-80" side="top">
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Brain className="h-4 w-4 text-primary" />
-                                    <span className="font-medium text-sm">תקציר ניתוח AI</span>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {file.ai_summary}
-                                  </p>
-                                </div>
-                              </HoverCardContent>
-                            </HoverCard>
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {getFileIcon(file.file_type)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h4 className="font-medium truncate text-right">
+                              {file.custom_name || file.file_name}
+                            </h4>
+                            <Badge variant="outline" className="text-xs">
+                              {formatFileSize(file.size_mb)}
+                            </Badge>
+                            {file.ai_summary ? (
+                              <Badge variant="outline" className="text-xs border-green-500/50 bg-green-500/10 text-green-700">
+                                <CheckCircle2 className="h-3 w-3 ml-1" />
+                                נותח ע"י AI
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-orange-500/50 bg-orange-500/10 text-orange-700">
+                                <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                                ממתין לניתוח
+                              </Badge>
+                            )}
+                          </div>
+                          {file.custom_name && (
+                            <p className="text-sm text-muted-foreground mb-1 text-right">
+                              שם מקורי: {file.file_name}
+                            </p>
                           )}
+                          {file.description && (
+                            <p className="text-sm text-muted-foreground mb-2 text-right">
+                              {file.description}
+                            </p>
+                          )}
+                          {file.ai_summary && (
+                            <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mt-2">
+                              <div className="flex items-start gap-2 mb-2">
+                                <Brain className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-foreground/90 line-clamp-3 leading-relaxed text-right">
+                                  {file.ai_summary}
+                                </p>
+                              </div>
+                              <HoverCard>
+                                <HoverCardTrigger asChild>
+                                  <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                                    הצג ניתוח מלא ←
+                                  </Button>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-96" align="start">
+                                  <div className="space-y-2">
+                                    <h5 className="font-semibold text-sm flex items-center gap-2">
+                                      <Brain className="h-4 w-4 text-primary" />
+                                      ניתוח AI מלא
+                                    </h5>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap text-right">
+                                      {file.ai_summary}
+                                    </p>
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2 text-right">
+                            הועלה {new Date(file.created_at).toLocaleDateString('he-IL')}
+                          </p>
                         </div>
-                        {file.custom_name && (
-                          <p className="text-sm text-muted-foreground mb-1">
-                            שם מקורי: {file.file_name}
-                          </p>
-                        )}
-                        {file.description && (
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {file.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          הועלה {new Date(file.created_at).toLocaleDateString('he-IL')}
-                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-row-reverse">
                         <Button
                           size="sm"
                           variant="outline"
