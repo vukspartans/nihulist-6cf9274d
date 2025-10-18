@@ -10,6 +10,7 @@ import { Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logAdminAction } from "@/lib/auditLog";
 import { adminTranslations } from "@/constants/adminTranslations";
+import { RFPStatisticsCards } from "@/components/admin/RFPStatisticsCards";
 
 interface RFP {
   id: string;
@@ -184,7 +185,7 @@ const RFPsManagement = () => {
               updateProposalMutation.mutate({ id: item.id, status: 'approved' })
             }
           >
-            <CheckCircle2 className="w-4 h-4 ml-1" />
+            <CheckCircle2 className="w-4 h-4 mr-1" />
             {adminTranslations.rfps.approve}
           </Button>
           <Button
@@ -194,7 +195,7 @@ const RFPsManagement = () => {
               updateProposalMutation.mutate({ id: item.id, status: 'rejected' })
             }
           >
-            <XCircle className="w-4 h-4 ml-1" />
+            <XCircle className="w-4 h-4 mr-1" />
             {adminTranslations.rfps.reject}
           </Button>
           <Button
@@ -215,18 +216,20 @@ const RFPsManagement = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" dir="rtl">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent text-right">
             {adminTranslations.rfps.title}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-right">
             {adminTranslations.rfps.description}
           </p>
         </div>
 
+        <RFPStatisticsCards />
+
         <Tabs defaultValue="rfps" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-2" dir="rtl">
             <TabsTrigger value="rfps">
               {adminTranslations.rfps.rfpsTab} ({rfps.length})
             </TabsTrigger>

@@ -246,6 +246,18 @@ export const adminTranslations = {
     deleted: "קריאה להצעות מחיר נמחקה בהצלחה",
     deleteFailed: "מחיקת קריאה להצעות מחיר נכשלה",
     statusUpdated: "סטטוס עודכן בהצלחה",
+    
+    // Statistics
+    statistics: {
+      totalRFPs: "סך קריאות להצעות מחיר",
+      totalInvites: "הזמנות שנשלחו ליועצים",
+      responseRate: "שיעור מענה יועצים",
+      approvalRate: "שיעור גיוס יועצים",
+      rfpsDesc: "קריאות שנשלחו",
+      invitesDesc: "הזמנות שנשלחו",
+      responseDesc: "מתוך כלל ההזמנות",
+      approvalDesc: "מתוך כלל ההצעות",
+    },
   },
 
   // Users Management
