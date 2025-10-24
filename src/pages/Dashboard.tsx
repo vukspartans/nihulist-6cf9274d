@@ -13,6 +13,7 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { ProjectFilters } from "@/components/ProjectFilters";
 import { UserHeader } from "@/components/UserHeader";
 import { ProjectSummary } from "@/types/project";
+import Logo from "@/components/Logo";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -168,7 +169,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="flex justify-between items-center p-6 border-b">
-        <h1 className="text-2xl font-bold text-primary">Nihulist</h1>
+        <Logo size="md" />
         <div className="flex items-center gap-4">
           <Button
             onClick={() => navigate("/projects/new")}

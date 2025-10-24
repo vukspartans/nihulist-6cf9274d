@@ -42,38 +42,38 @@ const MobileNav = ({
         <nav className="flex flex-col gap-4 mt-8">
           {showHomeLink && (
             <Link to="/">
-              <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+              <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
                 דף הבית
               </Button>
             </Link>
           )}
           {showEntrepreneurLink && (
             <Link to="/for-entrepreneurs">
-              <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+              <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
                 ליזמים
               </Button>
             </Link>
           )}
           {showConsultantLink && (
             <Link to="/for-consultants">
-              <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+              <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
                 ליועצים
               </Button>
             </Link>
           )}
-          <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+          <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
             אודות
           </Button>
-          <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+          <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
             הפתרונות שלנו
           </Button>
-          <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+          <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
             עולם התוכן
           </Button>
-          <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+          <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
             תמיכה
           </Button>
-          <Button variant="ghost" className="w-full justify-end text-base" size="lg">
+          <Button variant="ghost" className="w-full justify-end text-right text-base" size="lg">
             צור קשר
           </Button>
           

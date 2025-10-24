@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
+import Logo from "@/components/Logo";
+import BackToTop from "@/components/BackToTop";
 
 const ForEntrepreneurs = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -70,14 +72,8 @@ const ForEntrepreneurs = () => {
       {/* Navigation */}
       <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg sm:text-xl font-bold text-foreground">ניהוליסט</span>
-              <span className="text-xs sm:text-sm text-muted-foreground">NihuList</span>
-            </div>
+          <Link to="/" className="flex items-center">
+            <Logo size="sm" className="sm:h-10" />
           </Link>
           
           {/* Desktop Navigation */}
@@ -356,6 +352,9 @@ const ForEntrepreneurs = () => {
           </Link>
         </div>
       </div>
+
+      {/* Back to Top Button */}
+      <BackToTop />
     </div>
   );
 };

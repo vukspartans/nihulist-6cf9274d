@@ -13,6 +13,7 @@ import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Up
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import Logo from '@/components/Logo';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -296,7 +297,7 @@ const AdvisorDashboard = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="flex justify-between items-center p-6 border-b">
-        <h1 className="text-2xl font-bold text-primary">Nihulist</h1>
+        <Logo size="md" />
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />

@@ -31,6 +31,8 @@ import { useNavigate, Link } from "react-router-dom";
 import HeroImageCarousel from "@/components/HeroImageCarousel";
 import LazySection from "@/components/LazySection";
 import MobileNav from "@/components/MobileNav";
+import Logo from "@/components/Logo";
+import BackToTop from "@/components/BackToTop";
 
 // Lazy load heavy components
 const OptimizedTestimonials = lazy(() => import("@/components/OptimizedTestimonials"));
@@ -98,12 +100,7 @@ const Landing = memo(() => {
       {/* Navigation */}
       <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
-            <span className="text-lg sm:text-xl font-bold text-primary">ניהוליסט</span>
-          </div>
+          <Logo size="sm" className="sm:h-10" />
           
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-4">
@@ -556,15 +553,7 @@ const Landing = memo(() => {
         <div className="container mx-auto px-4 lg:px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-xl font-bold">NihuList</div>
-                  <div className="text-sm text-white/70">ניהוליסט</div>
-                </div>
-              </div>
+              <Logo size="lg" variant="white" />
               <p className="text-white/80 text-sm leading-relaxed">
                 מחברים יזמים ויועצים דרך הפלטפורמה הבטוחה והחכמה שלנו.
               </p>
@@ -679,6 +668,9 @@ const Landing = memo(() => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Back to Top Button */}
+      <BackToTop />
     </div>
 });
 
