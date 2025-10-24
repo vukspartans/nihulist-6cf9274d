@@ -663,14 +663,15 @@ const Auth = () => {
         : 'bg-gradient-to-br from-background via-tech-purple/10 to-tech-purple/5'
     }`} dir="rtl">
       {/* Top Navigation */}
-      <div className="w-full max-w-7xl mx-auto py-4 flex items-center justify-between">
+      <div className="w-full max-w-7xl mx-auto py-2 sm:py-4 px-4 flex items-center justify-between">
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Home className="h-4 w-4" />
-            חזרה לדף הבית
+          <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9">
+            <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">חזרה לדף הבית</span>
+            <span className="sm:hidden">חזרה</span>
           </Button>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="hidden sm:flex items-center gap-4">
           <Link to="/for-entrepreneurs">
             <Button variant="ghost" size="sm">ליזמים</Button>
           </Link>
@@ -682,15 +683,15 @@ const Auth = () => {
 
       {/* Auth Card */}
       <div className="flex-1 flex items-center justify-center">
-        <Card className={`w-full max-w-lg construction-card relative ${
+        <Card className={`w-full max-w-lg construction-card relative p-4 sm:p-6 ${
           formData.role === 'entrepreneur' 
             ? 'border-primary/20 shadow-lg shadow-primary/10' 
             : 'border-tech-purple/20 shadow-lg shadow-tech-purple/10'
         }`}>
-          <CardHeader className="text-center space-y-4">
+          <CardHeader className="text-center space-y-3 sm:space-y-4 p-0 sm:p-6">
             {/* Role Badge */}
             <div className="flex justify-center">
-              <Badge className={`text-sm px-4 py-1.5 text-white font-medium ${
+              <Badge className={`text-xs sm:text-sm px-3 py-1 sm:px-4 sm:py-1.5 text-white font-medium ${
                 formData.role === 'entrepreneur'
                   ? 'bg-gradient-to-r from-primary to-primary-glow'
                   : 'bg-gradient-to-r from-tech-purple to-accent'
@@ -700,15 +701,15 @@ const Auth = () => {
             </div>
             
             {/* Role Icon */}
-            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg ${
+            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg ${
               formData.role === 'entrepreneur'
                 ? 'bg-gradient-to-r from-primary to-primary-glow shadow-primary/30'
                 : 'bg-gradient-to-r from-tech-purple to-accent shadow-tech-purple/30'
             }`}>
-              <RoleIcon className="w-10 h-10 text-white" />
+              <RoleIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
             
-            <CardTitle className={`text-3xl font-bold ${
+            <CardTitle className={`text-2xl sm:text-3xl font-bold ${
               formData.role === 'entrepreneur' ? 'text-primary' : 'text-tech-purple'
             }`}>
               {isLogin 
@@ -716,7 +717,7 @@ const Auth = () => {
                 : formData.role === 'advisor' ? "הצטרפות כיועץ" : "הצטרפות כיזם"
               }
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-sm sm:text-base">
               {isLogin 
                 ? formData.role === 'advisor' 
                   ? "התחבר כיועץ כדי לנהל את הפרופיל שלך ולקבל פרויקטים" 
@@ -728,20 +729,32 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6 p-0 sm:p-6">
+          {/* Step Indicator for Signup */}
+          {!isLogin && !isForgotPassword && (
+            <div className="flex items-center justify-center gap-2 mb-2 sm:mb-4">
+              <div className={`h-2 rounded-full transition-all ${
+                signupStep === 1 ? 'bg-primary w-8' : 'bg-muted w-2'
+              }`} />
+              <div className={`h-2 rounded-full transition-all ${
+                signupStep === 2 ? 'bg-primary w-8' : 'bg-muted w-2'
+              }`} />
+            </div>
+          )}
+
           {isForgotPassword ? (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
+            <form onSubmit={handleForgotPassword} className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                <Label htmlFor="email" className="text-right text-sm sm:text-base">כתובת אימייל *</Label>
                 <div className="relative">
-                  <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute right-2 sm:right-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="your@email.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="pr-10"
+                    className="pr-8 sm:pr-10 text-sm sm:text-base h-9 sm:h-10"
                     required
                     dir="ltr"
                   />
@@ -753,7 +766,7 @@ const Auth = () => {
 
               <Button 
                 type="submit" 
-                className="w-full h-11 text-base font-medium" 
+                className="w-full h-10 sm:h-11 text-sm sm:text-base font-medium" 
                 variant="premium"
                 disabled={loading}
               >
@@ -776,16 +789,16 @@ const Auth = () => {
                 {/* Step 1: Personal Information */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-right">שם מלא *</Label>
+                    <Label htmlFor="name" className="text-right text-sm sm:text-base">שם מלא *</Label>
                     <div className="relative">
-                      <UserIcon className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <UserIcon className="absolute right-2 sm:right-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input
                         id="name"
                         type="text"
                         placeholder="הזן שם מלא..."
                         value={formData.name}
                         onChange={(e) => handleInputChange("name", e.target.value)}
-                        className="pr-10 text-right"
+                        className="pr-8 sm:pr-10 text-right text-sm sm:text-base h-9 sm:h-10"
                         required
                         dir="rtl"
                       />
@@ -810,18 +823,18 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-right">
+                    <Label htmlFor="companyName" className="text-right text-sm sm:text-base">
                       שם המשרד {formData.role === 'advisor' && <span className="text-destructive">*</span>}
                     </Label>
                     <div className="relative">
-                      <Building2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Building2 className="absolute right-2 sm:right-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input
                         id="companyName"
                         type="text"
                         placeholder="שם המשרד שלך..."
                         value={formData.companyName}
                         onChange={(e) => handleInputChange("companyName", e.target.value)}
-                        className="pr-10 text-right"
+                        className="pr-8 sm:pr-10 text-right text-sm sm:text-base h-9 sm:h-10"
                         dir="rtl"
                       />
                     </div>
@@ -872,7 +885,7 @@ const Auth = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 text-base font-medium" 
+                  className="w-full h-10 sm:h-11 text-sm sm:text-base font-medium" 
                   variant="premium"
                   disabled={!isStep1Valid()}
                 >
@@ -889,16 +902,16 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-right">כתובת אימייל *</Label>
+                  <Label htmlFor="email" className="text-right text-sm sm:text-base">כתובת אימייל *</Label>
                   <div className="relative">
-                    <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute right-2 sm:right-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
                       placeholder="your@email.com"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      className="pr-10"
+                      className="pr-8 sm:pr-10 text-sm sm:text-base h-9 sm:h-10"
                       required
                       dir="ltr"
                     />
@@ -906,16 +919,16 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-right">סיסמה *</Label>
+                  <Label htmlFor="password" className="text-right text-sm sm:text-base">סיסמה *</Label>
                   <div className="relative">
-                    <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute right-2 sm:right-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type="password"
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
-                      className="pr-10"
+                      className="pr-8 sm:pr-10 text-sm sm:text-base h-9 sm:h-10"
                       required
                       minLength={6}
                       dir="ltr"
