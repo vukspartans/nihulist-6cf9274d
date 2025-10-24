@@ -30,6 +30,7 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import HeroImageCarousel from "@/components/HeroImageCarousel";
 import LazySection from "@/components/LazySection";
+import MobileNav from "@/components/MobileNav";
 
 // Lazy load heavy components
 const OptimizedTestimonials = lazy(() => import("@/components/OptimizedTestimonials"));
@@ -95,15 +96,17 @@ const Landing = memo(() => {
 
   return <div className="min-h-screen bg-background" dir="rtl">
       {/* Navigation */}
-      <nav className="relative z-50 py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
+      <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-primary">ניהוליסט</span>
+            <span className="text-lg sm:text-xl font-bold text-primary">ניהוליסט</span>
           </div>
-          <div className="flex items-center gap-2 lg:gap-4">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-4">
             <Button variant="ghost" size="sm">אודות</Button>
             <Button variant="ghost" size="sm">הפתרונות שלנו</Button>
             <Button variant="ghost" size="sm">עולם התוכן</Button>
@@ -115,85 +118,99 @@ const Landing = memo(() => {
             <Link to="/for-consultants">
               <Button variant="ghost" size="sm">ליועצים</Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={handleLoginClick} className="text-sm lg:text-base px-6">
+            <Button variant="outline" size="sm" onClick={handleLoginClick} className="px-6">
               התחברו למערכת
             </Button>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="flex lg:hidden items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleLoginClick} className="px-4 text-xs">
+              התחבר
+            </Button>
+            <MobileNav 
+              onLoginClick={handleLoginClick}
+              onSignupClick={handleMainCTAClick}
+              showEntrepreneurLink
+              showConsultantLink
+            />
           </div>
         </div>
       </nav>
 
       {/* Hero Section - Optimized Above the Fold */}
-      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
+      <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-7xl mx-auto">
             {/* Left content */}
-            <div className="space-y-6 lg:space-y-8 text-center lg:text-right">
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-right">
               {/* Security badge */}
               <div className="animate-fade-in">
-                <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-xs lg:text-sm hover-scale">
-                  <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
-                  הגנה ברמה בנקאית על המידע שלכם
+                <Badge variant="outline" className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm hover-scale">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                  <span className="hidden sm:inline">הגנה ברמה בנקאית על המידע שלכם</span>
+                  <span className="sm:hidden">אבטחה מלאה</span>
                 </Badge>
               </div>
 
-              {/* Main headline - Reduced size for better space usage */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
+              {/* Main headline - Mobile optimized */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
                 <span className="gradient-text">ניהוליסט</span>
                 <br />
                 <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
-                <span className="gradient-text text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">חכם יותר, מהיר יותר</span>
+                <span className="gradient-text text-2xl sm:text-3xl md:text-4xl lg:text-4xl xl:text-5xl">חכם יותר, מהיר יותר</span>
               </h1>
 
               {/* Subtext - More concise */}
-              <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
+              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{animationDelay: "0.2s"}}>
                 הפלטפורמה הבטוחה למציאת המומחים המושלמים לכל פרויקט בנייה ונדל"ן.
               </p>
 
-              {/* CTA Button */}
+              {/* CTA Button - Mobile optimized */}
               <div className="animate-slide-up" style={{animationDelay: "0.4s"}}>
                 <Button 
                   size="lg" 
                   onClick={handleMainCTAClick}
-                  className="text-lg px-8 py-6 hover-scale animate-glow"
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 hover-scale animate-glow"
                 >
                   <Zap className="w-5 h-5 ml-2" />
                   התחל עכשיו
                 </Button>
               </div>
 
-              {/* Trust indicators - Compact */}
+              {/* Trust indicators - Mobile optimized */}
               <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
-                <div className="flex flex-wrap justify-center lg:justify-start gap-4 lg:gap-6 text-xs lg:text-sm font-medium text-muted-foreground">
-                  <span className="flex items-center gap-2 hover-scale">
-                    <CheckCircle className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm font-medium text-muted-foreground">
+                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
+                    <CheckCircle className="w-4 h-4 text-primary" />
                     +500 פרויקטים
                   </span>
-                  <span className="flex items-center gap-2 hover-scale">
-                    <UserCheck className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
+                    <UserCheck className="w-4 h-4 text-primary" />
                     +1,000 יועצים
                   </span>
-                  <span className="flex items-center gap-2 hover-scale">
-                    <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-primary" />
+                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
+                    <Shield className="w-4 h-4 text-primary" />
                     אבטחה ארגונית
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right content - Optimized Hero Image */}
-            <div className="flex justify-center lg:justify-end animate-scale-in" style={{animationDelay: "0.3s"}}>
+            {/* Right content - Mobile optimized hero image */}
+            <div className="flex justify-center lg:justify-end animate-scale-in order-first lg:order-last" style={{animationDelay: "0.3s"}}>
               <div className="relative">
                 <HeroImageCarousel 
                   images={heroImages}
-                  className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 overflow-hidden hover-scale relative"
+                  className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-3xl bg-gradient-to-br from-primary/20 to-tech-purple/20 overflow-hidden hover-scale relative"
                 />
-                {/* Floating elements */}
-                <div className="absolute -top-3 -right-3 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center animate-float">
-                  <Trophy className="w-5 h-5 text-white" />
+                {/* Floating elements - Hidden on mobile */}
+                <div className="hidden sm:flex absolute -top-3 -right-3 w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-2xl items-center justify-center animate-float">
+                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div className="absolute -bottom-3 -left-3 w-10 h-10 bg-tech-purple rounded-2xl flex items-center justify-center animate-float" style={{animationDelay: "1s"}}>
-                  <Target className="w-5 h-5 text-white" />
+                <div className="hidden sm:flex absolute -bottom-3 -left-3 w-8 h-8 sm:w-10 sm:h-10 bg-tech-purple rounded-2xl items-center justify-center animate-float" style={{animationDelay: "1s"}}>
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
               </div>
             </div>
@@ -202,7 +219,7 @@ const Landing = memo(() => {
       </section>
 
       {/* Trust & Credibility Section - Lazy Loaded */}
-      <LazySection className="py-24 lg:py-32 bg-muted/30 relative overflow-hidden">
+      <LazySection className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-muted/30 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-10 left-10 w-32 h-32 bg-primary rounded-full blur-3xl animate-float"></div>
@@ -217,7 +234,7 @@ const Landing = memo(() => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-12 sm:mb-16 lg:mb-20">
             <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.1s"}}>
                 <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
                 <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטי בנייה הושלמו</div>
@@ -247,7 +264,7 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* How It Works Section - Lazy Loaded */}
-      <LazySection className="py-32 lg:py-40 bg-background relative overflow-hidden">
+      <LazySection className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 right-20 w-64 h-64 bg-tech-purple rounded-full blur-3xl animate-float" style={{animationDelay: "3s"}}></div>
@@ -264,9 +281,9 @@ const Landing = memo(() => {
             </p>
           </div>
           
-          <div className="grid lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 max-w-7xl mx-auto">
             {/* Step 1 */}
-            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.2s"}}>
+            <Card className="text-center p-6 sm:p-8 lg:p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.2s"}}>
               <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 1
               </div>

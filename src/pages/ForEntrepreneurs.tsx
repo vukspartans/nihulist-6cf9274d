@@ -19,6 +19,7 @@ import {
   Award
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import MobileNav from "@/components/MobileNav";
 
 const ForEntrepreneurs = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -67,19 +68,20 @@ const ForEntrepreneurs = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Navigation */}
-      <nav className="relative z-50 py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
+      <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+          <Link to="/" className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
-              <span className="text-sm text-muted-foreground">NihuList</span>
+              <span className="text-lg sm:text-xl font-bold text-foreground">ניהוליסט</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">NihuList</span>
             </div>
           </Link>
           
-          <div className="flex items-center gap-4">
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-4">
             <Link to="/">
               <Button variant="ghost" size="sm">דף הבית</Button>
             </Link>
@@ -95,21 +97,32 @@ const ForEntrepreneurs = () => {
               התחל עכשיו
             </Button>
           </div>
+
+          {/* Mobile Navigation */}
+          <div className="flex lg:hidden">
+            <MobileNav 
+              showHomeLink
+              showConsultantLink
+              ctaText="התחל עכשיו"
+              ctaAction={() => navigate('/auth?type=entrepreneur')}
+            />
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section - Optimized Above the Fold */}
-      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
+      {/* Hero Section - Mobile Optimized */}
+      <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
             <div className="animate-fade-in">
-              <Badge variant="outline" className="inline-flex items-center gap-2 px-6 py-3 text-sm mb-6">
-                <Briefcase className="w-4 h-4 text-primary" />
-                פתרון מותאם ליזמים חכמים
+              <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm mb-4 sm:mb-6">
+                <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                <span className="hidden sm:inline">פתרון מותאם ליזמים חכמים</span>
+                <span className="sm:hidden">ליזמים</span>
               </Badge>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight animate-slide-up">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-tight animate-slide-up">
               <span className="text-foreground">מצא את</span>
               <br />
               <span className="gradient-text">מומחי הבנייה המושלמים</span>
@@ -117,28 +130,28 @@ const ForEntrepreneurs = () => {
               <span className="text-foreground">לפרויקט שלך</span>
             </h1>
 
-            <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto animate-slide-up" style={{animationDelay: "0.2s"}}>
               פלטפורמה חכמה שמחברת אותך עם מומחי בנייה ונדל"ן מובילים בתעשייה.
-              <br />
-              חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות בפרויקט הבנייה שלך.
+              <br className="hidden sm:inline" />
+              חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
-                size="xl" 
+                size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="text-lg px-10 py-6 hover-scale"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale"
               >
-                <Zap className="w-6 h-6 ml-2" />
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
                 התחל חינם עכשיו
               </Button>
               
               <Button 
                 variant="outline" 
-                size="xl"
-                className="text-lg px-10 py-6 hover-scale"
+                size="lg"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale hidden sm:flex"
               >
-                <BarChart className="w-6 h-6 ml-2" />
+                <BarChart className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
                 צפה בדמו
               </Button>
             </div>
@@ -163,7 +176,7 @@ const ForEntrepreneurs = () => {
       </section>
 
       {/* Interactive Features Section */}
-      <section className="py-24 lg:py-32 bg-background">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -175,15 +188,16 @@ const ForEntrepreneurs = () => {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-16 items-center max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center max-w-7xl mx-auto">
             {/* Interactive Feature Cards */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {features.map((feature, index) => (
                 <Card 
                   key={index}
-                  className={`p-6 cursor-pointer transition-all duration-300 hover-scale ${
+                  className={`p-4 sm:p-6 cursor-pointer transition-all duration-300 hover-scale ${
                     activeFeature === index ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
                   }`}
+                  onClick={() => setActiveFeature(index)}
                   onMouseEnter={() => setActiveFeature(index)}
                 >
                   <div className="flex items-start gap-4">
@@ -225,7 +239,7 @@ const ForEntrepreneurs = () => {
       </section>
 
       {/* Benefits Grid */}
-      <section className="py-24 lg:py-32 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -234,9 +248,9 @@ const ForEntrepreneurs = () => {
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 max-w-7xl mx-auto">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="p-8 text-center hover-scale animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
+              <Card key={index} className="p-6 sm:p-8 text-center hover-scale animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
                 <div className="w-16 h-16 bg-gradient-to-r from-primary to-tech-purple rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <CheckCircle className="w-8 h-8 text-white" />
                 </div>
@@ -249,7 +263,7 @@ const ForEntrepreneurs = () => {
       </section>
 
       {/* Success Stories */}
-      <section className="py-24 lg:py-32 bg-background">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -259,9 +273,9 @@ const ForEntrepreneurs = () => {
             <p className="text-xl text-muted-foreground">יזמים שהצליחו להאיץ את העסק עם היועצים הנכונים</p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 max-w-6xl mx-auto">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-8 lg:p-12 relative overflow-hidden hover-scale animate-scale-in" style={{animationDelay: `${index * 0.2}s`}}>
+              <Card key={index} className="p-6 sm:p-8 lg:p-12 relative overflow-hidden hover-scale animate-scale-in" style={{animationDelay: `${index * 0.2}s`}}>
                 <div className="absolute top-4 left-4">
                   <Badge className="bg-green-100 text-green-800">
                     חסך {testimonial.savings}
@@ -289,7 +303,7 @@ const ForEntrepreneurs = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 lg:py-32 bg-gradient-to-r from-primary via-tech-purple to-primary relative overflow-hidden">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-gradient-to-r from-primary via-tech-purple to-primary relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-4 lg:px-6 text-center">
           <div className="max-w-4xl mx-auto space-y-8">
@@ -303,14 +317,14 @@ const ForEntrepreneurs = () => {
               הצטרף לאלפי יזמים שכבר מצאו את היועצים המושלמים לעסק שלהם
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
               <Button 
                 variant="hero" 
-                size="xl" 
+                size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="text-xl px-12 py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
+                className="w-full sm:w-auto text-base sm:text-xl px-8 sm:px-12 py-5 sm:py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
               >
-                <Zap className="w-6 h-6 ml-2 text-white/80 group-hover:text-white transition-colors" />
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2 text-white/80 group-hover:text-white transition-colors" />
                 <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו - חינם</span>
               </Button>
             </div>

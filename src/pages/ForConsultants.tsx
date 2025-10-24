@@ -22,6 +22,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import MobileNav from "@/components/MobileNav";
 
 const ForConsultants = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -121,19 +122,20 @@ const ForConsultants = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Navigation */}
-      <nav className="relative z-50 py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
+      <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+          <Link to="/" className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-primary to-tech-purple flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-foreground">ניהוליסט</span>
-              <span className="text-sm text-muted-foreground">NihuList</span>
+              <span className="text-lg sm:text-xl font-bold text-foreground">ניהוליסט</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">NihuList</span>
             </div>
           </Link>
           
-          <div className="flex items-center gap-4">
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-4">
             <Link to="/">
               <Button variant="ghost" size="sm">דף הבית</Button>
             </Link>
@@ -149,13 +151,23 @@ const ForConsultants = () => {
               הצטרף עכשיו
             </Button>
           </div>
+
+          {/* Mobile Navigation */}
+          <div className="flex lg:hidden">
+            <MobileNav 
+              showHomeLink
+              showEntrepreneurLink
+              ctaText="הצטרף עכשיו"
+              ctaAction={() => navigate('/auth?type=advisor')}
+            />
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section - Optimized Above the Fold */}
-      <section className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-br from-background via-tech-purple/5 to-primary/5">
+      {/* Hero Section - Mobile Optimized */}
+      <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-background via-tech-purple/5 to-primary/5">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-6 lg:space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="animate-fade-in">
                 <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 text-xs lg:text-sm">
                   <Award className="w-3 h-3 lg:w-4 lg:h-4 text-tech-purple" />
@@ -175,11 +187,11 @@ const ForConsultants = () => {
               הצטרף לרשת מומחי הבנייה המובילה והתחבר עם יזמי נדל"ן איכותיים שמחפשים את המומחיות שלך.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth?type=advisor')}
-                className="text-lg px-8 py-6 hover-scale"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 hover-scale"
               >
                 <UserCheck className="w-5 h-5 ml-2" />
                 הצטרף עכשיו
@@ -188,7 +200,7 @@ const ForConsultants = () => {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="text-lg px-8 py-6 hover-scale"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 hover-scale hidden sm:flex"
               >
                 <BarChart className="w-5 h-5 ml-2" />
                 צפה איך זה עובד
@@ -215,7 +227,7 @@ const ForConsultants = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-24 lg:py-32 bg-background">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -227,7 +239,7 @@ const ForConsultants = () => {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-12 sm:mb-16">
             {onboardingSteps.map((step, index) => (
               <Card 
                 key={index}
@@ -270,7 +282,7 @@ const ForConsultants = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-24 lg:py-32 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -280,7 +292,7 @@ const ForConsultants = () => {
             <p className="text-xl text-muted-foreground">למה אלפי יועצים כבר בחרו בנו</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 max-w-7xl mx-auto">
             {benefits.map((benefit, index) => (
               <Card key={index} className="p-8 text-center hover-scale animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
                 <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -302,7 +314,7 @@ const ForConsultants = () => {
       </section>
 
       {/* Success Stories */}
-      <section className="py-24 lg:py-32 bg-background">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -343,7 +355,7 @@ const ForConsultants = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-24 lg:py-32 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-black mb-6">
@@ -405,7 +417,7 @@ const ForConsultants = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 lg:py-32 bg-gradient-to-r from-tech-purple via-primary to-tech-purple relative overflow-hidden">
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-gradient-to-r from-tech-purple via-primary to-tech-purple relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-4 lg:px-6 text-center">
           <div className="max-w-4xl mx-auto space-y-8">
