@@ -196,16 +196,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
 </div>
 `;
     
-    // Build advisor-type pairs
+    // Build advisor-type pairs from recommended advisors
     const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
-    
-    // Add selected advisors (general type)
-    selectedAdvisors.forEach(advisorId => {
-      advisorTypePairs.push({
-        advisor_id: advisorId,
-        advisor_type: 'general'
-      });
-    });
     
     // Add recommended advisors with their specific types
     Object.entries(selectedRecommendedAdvisors).forEach(([advisorType, advisorIds]) => {
