@@ -56,7 +56,7 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
         .from('project_advisors')
         .select(`
           *,
-          advisor:advisors!inner (
+          advisor:advisors!project_advisors_advisor_id_fkey (
             company_name,
             location,
             logo_url,
