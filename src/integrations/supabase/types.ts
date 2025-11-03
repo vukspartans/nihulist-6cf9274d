@@ -1184,8 +1184,8 @@ export type Database = {
           selected_advisor_ids: string[]
         }
         Returns: {
-          invites_sent: number
-          rfp_id: string
+          result_invites_sent: number
+          result_rfp_id: string
         }[]
       }
     }

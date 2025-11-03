@@ -5,8 +5,8 @@ import { handleError } from '@/utils/errorHandling';
 import { DEADLINES } from '@/utils/constants';
 
 interface RFPResult {
-  rfp_id: string;
-  invites_sent: number;
+  result_rfp_id: string;
+  result_invites_sent: number;
 }
 
 export const useRFP = () => {
@@ -71,10 +71,14 @@ export const useRFP = () => {
 
       const result = data?.[0] as RFPResult;
       
-      console.log('[useRFP] RFP Result:', result);
+      console.log('[useRFP] RFP Result:', {
+        rfpId: result?.result_rfp_id,
+        invitesSent: result?.result_invites_sent,
+        rawData: result
+      });
       
       if (result) {
-        if (result.invites_sent === 0) {
+        if (result.result_invites_sent === 0) {
           toast({
             title: "אזהרה",
             description: "RFP נשמר אך לא נשלחו הזמנות ליועצים. אנא בדוק שהיועצים פעילים.",
@@ -83,21 +87,42 @@ export const useRFP = () => {
         } else {
           toast({
             title: "הצעות מחיר נשלחו בהצלחה",
-            description: `הזמנות נשלחו ל-${result.invites_sent} יועצים`,
+            description: `הזמנות נשלחו ל-${result.result_invites_sent} יועצים`,
           });
         }
       }
 
       return result;
-    } catch (err) {
-      // Use standardized error handling
-      handleError(err, {
-        action: 'send_rfp',
+    } catch (err: any) {
+      // Detailed error logging
+      console.error('[send_rfp] Full Error Details:', {
+        message: err.message,
+        code: err.code,
+        details: err.details,
+        hint: err.hint,
         metadata: {
           projectId,
-          advisorCount: selectedAdvisorIds.length,
+          advisorCount: uniqueAdvisorIds.length,
         },
       });
+
+      // User-friendly error messages
+      let errorMessage = 'שגיאה בשליחת הזמנות RFP';
+      
+      if (err.code === 'PGRST116') {
+        errorMessage = 'פונקציית שליחת ההזמנות לא נמצאה במערכת. אנא נסה שוב.';
+      } else if (err.code === '42702') {
+        errorMessage = 'שגיאת תצורה בפונקציית השליחה. צור קשר עם התמיכה.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      toast({
+        title: "שגיאה",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
       return null;
     } finally {
       setLoading(false);
