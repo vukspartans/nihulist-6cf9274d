@@ -39,10 +39,20 @@ export const useRFP = () => {
       return null;
     }
 
+    // PHASE 4: Deduplicate advisor IDs on frontend
+    const uniqueAdvisorIds = Array.from(new Set(selectedAdvisorIds));
+    
+    if (uniqueAdvisorIds.length !== selectedAdvisorIds.length) {
+      console.warn('[useRFP] Removed duplicate advisor IDs:', {
+        original: selectedAdvisorIds.length,
+        unique: uniqueAdvisorIds.length
+      });
+    }
+
     console.log('[useRFP] Sending RFP to advisors:', {
       projectId,
-      advisorIds: selectedAdvisorIds,
-      count: selectedAdvisorIds.length,
+      advisorIds: uniqueAdvisorIds,
+      count: uniqueAdvisorIds.length,
       deadline: deadlineHours
     });
 
@@ -51,7 +61,7 @@ export const useRFP = () => {
     try {
       const { data, error } = await supabase.rpc('send_rfp_invitations_to_advisors', {
         project_uuid: projectId,
-        selected_advisor_ids: selectedAdvisorIds,
+        selected_advisor_ids: uniqueAdvisorIds,
         deadline_hours: deadlineHours,
         email_subject: emailSubject || null,
         email_body_html: emailBodyHtml || null
