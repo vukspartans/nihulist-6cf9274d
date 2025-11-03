@@ -141,9 +141,10 @@ export const ProposalComparisonDialog = ({
                   <TableHead className="text-right">ספק</TableHead>
                   <TableHead className="text-right">מחיר</TableHead>
                   <TableHead className="text-right">זמן ביצוע</TableHead>
-                  <TableHead className="text-right">תאריך הגשה</TableHead>
-                  <TableHead className="text-right">סטטוס</TableHead>
-                  <TableHead className="text-right">פעולות</TableHead>
+              <TableHead className="text-right">תאריך הגשה</TableHead>
+              <TableHead className="text-right">קבצים</TableHead>
+              <TableHead className="text-right">סטטוס</TableHead>
+              <TableHead className="text-right">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -180,6 +181,25 @@ export const ProposalComparisonDialog = ({
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {(proposal as any).files && Array.isArray((proposal as any).files) && (proposal as any).files.length > 0 ? (
+                        <div className="space-y-1">
+                          {(proposal as any).files.map((file: any, idx: number) => (
+                            <Button
+                              key={idx}
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-primary"
+                              onClick={() => window.open(file.url, '_blank')}
+                            >
+                              📎 {file.name || `קובץ ${idx + 1}`}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">אין קבצים</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge 

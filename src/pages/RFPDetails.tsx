@@ -241,8 +241,8 @@ const RFPDetails = () => {
             </Badge>
           </div>
 
-          {/* Deadline Countdown - will work after DB migration */}
-          {inviteDetails?.deadline_at && inviteDetails.status === 'pending' && (
+          {/* Deadline Countdown */}
+          {inviteDetails?.deadline_at && ['sent', 'opened', 'in_progress'].includes(inviteDetails.status) && (
             <DeadlineCountdown deadline={inviteDetails.deadline_at} />
           )}
 

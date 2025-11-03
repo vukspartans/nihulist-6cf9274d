@@ -28,7 +28,11 @@ export const PriceProposalManager = ({ projectId, projectName, projectType, onRf
     if (!isAdvisorSelectionValid) {
       return;
     }
-    const result = await sendRFPInvitations(projectId, selectedSuppliers);
+    const result = await sendRFPInvitations(
+      projectId, 
+      selectedAdvisors,
+      168
+    );
     if (result) {
       setProposalSent(true);
       onRfpSent?.();

@@ -26,7 +26,11 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
     if (!isAdvisorSelectionValid) {
       return;
     }
-    const result = await sendRFPInvitations(projectId, selectedSuppliers);
+    const result = await sendRFPInvitations(
+      projectId, 
+      selectedAdvisors,
+      168
+    );
     if (result) {
       setRfpSent(true);
     }

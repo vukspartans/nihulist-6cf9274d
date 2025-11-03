@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
+import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, FileSignature } from 'lucide-react';
 
 interface ProposalApprovalDialogProps {
@@ -31,9 +32,28 @@ export const ProposalApprovalDialog = ({
   const [signature, setSignature] = useState<SignatureData | null>(null);
   const [step, setStep] = useState<'notes' | 'signature'>('notes');
   const { approveProposal, loading } = useProposalApproval();
+  const { toast } = useToast();
 
   const handleApprove = async () => {
-    if (!signature) return;
+    // Validate signature is captured
+    if (!signature) {
+      toast({
+        title: 'חתימה חסרה',
+        description: 'יש לחתום על האישור לפני המשך',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate notes are provided
+    if (!notes.trim()) {
+      toast({
+        title: 'הערות חסרות',
+        description: 'יש להוסיף הערות לפני אישור ההצעה',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const result = await approveProposal({
       proposalId: proposal.id,
@@ -42,7 +62,7 @@ export const ProposalApprovalDialog = ({
       price: proposal.price,
       timelineDays: proposal.timeline_days,
       signature,
-      notes: notes || undefined,
+      notes,
     });
 
     if (result.success) {

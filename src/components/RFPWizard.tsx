@@ -186,6 +186,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const result = await sendRFPInvitations(
       projectId, 
       allAdvisorIds,
+      168,
       rfpContent.title,
       emailBodyHtml
     );

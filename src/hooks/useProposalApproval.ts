@@ -25,9 +25,15 @@ export const useProposalApproval = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  /**
+   * Approve a proposal and create project_advisor relationship
+   * @param data - ApprovalData containing proposal details, pricing, timeline, and signature
+   */
   const approveProposal = async (data: ApprovalData) => {
     setLoading(true);
     try {
+      console.log(`[Approval] Updating proposal ${data.proposalId} status to 'accepted'`);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
@@ -117,8 +123,15 @@ export const useProposalApproval = () => {
     }
   };
 
+  /**
+   * Reject a proposal with optional reason
+   * @param proposalId - UUID of the proposal to reject
+   * @param projectId - UUID of the project
+   * @param reason - Optional rejection reason
+   */
   const rejectProposal = async (proposalId: string, projectId: string, reason?: string) => {
     setLoading(true);
+    console.log(`[Rejection] Updating proposal ${proposalId} status to 'rejected'`);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');

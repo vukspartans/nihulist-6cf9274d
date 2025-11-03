@@ -24,6 +24,10 @@ interface SubmitProposalData {
   declaration: string;
 }
 
+/**
+ * Hook for handling proposal submissions by advisors
+ * Manages validation, signature capture, and database persistence
+ */
 export const useProposalSubmit = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
