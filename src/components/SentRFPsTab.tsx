@@ -58,6 +58,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     });
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <Card>
@@ -71,6 +72,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Card>
@@ -84,6 +86,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     );
   }
 
+  // Empty state
   if (!rfps || rfps.length === 0) {
     return (
       <Card>
@@ -101,7 +104,24 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      {/* PHASE 5: Warning when RFPs have zero invites */}
+      {rfps.some(rfp => 
+        rfp.advisorTypes.reduce((sum, type) => sum + type.invitesSent, 0) === 0
+      ) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <p className="text-sm font-medium text-yellow-800">
+              חלק מהבקשות לא נשלחו ליועצים
+            </p>
+          </div>
+          <p className="text-sm text-yellow-700 mt-1">
+            ייתכן שהבעיה היא בתהליך שליחת ההזמנות. אנא נסה שוב או צור קשר עם התמיכה.
+          </p>
+        </div>
+      )}
+
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -129,9 +149,10 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                       </div>
                       <span className="font-medium">{rfp.subject}</span>
                     </div>
-                    <Badge variant="outline" className="mr-2">
-                      {rfp.advisorTypes.reduce((sum, type) => sum + type.invitesSent, 0)} הזמנות
-                    </Badge>
+              {/* PHASE 2: Show proposals received instead of invites sent */}
+              <Badge variant="outline" className="mr-2">
+                {rfp.advisorTypes.reduce((sum, type) => sum + type.proposalsReceived, 0)} הצעות
+              </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -212,6 +233,6 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         proposalIds={comparisonDialog.proposalIds}
         advisorType={comparisonDialog.advisorType}
       />
-    </>
+    </div>
   );
 };

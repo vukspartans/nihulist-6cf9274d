@@ -157,6 +157,17 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     // Flatten the Record structure to array of advisor IDs
     const allAdvisorIds = Object.values(selectedRecommendedAdvisors).flat();
     
+    // PHASE 3: Add frontend logging
+    console.log('[RFPWizard] Sending RFP:', {
+      projectId,
+      projectName,
+      advisorIds: allAdvisorIds,
+      advisorCount: allAdvisorIds.length,
+      deadline: 168,
+      subject: rfpContent.title,
+      selectedRecommendedAdvisors
+    });
+    
     // Prepare email content with RTL support, proper spacing, and clickable links
     const loginUrl = `${window.location.origin}/auth`;
     const emailBodyHtml = `
@@ -190,6 +201,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       rfpContent.title,
       emailBodyHtml
     );
+    
+    console.log('[RFPWizard] RFP Result:', result);
     
     if (result) {
       setProposalSent(true);

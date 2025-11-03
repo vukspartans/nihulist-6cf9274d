@@ -29,6 +29,23 @@ export const useRFP = () => {
     emailSubject?: string,
     emailBodyHtml?: string
   ): Promise<RFPResult | null> => {
+    // PHASE 3: Validate advisor selection
+    if (!selectedAdvisorIds || selectedAdvisorIds.length === 0) {
+      toast({
+        title: "שגיאה",
+        description: "לא נבחרו יועצים. אנא בחר לפחות יועץ אחד.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    console.log('[useRFP] Sending RFP to advisors:', {
+      projectId,
+      advisorIds: selectedAdvisorIds,
+      count: selectedAdvisorIds.length,
+      deadline: deadlineHours
+    });
+
     setLoading(true);
 
     try {
@@ -43,11 +60,22 @@ export const useRFP = () => {
       if (error) throw error;
 
       const result = data?.[0] as RFPResult;
+      
+      console.log('[useRFP] RFP Result:', result);
+      
       if (result) {
-        toast({
-          title: "הצעות מחיר נשלחו בהצלחה",
-          description: `הזמנות נשלחו ל-${result.invites_sent} יועצים`,
-        });
+        if (result.invites_sent === 0) {
+          toast({
+            title: "אזהרה",
+            description: "RFP נשמר אך לא נשלחו הזמנות ליועצים. אנא בדוק שהיועצים פעילים.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "הצעות מחיר נשלחו בהצלחה",
+            description: `הזמנות נשלחו ל-${result.invites_sent} יועצים`,
+          });
+        }
       }
 
       return result;
