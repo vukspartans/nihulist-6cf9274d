@@ -121,23 +121,60 @@ const AdvisorDashboard = () => {
       setAdvisorProfile(advisor);
 
       if (advisor) {
-        // Fetch RFP invites
-      const { data: invites } = await supabase
-        .from('rfp_invites')
-        .select(`
-          *,
-          advisor_type,
-          rfps!rfp_invites_rfp_id_fkey (
-            *,
-            projects!rfps_project_id_fkey (*)
-          )
-        `)
-        .eq('advisor_id', advisor.id)
-        .order('created_at', { ascending: false });
+        // Step 1: Fetch RFP invites (without deep embedding to avoid RLS conflicts)
+        const { data: invites, error: invitesError } = await supabase
+          .from('rfp_invites')
+          .select('id, rfp_id, advisor_type, status, created_at, deadline_at')
+          .eq('advisor_id', advisor.id)
+          .order('created_at', { ascending: false });
 
-        setRfpInvites(invites || []);
+        console.debug('[AdvisorDashboard] Invites fetched:', invites?.length || 0, invitesError);
 
-        // Fetch submitted proposals
+        if (invites && invites.length > 0) {
+          // Step 2: Fetch RFPs for the rfp_ids
+          const rfpIds = invites.map(inv => inv.rfp_id);
+          const { data: rfps, error: rfpsError } = await supabase
+            .from('rfps')
+            .select('id, subject, body_html, sent_at, project_id')
+            .in('id', rfpIds);
+
+          console.debug('[AdvisorDashboard] RFPs fetched:', rfps?.length || 0, 'for', rfpIds.length, 'invites', rfpsError);
+
+          if (rfps && rfps.length > 0) {
+            // Step 3: Fetch projects for the project_ids
+            const projectIds = rfps.map(rfp => rfp.project_id);
+            const { data: projects, error: projectsError } = await supabase
+              .from('projects')
+              .select('id, name, type, location, budget, timeline_start, timeline_end, description')
+              .in('id', projectIds);
+
+            console.debug('[AdvisorDashboard] Projects fetched:', projects?.length || 0, 'for', projectIds.length, 'RFPs', projectsError);
+
+            // Step 4: Client-side merge
+            const mergedInvites = invites.map(invite => {
+              const rfp = rfps.find(r => r.id === invite.rfp_id);
+              const project = rfp ? projects?.find(p => p.id === rfp.project_id) : null;
+              
+              return {
+                ...invite,
+                rfps: rfp ? {
+                  ...rfp,
+                  projects: project || null
+                } : null
+              };
+            });
+
+            setRfpInvites(mergedInvites as any);
+          } else {
+            console.warn('[AdvisorDashboard] No RFPs found for invites, setting empty');
+            setRfpInvites([]);
+          }
+        } else {
+          console.debug('[AdvisorDashboard] No invites found for advisor', advisor.id);
+          setRfpInvites([]);
+        }
+
+        // Fetch submitted proposals (keep existing logic)
         const { data: proposalData } = await supabase
           .from('proposals')
           .select(`
