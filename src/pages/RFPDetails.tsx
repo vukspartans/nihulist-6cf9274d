@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText, Send, X } from 'lucide-react';
+import { DeadlineCountdown } from '@/components/DeadlineCountdown';
+import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
+import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 
 interface RFPDetails {
   id: string;
@@ -32,6 +35,7 @@ interface RFPInvite {
   id: string;
   status: string;
   created_at: string;
+  deadline_at?: string;
 }
 
 const RFPDetails = () => {
@@ -44,6 +48,9 @@ const RFPDetails = () => {
   const [rfpDetails, setRfpDetails] = useState<RFPDetails | null>(null);
   const [inviteDetails, setInviteDetails] = useState<RFPInvite | null>(null);
   const [advisorId, setAdvisorId] = useState<string | null>(null);
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
+
+  const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
     if (user && rfp_id) {
@@ -72,7 +79,7 @@ const RFPDetails = () => {
 
       setAdvisorId(advisor.id);
 
-      // Fetch RFP details with invite info
+      // Fetch RFP details with invite info (deadline_at not yet in schema)
       const { data: invite } = await supabase
         .from('rfp_invites')
         .select(`
@@ -130,9 +137,22 @@ const RFPDetails = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'ממתין לתגובה';
-      case 'responded': return 'נענה';
-      case 'accepted': return 'התקבל';
+      case 'sent': return 'נשלח';
+      case 'opened': return 'נפתח';
+      case 'in_progress': return 'בעבודה';
+      case 'submitted': return 'הוגש';
+      case 'declined': return 'נדחה';
+      case 'expired': return 'פג תוקף';
       default: return status;
+    }
+  };
+
+  const handleDecline = async (reason: string, note?: string) => {
+    if (!inviteDetails?.id) return;
+    
+    const result = await declineRFP(inviteDetails.id, reason, note);
+    if (result.success) {
+      navigate('/advisor-dashboard');
     }
   };
 
@@ -190,6 +210,11 @@ const RFPDetails = () => {
               {getStatusText(inviteDetails?.status || '')}
             </Badge>
           </div>
+
+          {/* Deadline Countdown - will work after DB migration */}
+          {inviteDetails?.deadline_at && inviteDetails.status === 'pending' && (
+            <DeadlineCountdown deadline={inviteDetails.deadline_at} />
+          )}
 
           {/* Project Overview */}
           <Card>
@@ -299,12 +324,23 @@ const RFPDetails = () => {
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
             {inviteDetails?.status === 'pending' && (
-              <Button 
-                onClick={() => navigate(`/submit-proposal/${rfp_id}`)}
-                size="lg"
-              >
-                הגשת הצעת מחיר
-              </Button>
+              <>
+                <Button 
+                  onClick={() => navigate(`/submit-proposal/${rfp_id}`)}
+                  size="lg"
+                >
+                  <Send className="w-4 h-4 ml-2" />
+                  הגש הצעת מחיר
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setDeclineDialogOpen(true)}
+                  size="lg"
+                >
+                  <X className="w-4 h-4 ml-2" />
+                  דחה בקשה
+                </Button>
+              </>
             )}
             <Button 
               variant="outline" 
@@ -314,6 +350,13 @@ const RFPDetails = () => {
               חזרה ללוח הבקרה
             </Button>
           </div>
+
+          <DeclineRFPDialog
+            open={declineDialogOpen}
+            onOpenChange={setDeclineDialogOpen}
+            onDecline={handleDecline}
+            loading={declining}
+          />
         </div>
       </div>
     </div>

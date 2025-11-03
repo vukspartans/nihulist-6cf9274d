@@ -7,9 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, AlertCircle } from 'lucide-react';
+import { SignatureCanvas } from '@/components/SignatureCanvas';
+import { FileUpload } from '@/components/FileUpload';
+import { ConditionsBuilder } from '@/components/ConditionsBuilder';
+import { useProposalSubmit } from '@/hooks/useProposalSubmit';
 
 interface RFPDetails {
   id: string;
@@ -39,7 +45,6 @@ const SubmitProposal = () => {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [rfpDetails, setRfpDetails] = useState<RFPDetails | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
@@ -47,8 +52,13 @@ const SubmitProposal = () => {
   // Form fields
   const [price, setPrice] = useState('');
   const [timelineDays, setTimelineDays] = useState('');
-  const [terms, setTerms] = useState('');
-  const [description, setDescription] = useState('');
+  const [scopeText, setScopeText] = useState('');
+  const [conditions, setConditions] = useState<Record<string, any>>({});
+  const [files, setFiles] = useState<any[]>([]);
+  const [signature, setSignature] = useState<any>(null);
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
+
+  const { submitProposal, loading: submitting } = useProposalSubmit();
 
   useEffect(() => {
     if (user && rfp_id) {
@@ -117,49 +127,49 @@ const SubmitProposal = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
 
-    try {
-      if (!price || !timelineDays) {
-        throw new Error('נדרש למלא מחיר ולוח זמנים');
-      }
-
-      const proposalData = {
-        project_id: rfpDetails?.projects.id,
-        advisor_id: advisorProfile?.id,
-        supplier_name: advisorProfile?.company_name,
-        price: parseFloat(price),
-        timeline_days: parseInt(timelineDays),
-        terms: terms || null,
-        status: 'received'
-      };
-
-      const { error } = await supabase
-        .from('proposals')
-        .insert([proposalData]);
-
-      if (error) throw error;
-
-      // Update RFP invite status
-      await supabase
-        .from('rfp_invites')
-        .update({ status: 'responded' })
-        .eq('rfp_id', rfp_id)
-        .eq('advisor_id', advisorProfile?.id);
-
-      setSubmitted(true);
+    if (!declarationAccepted) {
       toast({
-        title: "הצעה נשלחה בהצלחה",
-        description: "הצעת המחיר שלך נשלחה ללקוח",
-      });
-    } catch (error: any) {
-      toast({
-        title: "שגיאה",
-        description: error.message || "אירעה שגיאה בשליחת ההצעה",
+        title: "נדרשת הצהרה",
+        description: "יש לאשר את ההצהרה לפני שליחת ההצעה",
         variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
+      return;
+    }
+
+    if (!signature) {
+      toast({
+        title: "נדרשת חתימה",
+        description: "יש לחתום על ההצעה לפני השליחה",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!price || !timelineDays) {
+      toast({
+        title: "שדות חסרים",
+        description: "נדרש למלא מחיר ולוח זמנים",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await submitProposal({
+      rfpId: rfp_id || '',
+      projectId: rfpDetails?.projects.id || '',
+      advisorId: advisorProfile?.id || '',
+      price: parseFloat(price),
+      timeline_days: parseInt(timelineDays),
+      scope_text: scopeText,
+      conditions,
+      files,
+      signature,
+      declaration: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה"
+    });
+
+    if (result.success) {
+      setSubmitted(true);
     }
   };
 
@@ -261,70 +271,133 @@ const SubmitProposal = () => {
             </Card>
 
             {/* Proposal Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>הגשת הצעת מחיר</CardTitle>
-                <CardDescription>
-                  מלא את פרטי ההצעה שלך עבור הפרויקט
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">מחיר מוצע (₪) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="הזן מחיר בשקלים"
-                      required
-                    />
-                  </div>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>הגשת הצעת מחיר</CardTitle>
+                  <CardDescription>
+                    מלא את פרטי ההצעה שלך עבור הפרויקט
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Price & Timeline */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price">מחיר מוצע (₪) *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="הזן מחיר בשקלים"
+                          required
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="timeline">זמן ביצוע (ימים) *</Label>
-                    <Input
-                      id="timeline"
-                      type="number"
-                      value={timelineDays}
-                      onChange={(e) => setTimelineDays(e.target.value)}
-                      placeholder="מספר ימי העבודה"
-                      required
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="timeline">זמן ביצוע (ימים) *</Label>
+                        <Input
+                          id="timeline"
+                          type="number"
+                          value={timelineDays}
+                          onChange={(e) => setTimelineDays(e.target.value)}
+                          placeholder="מספר ימי העבודה"
+                          required
+                        />
+                      </div>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="terms">תנאי תשלום</Label>
-                    <Input
-                      id="terms"
-                      value={terms}
-                      onChange={(e) => setTerms(e.target.value)}
-                      placeholder="לדוגמה: 30% מקדמה, יתרה בתשלומים"
-                    />
-                  </div>
+                    {/* Scope */}
+                    <div className="space-y-2">
+                      <Label htmlFor="scope">היקף העבודה *</Label>
+                      <Textarea
+                        id="scope"
+                        value={scopeText}
+                        onChange={(e) => setScopeText(e.target.value)}
+                        placeholder="פרט את העבודה שתבוצע, שיטות העבודה והפתרונות המוצעים..."
+                        className="min-h-[120px]"
+                        required
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">פירוט ההצעה</Label>
-                    <Textarea
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="פרט את העבודה שתבוצע, שיטות העבודה והפתרונות המוצעים..."
-                      className="min-h-[120px]"
-                    />
-                  </div>
+                    {/* Conditions */}
+                    <Card className="border-dashed">
+                      <CardHeader>
+                        <CardTitle className="text-base">תנאים והנחות</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ConditionsBuilder
+                          value={conditions}
+                          onChange={setConditions}
+                        />
+                      </CardContent>
+                    </Card>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={submitting}
-                  >
-                    {submitting ? 'שולח...' : 'שלח הצעת מחיר'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                    {/* File Upload */}
+                    <Card className="border-dashed">
+                      <CardHeader>
+                        <CardTitle className="text-base">מסמכים מצורפים</CardTitle>
+                        <CardDescription>
+                          עד 10 קבצים, מקסימום 10 MB לקובץ
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <FileUpload
+                          onUpload={setFiles}
+                          maxFiles={10}
+                          maxSize={10 * 1024 * 1024}
+                          existingFiles={files}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    {/* Declaration */}
+                    <Alert>
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="declaration"
+                          checked={declarationAccepted}
+                          onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor="declaration"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            הצהרה *
+                          </label>
+                          <AlertDescription className="text-sm">
+                            אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה
+                          </AlertDescription>
+                        </div>
+                      </div>
+                    </Alert>
+
+                    {/* Signature */}
+                    <Card className="border-dashed">
+                      <CardHeader>
+                        <CardTitle className="text-base">חתימה דיגיטלית *</CardTitle>
+                        <CardDescription>
+                          חתום במסך המגע או בעכבר
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <SignatureCanvas onSign={setSignature} />
+                      </CardContent>
+                    </Card>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={submitting || !declarationAccepted || !signature}
+                    >
+                      {submitting ? 'שולח הצעה...' : 'שלח הצעת מחיר'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
