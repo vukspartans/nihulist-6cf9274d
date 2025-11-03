@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Upload
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { PhasedAdvisorSelection } from './PhasedAdvisorSelection';
 import { AdvisorRecommendationsCard } from './AdvisorRecommendationsCard';
 import { ProjectTypeSelector } from './ProjectTypeSelector';
@@ -67,6 +68,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   });
   const [proposalSent, setProposalSent] = useState(false);
   const { sendRFPInvitations, loading } = useRFP();
+  const { toast } = useToast();
 
   // Load existing RFP from database
   useEffect(() => {

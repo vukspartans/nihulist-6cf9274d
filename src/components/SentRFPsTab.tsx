@@ -4,122 +4,120 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useProjectRFPs, RFPMetrics } from '@/hooks/useProjectRFPs';
-import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog';
-import { Clock, Send, FileText, AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send } from 'lucide-react';
+import { useRFPInvitesWithDetails } from '@/hooks/useRFPInvitesWithDetails';
+import { ProposalComparisonDialog } from './ProposalComparisonDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 interface SentRFPsTabProps {
   projectId: string;
 }
 
 export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
-  const { data: rfps, isLoading, error } = useProjectRFPs(projectId);
-  const [comparisonDialog, setComparisonDialog] = useState<{
-    open: boolean;
-    proposalIds: string[];
-    advisorType: string;
-  }>({
-    open: false,
-    proposalIds: [],
-    advisorType: '',
-  });
+  const { data: rfpsWithInvites, isLoading, error } = useRFPInvitesWithDetails(projectId);
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
+  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
+
+  // Helper function to translate status to Hebrew
+  const translateStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'pending': 'ממתין',
+      'sent': 'נשלח',
+      'opened': 'נפתח',
+      'in_progress': 'בתהליך',
+      'submitted': 'הצעה התקבלה',
+      'declined': 'סורב',
+      'expired': 'פג תוקף',
+    };
+    return statusMap[status] || status;
+  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'פתוח':
-        return 'default';
-      case 'ממתין':
+      case 'submitted':
+        return 'success';
+      case 'in_progress':
+      case 'opened':
         return 'secondary';
-      case 'סגור':
-        return 'outline';
+      case 'declined':
+      case 'expired':
+        return 'destructive';
+      case 'sent':
+      case 'pending':
       default:
-        return 'default';
+        return 'outline';
     }
   };
 
-  const getStatusClassName = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'פתוח':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'ממתין':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'סגור':
-        return 'bg-green-100 text-green-800 border-green-200';
+      case 'submitted':
+        return <CheckCircle2 className="h-4 w-4" />;
+      case 'in_progress':
+      case 'opened':
+        return <Clock className="h-4 w-4" />;
+      case 'declined':
+      case 'expired':
+        return <XCircle className="h-4 w-4" />;
+      case 'sent':
+      case 'pending':
       default:
-        return '';
+        return <FileText className="h-4 w-4" />;
     }
   };
 
   const handleCompareProposals = (proposalIds: string[], advisorType: string) => {
-    setComparisonDialog({
-      open: true,
-      proposalIds,
-      advisorType,
-    });
+    setSelectedProposalIds(proposalIds);
+    setSelectedAdvisorType(advisorType);
+    setComparisonDialogOpen(true);
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">טוען בקשות להצעות מחיר...</p>
-          </div>
+        <CardContent className="p-6">
+          <p className="text-center text-muted-foreground">טוען בקשות...</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Card>
-        <CardContent className="py-12">
-          <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-muted-foreground">שגיאה בטעינת הבקשות</p>
-          </div>
+        <CardContent className="p-6">
+          <p className="text-center text-destructive">שגיאה בטעינת הבקשות</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Empty state
-  if (!rfps || rfps.length === 0) {
+  if (!rfpsWithInvites || rfpsWithInvites.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12">
-          <div className="text-center">
-            <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">לא נשלחו בקשות להצעות מחיר</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              כאשר תשלח בקשות להצעות מחיר, הן יופיעו כאן עם סטטוס ופירוט מלא.
-            </p>
-          </div>
+        <CardContent className="p-6">
+          <p className="text-center text-muted-foreground">לא נשלחו בקשות עדיין</p>
         </CardContent>
       </Card>
     );
   }
+
+  // Check if any RFP has zero invites
+  const hasZeroInvites = rfpsWithInvites.some(rfp => rfp.totalInvites === 0);
 
   return (
     <div className="space-y-4">
-      {/* PHASE 5: Warning when RFPs have zero invites */}
-      {rfps.some(rfp => 
-        rfp.advisorTypes.reduce((sum, type) => sum + type.invitesSent, 0) === 0
-      ) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-yellow-600" />
-            <p className="text-sm font-medium text-yellow-800">
-              חלק מהבקשות לא נשלחו ליועצים
-            </p>
-          </div>
-          <p className="text-sm text-yellow-700 mt-1">
-            ייתכן שהבעיה היא בתהליך שליחת ההזמנות. אנא נסה שוב או צור קשר עם התמיכה.
-          </p>
-        </div>
+      {/* PHASE 5: Warning banner for RFPs with zero invites */}
+      {hasZeroInvites && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>אזהרה:</strong> חלק מהבקשות לא נשלחו ליועצים. ייתכן שהיועצים שנבחרו אינם פעילים או לא אושרו על ידי המנהל.
+          </AlertDescription>
+        </Alert>
       )}
 
       <Card dir="rtl">
@@ -127,91 +125,88 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           <CardTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" />
             בקשות להצעות מחיר שנשלחו
-            <Badge variant="secondary">{rfps.length}</Badge>
+            <Badge variant="secondary">{rfpsWithInvites.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
-            {rfps.map((rfp, index) => (
-              <AccordionItem key={rfp.rfpId} value={rfp.rfpId}>
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
+            {rfpsWithInvites.map((rfp) => {
+              const proposalsCount = rfp.advisorInvites.filter(inv => inv.proposalId).length;
+              
+              return (
+                <AccordionItem key={rfp.rfpId} value={rfp.rfpId}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium">{rfp.subject}</span>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(rfp.sentAt).toLocaleDateString('he-IL', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
+                          {format(new Date(rfp.sentAt), 'dd/MM/yyyy HH:mm', { locale: he })}
                         </span>
                       </div>
-                      <span className="font-medium">{rfp.subject}</span>
+                      <div className="flex items-center gap-2">
+                        {/* PHASE 4: Changed from "הצעות" to "בקשות" */}
+                        <Badge variant="outline">{rfp.totalInvites} בקשות</Badge>
+                        {proposalsCount > 0 && (
+                          <Badge variant="success">{proposalsCount} הצעות</Badge>
+                        )}
+                      </div>
                     </div>
-              {/* PHASE 2: Show proposals received instead of invites sent */}
-              <Badge variant="outline" className="mr-2">
-                {rfp.advisorTypes.reduce((sum, type) => sum + type.proposalsReceived, 0)} הצעות
-              </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pt-4">
-                    {rfp.advisorTypes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        לא נמצאו יועצים בבקשה זו
-                      </p>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {rfp.totalInvites === 0 ? (
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          לא נשלחו הזמנות ליועצים עבור בקשה זו. ייתכן שהיועצים שנבחרו אינם פעילים או לא אושרו על ידי המנהל.
+                        </AlertDescription>
+                      </Alert>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">סוג יועץ</TableHead>
-                            <TableHead className="text-right">הזמנות נשלחו</TableHead>
-                            <TableHead className="text-right">הצעות התקבלו</TableHead>
+                            <TableHead className="text-right">שם יועץ</TableHead>
+                            <TableHead className="text-right">תחום</TableHead>
                             <TableHead className="text-right">סטטוס</TableHead>
+                            <TableHead className="text-right">תאריך יעד</TableHead>
                             <TableHead className="text-right">פעולות</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {rfp.advisorTypes.map((type) => (
-                            <TableRow 
-                              key={type.type}
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => {
-                                if (type.proposalIds.length > 0) {
-                                  handleCompareProposals(type.proposalIds, type.type);
-                                }
-                              }}
-                            >
-                              <TableCell className="font-medium">{type.type}</TableCell>
-                              <TableCell>{type.invitesSent}</TableCell>
-                              <TableCell>
-                                <span className={type.proposalsReceived > 0 ? 'font-semibold text-primary' : ''}>
-                                  {type.proposalsReceived}/{type.invitesSent}
-                                </span>
-                              </TableCell>
+                          {rfp.advisorInvites.map((invite) => (
+                            <TableRow key={invite.inviteId}>
+                              <TableCell className="font-medium">{invite.advisorName}</TableCell>
+                              <TableCell>{invite.advisorType}</TableCell>
                               <TableCell>
                                 <Badge 
-                                  variant={getStatusVariant(type.status)}
-                                  className={getStatusClassName(type.status)}
+                                  variant={getStatusVariant(invite.status)}
+                                  className="gap-1"
                                 >
-                                  {type.status}
+                                  {getStatusIcon(invite.status)}
+                                  {translateStatus(invite.status)}
                                 </Badge>
                               </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {invite.deadlineAt 
+                                  ? format(new Date(invite.deadlineAt), 'dd/MM/yyyy', { locale: he })
+                                  : '-'
+                                }
+                              </TableCell>
                               <TableCell>
-                                {type.proposalIds.length > 0 ? (
+                                {invite.proposalId && (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCompareProposals(type.proposalIds, type.type);
-                                    }}
+                                    onClick={() => handleCompareProposals([invite.proposalId!], invite.advisorType)}
+                                    className="gap-2"
                                   >
-                                    השווה הצעות ({type.proposalIds.length})
+                                    <Eye className="h-4 w-4" />
+                                    צפה בהצעה
                                   </Button>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">אין הצעות</span>
+                                )}
+                                {invite.status === 'declined' && invite.declineReason && (
+                                  <span className="text-xs text-muted-foreground block mt-1">
+                                    סיבה: {invite.declineReason}
+                                  </span>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -219,19 +214,19 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                         </TableBody>
                       </Table>
                     )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         </CardContent>
       </Card>
 
       <ProposalComparisonDialog
-        open={comparisonDialog.open}
-        onOpenChange={(open) => setComparisonDialog({ ...comparisonDialog, open })}
-        proposalIds={comparisonDialog.proposalIds}
-        advisorType={comparisonDialog.advisorType}
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+        proposalIds={selectedProposalIds}
+        advisorType={selectedAdvisorType}
       />
     </div>
   );
