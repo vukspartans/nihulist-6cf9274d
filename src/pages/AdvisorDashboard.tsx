@@ -93,6 +93,7 @@ const AdvisorDashboard = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -140,35 +141,36 @@ const AdvisorDashboard = () => {
 
           console.debug('[AdvisorDashboard] RFPs fetched:', rfps?.length || 0, 'for', rfpIds.length, 'invites', rfpsError);
 
+          // Step 3: Fetch projects (even if rfps is empty, still try)
+          let projects: any[] = [];
           if (rfps && rfps.length > 0) {
-            // Step 3: Fetch projects for the project_ids
             const projectIds = rfps.map(rfp => rfp.project_id);
-            const { data: projects, error: projectsError } = await supabase
+            const { data: projectsData, error: projectsError } = await supabase
               .from('projects')
               .select('id, name, type, location, budget, timeline_start, timeline_end, description')
               .in('id', projectIds);
 
-            console.debug('[AdvisorDashboard] Projects fetched:', projects?.length || 0, 'for', projectIds.length, 'RFPs', projectsError);
-
-            // Step 4: Client-side merge
-            const mergedInvites = invites.map(invite => {
-              const rfp = rfps.find(r => r.id === invite.rfp_id);
-              const project = rfp ? projects?.find(p => p.id === rfp.project_id) : null;
-              
-              return {
-                ...invite,
-                rfps: rfp ? {
-                  ...rfp,
-                  projects: project || null
-                } : null
-              };
-            });
-
-            setRfpInvites(mergedInvites as any);
-          } else {
-            console.warn('[AdvisorDashboard] No RFPs found for invites, setting empty');
-            setRfpInvites([]);
+            console.debug('[AdvisorDashboard] Projects fetched:', projectsData?.length || 0, 'for', projectIds.length, 'RFPs', projectsError);
+            projects = projectsData || [];
           }
+
+          // Step 4: Client-side merge - always keep invites, attach data when available
+          const mergedInvites = invites.map(invite => {
+            const rfp = rfps?.find(r => r.id === invite.rfp_id);
+            const project = rfp ? projects?.find(p => p.id === rfp.project_id) : null;
+            
+            console.debug('[AdvisorDashboard] Patch invite', invite.id, 'rfp found?', !!rfp, 'project found?', !!project);
+            
+            return {
+              ...invite,
+              rfps: rfp ? {
+                ...rfp,
+                projects: project || null
+              } : null
+            };
+          });
+
+          setRfpInvites(mergedInvites as any);
         } else {
           console.debug('[AdvisorDashboard] No invites found for advisor', advisor.id);
           setRfpInvites([]);
@@ -249,12 +251,38 @@ const AdvisorDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'sent': return 'bg-blue-100 text-blue-800';
+      case 'opened': return 'bg-cyan-100 text-cyan-800';
+      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
+      case 'submitted': return 'bg-green-100 text-green-800';
+      case 'declined': return 'bg-red-100 text-red-800';
+      case 'expired': return 'bg-gray-100 text-gray-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'responded': return 'bg-blue-100 text-blue-800';
       case 'received': return 'bg-green-100 text-green-800';
       case 'reviewed': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'sent': return 'נשלח';
+      case 'opened': return 'נפתח';
+      case 'in_progress': return 'בתהליך';
+      case 'submitted': return 'הוגש';
+      case 'declined': return 'נדחה';
+      case 'expired': return 'פג תוקף';
+      case 'pending': return 'ממתין לתגובה';
+      case 'responded': return 'נענה';
+      case 'received': return 'התקבל';
+      case 'reviewed': return 'נבדק';
+      default: return status;
+    }
+  };
+
+  const canSubmitProposal = (status: string) => {
+    return ['sent', 'opened', 'in_progress', 'pending'].includes(status);
   };
 
   if (loading) {
@@ -323,13 +351,19 @@ const AdvisorDashboard = () => {
   const profileStatus = checkRequiredFields();
   const isProfileIncomplete = !profileStatus.isComplete;
 
-  const pendingInvites = rfpInvites.filter(invite => invite.status === 'pending');
   const newInvites = rfpInvites.filter(invite => {
     const createdDate = new Date(invite.created_at);
     const hoursSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
     return hoursSinceCreated < 24;
   });
-  const unsubmittedInvites = pendingInvites.filter(invite => 
+
+  const activeInvites = rfpInvites.filter(invite => 
+    ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status)
+  );
+
+  const displayedInvites = showActiveOnly ? activeInvites : rfpInvites;
+
+  const unsubmittedInvites = activeInvites.filter(invite => 
     !proposals.some(p => p.id === invite.rfp_id)
   );
 
@@ -527,22 +561,51 @@ const AdvisorDashboard = () => {
           </TabsList>
 
           <TabsContent value="rfp-invites" className="space-y-4">
-            {rfpInvites.length === 0 ? (
+            {/* Filter Toggle */}
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex gap-2">
+                <Button 
+                  variant={showActiveOnly ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setShowActiveOnly(true)}
+                >
+                  הצג רק פעילים ({activeInvites.length})
+                </Button>
+                <Button 
+                  variant={!showActiveOnly ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setShowActiveOnly(false)}
+                >
+                  הצג הכל ({rfpInvites.length})
+                </Button>
+              </div>
+            </div>
+
+            {displayedInvites.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">אין הזמנות להצעת מחיר כרגע</p>
+                  <p className="text-muted-foreground">
+                    {showActiveOnly ? 'אין הזמנות פעילות כרגע' : 'אין הזמנות להצעת מחיר כרגע'}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
-              rfpInvites.map((invite) => {
+              displayedInvites.map((invite) => {
                 const isNew = newInvites.some(newInv => newInv.id === invite.id);
+                const projectName = invite.rfps?.projects?.name || 'פרויקט';
+                const projectLocation = invite.rfps?.projects?.location || '—';
+                const projectBudget = invite.rfps?.projects?.budget;
+                const projectTimelineStart = invite.rfps?.projects?.timeline_start;
+                const projectTimelineEnd = invite.rfps?.projects?.timeline_end;
+                const projectDescription = invite.rfps?.projects?.description;
+                
                 return (
                   <Card key={invite.id} className={`hover:shadow-md transition-shadow ${isNew ? 'border-2 border-orange-400' : ''}`}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <CardTitle className="text-lg">{invite.rfps.projects.name}</CardTitle>
+                            <CardTitle className="text-lg">{projectName}</CardTitle>
                             {isNew && (
                               <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">חדש</span>
                             )}
@@ -554,53 +617,61 @@ const AdvisorDashboard = () => {
                           </div>
                           <CardDescription className="flex items-center gap-2 mt-2">
                             <MapPin className="h-4 w-4" />
-                            {invite.rfps.projects.location}
+                            {projectLocation}
+                            {!invite.rfps?.projects && (
+                              <span className="text-xs text-muted-foreground mr-2">• טוען פרטי פרויקט…</span>
+                            )}
                           </CardDescription>
                         </div>
-                        <Badge className={getStatusColor(invite.status)}>
-                          {invite.status === 'pending' ? 'ממתין לתגובה' : 
-                           invite.status === 'responded' ? 'נענה' : invite.status}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge className={getStatusColor(invite.status)}>
+                            {getStatusLabel(invite.status)}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">סטטוס</span>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div className="flex items-center gap-2">
                           <Coins className="h-4 w-4 text-muted-foreground" />
-                          <span>תקציב: ₪{invite.rfps.projects.budget?.toLocaleString()}</span>
+                          <span>תקציב: {projectBudget ? `₪${projectBudget.toLocaleString()}` : '—'}</span>
                         </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {new Date(invite.rfps.projects.timeline_start).toLocaleDateString('he-IL')} - 
-                          {new Date(invite.rfps.projects.timeline_end).toLocaleDateString('he-IL')}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {projectTimelineStart && projectTimelineEnd ? (
+                              `${new Date(projectTimelineStart).toLocaleDateString('he-IL')} - ${new Date(projectTimelineEnd).toLocaleDateString('he-IL')}`
+                            ) : '—'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>התקבל: {new Date(invite.created_at).toLocaleDateString('he-IL')}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>התקבל: {new Date(invite.created_at).toLocaleDateString('he-IL')}</span>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {invite.rfps.projects.description}
-                    </p>
-
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => window.open(`/rfp-details/${invite.rfp_id}`, '_blank')}
-                      >
-                        צפייה בפרטים
-                      </Button>
-                      {invite.status === 'pending' && (
-                        <Button onClick={() => window.location.href = `/submit-proposal/${invite.rfp_id}`}>
-                          הגשת הצעת מחיר
-                        </Button>
+                      
+                      {projectDescription && (
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          {projectDescription}
+                        </p>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.open(`/rfp-details/${invite.rfp_id}`, '_blank')}
+                        >
+                          צפייה בפרטים
+                        </Button>
+                        {canSubmitProposal(invite.status) && (
+                          <Button onClick={() => window.location.href = `/submit-proposal/${invite.rfp_id}`}>
+                            הגשת הצעת מחיר
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })
             )}
