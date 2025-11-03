@@ -19,7 +19,7 @@ export function RFPStatisticsCards() {
       const totalRFPs = rfpsResult.count || 0;
       const totalInvites = invitesResult.count || 0;
       const totalProposals = proposalsResult.data?.length || 0;
-      const approvedProposals = proposalsResult.data?.filter(p => p.status === 'approved').length || 0;
+      const approvedProposals = proposalsResult.data?.filter(p => p.status === 'accepted').length || 0;
       
       // Calculate rates
       const responseRate = totalInvites > 0 

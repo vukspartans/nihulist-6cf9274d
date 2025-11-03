@@ -6,7 +6,11 @@ export const useDeclineRFP = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const declineRFP = async (rfpInviteId: string, reason: string, note?: string) => {
+  const declineRFP = async (
+    rfpInviteId: string, 
+    reason: 'no_capacity' | 'outside_expertise' | 'timeline_conflict' | 'budget_mismatch' | 'other', 
+    note?: string
+  ) => {
     setLoading(true);
 
     try {

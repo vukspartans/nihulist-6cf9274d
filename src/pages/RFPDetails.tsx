@@ -147,7 +147,10 @@ const RFPDetails = () => {
     }
   };
 
-  const handleDecline = async (reason: string, note?: string) => {
+  const handleDecline = async (
+    reason: 'no_capacity' | 'outside_expertise' | 'timeline_conflict' | 'budget_mismatch' | 'other', 
+    note?: string
+  ) => {
     if (!inviteDetails?.id) return;
     
     const result = await declineRFP(inviteDetails.id, reason, note);

@@ -20,27 +20,39 @@ export type Database = {
           actor_id: string | null
           actor_type: string
           created_at: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
+          ip: string | null
           meta: Json | null
           project_id: string | null
+          user_agent: string | null
         }
         Insert: {
           action: string
           actor_id?: string | null
           actor_type: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip?: string | null
           meta?: Json | null
           project_id?: string | null
+          user_agent?: string | null
         }
         Update: {
           action?: string
           actor_id?: string | null
           actor_type?: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip?: string | null
           meta?: Json | null
           project_id?: string | null
+          user_agent?: string | null
         }
         Relationships: [
           {
@@ -265,6 +277,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      magic_links: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          metadata: Json | null
+          purpose: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          metadata?: Json | null
+          purpose: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          purpose?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -507,11 +555,19 @@ export type Database = {
         Row: {
           advisor_id: string | null
           ai_flags: Json | null
+          amended_from_id: string | null
           attachment_url: string | null
+          conditions_json: Json | null
+          currency: string | null
+          declaration_text: string | null
+          files: Json | null
           id: string
           price: number
           project_id: string
-          status: string
+          scope_text: string | null
+          signature_blob: string | null
+          signature_meta_json: Json | null
+          status: Database["public"]["Enums"]["proposal_status"]
           submit_token: string | null
           submitted_at: string
           supplier_id: string | null
@@ -519,15 +575,24 @@ export type Database = {
           terms: string | null
           timeline_days: number
           token_used_at: string | null
+          version: number | null
         }
         Insert: {
           advisor_id?: string | null
           ai_flags?: Json | null
+          amended_from_id?: string | null
           attachment_url?: string | null
+          conditions_json?: Json | null
+          currency?: string | null
+          declaration_text?: string | null
+          files?: Json | null
           id?: string
           price: number
           project_id: string
-          status?: string
+          scope_text?: string | null
+          signature_blob?: string | null
+          signature_meta_json?: Json | null
+          status?: Database["public"]["Enums"]["proposal_status"]
           submit_token?: string | null
           submitted_at?: string
           supplier_id?: string | null
@@ -535,15 +600,24 @@ export type Database = {
           terms?: string | null
           timeline_days: number
           token_used_at?: string | null
+          version?: number | null
         }
         Update: {
           advisor_id?: string | null
           ai_flags?: Json | null
+          amended_from_id?: string | null
           attachment_url?: string | null
+          conditions_json?: Json | null
+          currency?: string | null
+          declaration_text?: string | null
+          files?: Json | null
           id?: string
           price?: number
           project_id?: string
-          status?: string
+          scope_text?: string | null
+          signature_blob?: string | null
+          signature_meta_json?: Json | null
+          status?: Database["public"]["Enums"]["proposal_status"]
           submit_token?: string | null
           submitted_at?: string
           supplier_id?: string | null
@@ -551,6 +625,7 @@ export type Database = {
           terms?: string | null
           timeline_days?: number
           token_used_at?: string | null
+          version?: number | null
         }
         Relationships: [
           {
@@ -558,6 +633,13 @@ export type Database = {
             columns: ["advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_amended_from_id_fkey"
+            columns: ["amended_from_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
           {
@@ -628,39 +710,60 @@ export type Database = {
         Row: {
           advisor_id: string | null
           created_at: string
+          deadline_at: string | null
+          decline_note: string | null
+          decline_reason:
+            | Database["public"]["Enums"]["decline_reason_type"]
+            | null
           delivered_at: string | null
           email: string
           id: string
+          last_notification_at: string | null
           opened_at: string | null
           personalized_body_html: string | null
           rfp_id: string
-          status: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
           supplier_id: string | null
         }
         Insert: {
           advisor_id?: string | null
           created_at?: string
+          deadline_at?: string | null
+          decline_note?: string | null
+          decline_reason?:
+            | Database["public"]["Enums"]["decline_reason_type"]
+            | null
           delivered_at?: string | null
           email: string
           id?: string
+          last_notification_at?: string | null
           opened_at?: string | null
           personalized_body_html?: string | null
           rfp_id: string
-          status?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
           supplier_id?: string | null
         }
         Update: {
           advisor_id?: string | null
           created_at?: string
+          deadline_at?: string | null
+          decline_note?: string | null
+          decline_reason?:
+            | Database["public"]["Enums"]["decline_reason_type"]
+            | null
           delivered_at?: string | null
           email?: string
           id?: string
+          last_notification_at?: string | null
           opened_at?: string | null
           personalized_body_html?: string | null
           rfp_id?: string
-          status?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token?: string
           supplier_id?: string | null
         }
@@ -722,6 +825,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      signatures: {
+        Row: {
+          content_hash: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          sign_png: string
+          sign_text: string
+          sign_vector_json: Json
+          signed_at: string
+          signer_email_snapshot: string
+          signer_ip: string | null
+          signer_name_snapshot: string
+          signer_user_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          sign_png: string
+          sign_text: string
+          sign_vector_json: Json
+          signed_at?: string
+          signer_email_snapshot: string
+          signer_ip?: string | null
+          signer_name_snapshot: string
+          signer_user_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          sign_png?: string
+          sign_text?: string
+          sign_vector_json?: Json
+          signed_at?: string
+          signer_email_snapshot?: string
+          signer_ip?: string | null
+          signer_name_snapshot?: string
+          signer_user_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {
@@ -836,10 +990,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      canonicalize_advisor_name: {
-        Args: { name: string }
-        Returns: string
-      }
+      canonicalize_advisor_name: { Args: { name: string }; Returns: string }
+      expire_old_rfp_invites: { Args: never; Returns: undefined }
       generate_project_recommendations: {
         Args: { project_uuid: string }
         Returns: {
@@ -870,23 +1022,36 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_project_owner: {
-        Args: { p_project_id: string }
-        Returns: boolean
-      }
-      normalize_project_type: {
-        Args: { legacy_type: string }
-        Returns: string
-      }
-      send_rfp_invitations: {
-        Args:
-          | {
+      is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      normalize_project_type: { Args: { legacy_type: string }; Returns: string }
+      send_rfp_invitations:
+        | {
+            Args: { project_uuid: string; selected_supplier_ids?: string[] }
+            Returns: {
+              invites_sent: number
+              rfp_id: string
+            }[]
+          }
+        | {
+            Args: {
               email_body_html?: string
               email_subject?: string
               project_uuid: string
               selected_supplier_ids?: string[]
             }
-          | { project_uuid: string; selected_supplier_ids?: string[] }
+            Returns: {
+              invites_sent: number
+              rfp_id: string
+            }[]
+          }
+      send_rfp_invitations_to_advisors: {
+        Args: {
+          deadline_hours?: number
+          email_body_html?: string
+          email_subject?: string
+          project_uuid: string
+          selected_advisor_ids: string[]
+        }
         Returns: {
           invites_sent: number
           rfp_id: string
@@ -895,6 +1060,27 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
+      decline_reason_type:
+        | "no_capacity"
+        | "outside_expertise"
+        | "timeline_conflict"
+        | "budget_mismatch"
+        | "other"
+      proposal_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "accepted"
+        | "rejected"
+        | "withdrawn"
+      rfp_invite_status:
+        | "pending"
+        | "sent"
+        | "opened"
+        | "in_progress"
+        | "submitted"
+        | "declined"
+        | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1023,6 +1209,30 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "entrepreneur", "advisor", "supplier"],
+      decline_reason_type: [
+        "no_capacity",
+        "outside_expertise",
+        "timeline_conflict",
+        "budget_mismatch",
+        "other",
+      ],
+      proposal_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "accepted",
+        "rejected",
+        "withdrawn",
+      ],
+      rfp_invite_status: [
+        "pending",
+        "sent",
+        "opened",
+        "in_progress",
+        "submitted",
+        "declined",
+        "expired",
+      ],
     },
   },
 } as const

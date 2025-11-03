@@ -20,7 +20,7 @@ const AdminDashboard = () => {
         supabase.from('proposals').select('status', { count: 'exact' }),
       ]);
 
-      const approvedProposals = proposals.data?.filter(p => p.status === 'approved').length || 0;
+      const approvedProposals = proposals.data?.filter(p => p.status === 'accepted').length || 0;
 
       return {
         advisors: advisors.count || 0,

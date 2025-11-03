@@ -77,7 +77,7 @@ const RFPsManagement = () => {
   });
 
   const updateProposalMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: 'accepted' | 'rejected' | 'submitted' | 'under_review' | 'draft' | 'withdrawn' }) => {
       const oldData = proposals.find(p => p.id === id);
       const { error } = await supabase
         .from('proposals')
@@ -137,9 +137,12 @@ const RFPsManagement = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'received': return adminTranslations.rfps.received;
-      case 'approved': return adminTranslations.rfps.approved;
+      case 'submitted': return adminTranslations.rfps.received;
+      case 'accepted': return adminTranslations.rfps.approved;
       case 'rejected': return adminTranslations.rfps.rejected;
+      case 'under_review': return 'בבדיקה';
+      case 'draft': return 'טיוטה';
+      case 'withdrawn': return 'נמשך';
       default: return status;
     }
   };
@@ -159,7 +162,7 @@ const RFPsManagement = () => {
       cell: (item) => (
         <Badge
           variant={
-            item.status === 'approved'
+            item.status === 'accepted'
               ? 'default'
               : item.status === 'rejected'
               ? 'destructive'
@@ -182,7 +185,7 @@ const RFPsManagement = () => {
             size="sm"
             variant="outline"
             onClick={() =>
-              updateProposalMutation.mutate({ id: item.id, status: 'approved' })
+              updateProposalMutation.mutate({ id: item.id, status: 'accepted' })
             }
           >
             <CheckCircle2 className="w-4 h-4 mr-1" />

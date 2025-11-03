@@ -57,23 +57,24 @@ export const useProposalSubmit = () => {
         vector_points: data.signature.vector.reduce((sum, stroke) => sum + stroke.length, 0)
       };
 
-      // Insert proposal (using any to bypass type check until schema syncs)
+      // Insert proposal with proper types
+      const proposalInsert: any = {
+        advisor_id: data.advisorId,
+        price: data.price,
+        timeline_days: data.timeline_days,
+        scope_text: data.scope_text,
+        conditions_json: data.conditions,
+        files: data.files,
+        declaration_text: data.declaration,
+        signature_blob: data.signature.png,
+        signature_meta_json: signatureMetadata,
+        supplier_name: '',
+        submitted_at: new Date().toISOString()
+      };
+
       const { data: proposal, error: proposalError } = await supabase
         .from('proposals')
-        .insert({
-          project_id: data.projectId,
-          advisor_id: data.advisorId,
-          price: data.price,
-          timeline_days: data.timeline_days,
-          scope_text: data.scope_text,
-          conditions_json: data.conditions as any,
-          files: data.files as any,
-          declaration_text: data.declaration,
-          signature_blob: data.signature.png,
-          signature_meta_json: signatureMetadata as any,
-          status: 'submitted',
-          submitted_at: new Date().toISOString()
-        } as any)
+        .insert(proposalInsert)
         .select()
         .single();
 
@@ -87,7 +88,7 @@ export const useProposalSubmit = () => {
         .eq('user_id', currentUser?.id)
         .single();
 
-      const { error: signatureError } = await (supabase as any)
+      const { error: signatureError } = await supabase
         .from('signatures')
         .insert({
           entity_type: 'proposal',
@@ -119,8 +120,8 @@ export const useProposalSubmit = () => {
           rfp_id: data.rfpId,
           price: data.price,
           timeline_days: data.timeline_days
-        } as any
-      } as any);
+        }
+      });
 
       toast({
         title: 'הצעת המחיר נשלחה בהצלחה',
