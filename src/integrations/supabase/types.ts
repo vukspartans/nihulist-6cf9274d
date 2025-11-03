@@ -1155,6 +1155,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_advisor_invited_to_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_owned_by_user: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
