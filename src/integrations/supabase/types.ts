@@ -1159,11 +1159,23 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      is_invite_visible_to_advisor: {
+        Args: { _invite_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_invite_visible_to_entrepreneur: {
+        Args: { _invite_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_project_owned_by_user: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_user_invited_to_rfp: {
+        Args: { _rfp_id: string; _user_id: string }
+        Returns: boolean
+      }
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
       send_rfp_invitations:
