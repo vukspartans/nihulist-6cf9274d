@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { handleError } from '@/utils/errorHandling';
+import { DEADLINES } from '@/utils/constants';
 
 interface RFPResult {
   rfp_id: string;
@@ -23,7 +25,7 @@ export const useRFP = () => {
   const sendRFPInvitations = async (
     projectId: string,
     selectedAdvisorIds: string[],
-    deadlineHours: number = 168,
+    deadlineHours: number = DEADLINES.DEFAULT_RFP_HOURS,
     emailSubject?: string,
     emailBodyHtml?: string
   ): Promise<RFPResult | null> => {
@@ -50,11 +52,13 @@ export const useRFP = () => {
 
       return result;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שליחת הצעות מחיר נכשלה';
-      toast({
-        title: "שגיאה",
-        description: message,
-        variant: "destructive",
+      // Use standardized error handling
+      handleError(err, {
+        action: 'send_rfp',
+        metadata: {
+          projectId,
+          advisorCount: selectedAdvisorIds.length,
+        },
       });
       return null;
     } finally {

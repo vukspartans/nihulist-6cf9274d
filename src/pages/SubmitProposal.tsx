@@ -113,7 +113,7 @@ const SubmitProposal = () => {
         return;
       }
 
-      setRfpDetails(rfp.rfps);
+      setRfpDetails(rfp.rfps as any);
     } catch (error) {
       toast({
         title: "שגיאה",

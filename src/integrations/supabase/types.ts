@@ -425,6 +425,34 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_project_advisors_advisor"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_advisors_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_advisors_proposal"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_advisors_proposal"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_advisors_advisor_id_fkey"
             columns: ["advisor_id"]
             isOneToOne: false
@@ -436,6 +464,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_advisors_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
             referencedColumns: ["id"]
           },
           {
@@ -629,10 +664,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_proposals_advisor"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_proposals_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_advisor_id_fkey"
             columns: ["advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_amended_from_id_fkey"
+            columns: ["amended_from_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
             referencedColumns: ["id"]
           },
           {
@@ -768,6 +824,20 @@ export type Database = {
           supplier_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_rfp_invites_advisor"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_rfp_invites_rfp"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rfp_invites_advisor_id_fkey"
             columns: ["advisor_id"]
@@ -987,9 +1057,65 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      proposal_summary: {
+        Row: {
+          advisor_company: string | null
+          advisor_email: string | null
+          advisor_id: string | null
+          advisor_name: string | null
+          file_count: number | null
+          id: string | null
+          price: number | null
+          project_id: string | null
+          project_name: string | null
+          project_type: string | null
+          status: Database["public"]["Enums"]["proposal_status"] | null
+          submitted_at: string | null
+          timeline_days: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_proposals_advisor"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_proposals_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      approve_proposal_atomic: {
+        Args: {
+          p_content_hash: string
+          p_entrepreneur_notes: string
+          p_proposal_id: string
+          p_signature_png: string
+          p_signature_vector: Json
+        }
+        Returns: Json
+      }
       can_access_proposal_file: {
         Args: { file_path: string; user_uuid: string }
         Returns: boolean
@@ -1028,6 +1154,7 @@ export type Database = {
       }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
+      refresh_proposal_summary: { Args: never; Returns: undefined }
       send_rfp_invitations:
         | {
             Args: { project_uuid: string; selected_supplier_ids?: string[] }

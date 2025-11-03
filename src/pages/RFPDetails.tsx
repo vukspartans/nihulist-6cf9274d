@@ -135,7 +135,7 @@ const RFPDetails = () => {
         return;
       }
 
-      setRfpDetails(invite.rfps);
+      setRfpDetails(invite.rfps as any);
       setInviteDetails({
         id: invite.id,
         status: invite.status,

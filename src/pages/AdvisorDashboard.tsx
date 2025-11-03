@@ -125,9 +125,9 @@ const AdvisorDashboard = () => {
           .from('rfp_invites')
           .select(`
             *,
-            rfps (
+            rfps!rfp_invites_rfp_id_fkey (
               *,
-              projects (*)
+              projects!rfps_project_id_fkey (*)
             )
           `)
           .eq('advisor_id', advisor.id)
@@ -140,7 +140,7 @@ const AdvisorDashboard = () => {
           .from('proposals')
           .select(`
             *,
-            projects (name, type, location)
+            projects!proposals_project_id_fkey (name, type, location)
           `)
           .eq('advisor_id', advisor.id)
           .order('submitted_at', { ascending: false });

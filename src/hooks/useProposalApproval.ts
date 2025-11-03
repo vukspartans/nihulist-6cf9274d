@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
+import { handleError } from '@/utils/errorHandling';
+import { SignatureData } from '@/components/SignatureCanvas';
 
 type ProposalStatus = Database['public']['Enums']['proposal_status'];
 
@@ -12,14 +14,14 @@ interface ApprovalData {
   advisorId: string;
   price: number;
   timelineDays: number;
-  signature?: {
-    png: string;
-    vector: any[];
-    timestamp: string;
-  };
+  signature?: SignatureData;
   notes?: string;
 }
 
+/**
+ * PHASE 2: Hook for handling proposal approval workflow
+ * Uses atomic database function for transaction safety
+ */
 export const useProposalApproval = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -27,97 +29,81 @@ export const useProposalApproval = () => {
 
   /**
    * Approve a proposal and create project_advisor relationship
+   * Uses atomic database function to ensure all-or-nothing transaction
    * @param data - ApprovalData containing proposal details, pricing, timeline, and signature
    */
   const approveProposal = async (data: ApprovalData) => {
     setLoading(true);
+    
     try {
-      console.log(`[Approval] Updating proposal ${data.proposalId} status to 'accepted'`);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('משתמש לא מחובר');
+      console.log('[Approval] Starting approval process for proposal:', data.proposalId);
 
-      // 1. Update proposal status to 'accepted'
-      const { error: proposalError } = await supabase
-        .from('proposals')
-        .update({ status: 'accepted' as ProposalStatus })
-        .eq('id', data.proposalId);
-
-      if (proposalError) throw proposalError;
-
-      // 2. Create project_advisors entry
-      const { error: advisorError } = await supabase
-        .from('project_advisors')
-        .insert({
-          project_id: data.projectId,
-          advisor_id: data.advisorId,
-          fee_amount: data.price,
-          fee_type: 'fixed',
-          fee_currency: 'ILS',
-          start_date: new Date().toISOString().split('T')[0],
-          selected_by: user.id,
-          status: 'active',
-          notes: data.notes,
-        });
-
-      if (advisorError) throw advisorError;
-
-      // 3. Create entrepreneur signature (if provided)
-      if (data.signature) {
-        const contentHash = `${data.proposalId}-${Date.now()}`;
-        
-        const { error: signatureError } = await supabase
-          .from('signatures')
-          .insert({
-            entity_type: 'proposal_approval',
-            entity_id: data.proposalId,
-            signer_user_id: user.id,
-            sign_png: data.signature.png,
-            sign_vector_json: data.signature.vector,
-            sign_text: 'Entrepreneur approval signature',
-            content_hash: contentHash,
-            signer_name_snapshot: user.email || 'Unknown',
-            signer_email_snapshot: user.email || '',
-          });
-
-        if (signatureError) {
-          console.error('Signature creation failed:', signatureError);
-        }
+      // VALIDATION: Ensure signature is provided and valid
+      if (!data.signature?.png || !data.signature?.vector || data.signature.vector.length === 0) {
+        throw new Error('חתימה לא תקינה - נדרש לחתום לפני אישור');
       }
 
-      // 4. Log activity
-      await supabase.from('activity_log').insert({
-        actor_id: user.id,
-        actor_type: 'entrepreneur',
-        action: 'proposal_approved',
-        entity_type: 'proposal',
-        entity_id: data.proposalId,
-        project_id: data.projectId,
-        meta: {
-          advisor_id: data.advisorId,
-          price: data.price,
-          timeline_days: data.timelineDays,
-        },
-      });
+      if (!data.notes || data.notes.trim().length < 10) {
+        throw new Error('נדרש להוסיף הערות (מינימום 10 תווים)');
+      }
 
-      // 5. Invalidate relevant caches
-      queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-advisors', data.projectId] });
+      // Calculate content hash for signature verification
+      const contentToHash = JSON.stringify({
+        proposalId: data.proposalId,
+        notes: data.notes,
+        timestamp: data.signature.timestamp
+      });
+      
+      const hashBuffer = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(contentToHash)
+      );
+      const contentHash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // USE ATOMIC FUNCTION for transaction safety
+      console.log(`[Approval] Calling atomic approval function for proposal ${data.proposalId}`);
+      
+      const { data: result, error: approvalError } = await supabase.rpc(
+        'approve_proposal_atomic',
+        {
+          p_proposal_id: data.proposalId,
+          p_entrepreneur_notes: data.notes,
+          p_signature_png: data.signature.png,
+          p_signature_vector: { strokes: data.signature.vector },
+          p_content_hash: contentHash,
+        }
+      );
+
+      if (approvalError) throw approvalError;
+
+      console.log('[Approval] Atomic approval successful:', result);
 
       toast({
         title: 'הצעה אושרה בהצלחה',
         description: 'היועץ נוסף לפרויקט',
       });
 
+      // Invalidate relevant caches
+      queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-advisors', data.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['activity-log', data.projectId] });
+
       return { success: true };
     } catch (error: any) {
-      console.error('Error approving proposal:', error);
-      toast({
-        title: 'שגיאה באישור הצעה',
-        description: error.message || 'אירעה שגיאה בלתי צפויה',
-        variant: 'destructive',
+      console.error('[Approval] Error:', error);
+      
+      // Use standardized error handling
+      handleError(error, {
+        action: 'approve_proposal',
+        metadata: {
+          proposalId: data.proposalId,
+          projectId: data.projectId,
+        },
       });
-      return { success: false, error };
+
+      return { success: false };
     } finally {
       setLoading(false);
     }
@@ -132,6 +118,7 @@ export const useProposalApproval = () => {
   const rejectProposal = async (proposalId: string, projectId: string, reason?: string) => {
     setLoading(true);
     console.log(`[Rejection] Updating proposal ${proposalId} status to 'rejected'`);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
@@ -167,13 +154,14 @@ export const useProposalApproval = () => {
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error rejecting proposal:', error);
-      toast({
-        title: 'שגיאה בדחיית הצעה',
-        description: error.message || 'אירעה שגיאה בלתי צפויה',
-        variant: 'destructive',
+      console.error('[Rejection] Error:', error);
+      
+      handleError(error, {
+        action: 'reject_proposal',
+        metadata: { proposalId, projectId },
       });
-      return { success: false, error };
+
+      return { success: false };
     } finally {
       setLoading(false);
     }

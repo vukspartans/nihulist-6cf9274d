@@ -6,6 +6,8 @@ import type { Database } from '@/integrations/supabase/types';
 import { SignatureData } from '@/components/SignatureCanvas';
 import { UploadedFile } from '@/components/FileUpload';
 import { ProposalConditions } from '@/components/ConditionsBuilder';
+import { handleError } from '@/utils/errorHandling';
+import { PROPOSAL_VALIDATION, FILE_LIMITS } from '@/utils/constants';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 type SignatureInsert = Database['public']['Tables']['signatures']['Insert'];
@@ -34,34 +36,34 @@ export const useProposalSubmit = () => {
   const queryClient = useQueryClient();
 
   const submitProposal = async (data: SubmitProposalData) => {
-    // Input validation
+    // Input validation using constants
     if (!data.projectId || !data.advisorId) {
       throw new Error('Missing required project or advisor ID');
     }
 
-    if (data.price <= 0 || data.price > 100000000) {
-      throw new Error('מחיר לא תקין - חייב להיות בין 1 ל-100 מיליון');
+    if (data.price < PROPOSAL_VALIDATION.MIN_PRICE || data.price > PROPOSAL_VALIDATION.MAX_PRICE) {
+      throw new Error(`מחיר לא תקין - חייב להיות בין ${PROPOSAL_VALIDATION.MIN_PRICE} ל-${PROPOSAL_VALIDATION.MAX_PRICE}`);
     }
 
-    if (data.timeline_days <= 0 || data.timeline_days > 3650) {
-      throw new Error('לוח זמנים לא תקין - חייב להיות בין 1 ל-3650 ימים');
+    if (data.timeline_days < PROPOSAL_VALIDATION.MIN_TIMELINE_DAYS || data.timeline_days > PROPOSAL_VALIDATION.MAX_TIMELINE_DAYS) {
+      throw new Error(`לוח זמנים לא תקין - חייב להיות בין ${PROPOSAL_VALIDATION.MIN_TIMELINE_DAYS} ל-${PROPOSAL_VALIDATION.MAX_TIMELINE_DAYS} ימים`);
     }
 
-    if (!data.scope_text || data.scope_text.trim().length < 50) {
-      throw new Error('תיאור היקף העבודה קצר מדי - מינימום 50 תווים');
+    if (!data.scope_text || data.scope_text.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH) {
+      throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
     }
 
     if (!data.signature.png || !data.signature.vector || data.signature.vector.length === 0) {
       throw new Error('חתימה לא תקינה');
     }
 
-    if (data.files.length > 10) {
-      throw new Error('מקסימום 10 קבצים מצורפים');
+    if (data.files.length > FILE_LIMITS.MAX_FILES) {
+      throw new Error(`מקסימום ${FILE_LIMITS.MAX_FILES} קבצים מצורפים`);
     }
 
     const totalFileSize = data.files.reduce((sum, f) => sum + (f.size || 0), 0);
-    if (totalFileSize > 50 * 1024 * 1024) {  // 50MB
-      throw new Error('גודל הקבצים המצורפים עולה על 50MB');
+    if (totalFileSize > FILE_LIMITS.MAX_TOTAL_SIZE_MB * 1024 * 1024) {
+      throw new Error(`גודל הקבצים המצורפים עולה על ${FILE_LIMITS.MAX_TOTAL_SIZE_MB}MB`);
     }
 
     setLoading(true);
@@ -194,11 +196,16 @@ export const useProposalSubmit = () => {
       return { success: true, proposalId: proposal.id };
     } catch (error: any) {
       console.error('Error submitting proposal:', error);
-      toast({
-        title: 'שגיאה בשליחת הצעת המחיר',
-        description: error.message || 'אנא נסה שוב',
-        variant: 'destructive',
+      
+      // Use standardized error handling
+      handleError(error, {
+        action: 'submit_proposal',
+        metadata: {
+          projectId: data.projectId,
+          rfpId: data.rfpId,
+        },
       });
+
       return { success: false };
     } finally {
       setLoading(false);
