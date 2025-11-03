@@ -55,8 +55,35 @@ const RFPDetails = () => {
   useEffect(() => {
     if (user && rfp_id) {
       fetchRFPDetails();
+      markAsOpened();
     }
   }, [user, rfp_id]);
+
+  const markAsOpened = async () => {
+    if (!rfp_id || !user) return;
+
+    try {
+      const { data: advisor } = await supabase
+        .from('advisors')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!advisor) return;
+
+      await supabase
+        .from('rfp_invites')
+        .update({ 
+          status: 'opened',
+          opened_at: new Date().toISOString(),
+        })
+        .eq('rfp_id', rfp_id)
+        .eq('advisor_id', advisor.id)
+        .eq('status', 'sent');
+    } catch (error) {
+      console.error('Error marking RFP as opened:', error);
+    }
+  };
 
   const fetchRFPDetails = async () => {
     try {
@@ -326,7 +353,7 @@ const RFPDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
-            {inviteDetails?.status === 'pending' && (
+            {['sent', 'opened', 'pending'].includes(inviteDetails?.status || '') && (
               <>
                 <Button 
                   onClick={() => navigate(`/submit-proposal/${rfp_id}`)}

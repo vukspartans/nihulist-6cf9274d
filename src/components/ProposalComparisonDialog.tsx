@@ -4,16 +4,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Mail, Phone, Award } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle } from 'lucide-react';
+import { ProposalApprovalDialog } from './ProposalApprovalDialog';
+import { useProposalApproval } from '@/hooks/useProposalApproval';
 
 interface Proposal {
   id: string;
+  project_id: string;
   advisor_id: string;
   supplier_name: string;
   price: number;
   timeline_days: number;
   terms: string | null;
   submitted_at: string;
+  status: string;
 }
 
 interface ProposalComparisonDialogProps {
@@ -32,6 +36,9 @@ export const ProposalComparisonDialog = ({
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'timeline'>('price');
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const { rejectProposal, loading: actionLoading } = useProposalApproval();
 
   useEffect(() => {
     if (open && proposalIds.length > 0) {
@@ -73,6 +80,20 @@ export const ProposalComparisonDialog = ({
       currency: 'ILS',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const handleApprove = (proposal: Proposal) => {
+    setSelectedProposal(proposal);
+    setApprovalDialogOpen(true);
+  };
+
+  const handleReject = async (proposal: Proposal) => {
+    if (!confirm(`האם אתה בטוח שברצונך לדחות את ההצעה של ${proposal.supplier_name}?`)) {
+      return;
+    }
+    
+    await rejectProposal(proposal.id, proposal.project_id);
+    fetchProposals();
   };
 
   return (
@@ -121,7 +142,8 @@ export const ProposalComparisonDialog = ({
                   <TableHead className="text-right">מחיר</TableHead>
                   <TableHead className="text-right">זמן ביצוע</TableHead>
                   <TableHead className="text-right">תאריך הגשה</TableHead>
-                  <TableHead className="text-right">תנאים</TableHead>
+                  <TableHead className="text-right">סטטוס</TableHead>
+                  <TableHead className="text-right">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,10 +181,42 @@ export const ProposalComparisonDialog = ({
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
                     </TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="text-sm text-muted-foreground truncate">
-                        {proposal.terms || 'לא צוין'}
-                      </p>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          proposal.status === 'accepted' ? 'default' : 
+                          proposal.status === 'rejected' ? 'destructive' : 
+                          'secondary'
+                        }
+                      >
+                        {proposal.status === 'submitted' && 'ממתין'}
+                        {proposal.status === 'accepted' && 'אושר'}
+                        {proposal.status === 'rejected' && 'נדחה'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {proposal.status === 'submitted' && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(proposal)}
+                            disabled={actionLoading}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="w-3 h-3 ml-1" />
+                            אשר
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReject(proposal)}
+                            disabled={actionLoading}
+                          >
+                            <XCircle className="w-3 h-3 ml-1" />
+                            דחה
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -171,6 +225,15 @@ export const ProposalComparisonDialog = ({
           </div>
         )}
       </DialogContent>
+
+      {selectedProposal && (
+        <ProposalApprovalDialog
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+          proposal={selectedProposal}
+          onSuccess={fetchProposals}
+        />
+      )}
     </Dialog>
   );
 };

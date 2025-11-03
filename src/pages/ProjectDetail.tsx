@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { ProjectFilesManager } from '@/components/ProjectFilesManager';
 import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
 import { SentRFPsTab } from '@/components/SentRFPsTab';
+import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -29,6 +30,8 @@ export const ProjectDetail = () => {
   const [rfpSent, setRfpSent] = useState(false);
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
 
 
   // Check for edit mode from URL params
@@ -198,6 +201,14 @@ export const ProjectDetail = () => {
     }).format(amount);
   };
 
+  const handleCompareProposals = () => {
+    const submittedProposals = proposals.filter(p => p.status === 'submitted');
+    if (submittedProposals.length > 0) {
+      setSelectedProposalIds(submittedProposals.map(p => p.id));
+      setComparisonDialogOpen(true);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6" dir="rtl">
       {/* Header */}
@@ -341,13 +352,24 @@ export const ProjectDetail = () => {
         <TabsContent value="received">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                הצעות מחיר שהתקבלו
-                {proposals.length > 0 && (
-                  <Badge variant="secondary">{proposals.length}</Badge>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  הצעות מחיר שהתקבלו
+                  {proposals.length > 0 && (
+                    <Badge variant="secondary">{proposals.length}</Badge>
+                  )}
+                </CardTitle>
+                {proposals.filter(p => p.status === 'submitted').length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCompareProposals}
+                  >
+                    <Eye className="w-4 h-4 ml-2" />
+                    השווה הצעות
+                  </Button>
                 )}
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent>
               {proposalsLoading ? (
@@ -435,6 +457,13 @@ export const ProjectDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ProposalComparisonDialog
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+        proposalIds={selectedProposalIds}
+        advisorType={project.type || 'כללי'}
+      />
     </div>
   );
 };
