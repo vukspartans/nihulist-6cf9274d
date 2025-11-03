@@ -765,6 +765,7 @@ export type Database = {
       rfp_invites: {
         Row: {
           advisor_id: string | null
+          advisor_type: string | null
           created_at: string
           deadline_at: string | null
           decline_note: string | null
@@ -785,6 +786,7 @@ export type Database = {
         }
         Insert: {
           advisor_id?: string | null
+          advisor_type?: string | null
           created_at?: string
           deadline_at?: string | null
           decline_note?: string | null
@@ -805,6 +807,7 @@ export type Database = {
         }
         Update: {
           advisor_id?: string | null
+          advisor_type?: string | null
           created_at?: string
           deadline_at?: string | null
           decline_note?: string | null
@@ -1177,11 +1180,11 @@ export type Database = {
           }
       send_rfp_invitations_to_advisors: {
         Args: {
+          advisor_type_pairs: Json
           deadline_hours?: number
           email_body_html?: string
           email_subject?: string
           project_uuid: string
-          selected_advisor_ids: string[]
         }
         Returns: {
           result_invites_sent: number

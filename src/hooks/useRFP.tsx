@@ -16,7 +16,7 @@ export const useRFP = () => {
   /**
    * Send RFP invitations to selected advisors
    * @param projectId - UUID of the project
-   * @param selectedAdvisorIds - Array of advisor UUIDs to invite
+   * @param advisorTypePairs - Array of {advisor_id, advisor_type} objects
    * @param deadlineHours - Hours until deadline (default: 168 = 7 days)
    * @param emailSubject - Custom email subject (optional)
    * @param emailBodyHtml - Custom email body HTML (optional)
@@ -24,13 +24,13 @@ export const useRFP = () => {
    */
   const sendRFPInvitations = async (
     projectId: string,
-    selectedAdvisorIds: string[],
+    advisorTypePairs: Array<{advisor_id: string, advisor_type: string}>,
     deadlineHours: number = DEADLINES.DEFAULT_RFP_HOURS,
     emailSubject?: string,
     emailBodyHtml?: string
   ): Promise<RFPResult | null> => {
-    // PHASE 3: Validate advisor selection
-    if (!selectedAdvisorIds || selectedAdvisorIds.length === 0) {
+    // Validate advisor selection
+    if (!advisorTypePairs || advisorTypePairs.length === 0) {
       toast({
         title: "שגיאה",
         description: "לא נבחרו יועצים. אנא בחר לפחות יועץ אחד.",
@@ -39,20 +39,10 @@ export const useRFP = () => {
       return null;
     }
 
-    // PHASE 4: Deduplicate advisor IDs on frontend
-    const uniqueAdvisorIds = Array.from(new Set(selectedAdvisorIds));
-    
-    if (uniqueAdvisorIds.length !== selectedAdvisorIds.length) {
-      console.warn('[useRFP] Removed duplicate advisor IDs:', {
-        original: selectedAdvisorIds.length,
-        unique: uniqueAdvisorIds.length
-      });
-    }
-
     console.log('[useRFP] Sending RFP to advisors:', {
       projectId,
-      advisorIds: uniqueAdvisorIds,
-      count: uniqueAdvisorIds.length,
+      pairsCount: advisorTypePairs.length,
+      uniqueAdvisors: new Set(advisorTypePairs.map(p => p.advisor_id)).size,
       deadline: deadlineHours
     });
 
@@ -61,7 +51,7 @@ export const useRFP = () => {
     try {
       const { data, error } = await supabase.rpc('send_rfp_invitations_to_advisors', {
         project_uuid: projectId,
-        selected_advisor_ids: uniqueAdvisorIds,
+        advisor_type_pairs: advisorTypePairs,
         deadline_hours: deadlineHours,
         email_subject: emailSubject || null,
         email_body_html: emailBodyHtml || null
@@ -102,7 +92,7 @@ export const useRFP = () => {
         hint: err.hint,
         metadata: {
           projectId,
-          advisorCount: uniqueAdvisorIds.length,
+          pairsCount: advisorTypePairs.length,
         },
       });
 

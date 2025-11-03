@@ -196,9 +196,30 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
 </div>
 `;
     
+    // Build advisor-type pairs
+    const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
+    
+    // Add selected advisors (general type)
+    selectedAdvisors.forEach(advisorId => {
+      advisorTypePairs.push({
+        advisor_id: advisorId,
+        advisor_type: 'general'
+      });
+    });
+    
+    // Add recommended advisors with their specific types
+    Object.entries(selectedRecommendedAdvisors).forEach(([advisorType, advisorIds]) => {
+      advisorIds.forEach(advisorId => {
+        advisorTypePairs.push({
+          advisor_id: advisorId,
+          advisor_type: advisorType
+        });
+      });
+    });
+    
     const result = await sendRFPInvitations(
       projectId, 
-      allAdvisorIds,
+      advisorTypePairs,
       168,
       rfpContent.title,
       emailBodyHtml

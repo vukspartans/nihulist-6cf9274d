@@ -28,9 +28,14 @@ export const PriceProposalManager = ({ projectId, projectName, projectType, onRf
     if (!isAdvisorSelectionValid) {
       return;
     }
+    // Convert to advisor-type pairs
+    const advisorTypePairs = selectedAdvisors.map(id => ({
+      advisor_id: id,
+      advisor_type: 'general'
+    }));
     const result = await sendRFPInvitations(
       projectId, 
-      selectedAdvisors,
+      advisorTypePairs,
       168
     );
     if (result) {
