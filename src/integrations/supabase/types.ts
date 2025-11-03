@@ -553,7 +553,7 @@ export type Database = {
       }
       proposals: {
         Row: {
-          advisor_id: string | null
+          advisor_id: string
           ai_flags: Json | null
           amended_from_id: string | null
           attachment_url: string | null
@@ -578,7 +578,7 @@ export type Database = {
           version: number | null
         }
         Insert: {
-          advisor_id?: string | null
+          advisor_id: string
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
@@ -603,7 +603,7 @@ export type Database = {
           version?: number | null
         }
         Update: {
-          advisor_id?: string | null
+          advisor_id?: string
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
@@ -990,6 +990,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_proposal_file: {
+        Args: { file_path: string; user_uuid: string }
+        Returns: boolean
+      }
       canonicalize_advisor_name: { Args: { name: string }; Returns: string }
       expire_old_rfp_invites: { Args: never; Returns: undefined }
       generate_project_recommendations: {

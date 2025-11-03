@@ -17,11 +17,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    interface SendRFPRequest {
+      rfp_id: string;
+      advisor_ids: string[];
+      deadline_hours?: number;
+    }
+
     const {
       rfp_id,
       advisor_ids,
       deadline_hours = 168 // 7 days default
-    } = await req.json();
+    }: SendRFPRequest = await req.json();
+
+    // Validate inputs
+    if (!rfp_id || !Array.isArray(advisor_ids) || advisor_ids.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: rfp_id, advisor_ids' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[send-rfp-with-deadline] Processing ${advisor_ids.length} invitations for RFP ${rfp_id}`);
 
     const deadline_at = new Date(Date.now() + deadline_hours * 60 * 60 * 1000);
     const results = [];

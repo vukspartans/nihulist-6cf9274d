@@ -33,7 +33,7 @@ export const useRFP = () => {
       if (result) {
         toast({
           title: "הצעות מחיר נשלחו בהצלחה",
-          description: `הזמנות נשלחו ל-${result.invites_sent} ספקים`,
+          description: `הזמנות נשלחו ל-${result.invites_sent} יועצים`,
         });
       }
 

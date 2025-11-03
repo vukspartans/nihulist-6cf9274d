@@ -2,3 +2,23 @@ project_id = "aazakceyruefejeyhkbk"
 
 [functions.get-advisors-data]
 verify_jwt = false
+
+[functions.send-rfp-with-deadline]
+verify_jwt = true
+
+[functions.send-proposal-notification]
+verify_jwt = true
+
+[functions.deadline-reminder]
+verify_jwt = false
+
+# Cron jobs for automated tasks
+[[cron]]
+name = "expire-old-rfps"
+function = "expire-rfps"
+schedule = "0 * * * *"  # Every hour
+
+[[cron]]
+name = "send-deadline-reminders"
+function = "deadline-reminder"
+schedule = "0 9 * * *"  # Daily at 9 AM
