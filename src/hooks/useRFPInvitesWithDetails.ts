@@ -38,6 +38,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           rfp_invites!rfp_invites_rfp_id_fkey (
             id,
             advisor_id,
+            advisor_type,
             status,
             decline_reason,
             email,
@@ -83,7 +84,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
         
         const advisorInvites: AdvisorInviteDetail[] = invites.map(invite => {
           const advisor = invite.advisors;
-          const advisorType = advisor?.expertise?.[0] || 'לא מוגדר';
+          const advisorType = invite.advisor_type || advisor?.expertise?.[0] || 'לא מוגדר';
           const proposalId = proposalMap.get(invite.advisor_id);
 
           return {

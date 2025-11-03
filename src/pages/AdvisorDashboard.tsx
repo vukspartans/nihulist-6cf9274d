@@ -26,6 +26,7 @@ const COVER_OPTIONS = [
 interface RFPInvite {
   id: string;
   rfp_id: string;
+  advisor_type?: string;
   status: string;
   created_at: string;
   rfps: {
@@ -121,17 +122,18 @@ const AdvisorDashboard = () => {
 
       if (advisor) {
         // Fetch RFP invites
-        const { data: invites } = await supabase
-          .from('rfp_invites')
-          .select(`
+      const { data: invites } = await supabase
+        .from('rfp_invites')
+        .select(`
+          *,
+          advisor_type,
+          rfps!rfp_invites_rfp_id_fkey (
             *,
-            rfps!rfp_invites_rfp_id_fkey (
-              *,
-              projects!rfps_project_id_fkey (*)
-            )
-          `)
-          .eq('advisor_id', advisor.id)
-          .order('created_at', { ascending: false });
+            projects!rfps_project_id_fkey (*)
+          )
+        `)
+        .eq('advisor_id', advisor.id)
+        .order('created_at', { ascending: false });
 
         setRfpInvites(invites || []);
 
@@ -502,10 +504,15 @@ const AdvisorDashboard = () => {
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <CardTitle className="text-lg">{invite.rfps.projects.name}</CardTitle>
                             {isNew && (
                               <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">חדש</span>
+                            )}
+                            {invite.advisor_type && (
+                              <Badge variant="outline" className="text-xs">
+                                {invite.advisor_type}
+                              </Badge>
                             )}
                           </div>
                           <CardDescription className="flex items-center gap-2 mt-2">
