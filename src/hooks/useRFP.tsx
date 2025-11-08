@@ -89,6 +89,29 @@ export const useRFP = () => {
             variant: "destructive",
           });
         } else {
+          // Send RFP invitation emails
+          console.log('[useRFP] Triggering email sending for RFP:', result.result_rfp_id);
+          
+          supabase.functions
+            .invoke('send-rfp-email', {
+              body: { 
+                rfp_id: result.result_rfp_id,
+                test_mode: false // Set to true to send all emails to test address
+              }
+            })
+            .then(({ data: emailData, error: emailError }) => {
+              if (emailError) {
+                console.error('[useRFP] Email sending failed:', emailError);
+                toast({
+                  title: "שליחת אימיילים נכשלה",
+                  description: "ההזמנות נשלחו במערכת אך שליחת האימיילים נכשלה.",
+                  variant: "destructive",
+                });
+              } else {
+                console.log('[useRFP] Emails sent successfully:', emailData);
+              }
+            });
+
           toast({
             title: "הצעות מחיר נשלחו בהצלחה",
             description: `הזמנות נשלחו ל-${result.result_invites_sent} יועצים`,
