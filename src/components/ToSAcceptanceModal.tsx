@@ -66,7 +66,7 @@ export const ToSAcceptanceModal = () => {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 text-right">
           <p className="text-sm text-muted-foreground text-center">
             על מנת להמשיך להשתמש במערכת, נדרש לאשר את תנאי השימוש המעודכנים
           </p>

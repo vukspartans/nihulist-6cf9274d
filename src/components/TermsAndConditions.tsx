@@ -10,8 +10,8 @@ interface TermsAndConditionsProps {
 export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditionsProps) => {
   return (
     <div className="space-y-4" dir="rtl">
-      <ScrollArea className="h-64 border rounded-md p-4 bg-muted/30">
-        <div className="space-y-3 text-sm">
+      <ScrollArea className="h-64 border rounded-md p-4 bg-muted/30 text-right">
+        <div className="space-y-3 text-sm text-right">
           <h3 className="font-bold text-lg text-primary">תנאי שימוש - מערכת ניהוליסט</h3>
           
           <p className="text-muted-foreground">
