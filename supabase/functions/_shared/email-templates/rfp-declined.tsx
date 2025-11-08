@@ -28,10 +28,12 @@ export const RFPDeclinedEmail = ({
 }: RFPDeclinedEmailProps) => {
   const getReasonText = (reason?: string) => {
     switch (reason) {
-      case 'not_available':
+      case 'no_capacity':
         return 'אין זמינות כרגע';
       case 'outside_expertise':
         return 'מחוץ לתחום ההתמחות';
+      case 'timeline_conflict':
+        return 'קונפליקט בלוחות זמנים';
       case 'budget_mismatch':
         return 'אי התאמה תקציבית';
       case 'other':
