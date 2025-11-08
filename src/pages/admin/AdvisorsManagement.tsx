@@ -199,7 +199,7 @@ export default function AdvisorsManagement() {
           <div className="flex gap-2">
             <Button onClick={() => setBulkUploadOpen(true)} variant="outline" className="shrink-0" size="default">
               <Upload className="h-4 w-4 ml-2" />
-              העלאה באצווה
+              העלאה מרוכזת
             </Button>
             <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0" size="default">
               <Plus className="h-4 w-4 ml-2" />
