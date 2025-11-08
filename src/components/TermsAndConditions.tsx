@@ -10,8 +10,8 @@ interface TermsAndConditionsProps {
 export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditionsProps) => {
   return (
     <div className="space-y-4" dir="rtl">
-      <ScrollArea className="h-64 border rounded-md p-4 bg-muted/30 text-right">
-        <div className="space-y-3 text-sm text-right">
+      <ScrollArea className="h-64 border rounded-md p-4 bg-muted/30 text-right" dir="rtl">
+        <div className="space-y-3 text-sm text-right" dir="rtl">
           <h3 className="font-bold text-lg text-primary">תנאי שימוש - מערכת ניהוליסט</h3>
           
           <p className="text-muted-foreground">
@@ -112,7 +112,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
         </div>
       </ScrollArea>
       
-      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-md border">
+      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-md border" dir="rtl">
         <Checkbox 
           id="tos" 
           checked={accepted}
