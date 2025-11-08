@@ -5,6 +5,7 @@ import { StatsCard } from "@/components/admin/StatsCard";
 import { Building2, FolderKanban, FileText, CheckCircle2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminTranslations } from "@/constants/adminTranslations";
+import { TestRFPEmail } from "@/components/admin/TestRFPEmail";
 
 const AdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
@@ -91,6 +92,8 @@ const AdminDashboard = () => {
             />
           </div>
         )}
+
+        <TestRFPEmail />
       </div>
     </AdminLayout>
   );
