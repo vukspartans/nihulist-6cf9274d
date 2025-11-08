@@ -105,7 +105,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
 
           <div className="mt-6 pt-4 border-t">
             <p className="text-xs text-muted-foreground">
-              תאריך עדכון אחרון: נובמבר 2024<br/>
+              תאריך עדכון אחרון: נובמבר 2025<br/>
               גרסה: 1.0
             </p>
           </div>

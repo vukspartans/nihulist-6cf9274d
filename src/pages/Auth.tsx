@@ -985,7 +985,7 @@ const Auth = () => {
             )}
 
             {!isLogin && signupStep === 3 && (
-              <div className="space-y-4">
+              <div className="space-y-4" dir="rtl">
                 {/* Step 3: Terms and Conditions */}
                 <div className="bg-muted/30 p-4 rounded-lg">
                   <p className="text-sm text-center">שלב 3 מתוך 3: תנאי שימוש</p>

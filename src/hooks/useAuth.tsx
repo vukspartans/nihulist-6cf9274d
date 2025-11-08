@@ -11,6 +11,8 @@ interface UserProfile {
   role: string;
   created_at: string;
   updated_at: string;
+  tos_accepted_at: string | null;
+  tos_version: string | null;
 }
 
 type AppRole = 'admin' | 'entrepreneur' | 'advisor' | 'supplier';
