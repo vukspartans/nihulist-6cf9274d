@@ -13,6 +13,7 @@ interface UserProfile {
   updated_at: string;
   tos_accepted_at: string | null;
   tos_version: string | null;
+  requires_password_change: boolean | null;
 }
 
 type AppRole = 'admin' | 'entrepreneur' | 'advisor' | 'supplier';

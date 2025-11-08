@@ -325,6 +325,7 @@ export type Database = {
           id: string
           name: string | null
           phone: string | null
+          requires_password_change: boolean | null
           role: string | null
           tos_accepted_at: string | null
           tos_version: string | null
@@ -341,6 +342,7 @@ export type Database = {
           id?: string
           name?: string | null
           phone?: string | null
+          requires_password_change?: boolean | null
           role?: string | null
           tos_accepted_at?: string | null
           tos_version?: string | null
@@ -357,6 +359,7 @@ export type Database = {
           id?: string
           name?: string | null
           phone?: string | null
+          requires_password_change?: boolean | null
           role?: string | null
           tos_accepted_at?: string | null
           tos_version?: string | null

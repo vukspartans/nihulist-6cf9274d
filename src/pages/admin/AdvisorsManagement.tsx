@@ -7,10 +7,11 @@ import { SearchBar } from "@/components/admin/SearchBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle, XCircle, Power, Upload } from "lucide-react";
 import { logAdminAction } from "@/lib/auditLog";
 import { CreateAdvisorDialog } from "@/components/admin/CreateAdvisorDialog";
 import { EditAdvisorDialog } from "@/components/admin/EditAdvisorDialog";
+import { BulkAdvisorUpload } from "@/components/admin/BulkAdvisorUpload";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,7 @@ export default function AdvisorsManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
@@ -194,10 +196,16 @@ export default function AdvisorsManagement() {
             </h1>
             <p className="text-muted-foreground mt-1">ניהול וניטור יועצים במערכת</p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0" size="default">
-            <Plus className="h-4 w-4 ml-2" />
-            {t.advisors.createButton}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setBulkUploadOpen(true)} variant="outline" className="shrink-0" size="default">
+              <Upload className="h-4 w-4 ml-2" />
+              העלאה באצווה
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0" size="default">
+              <Plus className="h-4 w-4 ml-2" />
+              {t.advisors.createButton}
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -401,6 +409,12 @@ export default function AdvisorsManagement() {
         <CreateAdvisorDialog
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
+        />
+
+        <BulkAdvisorUpload
+          open={bulkUploadOpen}
+          onOpenChange={setBulkUploadOpen}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["advisors"] })}
         />
 
         {selectedAdvisor && (

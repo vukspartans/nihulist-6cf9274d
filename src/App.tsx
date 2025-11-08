@@ -1,14 +1,15 @@
-
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import { ToSAcceptanceModal } from "@/components/ToSAcceptanceModal";
+import { PasswordChangeModal } from "@/components/PasswordChangeModal";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -34,9 +35,30 @@ import AuditLog from "./pages/admin/AuditLog";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+const AppContent = () => {
+  const { user, profile } = useAuth();
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+
+  useEffect(() => {
+    if (user && profile?.requires_password_change) {
+      setShowPasswordChange(true);
+    } else {
+      setShowPasswordChange(false);
+    }
+  }, [user, profile]);
+
+  return (
+    <>
+      {user && profile?.requires_password_change && (
+        <PasswordChangeModal
+          open={showPasswordChange}
+          userId={user.id}
+          onSuccess={() => {
+            setShowPasswordChange(false);
+            window.location.reload();
+          }}
+        />
+      )}
       <ToSAcceptanceModal />
       <TooltipProvider>
         <ErrorBoundary>
@@ -128,6 +150,14 @@ const App = () => (
         </BrowserRouter>
         </ErrorBoundary>
       </TooltipProvider>
+    </>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   </QueryClientProvider>
 );
