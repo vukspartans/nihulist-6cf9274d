@@ -216,11 +216,6 @@ export const PhasedAdvisorSelection = ({
                               {phaseInfo.name}
                             </h3>
                           </div>
-                          <Badge variant={phaseInfo.badgeVariant}>
-                            {phaseInfo.priority === 'must-have' && 'חובה'}
-                            {phaseInfo.priority === 'important' && 'חשוב'}
-                            {phaseInfo.priority === 'recommended' && 'מומלץ'}
-                          </Badge>
                         </div>
                         
                         <div className="flex items-center gap-3">

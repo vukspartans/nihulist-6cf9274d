@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PhasedAdvisorSelection } from './PhasedAdvisorSelection';
 import { AdvisorRecommendationsCard } from './AdvisorRecommendationsCard';
 import { ProjectTypeSelector } from './ProjectTypeSelector';
+import { AdvisorTypeRequestData } from './RequestEditorDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
@@ -46,6 +47,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const [advisorValidation, setAdvisorValidation] = useState<any>(null);
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
   const [selectedRecommendedAdvisors, setSelectedRecommendedAdvisors] = useState<Record<string, string[]>>({});
+  const [requestDataByType, setRequestDataByType] = useState<Record<string, AdvisorTypeRequestData>>({});
   const [rfpContent, setRfpContent] = useState<RFPContent>({
     title: 'בקשה להצעת מחיר {{שם_הפרויקט}}',
     content: `שלום {{שם_המשרד}},
@@ -103,7 +105,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     loadExistingRfp();
   }, [projectId]);
 
-  const totalSteps = 4;
+  const totalSteps = 3;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -155,37 +157,57 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     }
   };
 
+  const handleRequestDataChange = (advisorType: string, data: AdvisorTypeRequestData) => {
+    setRequestDataByType(prev => ({
+      ...prev,
+      [advisorType]: data
+    }));
+  };
+
   const handleSendRFP = async () => {
-    // Flatten the Record structure to array of advisor IDs
-    const allAdvisorIds = Object.values(selectedRecommendedAdvisors).flat();
-    
-    // PHASE 3: Add frontend logging
-    console.log('[RFPWizard] Sending RFP:', {
+    console.log('[RFPWizard] Sending RFP with per-type data:', {
       projectId,
       projectName,
-      advisorIds: allAdvisorIds,
-      advisorCount: allAdvisorIds.length,
-      deadline: 168,
-      subject: rfpContent.title,
-      selectedRecommendedAdvisors
+      selectedRecommendedAdvisors,
+      requestDataByType
     });
-    
-    // Prepare email content with RTL support, proper spacing, and clickable links
+
     const loginUrl = `${window.location.origin}/auth`;
+    
+    // Build advisor-type pairs from recommended advisors
+    const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
+    
+    // For each advisor type, send with custom content if available
+    for (const [advisorType, advisorIds] of Object.entries(selectedRecommendedAdvisors)) {
+      if (advisorIds.length === 0) continue;
+      
+      advisorIds.forEach(advisorId => {
+        advisorTypePairs.push({
+          advisor_id: advisorId,
+          advisor_type: advisorType
+        });
+      });
+    }
+
+    // Use first type's data or default
+    const firstType = Object.keys(selectedRecommendedAdvisors)[0];
+    const typeData = requestDataByType[firstType];
+    const emailSubject = typeData?.emailSubject || `בקשה להצעת מחיר - ${projectName}`;
+    const emailBodyText = typeData?.emailBody || rfpContent.content;
+    
+    // Format email body HTML
     const emailBodyHtml = `
 <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: right; line-height: 1.6;">
-  ${rfpContent.content
+  ${emailBodyText
     .split('\n')
     .map(line => {
       const trimmed = line.trim();
       if (!trimmed) return '<div style="height: 12px;"></div>';
       
-      // Convert login link line to clickable link
       if (trimmed.includes('היכנס/י עכשיו למערכת ניהוליסט')) {
         return `<p style="margin: 16px 0;"><a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 500;">${trimmed}</a></p>`;
       }
       
-      // Add indentation for list items starting with ✅
       if (trimmed.startsWith('✅')) {
         return `<p style="margin: 8px 0 8px 20px;">${trimmed}</p>`;
       }
@@ -196,24 +218,11 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
 </div>
 `;
     
-    // Build advisor-type pairs from recommended advisors
-    const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
-    
-    // Add recommended advisors with their specific types
-    Object.entries(selectedRecommendedAdvisors).forEach(([advisorType, advisorIds]) => {
-      advisorIds.forEach(advisorId => {
-        advisorTypePairs.push({
-          advisor_id: advisorId,
-          advisor_type: advisorType
-        });
-      });
-    });
-    
     const result = await sendRFPInvitations(
       projectId, 
       advisorTypePairs,
       168,
-      rfpContent.title,
+      emailSubject,
       emailBodyHtml
     );
     
@@ -233,8 +242,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         return isAdvisorSelectionValid;
       case 3:
         return Object.values(selectedRecommendedAdvisors).some(ids => ids.length > 0);
-      case 4:
-        return !!rfpContent.title && !!rfpContent.content;
       default:
         return true;
     }
@@ -248,8 +255,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         return 'בחירת יועצים';
       case 3:
         return 'בחירת יועצים מומלצים';
-      case 4:
-        return 'עריכת תוכן הצעת מחיר';
       default:
         return '';
     }
@@ -372,83 +377,9 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
                 selectedAdvisorTypes={selectedAdvisors}
                 selectedAdvisors={selectedRecommendedAdvisors}
                 onSelectAdvisors={setSelectedRecommendedAdvisors}
-                rfpContent={rfpContent}
+                requestDataByType={requestDataByType}
+                onRequestDataChange={handleRequestDataChange}
               />
-            </div>
-          )}
-
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">עריכת תוכן הצעת המחיר</h3>
-                <p className="text-muted-foreground">
-                  ערוך את תוכן הבקשה שתישלח ליועצים הנבחרים
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="rfp-title">כותרת</Label>
-                  <Input
-                    id="rfp-title"
-                    value={rfpContent.title}
-                    onChange={(e) => setRfpContent(prev => ({ ...prev, title: e.target.value }))}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="rfp-content">תוכן הבקשה</Label>
-                  <Textarea
-                    id="rfp-content"
-                    rows={8}
-                    value={rfpContent.content}
-                    onChange={(e) => setRfpContent(prev => ({ ...prev, content: e.target.value }))}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="rfp-files">קבצים מצורפים (אופציונלי)</Label>
-                  <div className="mt-1">
-                    <input
-                      type="file"
-                      id="rfp-files"
-                      multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('rfp-files')?.click()}
-                      className="w-full"
-                    >
-                      <Upload className="h-4 w-4 ml-2" />
-                      העלה קבצים
-                    </Button>
-                  </div>
-                  
-                  {rfpContent.attachments.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {rfpContent.attachments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
-                          <span className="text-sm">{file.name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeAttachment(index)}
-                          >
-                            הסר
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </CardContent>

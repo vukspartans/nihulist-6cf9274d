@@ -5,7 +5,7 @@ import { Users, RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAdvisorsByExpertise } from '@/hooks/useAdvisorsByExpertise';
 import { AdvisorTable } from '@/components/AdvisorTable';
-import { EmailPreviewDialog } from '@/components/EmailPreviewDialog';
+import { RequestEditorDialog, AdvisorTypeRequestData } from '@/components/RequestEditorDialog';
 
 interface AdvisorRecommendationsCardProps {
   projectId: string;
@@ -15,11 +15,8 @@ interface AdvisorRecommendationsCardProps {
   selectedAdvisorTypes: string[];
   selectedAdvisors: Record<string, string[]>;
   onSelectAdvisors: (advisors: Record<string, string[]>) => void;
-  rfpContent?: {
-    title: string;
-    content: string;
-    attachments?: File[];
-  };
+  requestDataByType?: Record<string, AdvisorTypeRequestData>;
+  onRequestDataChange?: (advisorType: string, data: AdvisorTypeRequestData) => void;
 }
 
 export const AdvisorRecommendationsCard = ({
@@ -30,9 +27,10 @@ export const AdvisorRecommendationsCard = ({
   selectedAdvisorTypes,
   selectedAdvisors,
   onSelectAdvisors,
-  rfpContent
+  requestDataByType = {},
+  onRequestDataChange
 }: AdvisorRecommendationsCardProps) => {
-  const [emailContentByType, setEmailContentByType] = useState<Record<string, { title: string; content: string }>>({});
+  const [reviewedTypes, setReviewedTypes] = useState<Record<string, boolean>>({});
   
   const { sortedAdvisorTypes, loading, error } = useAdvisorsByExpertise(
     projectType,
@@ -57,11 +55,9 @@ export const AdvisorRecommendationsCard = ({
     }
   };
 
-  const handleEmailSave = (advisorType: string, title: string, content: string) => {
-    setEmailContentByType(prev => ({
-      ...prev,
-      [advisorType]: { title, content }
-    }));
+  const handleRequestSave = (advisorType: string, data: AdvisorTypeRequestData) => {
+    onRequestDataChange?.(advisorType, data);
+    setReviewedTypes(prev => ({ ...prev, [advisorType]: true }));
   };
 
   if (loading) {
@@ -141,13 +137,6 @@ export const AdvisorRecommendationsCard = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-lg">{typeData.type}</h3>
-              {typeData.phaseInfo && (
-                <Badge variant={typeData.phaseInfo.badgeVariant} className="text-xs">
-                  {typeData.phaseInfo.priority === 'must-have' && 'חובה'}
-                  {typeData.phaseInfo.priority === 'important' && 'חשוב'}
-                  {typeData.phaseInfo.priority === 'recommended' && 'מומלץ'}
-                </Badge>
-              )}
             </div>
             
             <div className="flex items-center gap-2 flex-wrap">
@@ -159,13 +148,13 @@ export const AdvisorRecommendationsCard = ({
                   {selectedInType} נבחרו
                 </Badge>
               )}
-              <EmailPreviewDialog
+              <RequestEditorDialog
                 advisorType={typeData.type}
                 projectName={projectName}
-                projectType={projectType}
                 recipientCount={selectedInType}
-                rfpContent={emailContentByType[typeData.type] || rfpContent}
-                onSave={(title, content) => handleEmailSave(typeData.type, title, content)}
+                initialData={requestDataByType[typeData.type]}
+                onSave={(data) => handleRequestSave(typeData.type, data)}
+                hasBeenReviewed={reviewedTypes[typeData.type] || requestDataByType[typeData.type]?.hasBeenReviewed}
               />
             </div>
           </div>
@@ -227,10 +216,7 @@ export const AdvisorRecommendationsCard = ({
         {/* Phase 1 Advisors */}
         {advisorsByPhase[1]?.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-lg text-blue-700">שלב 1 - בחינת הפרויקט (חובה)</h3>
-              <Badge variant="destructive">קריטי</Badge>
-            </div>
+            <h3 className="font-bold text-lg text-blue-700">שלב 1 - בחינת הפרויקט</h3>
             {advisorsByPhase[1].map(renderAdvisorTypeCard)}
           </div>
         )}
@@ -238,10 +224,7 @@ export const AdvisorRecommendationsCard = ({
         {/* Phase 2 Advisors */}
         {advisorsByPhase[2]?.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-lg text-orange-700">שלב 2 - תכנון אדריכלי ראשוני (חשוב)</h3>
-              <Badge variant="default">חשוב</Badge>
-            </div>
+            <h3 className="font-bold text-lg text-orange-700">שלב 2 - תכנון אדריכלי ראשוני</h3>
             {advisorsByPhase[2].map(renderAdvisorTypeCard)}
           </div>
         )}
@@ -249,10 +232,7 @@ export const AdvisorRecommendationsCard = ({
         {/* Phase 3 Advisors */}
         {advisorsByPhase[3]?.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-lg text-yellow-700">שלב 3 - העלאת יועצים (מומלץ)</h3>
-              <Badge variant="secondary">מומלץ</Badge>
-            </div>
+            <h3 className="font-bold text-lg text-yellow-700">שלב 3 - העלאת יועצים</h3>
             {advisorsByPhase[3].map(renderAdvisorTypeCard)}
           </div>
         )}
