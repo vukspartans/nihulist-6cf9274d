@@ -10,11 +10,19 @@ import { Edit, Save, FileText, Mail, Paperclip, Upload, X, CheckCircle, AlertCir
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+
+export interface UploadedFileMetadata {
+  name: string;
+  url: string;
+  size: number;
+  path: string;
+}
 
 export interface AdvisorTypeRequestData {
   requestTitle: string;
   requestContent: string;
-  requestAttachments: File[];
+  requestAttachments: UploadedFileMetadata[];
   emailSubject: string;
   emailBody: string;
   hasBeenReviewed: boolean;
@@ -24,6 +32,8 @@ export interface AdvisorTypeRequestData {
 interface RequestEditorDialogProps {
   advisorType: string;
   projectName: string;
+  projectId: string;
+  rfpId?: string;
   recipientCount: number;
   initialData?: Partial<AdvisorTypeRequestData>;
   onSave: (data: AdvisorTypeRequestData) => void;
@@ -63,6 +73,8 @@ const getDefaultData = (projectName: string): AdvisorTypeRequestData => ({
 export const RequestEditorDialog = ({
   advisorType,
   projectName,
+  projectId,
+  rfpId,
   recipientCount,
   initialData,
   onSave,
@@ -71,6 +83,7 @@ export const RequestEditorDialog = ({
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("request");
+  const [uploading, setUploading] = useState(false);
   
   const defaultData = getDefaultData(projectName);
   const [formData, setFormData] = useState<AdvisorTypeRequestData>({
@@ -85,15 +98,92 @@ export const RequestEditorDialog = ({
     });
   }, [initialData, projectName]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setFormData(prev => ({
-      ...prev,
-      requestAttachments: [...prev.requestAttachments, ...files]
-    }));
+    if (files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadedFiles: UploadedFileMetadata[] = [];
+      
+      for (const file of files) {
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "קובץ גדול מדי",
+            description: `${file.name} גדול מ-10MB`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        // Generate unique file path
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${projectId}/temp/${advisorType}/${fileName}`;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('rfp-request-files')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          toast({
+            title: "שגיאה בהעלאת קובץ",
+            description: uploadError.message,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('rfp-request-files')
+          .getPublicUrl(filePath);
+
+        uploadedFiles.push({
+          name: file.name,
+          url: publicUrl,
+          size: file.size,
+          path: filePath
+        });
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        requestAttachments: [...prev.requestAttachments, ...uploadedFiles]
+      }));
+
+      if (uploadedFiles.length > 0) {
+        toast({
+          title: "קבצים הועלו בהצלחה",
+          description: `${uploadedFiles.length} קבצים הועלו`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בהעלאת הקבצים",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const removeAttachment = (index: number) => {
+  const removeAttachment = async (index: number) => {
+    const file = formData.requestAttachments[index];
+    
+    // Delete from storage
+    if (file.path) {
+      await supabase.storage
+        .from('rfp-request-files')
+        .remove([file.path]);
+    }
+
     setFormData(prev => ({
       ...prev,
       requestAttachments: prev.requestAttachments.filter((_, i) => i !== index)
@@ -220,9 +310,10 @@ export const RequestEditorDialog = ({
                     variant="outline"
                     onClick={() => document.getElementById('request-files')?.click()}
                     className="w-full"
+                    disabled={uploading}
                   >
                     <Upload className="h-4 w-4 ml-2" />
-                    העלה קבצים
+                    {uploading ? 'מעלה...' : 'העלה קבצים'}
                   </Button>
                   <p className="text-xs text-muted-foreground text-right mt-1">
                     תוכל לצרף תוכניות, מפרטים, או מסמכים רלוונטיים (עד 10MB לקובץ)

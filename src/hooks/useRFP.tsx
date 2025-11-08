@@ -20,6 +20,9 @@ export const useRFP = () => {
    * @param deadlineHours - Hours until deadline (default: 168 = 7 days)
    * @param emailSubject - Custom email subject (optional)
    * @param emailBodyHtml - Custom email body HTML (optional)
+   * @param requestTitle - Request title for advisors (optional)
+   * @param requestContent - Request content for advisors (optional)
+   * @param requestFiles - Uploaded file metadata (optional)
    * @returns RFPResult with rfp_id and invites_sent count
    */
   const sendRFPInvitations = async (
@@ -27,7 +30,10 @@ export const useRFP = () => {
     advisorTypePairs: Array<{advisor_id: string, advisor_type: string}>,
     deadlineHours: number = DEADLINES.DEFAULT_RFP_HOURS,
     emailSubject?: string,
-    emailBodyHtml?: string
+    emailBodyHtml?: string,
+    requestTitle?: string,
+    requestContent?: string,
+    requestFiles?: Array<{name: string, url: string, size: number, path: string}>
   ): Promise<RFPResult | null> => {
     // Validate advisor selection
     if (!advisorTypePairs || advisorTypePairs.length === 0) {
@@ -49,12 +55,20 @@ export const useRFP = () => {
     setLoading(true);
 
     try {
+      // Prepare request files for database (JSONB format)
+      const requestFilesJson = requestFiles ? JSON.stringify(
+        requestFiles.map(f => ({ name: f.name, url: f.url, size: f.size, path: f.path }))
+      ) : null;
+
       const { data, error } = await supabase.rpc('send_rfp_invitations_to_advisors', {
         project_uuid: projectId,
         advisor_type_pairs: advisorTypePairs,
         deadline_hours: deadlineHours,
         email_subject: emailSubject || null,
-        email_body_html: emailBodyHtml || null
+        email_body_html: emailBodyHtml || null,
+        request_title: requestTitle || null,
+        request_content: requestContent || null,
+        request_files: requestFilesJson
       });
 
       if (error) throw error;

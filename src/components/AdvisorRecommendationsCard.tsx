@@ -151,6 +151,7 @@ export const AdvisorRecommendationsCard = ({
               <RequestEditorDialog
                 advisorType={typeData.type}
                 projectName={projectName}
+                projectId={projectId}
                 recipientCount={selectedInType}
                 initialData={requestDataByType[typeData.type]}
                 onSave={(data) => handleRequestSave(typeData.type, data)}

@@ -36,6 +36,14 @@ interface RFPInvite {
   status: string;
   created_at: string;
   deadline_at?: string;
+  request_title?: string;
+  request_content?: string;
+  request_files?: Array<{
+    name: string;
+    url: string;
+    size: number;
+    path: string;
+  }>;
 }
 
 const RFPDetails = () => {
@@ -106,13 +114,17 @@ const RFPDetails = () => {
 
       setAdvisorId(advisor.id);
 
-      // Fetch RFP details with invite info (deadline_at not yet in schema)
+      // Fetch RFP details with invite info including request content
       const { data: invite } = await supabase
         .from('rfp_invites')
         .select(`
           id,
           status,
           created_at,
+          deadline_at,
+          request_title,
+          request_content,
+          request_files,
           rfps (
             id,
             subject,
@@ -139,7 +151,11 @@ const RFPDetails = () => {
       setInviteDetails({
         id: invite.id,
         status: invite.status,
-        created_at: invite.created_at
+        created_at: invite.created_at,
+        deadline_at: invite.deadline_at,
+        request_title: invite.request_title,
+        request_content: invite.request_content,
+        request_files: invite.request_files as any
       });
     } catch (error) {
       toast({
@@ -291,6 +307,60 @@ const RFPDetails = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Request Content from Entrepreneur */}
+          {(inviteDetails?.request_title || inviteDetails?.request_content || inviteDetails?.request_files) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  תוכן הבקשה
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {inviteDetails.request_title && (
+                    <div>
+                      <Label className="font-medium">כותרת הבקשה</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {inviteDetails.request_title}
+                      </p>
+                    </div>
+                  )}
+                  {inviteDetails.request_content && (
+                    <div>
+                      <Label className="font-medium">תיאור הבקשה</Label>
+                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                        {inviteDetails.request_content}
+                      </p>
+                    </div>
+                  )}
+                  {inviteDetails.request_files && inviteDetails.request_files.length > 0 && (
+                    <div>
+                      <Label className="font-medium">קבצים מצורפים</Label>
+                      <div className="mt-2 space-y-2">
+                        {inviteDetails.request_files.map((file, idx) => (
+                          <a 
+                            key={idx}
+                            href={file.url} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-primary hover:underline p-3 bg-muted rounded-lg"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="flex-1">{file.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </Badge>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Project Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

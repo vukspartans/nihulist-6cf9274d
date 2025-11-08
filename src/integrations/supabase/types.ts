@@ -778,6 +778,9 @@ export type Database = {
           last_notification_at: string | null
           opened_at: string | null
           personalized_body_html: string | null
+          request_content: string | null
+          request_files: Json | null
+          request_title: string | null
           rfp_id: string
           started_at: string | null
           status: Database["public"]["Enums"]["rfp_invite_status"]
@@ -799,6 +802,9 @@ export type Database = {
           last_notification_at?: string | null
           opened_at?: string | null
           personalized_body_html?: string | null
+          request_content?: string | null
+          request_files?: Json | null
+          request_title?: string | null
           rfp_id: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
@@ -820,6 +826,9 @@ export type Database = {
           last_notification_at?: string | null
           opened_at?: string | null
           personalized_body_html?: string | null
+          request_content?: string | null
+          request_files?: Json | null
+          request_title?: string | null
           rfp_id?: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
@@ -1198,19 +1207,36 @@ export type Database = {
               rfp_id: string
             }[]
           }
-      send_rfp_invitations_to_advisors: {
-        Args: {
-          advisor_type_pairs: Json
-          deadline_hours?: number
-          email_body_html?: string
-          email_subject?: string
-          project_uuid: string
-        }
-        Returns: {
-          result_invites_sent: number
-          result_rfp_id: string
-        }[]
-      }
+      send_rfp_invitations_to_advisors:
+        | {
+            Args: {
+              advisor_type_pairs: Json
+              deadline_hours?: number
+              email_body_html?: string
+              email_subject?: string
+              project_uuid: string
+            }
+            Returns: {
+              result_invites_sent: number
+              result_rfp_id: string
+            }[]
+          }
+        | {
+            Args: {
+              advisor_type_pairs: Json
+              deadline_hours?: number
+              email_body_html?: string
+              email_subject?: string
+              project_uuid: string
+              request_content?: string
+              request_files?: Json
+              request_title?: string
+            }
+            Returns: {
+              result_invites_sent: number
+              result_rfp_id: string
+            }[]
+          }
     }
     Enums: {
       app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
