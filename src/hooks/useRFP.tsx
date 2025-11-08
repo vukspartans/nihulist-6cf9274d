@@ -96,7 +96,7 @@ export const useRFP = () => {
             .invoke('send-rfp-email', {
               body: { 
                 rfp_id: result.result_rfp_id,
-                test_mode: false // Set to true to send all emails to test address
+                test_mode: true // TESTING: All emails will go to lior+nihulist@spartans.tech
               }
             })
             .then(({ data: emailData, error: emailError }) => {
