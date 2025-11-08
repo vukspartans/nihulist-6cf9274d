@@ -42,9 +42,31 @@ export const useDeclineRFP = () => {
         }
       });
 
+      console.log('[Decline] RFP invite declined successfully');
+
+      // Send email notification to entrepreneur (non-blocking)
+      console.log('[Decline] Sending email notification for invite:', rfpInviteId);
+      supabase.functions
+        .invoke('notify-rfp-declined', {
+          body: {
+            invite_id: rfpInviteId,
+            test_mode: true, // Set to false in production
+          },
+        })
+        .then(({ data: emailData, error: emailError }) => {
+          if (emailError) {
+            console.error('[Decline] Email notification failed:', emailError);
+          } else {
+            console.log('[Decline] Email notification sent:', emailData);
+          }
+        })
+        .catch((err) => {
+          console.error('[Decline] Email notification error:', err);
+        });
+
       toast({
         title: 'ההזמנה נדחתה',
-        description: 'היזם יקבל התראה על הדחייה',
+        description: 'היזם יקבל עדכון על כך',
       });
 
       return { success: true };

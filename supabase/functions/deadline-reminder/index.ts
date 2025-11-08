@@ -1,5 +1,11 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { Resend } from 'npm:resend@4.0.0';
+import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import React from 'npm:react@18.3.1';
+import { RFPDeadlineReminderEmail } from '../_shared/email-templates/rfp-deadline-reminder.tsx';
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,61 +18,165 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    console.log('[Deadline Reminder] Starting deadline reminder job');
 
-    // Find RFPs expiring in 24 hours
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const dayAfter = new Date(Date.now() + 25 * 60 * 60 * 1000);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: invites, error } = await supabase
-      .from("rfp_invites")
+    // Find invites with upcoming deadlines (24-48 hours)
+    const now = new Date();
+    const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const fortyEightHoursFromNow = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const { data: invites, error: invitesError } = await supabase
+      .from('rfp_invites')
       .select(`
         id,
         deadline_at,
-        email,
-        rfps!inner(id, subject),
-        advisors!inner(company_name)
+        advisor_type,
+        last_notification_at,
+        rfp_id,
+        advisors (
+          id,
+          company_name,
+          user_id,
+          profiles!advisors_user_id_fkey (
+            email,
+            name
+          )
+        ),
+        rfps!inner (
+          id,
+          project_id,
+          projects (
+            id,
+            name
+          )
+        )
       `)
       .in('status', ['sent', 'opened', 'in_progress'])
-      .gte('deadline_at', tomorrow.toISOString())
-      .lt('deadline_at', dayAfter.toISOString())
-      .is('last_notification_at', null);
+      .gte('deadline_at', twentyFourHoursFromNow.toISOString())
+      .lte('deadline_at', fortyEightHoursFromNow.toISOString());
 
-    if (error) {
-      console.error('[deadline-reminder] Query error:', error);
-      throw error;
+    if (invitesError) {
+      console.error('[Deadline Reminder] Error fetching invites:', invitesError);
+      throw invitesError;
     }
 
-    console.log(`[deadline-reminder] Found ${invites?.length || 0} expiring RFPs`);
+    console.log(`[Deadline Reminder] Found ${invites?.length || 0} invites with upcoming deadlines`);
 
-    const results = [];
+    let emailsSent = 0;
+    const errors: any[] = [];
+
     for (const invite of invites || []) {
-      console.log(`[deadline-reminder] Reminding ${invite.email} about RFP ${invite.rfps.id}`);
+      try {
+        const advisor = invite.advisors as any;
+        const rfp = invite.rfps as any;
+        const project = rfp.projects as any;
+        const advisorProfile = advisor.profiles as any;
 
-      // TODO: Send reminder email
-      // This would integrate with Resend or another email service
+        // Skip if already notified in the last 12 hours
+        if (invite.last_notification_at) {
+          const lastNotification = new Date(invite.last_notification_at);
+          const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+          if (lastNotification > twelveHoursAgo) {
+            console.log(`[Deadline Reminder] Skipping invite ${invite.id} - already notified recently`);
+            continue;
+          }
+        }
 
-      // Mark as notified
-      await supabase
-        .from("rfp_invites")
-        .update({ last_notification_at: new Date().toISOString() })
-        .eq("id", invite.id);
+        if (!advisorProfile?.email) {
+          console.warn(`[Deadline Reminder] No email for advisor ${advisor.id}`);
+          continue;
+        }
 
-      results.push({ invite_id: invite.id, status: 'notified' });
+        // Calculate hours remaining
+        const deadlineDate = new Date(invite.deadline_at);
+        const hoursRemaining = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+        // Submit URL - use advisor dashboard
+        const submitUrl = `https://www.nihulist.co.il/advisor-dashboard`;
+
+        // Render email
+        const html = await renderAsync(
+          React.createElement(RFPDeadlineReminderEmail, {
+            advisorCompany: advisor.company_name || 'יועץ',
+            projectName: project.name,
+            advisorType: invite.advisor_type || 'יועץ',
+            deadlineDate: invite.deadline_at,
+            hoursRemaining,
+            submitUrl,
+          })
+        );
+
+        // Send email via Resend
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'ניהוליסט <notifications@nihulist.co.il>',
+          to: [advisorProfile.email],
+          subject: `תזכורת: ${hoursRemaining} שעות נותרו להגשת הצעה - ${project.name}`,
+          html,
+        });
+
+        if (emailError) {
+          console.error(`[Deadline Reminder] Failed to send email for invite ${invite.id}:`, emailError);
+          errors.push({ invite_id: invite.id, error: emailError });
+          continue;
+        }
+
+        console.log(`[Deadline Reminder] Email sent for invite ${invite.id}:`, emailData);
+
+        // Update last notification timestamp
+        await supabase
+          .from('rfp_invites')
+          .update({ last_notification_at: now.toISOString() })
+          .eq('id', invite.id);
+
+        // Log activity
+        await supabase.from('activity_log').insert({
+          actor_id: advisor.user_id,
+          actor_type: 'system',
+          action: 'deadline_reminder_sent',
+          entity_type: 'rfp_invite',
+          entity_id: invite.id,
+          project_id: project.id,
+          meta: {
+            recipient: advisorProfile.email,
+            email_id: emailData?.id,
+            hours_remaining: hoursRemaining,
+            deadline_at: invite.deadline_at,
+          },
+        });
+
+        emailsSent++;
+      } catch (error: any) {
+        console.error(`[Deadline Reminder] Error processing invite ${invite.id}:`, error);
+        errors.push({ invite_id: invite.id, error: error.message });
+      }
     }
+
+    console.log(`[Deadline Reminder] Job complete: ${emailsSent} emails sent, ${errors.length} errors`);
 
     return new Response(
-      JSON.stringify({ success: true, notified: results.length, results }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        success: true, 
+        emails_sent: emailsSent,
+        errors_count: errors.length,
+        errors: errors.length > 0 ? errors : undefined,
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
     );
-  } catch (error) {
-    console.error('[deadline-reminder] Error:', error);
+  } catch (error: any) {
+    console.error('[Deadline Reminder] Fatal error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
     );
   }
 });
