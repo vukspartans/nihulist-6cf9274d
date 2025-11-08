@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Lock, User as UserIcon, Briefcase, Home } from "lucide-react";
+import { Building2, Mail, Lock, User as UserIcon, Briefcase, Home, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Session, User } from "@supabase/supabase-js";
 import PhoneInput from 'react-phone-number-input';
 import { ExpertiseSelector } from "@/components/ExpertiseSelector";
+import { TermsAndConditions } from "@/components/TermsAndConditions";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,9 +26,10 @@ const Auth = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const [signupStep, setSignupStep] = useState(1); // 1 = personal info, 2 = credentials
+  const [signupStep, setSignupStep] = useState(1); // 1 = personal info, 2 = credentials, 3 = ToS
   const [justLoggedOut, setJustLoggedOut] = useState(false);
   const [isForcedLogin, setIsForcedLogin] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -234,6 +236,24 @@ const Auth = () => {
       setSignupStep(2);
       return;
     }
+    
+    // If in signup mode and on step 2, move to step 3 (ToS)
+    if (!isLogin && signupStep === 2) {
+      setSignupStep(3);
+      return;
+    }
+    
+    // Step 3: Validate ToS acceptance
+    if (!isLogin && signupStep === 3) {
+      if (!tosAccepted) {
+        toast({
+          title: "נדרש אישור תנאי השימוש",
+          description: "יש לאשר את תנאי השימוש כדי להמשיך",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
 
     setLoading(true);
 
@@ -265,7 +285,9 @@ const Auth = () => {
               company_name: formData.companyName,
               role: formData.role,
               position_in_office: formData.positionInOffice,
-              expertise: formData.expertise.join(',')
+              expertise: formData.expertise.join(','),
+              tos_accepted: true,
+              tos_version: '1.0'
             }
           }
         });
@@ -739,6 +761,9 @@ const Auth = () => {
               <div className={`h-2 rounded-full transition-all ${
                 signupStep === 2 ? 'bg-primary w-8' : 'bg-muted w-2'
               }`} />
+              <div className={`h-2 rounded-full transition-all ${
+                signupStep === 3 ? 'bg-primary w-8' : 'bg-muted w-2'
+              }`} />
             </div>
           )}
 
@@ -898,7 +923,7 @@ const Auth = () => {
               <div className="space-y-4">
                 {/* Step 2: Login Credentials */}
                 <div className="bg-muted/30 p-4 rounded-lg">
-                  <p className="text-sm text-center">שלב 2 מתוך 2: פרטי התחברות</p>
+                  <p className="text-sm text-center">שלב 2 מתוך 3: פרטי התחברות</p>
                 </div>
 
                 <div className="space-y-2">
@@ -944,12 +969,46 @@ const Auth = () => {
                     variant="premium"
                     disabled={loading || !isStep2Valid()}
                   >
-                    {loading ? "מתבצע..." : "הצטרפות למערכת"}
+                    {loading ? "מתבצע..." : "המשך לתנאי שימוש"}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setSignupStep(1)}
+                    className="px-4"
+                    disabled={loading}
+                  >
+                    חזרה
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!isLogin && signupStep === 3 && (
+              <div className="space-y-4">
+                {/* Step 3: Terms and Conditions */}
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <p className="text-sm text-center">שלב 3 מתוך 3: תנאי שימוש</p>
+                </div>
+
+                <TermsAndConditions 
+                  accepted={tosAccepted}
+                  onAcceptChange={setTosAccepted}
+                />
+
+                <div className="flex gap-2">
+                  <Button 
+                    type="submit" 
+                    className="flex-1 h-11 text-base font-medium" 
+                    variant="premium"
+                    disabled={loading || !tosAccepted}
+                  >
+                    {loading ? "מתבצע..." : "השלם הרשמה"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSignupStep(2)}
                     className="px-4"
                     disabled={loading}
                   >

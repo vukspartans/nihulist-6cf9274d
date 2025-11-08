@@ -326,6 +326,8 @@ export type Database = {
           name: string | null
           phone: string | null
           role: string | null
+          tos_accepted_at: string | null
+          tos_version: string | null
           updated_at: string
           user_id: string
         }
@@ -340,6 +342,8 @@ export type Database = {
           name?: string | null
           phone?: string | null
           role?: string | null
+          tos_accepted_at?: string | null
+          tos_version?: string | null
           updated_at?: string
           user_id: string
         }
@@ -354,6 +358,8 @@ export type Database = {
           name?: string | null
           phone?: string | null
           role?: string | null
+          tos_accepted_at?: string | null
+          tos_version?: string | null
           updated_at?: string
           user_id?: string
         }

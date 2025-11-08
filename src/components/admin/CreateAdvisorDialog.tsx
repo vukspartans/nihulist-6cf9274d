@@ -59,6 +59,8 @@ export function CreateAdvisorDialog({ open, onOpenChange }: CreateAdvisorDialogP
           phone,
           company_name: companyName,
           role: "advisor",
+          tos_accepted: true,
+          tos_version: '1.0'
         },
       });
 

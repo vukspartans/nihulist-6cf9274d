@@ -42,6 +42,8 @@ export function CreateEntrepreneurDialog({ open, onOpenChange }: CreateEntrepren
           phone,
           company_name: companyName,
           role: "entrepreneur",
+          tos_accepted: true,
+          tos_version: '1.0'
         },
       });
 
