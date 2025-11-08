@@ -193,6 +193,26 @@ export const useProposalSubmit = () => {
       queryClient.invalidateQueries({ queryKey: ['rfp-invites', data.advisorId] });
       queryClient.invalidateQueries({ queryKey: ['activity-log', data.projectId] });
 
+      // Send email notification to entrepreneur (non-blocking)
+      console.log('[Proposal Submit] Sending email notification for proposal:', proposal.id);
+      supabase.functions
+        .invoke('notify-proposal-submitted', {
+          body: {
+            proposal_id: proposal.id,
+            test_mode: true, // Set to false in production
+          },
+        })
+        .then(({ data: emailData, error: emailError }) => {
+          if (emailError) {
+            console.error('[Proposal Submit] Email notification failed:', emailError);
+          } else {
+            console.log('[Proposal Submit] Email notification sent:', emailData);
+          }
+        })
+        .catch((err) => {
+          console.error('[Proposal Submit] Email notification error:', err);
+        });
+
       return { success: true, proposalId: proposal.id };
     } catch (error: any) {
       console.error('Error submitting proposal:', error);

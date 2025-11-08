@@ -598,12 +598,14 @@ export type Database = {
       proposals: {
         Row: {
           advisor_id: string
+          advisor_notified_at: string | null
           ai_flags: Json | null
           amended_from_id: string | null
           attachment_url: string | null
           conditions_json: Json | null
           currency: string | null
           declaration_text: string | null
+          entrepreneur_notified_at: string | null
           files: Json | null
           id: string
           price: number
@@ -623,12 +625,14 @@ export type Database = {
         }
         Insert: {
           advisor_id: string
+          advisor_notified_at?: string | null
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
           declaration_text?: string | null
+          entrepreneur_notified_at?: string | null
           files?: Json | null
           id?: string
           price: number
@@ -648,12 +652,14 @@ export type Database = {
         }
         Update: {
           advisor_id?: string
+          advisor_notified_at?: string | null
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
           declaration_text?: string | null
+          entrepreneur_notified_at?: string | null
           files?: Json | null
           id?: string
           price?: number

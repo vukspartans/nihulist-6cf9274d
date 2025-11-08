@@ -85,6 +85,27 @@ export const useProposalApproval = () => {
         description: 'היועץ נוסף לפרויקט',
       });
 
+      // Send email notification to advisor (non-blocking)
+      console.log('[Approval] Sending email notification for proposal:', data.proposalId);
+      supabase.functions
+        .invoke('notify-proposal-approved', {
+          body: {
+            proposal_id: data.proposalId,
+            entrepreneur_notes: data.notes,
+            test_mode: true, // Set to false in production
+          },
+        })
+        .then(({ data: emailData, error: emailError }) => {
+          if (emailError) {
+            console.error('[Approval] Email notification failed:', emailError);
+          } else {
+            console.log('[Approval] Email notification sent:', emailData);
+          }
+        })
+        .catch((err) => {
+          console.error('[Approval] Email notification error:', err);
+        });
+
       // Invalidate relevant caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-advisors', data.projectId] });
@@ -146,6 +167,27 @@ export const useProposalApproval = () => {
       });
 
       queryClient.invalidateQueries({ queryKey: ['proposals', projectId] });
+
+      // Send email notification to advisor (non-blocking)
+      console.log('[Rejection] Sending email notification for proposal:', proposalId);
+      supabase.functions
+        .invoke('notify-proposal-rejected', {
+          body: {
+            proposal_id: proposalId,
+            rejection_reason: reason,
+            test_mode: true, // Set to false in production
+          },
+        })
+        .then(({ data: emailData, error: emailError }) => {
+          if (emailError) {
+            console.error('[Rejection] Email notification failed:', emailError);
+          } else {
+            console.log('[Rejection] Email notification sent:', emailData);
+          }
+        })
+        .catch((err) => {
+          console.error('[Rejection] Email notification error:', err);
+        });
 
       toast({
         title: 'הצעה נדחתה',
