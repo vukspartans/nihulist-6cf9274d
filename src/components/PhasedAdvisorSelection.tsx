@@ -50,50 +50,16 @@ export const PhasedAdvisorSelection = ({
     ]));
   }, [data, projectType]);
 
-  // Auto-select Phase 1 advisors when project type is available (only once)
-  useEffect(() => {
-    if (data && projectType && !hasAutoSelected) {
-      const phase1Advisors = displayedAdvisors.filter(advisor => 
-        getAdvisorPhase(projectType, advisor) === 1
-      );
-      
-      if (phase1Advisors.length > 0) {
-        // Check if all Phase 1 advisors are already selected (using canonical comparison)
-        const canonicalSelectedSet = new Set(selectedAdvisors.map(canonicalizeAdvisor));
-        const missingPhase1 = phase1Advisors.filter(
-          advisor => !canonicalSelectedSet.has(canonicalizeAdvisor(advisor))
-        );
-        
-        // Only auto-select if there are missing Phase 1 advisors
-        if (missingPhase1.length > 0) {
-          // Merge existing selections with Phase 1 advisors (all canonicalized)
-          const allCanonical = new Set([
-            ...selectedAdvisors.map(canonicalizeAdvisor),
-            ...phase1Advisors.map(canonicalizeAdvisor)
-          ]);
-          onAdvisorsChange(Array.from(allCanonical));
-        }
-        
-        setHasAutoSelected(true);
-      }
-    }
-  }, [data, projectType, hasAutoSelected, displayedAdvisors]);
 
   useEffect(() => {
     if (data && projectType) {
       const result = validateAdvisorSelection(projectType, selectedAdvisors);
       setValidation(result);
       
-      // Consider valid if Phase 1 is complete (using canonical comparison)
-      const phase1Advisors = displayedAdvisors.filter(advisor => 
-        getAdvisorPhase(projectType, advisor) === 1
-      );
-      const canonicalSelectedSet = new Set(selectedAdvisors.map(canonicalizeAdvisor));
-      const phase1Complete = phase1Advisors.every(advisor => 
-        canonicalSelectedSet.has(canonicalizeAdvisor(advisor))
-      );
+      // Consider valid if at least one advisor is selected
+      const isValid = selectedAdvisors.length >= 1;
       
-      onValidationChange(phase1Complete, result);
+      onValidationChange(isValid, result);
     }
   }, [data, projectType, selectedAdvisors, displayedAdvisors]);
 
@@ -364,14 +330,18 @@ export const PhasedAdvisorSelection = ({
           )}
 
           {/* Summary Alert */}
-          {selectedAdvisors.length > 0 && (
+          {selectedAdvisors.length > 0 ? (
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                סה"כ {selectedAdvisors.length} יועצים נבחרו
-                {getPhaseProgress(1).selected === getPhaseProgress(1).total && 
-                  getPhaseProgress(1).total > 0 && 
-                  ' • שלב 1 הושלם ✓'}
+                סה"כ {selectedAdvisors.length} יועצים נבחרו • מוכן להמשך ✓
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                יש לבחור לפחות יועץ אחד כדי להמשיך
               </AlertDescription>
             </Alert>
           )}
