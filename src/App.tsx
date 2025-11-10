@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
-import { ToSAcceptanceModal } from "@/components/ToSAcceptanceModal";
 import { PasswordChangeModal } from "@/components/PasswordChangeModal";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -59,7 +58,6 @@ const AppContent = () => {
           }}
         />
       )}
-      <ToSAcceptanceModal />
       <TooltipProvider>
         <ErrorBoundary>
           <Toaster />
