@@ -32,8 +32,10 @@ const AdminLogin = () => {
 
   // Redirect if already admin and handle password recovery
   useEffect(() => {
+    // Parse recovery type from both query string and hash
     const urlParams = new URLSearchParams(window.location.search);
-    const type = urlParams.get('type');
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+    const type = urlParams.get('type') || hashParams.get('type');
     
     // If this is a recovery URL, prioritize showing password reset
     if (type === 'recovery') {

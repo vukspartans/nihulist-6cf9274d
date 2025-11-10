@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -63,6 +63,7 @@ const AppContent = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <RecoveryDeepLinkHandler />
             <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/for-entrepreneurs" element={<ForEntrepreneurs />} />
@@ -150,6 +151,21 @@ const AppContent = () => {
       </TooltipProvider>
     </>
   );
+};
+
+const RecoveryDeepLinkHandler = () => {
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if the URL hash contains type=recovery
+    if (window.location.hash.includes('type=recovery') && !pathname.startsWith('/heyadmin/login')) {
+      console.log('Recovery deep-link detected, redirecting to /heyadmin/login');
+      navigate('/heyadmin/login' + search + window.location.hash, { replace: true });
+    }
+  }, [pathname, search, navigate]);
+
+  return null;
 };
 
 const App = () => (
