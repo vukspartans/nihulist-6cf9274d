@@ -746,12 +746,12 @@ const AdvisorDashboard = () => {
                       <div className="flex gap-2">
                         <Button 
                           variant="outline" 
-                          onClick={() => window.open(`/rfp-details/${invite.rfp_id}`, '_blank')}
+                          onClick={() => navigate(`/rfp-details/${invite.rfp_id}`)}
                         >
                           צפייה בפרטים
                         </Button>
                         {canSubmitProposal(invite.status) && (
-                          <Button onClick={() => window.location.href = `/submit-proposal/${invite.rfp_id}`}>
+                          <Button onClick={() => navigate(`/submit-proposal/${invite.rfp_id}`)}>
                             הגשת הצעת מחיר
                           </Button>
                         )}
