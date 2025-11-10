@@ -31,6 +31,7 @@ import ProjectsManagement from "./pages/admin/ProjectsManagement";
 import RFPsManagement from "./pages/admin/RFPsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const AppContent = () => {
           <Sonner />
           <BrowserRouter>
             <RecoveryDeepLinkHandler />
+            <AuthEventRouter />
             <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/for-entrepreneurs" element={<ForEntrepreneurs />} />
@@ -164,6 +166,22 @@ const RecoveryDeepLinkHandler = () => {
       navigate('/heyadmin/login' + search + window.location.hash, { replace: true });
     }
   }, [pathname, search, navigate]);
+
+  return null;
+};
+
+const AuthEventRouter = () => {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' && !pathname.startsWith('/heyadmin/login')) {
+        navigate('/heyadmin/login?type=recovery', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, pathname]);
 
   return null;
 };
