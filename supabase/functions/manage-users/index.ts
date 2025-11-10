@@ -115,14 +115,15 @@ serve(async (req) => {
       console.log('User created:', newUser.user.id);
 
       // Create profile
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: newUser.user.id,
-          name: name || '',
-          phone: phone || null,
-          role: 'entrepreneur', // Default role
-        });
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        user_id: newUser.user.id,
+        email: email,
+        name: name || '',
+        phone: phone || null,
+        role: 'entrepreneur', // Default role
+      });
 
       if (profileError) {
         console.error('Profile creation error:', profileError);

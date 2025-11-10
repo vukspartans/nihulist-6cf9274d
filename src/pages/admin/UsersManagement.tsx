@@ -51,6 +51,7 @@ const UsersManagement = () => {
     phone: "",
     roles: [] as AppRole[],
   });
+  const [isSyncingEmails, setIsSyncingEmails] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -77,17 +78,39 @@ const UsersManagement = () => {
             .select('role')
             .eq('user_id', profile.user_id);
 
-          return {
-            ...profile,
-            roles: rolesData?.map(r => r.role) || [],
-            email: profile.email || '', // Email will be fetched separately if needed
-          };
+      return {
+        ...profile,
+        roles: rolesData?.map(r => r.role) || [],
+        email: profile.email || '(אימייל חסר)',
+      };
         })
       );
 
       return usersWithRoles as UserWithRoles[];
     },
   });
+
+  const syncEmailsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-user-emails');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`סונכרו ${data.synced} כתובות מייל בהצלחה${data.failed > 0 ? `, ${data.failed} נכשלו` : ''}`);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`שגיאה בסנכרון כתובות מייל: ${error.message}`);
+    },
+  });
+
+  const handleSyncEmails = () => {
+    setIsSyncingEmails(true);
+    syncEmailsMutation.mutate(undefined, {
+      onSettled: () => setIsSyncingEmails(false),
+    });
+  };
 
   const updateRolesMutation = useMutation({
     mutationFn: async ({ userId, roles }: { userId: string; roles: AppRole[] }) => {
@@ -305,10 +328,19 @@ const UsersManagement = () => {
               {adminTranslations.users.description}
             </p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="w-4 h-4 ml-2" />
-            {adminTranslations.users.addUser}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleSyncEmails}
+              disabled={isSyncingEmails}
+            >
+              {isSyncingEmails ? 'מסנכרן...' : 'סנכרן כתובות מייל'}
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 ml-2" />
+              {adminTranslations.users.addUser}
+            </Button>
+          </div>
         </div>
 
         <SearchBar
