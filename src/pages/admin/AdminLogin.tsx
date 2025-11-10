@@ -40,6 +40,7 @@ const AdminLogin = () => {
     // If this is a recovery URL, prioritize showing password reset
     if (type === 'recovery') {
       console.log('Recovery URL detected, setting up password reset');
+      localStorage.setItem('adminPasswordRecovery', 'true');
       
       // Set up auth state listener for password recovery
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -48,8 +49,9 @@ const AdminLogin = () => {
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Handle password recovery events
-          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && type === 'recovery')) {
+          // Handle password recovery events (check localStorage for auto-login case)
+          const isRecoveryFlow = localStorage.getItem('adminPasswordRecovery') === 'true';
+          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) {
             setIsPasswordReset(true);
             return;
           }
@@ -77,8 +79,9 @@ const AdminLogin = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle normal login
-        if (event === 'SIGNED_IN' && session?.user) {
+        // Handle normal login (but not if recovery is in progress)
+        const isRecoveryFlow = localStorage.getItem('adminPasswordRecovery') === 'true';
+        if (event === 'SIGNED_IN' && session?.user && !isRecoveryFlow) {
           navigate("/heyadmin");
         }
       }
@@ -190,7 +193,8 @@ const AdminLogin = () => {
 
       toast.success("הסיסמה עודכנה בהצלחה");
       
-      // Reset states and redirect to login
+      // Clear recovery flag and reset states
+      localStorage.removeItem('adminPasswordRecovery');
       setIsPasswordReset(false);
       setNewPassword("");
       navigate("/heyadmin/login");

@@ -15,6 +15,7 @@ import {
   Bell,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
+import { UserHeader } from "@/components/UserHeader";
 import {
   Sidebar,
   SidebarContent,
@@ -165,6 +166,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span className="absolute top-1 left-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
             </Button>
+            <UserHeader />
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-8 bg-gradient-to-br from-background via-background to-primary/[0.02] overflow-x-hidden">
