@@ -35,20 +35,48 @@ const AdminLogin = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const type = urlParams.get('type');
     
-    // Set up auth state listener for password recovery
+    // If this is a recovery URL, prioritize showing password reset
+    if (type === 'recovery') {
+      console.log('Recovery URL detected, setting up password reset');
+      
+      // Set up auth state listener for password recovery
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          console.log('Auth state change during recovery:', event);
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Handle password recovery events
+          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && type === 'recovery')) {
+            setIsPasswordReset(true);
+            return;
+          }
+        }
+      );
+
+      // Check for existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log('Checking session for recovery:', session ? 'found' : 'not found');
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // If we have a session, show reset form
+        if (session?.user) {
+          setIsPasswordReset(true);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }
+    
+    // Normal flow (not recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle password recovery events
-        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && type === 'recovery')) {
-          setIsPasswordReset(true);
-          return;
-        }
-        
         // Handle normal login
-        if (event === 'SIGNED_IN' && session?.user && !isPasswordReset && type !== 'recovery') {
+        if (event === 'SIGNED_IN' && session?.user) {
           navigate("/heyadmin");
         }
       }
@@ -58,16 +86,10 @@ const AdminLogin = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // If this is a recovery URL and we have a session, show reset form
-      if (type === 'recovery' && session?.user) {
-        setIsPasswordReset(true);
-        return;
-      }
     });
 
-    // Redirect if already admin
-    if (!authLoading && isAdmin) {
+    // Redirect if already admin (only when not in recovery mode)
+    if (!authLoading && isAdmin && type !== 'recovery') {
       navigate("/heyadmin", { replace: true });
     }
 
