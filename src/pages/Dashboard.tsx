@@ -51,12 +51,17 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
 
+  console.info('[Dashboard] Component mounted/rendered', { authLoading, hasUser: !!user, userId: user?.id });
+
   // SECURITY: Client-side role check removed - handled by RoleBasedRoute guard in App.tsx
 
   useEffect(() => {
+    console.info('[Dashboard] useEffect triggered', { authLoading, hasUser: !!user, userId: user?.id });
     if (!authLoading && user) {
-      console.info('[Dashboard] Auth ready, fetching projects for user:', user.id);
+      console.info('[Dashboard] ✅ Conditions met, fetching projects for user:', user.id);
       fetchProjects();
+    } else {
+      console.info('[Dashboard] ⏸️ Waiting for auth:', { authLoading, hasUser: !!user });
     }
   }, [user, authLoading]);
 
