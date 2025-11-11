@@ -1183,6 +1183,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      is_company_owner: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_invite_visible_to_advisor: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
