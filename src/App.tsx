@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
+import RoleBasedRoute from "@/components/RoleBasedRoute";
 import { PasswordChangeModal } from "@/components/PasswordChangeModal";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -76,7 +77,9 @@ const AppContent = () => {
               path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <Dashboard />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -84,7 +87,9 @@ const AppContent = () => {
               path="/projects/new" 
               element={
                 <ProtectedRoute>
-                  <ProjectWizard />
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <ProjectWizard />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -92,7 +97,9 @@ const AppContent = () => {
               path="/projects/:id" 
               element={
                 <ProtectedRoute>
-                  <ProjectDetail />
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <ProjectDetail />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -108,7 +115,9 @@ const AppContent = () => {
               path="/advisor-dashboard" 
               element={
                 <ProtectedRoute>
-                  <AdvisorDashboard />
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <AdvisorDashboard />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -116,7 +125,9 @@ const AppContent = () => {
               path="/advisor-profile" 
               element={
                 <ProtectedRoute>
-                  <AdvisorProfile />
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <AdvisorProfile />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -124,7 +135,9 @@ const AppContent = () => {
               path="/submit-proposal/:rfp_id" 
               element={
                 <ProtectedRoute>
-                  <SubmitProposal />
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <SubmitProposal />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -132,7 +145,9 @@ const AppContent = () => {
               path="/rfp-details/:rfp_id" 
               element={
                 <ProtectedRoute>
-                  <RFPDetails />
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <RFPDetails />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />

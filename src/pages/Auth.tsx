@@ -14,6 +14,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import PhoneInput from 'react-phone-number-input';
 import { ExpertiseSelector } from "@/components/ExpertiseSelector";
 import { TermsAndConditions } from "@/components/TermsAndConditions";
+import { getPrimaryRole, getDashboardRouteForRole, type AppRole } from '@/lib/roleNavigation';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -36,7 +37,7 @@ const Auth = () => {
     name: "",
     phone: "",
     companyName: "",
-    role: "entrepreneur" as "entrepreneur" | "advisor",
+    role: "entrepreneur" as AppRole,
     positionInOffice: "",
     expertise: [] as string[]
   });
@@ -122,29 +123,23 @@ const Auth = () => {
           }
           setTimeout(async () => {
             try {
-              // Check if user has admin role
-              const { data: roles } = await supabase
+              // SECURITY: Fetch roles from user_roles table, not profile.role
+              const { data: userRoles, error: rolesError } = await supabase
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', session.user.id);
-              const isAdmin = roles?.some(r => r.role === 'admin');
-              if (isAdmin) {
-                navigate("/heyadmin");
-                return;
-              }
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('user_id', session.user.id)
-                .single();
-              if (profile?.role === 'advisor') {
-                navigate("/advisor-dashboard");
-              } else {
-                navigate("/dashboard");
-              }
+              
+              if (rolesError) throw rolesError;
+              
+              const roles = userRoles?.map(r => r.role as AppRole) || [];
+              const primaryRole = getPrimaryRole(roles);
+              
+              // Redirect to appropriate dashboard based on role hierarchy
+              navigate(getDashboardRouteForRole(primaryRole));
             } catch (error) {
-              console.error('Error fetching profile:', error);
-              navigate("/dashboard");
+              console.error('Error fetching roles:', error);
+              // Fallback to landing page
+              navigate("/");
             }
           }, 100);
         }
@@ -192,35 +187,23 @@ const Auth = () => {
       // Normal authentication flow
       if (session?.user) {
         try {
-          // Check if user has admin role
-          const { data: roles } = await supabase
+          // SECURITY: Fetch roles from user_roles table, not profile.role
+          const { data: userRoles, error: rolesError } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', session.user.id);
           
-          const isAdmin = roles?.some(r => r.role === 'admin');
+          if (rolesError) throw rolesError;
           
-          // If admin, redirect to admin panel
-          if (isAdmin) {
-            navigate("/heyadmin");
-            return;
-          }
+          const roles = userRoles?.map(r => r.role as AppRole) || [];
+          const primaryRole = getPrimaryRole(roles);
           
-          // Otherwise check profile role
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .single();
-          
-          if (profile?.role === 'advisor') {
-            navigate("/advisor-dashboard");
-          } else {
-            navigate("/dashboard");
-          }
+          // Redirect to appropriate dashboard based on role hierarchy
+          navigate(getDashboardRouteForRole(primaryRole));
         } catch (error) {
-          console.error('Error fetching profile:', error);
-          navigate("/dashboard");
+          console.error('Error fetching roles:', error);
+          // Fallback to landing page
+          navigate("/");
         }
       }
     });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ interface RFPInvite {
 const RFPDetails = () => {
   const { rfp_id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, primaryRole } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
@@ -108,7 +109,7 @@ const RFPDetails = () => {
           description: "לא נמצא פרופיל יועץ",
           variant: "destructive",
         });
-        navigate('/advisor-profile');
+        navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
@@ -143,7 +144,7 @@ const RFPDetails = () => {
           description: "לא נמצאה הזמנה להצעת מחיר",
           variant: "destructive",
         });
-        navigate('/advisor-dashboard');
+        navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
@@ -198,7 +199,7 @@ const RFPDetails = () => {
     
     const result = await declineRFP(inviteDetails.id, reason, note);
     if (result.success) {
-      navigate('/advisor-dashboard');
+      navigate(getDashboardRouteForRole(primaryRole));
     }
   };
 
@@ -222,7 +223,7 @@ const RFPDetails = () => {
             <CardDescription>לא נמצאה הזמנה להצעת מחיר</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate('/advisor-dashboard')}>
+            <Button onClick={() => navigate(getDashboardRouteForRole(primaryRole))}>
               חזרה ללוח הבקרה
             </Button>
           </CardContent>
@@ -237,7 +238,7 @@ const RFPDetails = () => {
         <UserHeader />
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/advisor-dashboard')}
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
         >
           <ArrowLeft className="w-4 h-4 ml-2" />
           חזרה ללוח הבקרה
@@ -444,7 +445,7 @@ const RFPDetails = () => {
             )}
             <Button 
               variant="outline" 
-              onClick={() => navigate('/advisor-dashboard')}
+              onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
               size="lg"
             >
               חזרה ללוח הבקרה

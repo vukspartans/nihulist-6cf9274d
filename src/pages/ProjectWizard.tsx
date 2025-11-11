@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +35,7 @@ interface FileWithMetadata {
 export const ProjectWizard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { primaryRole } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -244,7 +247,7 @@ export const ProjectWizard = () => {
   const createAndFinish = async () => {
     const project = await createProjectInternal();
     if (project) {
-      navigate('/dashboard');
+      navigate(getDashboardRouteForRole(primaryRole));
     }
   };
 

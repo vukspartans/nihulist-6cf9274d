@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ interface AdvisorProfile {
 const SubmitProposal = () => {
   const { rfp_id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, primaryRole } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,7 @@ const SubmitProposal = () => {
           description: "לא נמצא פרופיל יועץ. אנא השלם את הפרופיל תחילה.",
           variant: "destructive",
         });
-        navigate('/advisor-profile');
+        navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
@@ -109,7 +110,7 @@ const SubmitProposal = () => {
           description: "לא נמצאה הזמנה להצעת מחיר",
           variant: "destructive",
         });
-        navigate('/advisor-dashboard');
+        navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
@@ -206,7 +207,7 @@ const SubmitProposal = () => {
             </CardHeader>
             <CardContent>
               <Button 
-                onClick={() => navigate('/advisor-dashboard')} 
+                onClick={() => navigate(getDashboardRouteForRole(primaryRole))} 
                 className="w-full"
               >
                 חזרה ללוח הבקרה
@@ -224,7 +225,7 @@ const SubmitProposal = () => {
         <UserHeader />
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/advisor-dashboard')}
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
         >
           <ArrowLeft className="w-4 h-4 ml-2" />
           חזרה

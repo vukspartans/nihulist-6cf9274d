@@ -49,24 +49,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect advisors to their dashboard
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profile?.role === 'advisor') {
-          navigate('/advisor-dashboard', { replace: true });
-        }
-      }
-    };
-    checkUserRole();
-  }, [navigate]);
+  // SECURITY: Client-side role check removed - handled by RoleBasedRoute guard in App.tsx
 
   useEffect(() => {
     fetchProjects();
