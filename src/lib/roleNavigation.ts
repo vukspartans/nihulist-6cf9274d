@@ -18,9 +18,9 @@ export const getDashboardRouteForRole = (primaryRole: AppRole | null): string =>
     case 'entrepreneur':
       return '/dashboard';
     case 'supplier':
-      return '/'; // or appropriate route for suppliers
+      return '/dashboard'; // temporary safe route until supplier dashboard exists
     default:
-      return '/';
+      return '/dashboard'; // safe fallback to entrepreneur dashboard
   }
 };
 

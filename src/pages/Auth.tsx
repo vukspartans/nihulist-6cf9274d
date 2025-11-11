@@ -32,7 +32,7 @@ const Auth = () => {
   const [justLoggedOut, setJustLoggedOut] = useState(false);
   const [isForcedLogin, setIsForcedLogin] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
-  const [fallbackTimer, setFallbackTimer] = useState<number | null>(null);
+  const [urlParsed, setUrlParsed] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -92,6 +92,9 @@ const Auth = () => {
         setFormData(prev => ({ ...prev, role: 'entrepreneur' }));
       }
     }
+    
+    // Mark URL params as parsed
+    setUrlParsed(true);
 
     // Set up auth state listener FIRST - this is critical for recovery flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -181,8 +184,12 @@ const Auth = () => {
       hasAuthUser: !!authUser, 
       isForcedLogin, 
       isPasswordReset, 
-      primaryRole 
+      primaryRole,
+      urlParsed
     });
+    
+    // Don't redirect until URL params are parsed
+    if (!urlParsed) return;
     
     // Only redirect once we have both user AND resolved primaryRole
     if (authUser && primaryRole && !isForcedLogin && !isPasswordReset) {
@@ -190,23 +197,8 @@ const Auth = () => {
       console.info('[Auth] ✅ Redirecting to:', target);
       navigate(target, { replace: true });
     }
-  }, [authUser, primaryRole, isForcedLogin, isPasswordReset, navigate]);
+  }, [authUser, primaryRole, isForcedLogin, isPasswordReset, urlParsed, navigate]);
 
-  // Safety fallback timer for when primaryRole is slow to resolve
-  useEffect(() => {
-    if (!authLoading && authUser && !isForcedLogin && !isPasswordReset && !primaryRole && !fallbackTimer) {
-      const timer = window.setTimeout(() => {
-        console.warn('[Auth] No primaryRole resolved after 1.5s, using entrepreneur dashboard fallback');
-        navigate('/dashboard', { replace: true });
-      }, 1500);
-      setFallbackTimer(timer);
-      return () => clearTimeout(timer);
-    }
-    if (fallbackTimer && (primaryRole || !authUser)) {
-      clearTimeout(fallbackTimer);
-      setFallbackTimer(null);
-    }
-  }, [authUser, authLoading, isForcedLogin, isPasswordReset, primaryRole, fallbackTimer, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

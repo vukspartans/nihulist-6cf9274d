@@ -36,8 +36,14 @@ const RoleBasedRoute = ({ children, allowedRoles, redirectTo }: RoleBasedRoutePr
     );
   }
 
+  // If no primaryRole resolved, redirect to auth
+  if (!primaryRole) {
+    console.warn('[RoleBasedRoute] No primaryRole, redirecting to auth');
+    return <Navigate to="/auth?mode=login&type=entrepreneur" replace />;
+  }
+  
   // If user doesn't have an allowed role, redirect to their appropriate dashboard
-  if (!primaryRole || !allowedRoles.includes(primaryRole)) {
+  if (!allowedRoles.includes(primaryRole)) {
     const fallback = redirectTo || getDashboardRouteForRole(primaryRole);
     console.warn('[RoleBasedRoute] Access denied, redirecting to:', fallback);
     return <Navigate to={fallback} replace />;
