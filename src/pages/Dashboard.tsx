@@ -56,13 +56,55 @@ const Dashboard = () => {
   // SECURITY: Client-side role check removed - handled by RoleBasedRoute guard in App.tsx
 
   useEffect(() => {
-    console.info('[Dashboard] useEffect triggered', { authLoading, hasUser: !!user, userId: user?.id });
-    if (!authLoading && user) {
-      console.info('[Dashboard] ✅ Conditions met, fetching projects for user:', user.id);
+    const initializeDashboard = async () => {
+      console.info('[Dashboard] useEffect triggered', { authLoading, hasUser: !!user, userId: user?.id });
+      
+      if (authLoading) {
+        console.info('[Dashboard] ⏸️ Waiting for auth to complete');
+        return;
+      }
+
+      if (!user) {
+        console.info('[Dashboard] ⏸️ No user available yet');
+        return;
+      }
+
+      // CRITICAL: Wait for Supabase client to have a valid session
+      // This ensures auth.uid() in RLS policies will work correctly
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      console.info('[Dashboard] Session check:', { 
+        hasSession: !!session, 
+        sessionUserId: session?.user?.id,
+        expectedUserId: user.id,
+        sessionMatch: session?.user?.id === user.id 
+      });
+
+      if (sessionError) {
+        console.error('[Dashboard] ❌ Session error:', sessionError);
+        toast({
+          title: "שגיאת הרשאה",
+          description: "אירעה שגיאה באימות. נא להתחבר מחדש.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!session || session.user.id !== user.id) {
+        console.warn('[Dashboard] ⚠️ Session mismatch or missing - waiting for sync');
+        // Wait a bit for session to sync and retry
+        setTimeout(() => {
+          console.info('[Dashboard] Retrying after session sync delay');
+          initializeDashboard();
+        }, 500);
+        return;
+      }
+
+      console.info('[Dashboard] ✅ Session verified, fetching projects');
       fetchProjects();
-    } else {
-      console.info('[Dashboard] ⏸️ Waiting for auth:', { authLoading, hasUser: !!user });
-    }
+    };
+
+    initializeDashboard();
   }, [user, authLoading]);
 
   const fetchProjects = async () => {
@@ -74,6 +116,13 @@ const Dashboard = () => {
     try {
       console.info('[Dashboard] Fetching projects for user:', user.id);
       
+      // Double-check session before query
+      const { data: { session } } = await supabase.auth.getSession();
+      console.info('[Dashboard] Pre-query session check:', { 
+        hasSession: !!session,
+        sessionUserId: session?.user?.id 
+      });
+      
       const { data, error } = await supabase
         .from("projects")
         .select("id, name, type, location, budget, advisors_budget, timeline_start, timeline_end, status, phase, created_at")
@@ -81,9 +130,15 @@ const Dashboard = () => {
         .neq("status", "deleted")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Dashboard] ❌ Query error:', error);
+        throw error;
+      }
       
-      console.info('[Dashboard] Projects loaded:', data?.length || 0);
+      console.info('[Dashboard] ✅ Projects loaded:', data?.length || 0, 'projects');
+      if (data && data.length > 0) {
+        console.info('[Dashboard] First project:', data[0].name);
+      }
       setProjects(data || []);
     } catch (error) {
       console.error("Error fetching projects:", error);
