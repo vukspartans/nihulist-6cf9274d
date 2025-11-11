@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getPrimaryRole } from '@/lib/roleNavigation';
+import type { AppRole } from '@/lib/roleNavigation';
 
 interface UserProfile {
   id: string;
@@ -16,8 +18,6 @@ interface UserProfile {
   requires_password_change: boolean | null;
 }
 
-type AppRole = 'admin' | 'entrepreneur' | 'advisor' | 'supplier';
-
 interface UserRole {
   id: string;
   user_id: string;
@@ -31,6 +31,7 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   roles: AppRole[];
+  primaryRole: AppRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
   isAdmin: boolean;
@@ -42,6 +43,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   roles: [],
+  primaryRole: null,
   loading: true,
   signOut: async () => {},
   isAdmin: false,
@@ -151,12 +153,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const isAdmin = roles.includes('admin');
   const hasRole = (role: AppRole) => roles.includes(role);
+  const primaryRole = getPrimaryRole(roles);
 
   const value = {
     user,
     session,
     profile,
     roles,
+    primaryRole,
     loading,
     signOut,
     isAdmin,

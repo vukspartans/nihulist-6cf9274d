@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInput from 'react-phone-number-input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
@@ -61,7 +62,7 @@ interface AdvisorProfile {
 }
 
 const AdvisorProfile = () => {
-  const { user } = useAuth();
+  const { user, primaryRole } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -151,7 +152,8 @@ const AdvisorProfile = () => {
         description: "הפרטים שלך עודכנו במערכת",
       });
 
-      navigate('/advisor-dashboard');
+      // SECURITY: Use primaryRole-based navigation, not hardcoded
+      navigate(getDashboardRouteForRole(primaryRole));
     } catch (error) {
       toast({
         title: "שגיאה",
@@ -233,7 +235,7 @@ const AdvisorProfile = () => {
       <div className="flex justify-between items-center p-6 border-b">
         <Button 
           variant="outline" 
-          onClick={() => navigate('/advisor-dashboard')}
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
           className="gap-2"
         >
           <ArrowRight className="h-4 w-4" />

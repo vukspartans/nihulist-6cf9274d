@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
@@ -79,7 +80,7 @@ interface AdvisorProfile {
 }
 
 const Profile = () => {
-  const { user, profile: authProfile } = useAuth();
+  const { user, profile: authProfile, primaryRole } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -609,9 +610,9 @@ const Profile = () => {
   };
 
 
+  // SECURITY: Use primaryRole from user_roles table, not profile.role
   const getDashboardRoute = () => {
-    const userRole = authProfile?.role || profile?.role;
-    return userRole === 'advisor' ? '/advisor-dashboard' : '/dashboard';
+    return getDashboardRouteForRole(primaryRole);
   };
 
   const getRoleDisplay = (role: string | null) => {

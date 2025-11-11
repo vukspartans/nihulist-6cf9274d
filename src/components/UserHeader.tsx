@@ -13,6 +13,7 @@ import { User, LogOut, KeyRound } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordChangeModal } from '@/components/PasswordChangeModal';
+import { getLoginRouteForRole } from '@/lib/roleNavigation';
 
 interface LocalProfile {
   name: string | null;
@@ -20,7 +21,7 @@ interface LocalProfile {
 }
 
 export const UserHeader = () => {
-  const { user, signOut, roles, isAdmin, profile: authProfile } = useAuth();
+  const { user, signOut, primaryRole } = useAuth();
   const navigate = useNavigate();
   const [localProfile, setLocalProfile] = useState<LocalProfile | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -53,21 +54,8 @@ export const UserHeader = () => {
 
   const handleSignOut = async () => {
     try {
-      // Capture role information BEFORE any state changes
-      const userIsAdmin = isAdmin;
-      const userIsAdvisor = authProfile?.role === 'advisor'; // Check authProfile.role from useAuth
-      const isAdminRoute = window.location.pathname.startsWith('/heyadmin');
-      
-      console.log('Logout - userIsAdmin:', userIsAdmin, 'userIsAdvisor:', userIsAdvisor, 'authProfile.role:', authProfile?.role);
-      
-      // Determine redirect target based on captured role info
-      let redirectTarget = '/auth?mode=login&type=entrepreneur&logged_out=1';
-      
-      if (isAdminRoute || userIsAdmin) {
-        redirectTarget = '/heyadmin/login';
-      } else if (userIsAdvisor) {
-        redirectTarget = '/auth?mode=login&type=advisor&logged_out=1';
-      }
+      // SECURITY: Use primaryRole from user_roles table via useAuth
+      const redirectTarget = getLoginRouteForRole(primaryRole);
       
       // Mark that we just logged out to prevent redirect loop
       sessionStorage.setItem('just_logged_out', 'true');

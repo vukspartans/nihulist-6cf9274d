@@ -17,11 +17,14 @@ import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog'
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
+import { getDashboardRouteForRole } from '@/lib/roleNavigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { primaryRole } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -185,7 +188,7 @@ export const ProjectDetail = () => {
         <p className="text-muted-foreground mb-4">
           פרויקט עם מזהה {id} לא נמצא או שאין לך הרשאה לצפות בו.
         </p>
-        <Button onClick={() => navigate('/dashboard')}>
+        <Button onClick={() => navigate(getDashboardRouteForRole(primaryRole))}>
           חזרה לדשבורד
         </Button>
       </div>
@@ -215,7 +218,7 @@ export const ProjectDetail = () => {
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
           className="flex items-center gap-2"
         >
           <ArrowRight className="w-4 h-4" />
