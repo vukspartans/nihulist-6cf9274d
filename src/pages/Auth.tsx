@@ -175,9 +175,17 @@ const Auth = () => {
 
   // Global redirect effect using useAuth state
   useEffect(() => {
+    console.info('[Auth] Redirect effect check:', { 
+      authLoading, 
+      hasAuthUser: !!authUser, 
+      isForcedLogin, 
+      isPasswordReset, 
+      primaryRole 
+    });
+    
     if (!authLoading && authUser && !isForcedLogin && !isPasswordReset) {
       const target = getDashboardRouteForRole(primaryRole);
-      console.info('[Auth] Redirecting based on primaryRole:', primaryRole, '→', target);
+      console.info('[Auth] ✅ Redirecting to:', target);
       navigate(target, { replace: true });
     }
   }, [authUser, authLoading, primaryRole, isForcedLogin, isPasswordReset, navigate]);
