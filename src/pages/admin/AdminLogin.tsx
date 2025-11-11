@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Shield, Loader2, Lock, ArrowLeft } from "lucide-react";
+import { Shield, Loader2, Lock, ArrowLeft, Home } from "lucide-react";
 import { z } from "zod";
 import { adminTranslations } from "@/constants/adminTranslations";
 import type { Session, User } from "@supabase/supabase-js";
@@ -16,6 +16,16 @@ const loginSchema = z.object({
   email: z.string().email(adminTranslations.login.invalidEmail),
   password: z.string().min(6, adminTranslations.login.passwordTooShort),
 });
+
+const BackToHome = () => (
+  <Link 
+    to="/" 
+    className="absolute top-6 left-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+  >
+    <Home className="w-4 h-4" />
+    <span>חזרה לעמוד הראשי</span>
+  </Link>
+);
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -208,7 +218,8 @@ const AdminLogin = () => {
   // Password reset form
   if (isPasswordReset) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+      <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+        <BackToHome />
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -256,7 +267,8 @@ const AdminLogin = () => {
   // Forgot password form
   if (isForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+      <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+        <BackToHome />
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -334,7 +346,8 @@ const AdminLogin = () => {
 
   // Login form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4" dir="rtl">
+      <BackToHome />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
