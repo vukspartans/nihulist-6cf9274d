@@ -15,6 +15,7 @@ import PhoneInput from 'react-phone-number-input';
 import { ExpertiseSelector } from "@/components/ExpertiseSelector";
 import { TermsAndConditions } from "@/components/TermsAndConditions";
 import { getPrimaryRole, getDashboardRouteForRole, type AppRole } from '@/lib/roleNavigation';
+import { useAuth } from '@/hooks/useAuth';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -31,6 +32,7 @@ const Auth = () => {
   const [justLoggedOut, setJustLoggedOut] = useState(false);
   const [isForcedLogin, setIsForcedLogin] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [fallbackTimer, setFallbackTimer] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -44,6 +46,7 @@ const Auth = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user: authUser, loading: authLoading, primaryRole } = useAuth();
 
   useEffect(() => {
     console.log("Auth component mounting, checking URL params");
@@ -121,27 +124,7 @@ const Auth = () => {
             setJustLoggedOut(false);
             sessionStorage.removeItem('just_logged_out');
           }
-          setTimeout(async () => {
-            try {
-              // SECURITY: Fetch roles from user_roles table, not profile.role
-              const { data: userRoles, error: rolesError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id);
-              
-              if (rolesError) throw rolesError;
-              
-              const roles = userRoles?.map(r => r.role as AppRole) || [];
-              const primaryRole = getPrimaryRole(roles);
-              
-              // Redirect to appropriate dashboard based on role hierarchy
-              navigate(getDashboardRouteForRole(primaryRole));
-            } catch (error) {
-              console.error('Error fetching roles:', error);
-              // Fallback to landing page
-              navigate("/");
-            }
-          }, 100);
+          // Note: Redirect now handled by global auth effect below
         }
       }
     );
@@ -184,32 +167,36 @@ const Auth = () => {
         return;
       }
       
-      // Normal authentication flow
-      if (session?.user) {
-        try {
-          // SECURITY: Fetch roles from user_roles table, not profile.role
-          const { data: userRoles, error: rolesError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id);
-          
-          if (rolesError) throw rolesError;
-          
-          const roles = userRoles?.map(r => r.role as AppRole) || [];
-          const primaryRole = getPrimaryRole(roles);
-          
-          // Redirect to appropriate dashboard based on role hierarchy
-          navigate(getDashboardRouteForRole(primaryRole));
-        } catch (error) {
-          console.error('Error fetching roles:', error);
-          // Fallback to landing page
-          navigate("/");
-        }
-      }
+      // Note: Redirect now handled by global auth effect below
     });
 
     return () => subscription.unsubscribe();
   }, [navigate, isPasswordReset]);
+
+  // Global redirect effect using useAuth state
+  useEffect(() => {
+    if (!authLoading && authUser && !isForcedLogin && !isPasswordReset) {
+      const target = getDashboardRouteForRole(primaryRole);
+      console.info('[Auth] Redirecting based on primaryRole:', primaryRole, '→', target);
+      navigate(target, { replace: true });
+    }
+  }, [authUser, authLoading, primaryRole, isForcedLogin, isPasswordReset, navigate]);
+
+  // Safety fallback timer for when primaryRole is slow to resolve
+  useEffect(() => {
+    if (!authLoading && authUser && !isForcedLogin && !isPasswordReset && !primaryRole && !fallbackTimer) {
+      const timer = window.setTimeout(() => {
+        console.warn('[Auth] No primaryRole resolved after 1.5s, using entrepreneur dashboard fallback');
+        navigate('/dashboard', { replace: true });
+      }, 1500);
+      setFallbackTimer(timer);
+      return () => clearTimeout(timer);
+    }
+    if (fallbackTimer && (primaryRole || !authUser)) {
+      clearTimeout(fallbackTimer);
+      setFallbackTimer(null);
+    }
+  }, [authUser, authLoading, isForcedLogin, isPasswordReset, primaryRole, fallbackTimer, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -489,6 +476,29 @@ const Auth = () => {
             </form>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Show spinner when checking auth or after successful login
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">בודק אימות...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authUser && !isForcedLogin && !isPasswordReset) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">עובר ללוח הבקרה...</p>
+        </div>
       </div>
     );
   }
