@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TermsAndConditions } from "@/components/TermsAndConditions";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -64,6 +64,9 @@ export const ToSAcceptanceModal = () => {
           <DialogTitle className="text-2xl font-bold text-center text-primary">
             תנאי שימוש - עדכון חשבון
           </DialogTitle>
+          <DialogDescription className="text-center text-sm">
+            אישור תנאי השימוש נדרש להמשך השימוש במערכת
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 text-right">

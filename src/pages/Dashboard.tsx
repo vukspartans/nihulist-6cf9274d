@@ -14,6 +14,7 @@ import { ProjectFilters } from "@/components/ProjectFilters";
 import { UserHeader } from "@/components/UserHeader";
 import { ProjectSummary } from "@/types/project";
 import Logo from "@/components/Logo";
+import { useAuth } from "@/hooks/useAuth";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -45,25 +46,29 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [loading, setLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
 
   // SECURITY: Client-side role check removed - handled by RoleBasedRoute guard in App.tsx
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!authLoading && user) {
+      console.info('[Dashboard] Auth ready, fetching projects for user:', user.id);
+      fetchProjects();
+    }
+  }, [user, authLoading]);
 
   const fetchProjects = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
+    if (!user) {
+      console.warn('[Dashboard] No user available for fetching projects');
+      return;
+    }
 
+    try {
+      console.info('[Dashboard] Fetching projects for user:', user.id);
+      
       const { data, error } = await supabase
         .from("projects")
         .select("id, name, type, location, budget, advisors_budget, timeline_start, timeline_end, status, phase, created_at")
@@ -72,6 +77,8 @@ const Dashboard = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      console.info('[Dashboard] Projects loaded:', data?.length || 0);
       setProjects(data || []);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -81,7 +88,7 @@ const Dashboard = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setProjectsLoading(false);
     }
   };
 
@@ -157,7 +164,7 @@ const Dashboard = () => {
     navigate(`/projects/${projectId}?edit=true`);
   };
 
-  if (loading) {
+  if (authLoading || projectsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <div className="text-center">

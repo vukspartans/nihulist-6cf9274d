@@ -8,9 +8,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, profile, loading, roles } = useAuth();
+  const { user, profile, loading } = useAuth();
 
-  if (loading || (user && roles.length === 0)) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <div className="text-center">
