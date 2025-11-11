@@ -174,6 +174,8 @@ const Auth = () => {
   }, [navigate, isPasswordReset]);
 
   // Global redirect effect using useAuth state
+  // Redirect as soon as user is authenticated, don't wait for loading to finish
+  // The RoleBasedRoute guard will handle loading states on the target page
   useEffect(() => {
     console.info('[Auth] Redirect effect check:', { 
       authLoading, 
@@ -183,12 +185,12 @@ const Auth = () => {
       primaryRole 
     });
     
-    if (!authLoading && authUser && !isForcedLogin && !isPasswordReset) {
+    if (authUser && !isForcedLogin && !isPasswordReset) {
       const target = getDashboardRouteForRole(primaryRole);
       console.info('[Auth] ✅ Redirecting to:', target);
       navigate(target, { replace: true });
     }
-  }, [authUser, authLoading, primaryRole, isForcedLogin, isPasswordReset, navigate]);
+  }, [authUser, primaryRole, isForcedLogin, isPasswordReset, navigate]);
 
   // Safety fallback timer for when primaryRole is slow to resolve
   useEffect(() => {
