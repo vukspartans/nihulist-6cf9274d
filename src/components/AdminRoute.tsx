@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getLoginRouteForRole } from "@/lib/roleNavigation";
 import { Loader2 } from "lucide-react";
 
 interface AdminRouteProps {
@@ -7,7 +8,7 @@ interface AdminRouteProps {
 }
 
 const AdminRoute = ({ children }: AdminRouteProps) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, primaryRole } = useAuth();
 
   console.log('AdminRoute - user:', user?.id, 'loading:', loading, 'isAdmin:', isAdmin);
 
@@ -25,8 +26,9 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!isAdmin) {
-    console.log('AdminRoute - User is not admin, redirecting to login');
-    return <Navigate to="/heyadmin/login" replace />;
+    console.log('AdminRoute - User is not admin, redirecting to role-based login');
+    const loginRoute = getLoginRouteForRole(primaryRole);
+    return <Navigate to={loginRoute} replace />;
   }
 
   console.log('AdminRoute - User is admin, rendering children');

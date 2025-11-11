@@ -109,18 +109,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST - synchronous to avoid deadlocks
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        console.log('[useAuth] Auth event:', event, 'session:', !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch profile and roles when user logs in
         if (session?.user) {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            fetchRoles(session.user.id)
-          ]);
+          // Start loading immediately
+          setProfileLoading(true);
+          setRolesLoading(true);
+          // Defer Supabase calls to avoid deadlock
+          setTimeout(() => {
+            Promise.all([
+              fetchProfile(session.user!.id),
+              fetchRoles(session.user!.id)
+            ]).catch((err) => {
+              console.error('[useAuth] Deferred auth fetch error:', err);
+              setProfileLoading(false);
+              setRolesLoading(false);
+            });
+          }, 0);
         } else {
           setProfile(null);
           setRoles([]);
@@ -131,15 +141,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[useAuth] Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        await Promise.all([
+        setProfileLoading(true);
+        setRolesLoading(true);
+        Promise.all([
           fetchProfile(session.user.id),
           fetchRoles(session.user.id)
-        ]);
+        ]).catch((err) => {
+          console.error('[useAuth] Initial session fetch error:', err);
+          setProfileLoading(false);
+          setRolesLoading(false);
+        });
       } else {
         setProfileLoading(false);
         setRolesLoading(false);

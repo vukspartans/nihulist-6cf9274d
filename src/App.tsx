@@ -176,9 +176,14 @@ const RecoveryDeepLinkHandler = () => {
 
   useEffect(() => {
     // Check if the URL hash contains type=recovery
-    if (window.location.hash.includes('type=recovery') && !pathname.startsWith('/heyadmin/login')) {
-      console.log('Recovery deep-link detected, redirecting to /heyadmin/login');
-      navigate('/heyadmin/login' + search + window.location.hash, { replace: true });
+    if (window.location.hash.includes('type=recovery')) {
+      if (pathname.startsWith('/heyadmin')) {
+        console.log('[Recovery] Admin recovery deep-link detected');
+        navigate('/heyadmin/login?type=recovery', { replace: true });
+      } else {
+        console.log('[Recovery] Non-admin recovery deep-link detected');
+        navigate('/auth?type=recovery', { replace: true });
+      }
     }
   }, [pathname, search, navigate]);
 
@@ -191,8 +196,14 @@ const AuthEventRouter = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' && !pathname.startsWith('/heyadmin/login')) {
-        navigate('/heyadmin/login?type=recovery', { replace: true });
+      if (event === 'PASSWORD_RECOVERY') {
+        if (pathname.startsWith('/heyadmin')) {
+          console.log('[AuthEvent] Admin password recovery');
+          navigate('/heyadmin/login?type=recovery', { replace: true });
+        } else {
+          console.log('[AuthEvent] Non-admin password recovery');
+          navigate('/auth?type=recovery', { replace: true });
+        }
       }
     });
     return () => subscription.unsubscribe();
