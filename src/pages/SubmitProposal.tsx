@@ -69,14 +69,45 @@ const SubmitProposal = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch advisor profile
-      const { data: advisor } = await supabase
+      // Step 1: Verify user is authenticated
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast({
+          title: "שגיאה",
+          description: "לא נמצא משתמש מחובר",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+
+      // Step 2: Wait for valid session to ensure auth.uid() is set for RLS
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.id !== authUser.id) {
+        console.warn('[SubmitProposal] Session mismatch, retrying...', {
+          userId: authUser.id,
+          sessionUserId: session?.user?.id || 'null',
+        });
+        // Retry after a short delay
+        setTimeout(fetchData, 500);
+        return;
+      }
+
+      console.log('[SubmitProposal] Session verified:', {
+        userId: authUser.id,
+        sessionUserId: session.user.id,
+        rfpId: rfp_id,
+      });
+
+      // Step 3: Fetch advisor profile
+      const { data: advisor, error: advisorError } = await supabase
         .from('advisors')
         .select('id, company_name')
-        .eq('user_id', user?.id)
+        .eq('user_id', authUser.id)
         .single();
 
-      if (!advisor) {
+      if (advisorError || !advisor) {
+        console.error('[SubmitProposal] Advisor fetch error:', advisorError);
         toast({
           title: "שגיאה",
           description: "לא נמצא פרופיל יועץ. אנא השלם את הפרופיל תחילה.",
@@ -88,8 +119,8 @@ const SubmitProposal = () => {
 
       setAdvisorProfile(advisor);
 
-      // Fetch RFP details
-      const { data: rfp } = await supabase
+      // Step 4: Fetch RFP details
+      const { data: rfp, error: rfpError } = await supabase
         .from('rfp_invites')
         .select(`
           rfp_id,
@@ -104,7 +135,19 @@ const SubmitProposal = () => {
         .eq('advisor_id', advisor.id)
         .single();
 
+      if (rfpError) {
+        console.error('[SubmitProposal] RFP fetch error:', rfpError);
+        toast({
+          title: "שגיאה",
+          description: "לא נמצאה הזמנה להצעת מחיר. ייתכן שאין לך הרשאות לצפות בבקשה זו.",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+
       if (!rfp) {
+        console.warn('[SubmitProposal] No RFP found (null result)');
         toast({
           title: "שגיאה",
           description: "לא נמצאה הזמנה להצעת מחיר",
@@ -116,6 +159,7 @@ const SubmitProposal = () => {
 
       setRfpDetails(rfp.rfps as any);
     } catch (error) {
+      console.error('[SubmitProposal] Unexpected error:', error);
       toast({
         title: "שגיאה",
         description: "אירעה שגיאה בטעינת הנתונים",

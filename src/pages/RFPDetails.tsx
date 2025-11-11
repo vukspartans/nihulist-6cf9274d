@@ -96,14 +96,45 @@ const RFPDetails = () => {
 
   const fetchRFPDetails = async () => {
     try {
-      // Get advisor profile first
-      const { data: advisor } = await supabase
+      // Step 1: Verify user is authenticated
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast({
+          title: "שגיאה",
+          description: "לא נמצא משתמש מחובר",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+
+      // Step 2: Wait for valid session to ensure auth.uid() is set for RLS
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.id !== authUser.id) {
+        console.warn('[RFPDetails] Session mismatch, retrying...', {
+          userId: authUser.id,
+          sessionUserId: session?.user?.id || 'null',
+        });
+        // Retry after a short delay
+        setTimeout(fetchRFPDetails, 500);
+        return;
+      }
+
+      console.log('[RFPDetails] Session verified:', {
+        userId: authUser.id,
+        sessionUserId: session.user.id,
+        rfpId: rfp_id,
+      });
+
+      // Step 3: Get advisor profile
+      const { data: advisor, error: advisorError } = await supabase
         .from('advisors')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', authUser.id)
         .single();
 
-      if (!advisor) {
+      if (advisorError || !advisor) {
+        console.error('[RFPDetails] Advisor fetch error:', advisorError);
         toast({
           title: "שגיאה",
           description: "לא נמצא פרופיל יועץ",
@@ -115,8 +146,8 @@ const RFPDetails = () => {
 
       setAdvisorId(advisor.id);
 
-      // Fetch RFP details with invite info including request content
-      const { data: invite } = await supabase
+      // Step 4: Fetch RFP details with invite info
+      const { data: invite, error: inviteError } = await supabase
         .from('rfp_invites')
         .select(`
           id,
@@ -138,7 +169,19 @@ const RFPDetails = () => {
         .eq('advisor_id', advisor.id)
         .single();
 
+      if (inviteError) {
+        console.error('[RFPDetails] Invite fetch error:', inviteError);
+        toast({
+          title: "שגיאה",
+          description: "לא נמצאה הזמנה להצעת מחיר. ייתכן שאין לך הרשאות לצפות בפרטי בקשה זו.",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+
       if (!invite) {
+        console.warn('[RFPDetails] No invite found (null result)');
         toast({
           title: "שגיאה",
           description: "לא נמצאה הזמנה להצעת מחיר",
@@ -159,6 +202,7 @@ const RFPDetails = () => {
         request_files: invite.request_files as any
       });
     } catch (error) {
+      console.error('[RFPDetails] Unexpected error:', error);
       toast({
         title: "שגיאה",
         description: "אירעה שגיאה בטעינת פרטי ההזמנה",
