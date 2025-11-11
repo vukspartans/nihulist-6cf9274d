@@ -34,13 +34,26 @@ export const DashboardStats = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
       
+      // Wait for valid session to ensure RLS policies work correctly
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.id !== user.id) {
+        console.warn('[DashboardStats] Session mismatch, retrying...');
+        setTimeout(fetchStats, 500);
+        return;
+      }
+      
+      console.log('[DashboardStats] Session verified:', {
+        userId: user.id,
+        sessionUserId: session.user.id
+      });
+      
       const {
         data: projects
       } = await supabase.from('projects').select('*').eq('owner_id', user.id).neq('status', 'deleted');
       
       const {
         data: rfps
-      } = await supabase.from('rfps').select('id').eq('sent_by', user.id);
+      } = await supabase.from('rfps').select('id, project_id').eq('sent_by', user.id);
       
       // Get total proposals received for user's projects
       const {
@@ -50,10 +63,9 @@ export const DashboardStats = () => {
         .select('id, project_id')
         .in('project_id', projects?.map(p => p.id) || []);
       
-      // Count active projects (not draft, closed, or deleted)
-      const activeProjectsCount = projects?.filter(p => 
-        !['draft', 'closed', 'deleted'].includes(p.status)
-      ).length || 0;
+      // Count active projects (projects that have at least one RFP sent)
+      const projectsWithRFPs = new Set(rfps?.map(r => r.project_id) || []);
+      const activeProjectsCount = projectsWithRFPs.size;
       
       setStats({
         totalProjects: projects?.length || 0,
