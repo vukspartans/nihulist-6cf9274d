@@ -171,7 +171,9 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="flex justify-between items-center p-6 border-b">
-        <Logo size="md" />
+        <div onClick={() => navigate('/')} className="cursor-pointer">
+          <Logo size="md" />
+        </div>
         <div className="flex items-center gap-4">
           <Button
             onClick={() => navigate("/projects/new")}

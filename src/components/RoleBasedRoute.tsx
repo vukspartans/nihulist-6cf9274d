@@ -15,7 +15,15 @@ interface RoleBasedRouteProps {
  * SECURITY: Prevents users from accessing dashboards they're not authorized for
  */
 const RoleBasedRoute = ({ children, allowedRoles, redirectTo }: RoleBasedRouteProps) => {
-  const { primaryRole, loading } = useAuth();
+  const { primaryRole, loading, roles } = useAuth();
+
+  console.log('[RoleBasedRoute]', {
+    primaryRole,
+    allowedRoles,
+    roles,
+    loading,
+    isAllowed: primaryRole && allowedRoles.includes(primaryRole)
+  });
 
   if (loading) {
     return (
@@ -31,6 +39,7 @@ const RoleBasedRoute = ({ children, allowedRoles, redirectTo }: RoleBasedRoutePr
   // If user doesn't have an allowed role, redirect to their appropriate dashboard
   if (!primaryRole || !allowedRoles.includes(primaryRole)) {
     const fallback = redirectTo || getDashboardRouteForRole(primaryRole);
+    console.warn('[RoleBasedRoute] Access denied, redirecting to:', fallback);
     return <Navigate to={fallback} replace />;
   }
 

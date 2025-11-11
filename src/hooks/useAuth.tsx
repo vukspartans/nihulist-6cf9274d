@@ -67,10 +67,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
 
   // Fetch user profile and roles
   const fetchProfile = async (userId: string) => {
+    setProfileLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -83,10 +85,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error('Error fetching profile:', error);
       setProfile(null);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
   const fetchRoles = async (userId: string) => {
+    setRolesLoading(true);
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -98,42 +103,47 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error('Error fetching roles:', error);
       setRoles([]);
+    } finally {
+      setRolesLoading(false);
     }
   };
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         // Fetch profile and roles when user logs in
         if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchRoles(session.user.id);
-          }, 0);
+          await Promise.all([
+            fetchProfile(session.user.id),
+            fetchRoles(session.user.id)
+          ]);
         } else {
           setProfile(null);
           setRoles([]);
+          setProfileLoading(false);
+          setRolesLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchRoles(session.user.id);
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchRoles(session.user.id)
+        ]);
+      } else {
+        setProfileLoading(false);
+        setRolesLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -151,6 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const loading = profileLoading || rolesLoading;
   const isAdmin = roles.includes('admin');
   const hasRole = (role: AppRole) => roles.includes(role);
   const primaryRole = getPrimaryRole(roles);
