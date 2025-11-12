@@ -46,11 +46,12 @@ export const useDeclineRFP = () => {
 
       // Send email notification to entrepreneur (non-blocking)
       console.log('[Decline] Sending email notification for invite:', rfpInviteId);
+      const isTestMode = import.meta.env.MODE === 'development' || import.meta.env.VITE_RFP_TEST_MODE === 'true';
       supabase.functions
         .invoke('notify-rfp-declined', {
           body: {
             invite_id: rfpInviteId,
-            test_mode: true, // Set to false in production
+            test_mode: isTestMode,
           },
         })
         .then(({ data: emailData, error: emailError }) => {

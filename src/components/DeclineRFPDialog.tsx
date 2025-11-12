@@ -63,9 +63,17 @@ export function DeclineRFPDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]" dir="rtl">
         <DialogHeader>
-          <DialogTitle>דחיית הזמנה להצעת מחיר</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            דחיית הזמנה להצעת מחיר
+          </DialogTitle>
           <DialogDescription>
-            נשמח להבין מדוע אינכם יכולים להגיש הצעה לפרויקט זה
+            <div className="space-y-2">
+              <p>נשמח להבין מדוע אינכם יכולים להגיש הצעה לפרויקט זה</p>
+              <p className="text-amber-600 font-medium text-sm flex items-center gap-1.5">
+                <span className="inline-block">⚠️</span>
+                שימו לב: פעולה זו אינה ניתנת לביטול
+              </p>
+            </div>
           </DialogDescription>
         </DialogHeader>
 

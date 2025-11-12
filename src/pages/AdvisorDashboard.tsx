@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Logo from '@/components/Logo';
+import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
+import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -29,6 +31,8 @@ interface RFPInvite {
   advisor_type?: string;
   status: string;
   created_at: string;
+  decline_reason?: string;
+  decline_note?: string;
   rfps: {
     id: string;
     subject: string;
@@ -94,6 +98,9 @@ const AdvisorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
+  const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
+  const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
     if (user) {
@@ -150,7 +157,7 @@ const AdvisorDashboard = () => {
         
         const { data: invites, error: invitesError, status, statusText } = await supabase
           .from('rfp_invites')
-          .select('id, rfp_id, advisor_type, status, created_at, deadline_at')
+          .select('id, rfp_id, advisor_type, status, created_at, deadline_at, decline_reason, decline_note')
           .eq('advisor_id', advisor.id)
           .order('created_at', { ascending: false });
 
@@ -369,6 +376,51 @@ const AdvisorDashboard = () => {
 
   const canSubmitProposal = (status: string) => {
     return ['sent', 'opened', 'in_progress', 'pending'].includes(status);
+  };
+
+  const handleDeclineClick = (inviteId: string) => {
+    setSelectedInviteToDecline(inviteId);
+    setDeclineDialogOpen(true);
+  };
+
+  const handleDeclineConfirm = async (reason: string, note?: string) => {
+    if (!selectedInviteToDecline) return;
+    
+    // Map Hebrew reason to database enum
+    const reasonMap: Record<string, string> = {
+      'לא רלוונטי למומחיות שלי': 'outside_expertise',
+      'עומס עבודה גבוה': 'no_capacity',
+      'מיקום הפרויקט רחוק מדי': 'other',
+      'תקציב נמוך מדי': 'budget_mismatch',
+      'לוח זמנים לא מתאים': 'timeline_conflict',
+      'אחר': 'other'
+    };
+    
+    const dbReason = reasonMap[reason] || 'other';
+    
+    const result = await declineRFP(
+      selectedInviteToDecline, 
+      dbReason as any, 
+      note
+    );
+    
+    if (result.success) {
+      // Refresh the invites list
+      fetchAdvisorData();
+      setDeclineDialogOpen(false);
+      setSelectedInviteToDecline(null);
+    }
+  };
+
+  const getDeclineReasonText = (reason: string) => {
+    switch (reason) {
+      case 'outside_expertise': return 'מחוץ לתחום ההתמחות';
+      case 'no_capacity': return 'אין זמינות כרגע';
+      case 'timeline_conflict': return 'קונפליקט בלוחות זמנים';
+      case 'budget_mismatch': return 'אי התאמה תקציבית';
+      case 'other': return 'סיבה אחרת';
+      default: return reason;
+    }
   };
 
   if (loading) {
@@ -743,7 +795,21 @@ const AdvisorDashboard = () => {
                         </p>
                       )}
 
-                      <div className="flex gap-2">
+                      {invite.status === 'declined' && invite.decline_reason && (
+                        <div className="mt-2 mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-sm font-medium text-red-900 mb-1">הזמנה נדחתה</p>
+                          <p className="text-xs text-red-700">
+                            סיבה: {getDeclineReasonText(invite.decline_reason)}
+                          </p>
+                          {invite.decline_note && (
+                            <p className="text-xs text-red-600 mt-1">
+                              הערה: {invite.decline_note}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 flex-wrap">
                         <Button 
                           variant="outline" 
                           onClick={() => navigate(`/rfp-details/${invite.rfp_id}`)}
@@ -753,6 +819,17 @@ const AdvisorDashboard = () => {
                         {canSubmitProposal(invite.status) && (
                           <Button onClick={() => navigate(`/submit-proposal/${invite.rfp_id}`)}>
                             הגשת הצעת מחיר
+                          </Button>
+                        )}
+                        {['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && (
+                          <Button 
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                            onClick={() => handleDeclineClick(invite.id)}
+                            disabled={declining}
+                          >
+                            <XCircle className="h-4 w-4 ml-2" />
+                            דחה הזמנה
                           </Button>
                         )}
                       </div>
@@ -811,6 +888,13 @@ const AdvisorDashboard = () => {
         </Tabs>
         </div>
       </div>
+
+      <DeclineRFPDialog
+        open={declineDialogOpen}
+        onOpenChange={setDeclineDialogOpen}
+        onDecline={handleDeclineConfirm}
+        loading={declining}
+      />
     </div>
   );
 };
