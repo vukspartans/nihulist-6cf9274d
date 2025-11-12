@@ -133,6 +133,8 @@ const SubmitProposal = () => {
         `)
         .eq('rfp_id', rfp_id)
         .eq('advisor_id', advisor.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (rfpError) {
