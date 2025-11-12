@@ -92,11 +92,14 @@ export const useRFP = () => {
           // Send RFP invitation emails
           console.log('[useRFP] Triggering email sending for RFP:', result.result_rfp_id);
           
+          // Determine if we're in test mode based on environment
+          const isTestMode = import.meta.env.MODE === 'development' || import.meta.env.VITE_RFP_TEST_MODE === 'true';
+          
           supabase.functions
             .invoke('send-rfp-email', {
               body: { 
                 rfp_id: result.result_rfp_id,
-                test_mode: true // TESTING: All emails will go to lior+nihulist@spartans.tech
+                test_mode: isTestMode
               }
             })
             .then(({ data: emailData, error: emailError }) => {

@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
 
 export interface UploadedFileMetadata {
   name: string;
@@ -103,24 +104,39 @@ export const RequestEditorDialog = ({
     if (files.length === 0) return;
 
     setUploading(true);
+    const uploadedFiles: UploadedFileMetadata[] = [];
+    const errors: string[] = [];
+
     try {
-      const uploadedFiles: UploadedFileMetadata[] = [];
-      
       for (const file of files) {
-        // Validate file size (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-          toast({
-            title: "קובץ גדול מדי",
-            description: `${file.name} גדול מ-10MB`,
-            variant: "destructive",
-          });
+        // Validate file type
+        if (!isValidFileType(file.name)) {
+          errors.push(`${file.name}: סוג קובץ לא נתמך`);
           continue;
         }
 
-        // Generate unique file path
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${projectId}/temp/${advisorType}/${fileName}`;
+        // Validate file size (10MB limit)
+        if (!isValidFileSize(file.size, 10)) {
+          errors.push(`${file.name}: גדול מ-10MB (${formatFileSize(file.size)})`);
+          continue;
+        }
+
+        // Sanitize file name and generate unique path
+        const sanitizedName = sanitizeFileName(file.name);
+        const fileExt = sanitizedName.split('.').pop();
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(7);
+        const uniqueFileName = `${timestamp}_${randomId}.${fileExt}`;
+        
+        // Project-based path structure (no temp folder, no advisor type)
+        const filePath = `${projectId}/${timestamp}/${uniqueFileName}`;
+
+        console.log('[RequestEditor] Uploading file:', {
+          original: file.name,
+          sanitized: sanitizedName,
+          path: filePath,
+          size: formatFileSize(file.size)
+        });
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
@@ -131,11 +147,8 @@ export const RequestEditorDialog = ({
           });
 
         if (uploadError) {
-          toast({
-            title: "שגיאה בהעלאת קובץ",
-            description: uploadError.message,
-            variant: "destructive",
-          });
+          console.error('[RequestEditor] Upload error:', uploadError);
+          errors.push(`${file.name}: ${uploadError.message}`);
           continue;
         }
 
@@ -145,25 +158,42 @@ export const RequestEditorDialog = ({
           .getPublicUrl(filePath);
 
         uploadedFiles.push({
-          name: file.name,
+          name: file.name, // Keep original name for display
           url: publicUrl,
           size: file.size,
           path: filePath
         });
+
+        console.log('[RequestEditor] File uploaded successfully:', {
+          name: file.name,
+          path: filePath,
+          url: publicUrl
+        });
       }
 
-      setFormData(prev => ({
-        ...prev,
-        requestAttachments: [...prev.requestAttachments, ...uploadedFiles]
-      }));
-
+      // Update form data with successfully uploaded files
       if (uploadedFiles.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          requestAttachments: [...prev.requestAttachments, ...uploadedFiles]
+        }));
+
         toast({
           title: "קבצים הועלו בהצלחה",
           description: `${uploadedFiles.length} קבצים הועלו`,
         });
       }
+
+      // Show errors if any
+      if (errors.length > 0) {
+        toast({
+          title: "שגיאות בהעלאת קבצים",
+          description: errors.join('\n'),
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error('[RequestEditor] Unexpected error:', error);
       toast({
         title: "שגיאה",
         description: "אירעה שגיאה בהעלאת הקבצים",
@@ -171,23 +201,50 @@ export const RequestEditorDialog = ({
       });
     } finally {
       setUploading(false);
+      // Reset file input
+      e.target.value = '';
     }
   };
 
   const removeAttachment = async (index: number) => {
     const file = formData.requestAttachments[index];
     
-    // Delete from storage
-    if (file.path) {
-      await supabase.storage
-        .from('rfp-request-files')
-        .remove([file.path]);
-    }
+    try {
+      // Delete from storage
+      if (file.path) {
+        console.log('[RequestEditor] Deleting file:', file.path);
+        const { error } = await supabase.storage
+          .from('rfp-request-files')
+          .remove([file.path]);
+        
+        if (error) {
+          console.error('[RequestEditor] Delete error:', error);
+          toast({
+            title: "שגיאה במחיקת קובץ",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
-    setFormData(prev => ({
-      ...prev,
-      requestAttachments: prev.requestAttachments.filter((_, i) => i !== index)
-    }));
+      setFormData(prev => ({
+        ...prev,
+        requestAttachments: prev.requestAttachments.filter((_, i) => i !== index)
+      }));
+
+      toast({
+        title: "קובץ נמחק",
+        description: `${file.name} הוסר מהרשימה`,
+      });
+    } catch (error) {
+      console.error('[RequestEditor] Error removing attachment:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן למחוק את הקובץ",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = () => {
@@ -331,7 +388,7 @@ export const RequestEditorDialog = ({
                         <Paperclip className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm flex-1 text-right">{file.name}</span>
                         <Badge variant="outline" className="text-xs">
-                          {(file.size / 1024).toFixed(1)} KB
+                          {formatFileSize(file.size)}
                         </Badge>
                         <Button
                           type="button"
