@@ -100,9 +100,9 @@ export function DeclineRFPDialog({
             <Label>סיבת הדחייה *</Label>
             <RadioGroup value={reason} onValueChange={setReason}>
               {DECLINE_REASONS.map((r) => (
-                <div key={r} className="flex items-center gap-2 flex-row-reverse justify-end">
+                <div key={r} className="flex items-center gap-2 flex-row-reverse">
                   <RadioGroupItem value={r} id={r} />
-                  <Label htmlFor={r} className="font-normal cursor-pointer flex-1 py-2">
+                  <Label htmlFor={r} className="font-normal cursor-pointer py-2">
                     {r}
                   </Label>
                 </div>
