@@ -43,7 +43,7 @@ serve(async (req) => {
         decline_note,
         advisor_type,
         rfp_id,
-        advisors (
+        advisors!rfp_invites_advisor_id_fkey (
           id,
           company_name,
           user_id
@@ -120,21 +120,26 @@ serve(async (req) => {
 
     console.log('[RFP Declined] Email sent successfully:', emailData);
 
-    // Log activity
-    await supabase.from('activity_log').insert({
-      actor_id: advisor.user_id,
-      actor_type: 'system',
-      action: 'rfp_declined_email_sent',
-      entity_type: 'rfp_invite',
-      entity_id: invite_id,
-      project_id: project.id,
-      meta: {
-        recipient: recipientEmail,
-        test_mode,
-        email_id: emailData?.id,
-        decline_reason: invite.decline_reason,
-      },
-    });
+    // Log activity (non-blocking - ignore errors due to RLS)
+    try {
+      await supabase.from('activity_log').insert({
+        actor_id: advisor.user_id,
+        actor_type: 'system',
+        action: 'rfp_declined_email_sent',
+        entity_type: 'rfp_invite',
+        entity_id: invite_id,
+        project_id: project.id,
+        meta: {
+          recipient: recipientEmail,
+          test_mode,
+          email_id: emailData?.id,
+          decline_reason: invite.decline_reason,
+        },
+      });
+    } catch (logError) {
+      console.error('[RFP Declined] Failed to log activity (non-critical):', logError);
+      // Continue execution - logging failure should not block email notification
+    }
 
     return new Response(
       JSON.stringify({ 
