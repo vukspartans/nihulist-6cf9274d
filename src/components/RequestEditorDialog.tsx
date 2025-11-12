@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
+import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 
 export interface UploadedFileMetadata {
   name: string;
@@ -108,6 +109,54 @@ export const RequestEditorDialog = ({
     const errors: string[] = [];
 
     try {
+      // VERIFY SESSION BEFORE UPLOAD
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        const errorMsg = reportableError(
+          'שגיאת אימות',
+          'יש להתחבר מחדש למערכת',
+          { sessionError: sessionError?.message }
+        );
+        toast({
+          title: "שגיאת אימות",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setUploading(false);
+        e.target.value = '';
+        return;
+      }
+
+      // Verify user owns this project
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id, owner_id')
+        .eq('id', projectId)
+        .eq('owner_id', session.user.id)
+        .single();
+
+      if (projectError || !project) {
+        const errorMsg = reportableError(
+          'שגיאה',
+          'לא ניתן לאמת הרשאות לפרויקט זה',
+          { projectError: projectError?.message, projectId }
+        );
+        toast({
+          title: "שגיאה",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setUploading(false);
+        e.target.value = '';
+        return;
+      }
+
+      console.log('[RequestEditor] Session verified, user owns project:', {
+        userId: session.user.id,
+        projectId: project.id
+      });
+
       for (const file of files) {
         // Validate file type
         if (!isValidFileType(file.name)) {
@@ -147,8 +196,16 @@ export const RequestEditorDialog = ({
           });
 
         if (uploadError) {
-          console.error('[RequestEditor] Upload error:', uploadError);
-          errors.push(`${file.name}: ${uploadError.message}`);
+          console.error('[RequestEditor] Upload error:', {
+            error: uploadError,
+            message: uploadError.message,
+            path: filePath,
+            projectId,
+            userId: session?.user?.id
+          });
+          
+          const errorMessage = formatSupabaseError(uploadError);
+          errors.push(`${file.name}: ${errorMessage}`);
           continue;
         }
 
@@ -186,17 +243,27 @@ export const RequestEditorDialog = ({
 
       // Show errors if any
       if (errors.length > 0) {
+        const errorMsg = reportableError(
+          'שגיאות בהעלאת קבצים',
+          errors.join('\n'),
+          { fileCount: files.length, projectId }
+        );
         toast({
           title: "שגיאות בהעלאת קבצים",
-          description: errors.join('\n'),
+          description: errorMsg,
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('[RequestEditor] Unexpected error:', error);
+      const errorMsg = reportableError(
+        'שגיאה',
+        'אירעה שגיאה בהעלאת הקבצים',
+        { error: error instanceof Error ? error.message : String(error), projectId }
+      );
       toast({
         title: "שגיאה",
-        description: "אירעה שגיאה בהעלאת הקבצים",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
