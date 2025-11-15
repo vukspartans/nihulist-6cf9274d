@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell, ArrowLeft } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell, ArrowRight } from 'lucide-react';
 import Logo from '@/components/Logo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -313,11 +313,11 @@ const RFPDetails = () => {
         <Logo size="md" />
         <div className="flex items-center gap-4">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
             חזרה לדשבורד
           </Button>
           <Button variant="ghost" size="icon" className="relative">
@@ -538,7 +538,9 @@ const RFPDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
-            {['sent', 'opened', 'pending'].includes(inviteDetails?.status || '') && (
+            {['sent', 'opened', 'pending', 'in_progress'].includes(inviteDetails?.status || '') && 
+             (inviteDetails?.status !== 'expired') &&
+             (!inviteDetails?.deadline_at || new Date(inviteDetails.deadline_at) > new Date()) && (
               <>
                 <Button 
                   onClick={() => {
