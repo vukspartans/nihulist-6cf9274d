@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -62,12 +63,18 @@ export function DeadlineCountdown({ deadline, className = '' }: DeadlineCountdow
     'default';
 
   const isUrgent = timeLeft.total < 48 * 60 * 60 * 1000;
+  const isCritical = timeLeft.total < 24 * 60 * 60 * 1000;
 
   return (
     <Alert variant={urgency} className={className}>
       <Clock className="h-4 w-4" />
       <AlertTitle className="flex items-center gap-2">
         {isUrgent && '⚠️'} זמן להגשה
+        {isCritical && (
+          <Badge variant="destructive" className="mr-2 animate-pulse">
+            דחוף
+          </Badge>
+        )}
       </AlertTitle>
       <AlertDescription className="mt-2" dir="rtl">
         <div className="flex gap-4 text-lg font-semibold">
