@@ -852,20 +852,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_rfp_invites_advisor"
-            columns: ["advisor_id"]
-            isOneToOne: false
-            referencedRelation: "advisors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_rfp_invites_rfp"
-            columns: ["rfp_id"]
-            isOneToOne: false
-            referencedRelation: "rfps"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "rfp_invites_advisor_id_fkey"
             columns: ["advisor_id"]
             isOneToOne: false
