@@ -539,6 +539,14 @@ const SubmitProposal = () => {
             <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <AlertDescription className="text-orange-900 dark:text-orange-200"><strong>שימו לב:</strong> חתימה דיגיטלית זו תהווה התחייבות משפטית מחייבת ותאושר באמצעות חותמת זמן וזיהוי דיגיטלי</AlertDescription>
           </Alert>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <Checkbox id="declaration" checked={declarationAccepted} onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)} />
+                <Label htmlFor="declaration" className="text-sm cursor-pointer">אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה. ההצעה תקפה למשך 90 יום מהיום.</Label>
+              </div>
+            </CardContent>
+          </Card>
           <Card className="border-2 border-primary shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -567,16 +575,8 @@ const SubmitProposal = () => {
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Checkbox id="declaration" checked={declarationAccepted} onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)} />
-                <Label htmlFor="declaration" className="text-sm cursor-pointer">אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה. ההצעה תקפה למשך 90 יום מהיום.</Label>
-              </div>
-            </CardContent>
-          </Card>
           <Button type="submit" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all" disabled={submitting}>
-            {submitting ? "שולח..." : "המשך לסקירה"}
+            {submitting ? "שולח..." : "סיכום ואישור"}
             <Send className="mr-2 h-4 w-4" />
           </Button>
         </form>

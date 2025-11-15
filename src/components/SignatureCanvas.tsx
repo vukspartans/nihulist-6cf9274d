@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RotateCcw, Download } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 
 interface SignatureCanvasProps {
   onSign: (signatureData: SignatureData) => void;
@@ -117,15 +117,6 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
     onSign(signatureData);
   };
 
-  const downloadSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !hasSigned) return;
-
-    const link = document.createElement('a');
-    link.download = `signature-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  };
 
   // Redraw all strokes when strokes change
   useEffect(() => {
@@ -187,16 +178,6 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
           >
             <RotateCcw className="ml-2 h-4 w-4" />
             נקה
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadSignature}
-            disabled={!hasSigned}
-            className="flex-1"
-          >
-            <Download className="ml-2 h-4 w-4" />
-            הורד
           </Button>
           <Button
             onClick={save}
