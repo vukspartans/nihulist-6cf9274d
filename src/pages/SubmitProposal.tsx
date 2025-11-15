@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, Bell, ArrowLeft } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, Bell, ArrowRight } from 'lucide-react';
 import Logo from '@/components/Logo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -428,11 +428,11 @@ const SubmitProposal = () => {
         <Logo size="md" />
         <div className="flex items-center gap-4">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
             חזרה לדשבורד
           </Button>
           <Button variant="ghost" size="icon" className="relative">

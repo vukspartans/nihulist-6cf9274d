@@ -71,24 +71,24 @@ export function DeadlineCountdown({ deadline, className = '' }: DeadlineCountdow
       </AlertTitle>
       <AlertDescription className="mt-2" dir="rtl">
         <div className="flex gap-4 text-lg font-semibold">
-          {timeLeft.days > 0 && (
-            <div className="text-center">
-              <div className="text-2xl">{timeLeft.days}</div>
-              <div className="text-xs text-muted-foreground">ימים</div>
-            </div>
-          )}
-          <div className="text-center">
-            <div className="text-2xl">{timeLeft.hours}</div>
-            <div className="text-xs text-muted-foreground">שעות</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl">{timeLeft.minutes}</div>
-            <div className="text-xs text-muted-foreground">דקות</div>
-          </div>
           {timeLeft.total < 60 * 60 * 1000 && (
             <div className="text-center">
               <div className="text-2xl">{timeLeft.seconds}</div>
               <div className="text-xs text-muted-foreground">שניות</div>
+            </div>
+          )}
+          <div className="text-center">
+            <div className="text-2xl">{timeLeft.minutes}</div>
+            <div className="text-xs text-muted-foreground">דקות</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl">{timeLeft.hours}</div>
+            <div className="text-xs text-muted-foreground">שעות</div>
+          </div>
+          {timeLeft.days > 0 && (
+            <div className="text-center">
+              <div className="text-2xl">{timeLeft.days}</div>
+              <div className="text-xs text-muted-foreground">ימים</div>
             </div>
           )}
         </div>
