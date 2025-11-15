@@ -173,7 +173,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       requestDataByType
     });
 
-    const loginUrl = `https://www.nihulist.co.il/auth?type=advisor&mode=login`;
+    
     
     // Build advisor-type pairs from recommended advisors
     const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
@@ -195,8 +195,12 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const typeData = requestDataByType[firstType];
     const emailSubject = typeData?.emailSubject || `בקשה להצעת מחיר - ${projectName}`;
     const emailBodyText = typeData?.emailBody || rfpContent.content;
+    const loginUrl = `${window.location.origin}/auth?type=advisor&mode=login`;
     
-    // Extract request data
+    // Extract request data - sanitize before sending
+    const requestTitle = typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined;
+    const requestContent = typeData?.requestContent ? sanitizeText(typeData.requestContent, 5000) : undefined;
+    const requestFiles = typeData?.requestAttachments;
     
     // SECURITY: Sanitize email content before sending
     const sanitizedEmailBody = emailBodyText
