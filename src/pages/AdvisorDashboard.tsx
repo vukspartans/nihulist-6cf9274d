@@ -17,6 +17,7 @@ import Logo from '@/components/Logo';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import BackToTop from '@/components/BackToTop';
+import { ProposalStatusBadge } from '@/components/ProposalStatusBadge';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -64,6 +65,17 @@ interface AdvisorProposal {
     type: string;
     location: string;
   };
+  project_advisors?: Array<{
+    selected_at: string;
+    selected_by: string;
+    start_date?: string;
+    end_date?: string;
+    fee_amount?: number;
+    fee_currency?: string;
+    payment_terms?: string;
+    scope_of_work?: string;
+    agreement_url?: string;
+  }>;
 }
 
 interface AdvisorProfile {
@@ -103,6 +115,7 @@ const AdvisorDashboard = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
+  const [proposalFilter, setProposalFilter] = useState<'all' | 'submitted' | 'under_review' | 'rejected'>('all');
   const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
@@ -272,12 +285,23 @@ const AdvisorDashboard = () => {
           setRfpInvites(mergedInvites as any);
         }
 
-        // Fetch submitted proposals (keep existing logic)
+        // Fetch submitted proposals with approval data
         const { data: proposalData } = await supabase
           .from('proposals')
           .select(`
             *,
-            projects!proposals_project_id_fkey (name, type, location)
+            projects!proposals_project_id_fkey (name, type, location),
+            project_advisors!project_advisors_proposal_id_fkey (
+              selected_at,
+              selected_by,
+              start_date,
+              end_date,
+              fee_amount,
+              fee_currency,
+              payment_terms,
+              scope_of_work,
+              agreement_url
+            )
           `)
           .eq('advisor_id', advisor.id)
           .order('submitted_at', { ascending: false });
@@ -500,19 +524,28 @@ const AdvisorDashboard = () => {
 
   const newInvites = rfpInvites.filter(invite => {
     const createdDate = new Date(invite.created_at);
-    const hoursSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
-    return hoursSinceCreated < 24;
+    const daysSinceCreation = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSinceCreation <= 7;
   });
+
+  const unsubmittedInvites = rfpInvites.filter(invite => 
+    ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && 
+    !proposalMap.has(invite.rfps?.projects?.id)
+  );
+
+  // Filter proposals by type
+  const winningProposals = proposals.filter(p => p.status === 'accepted');
+  const activeProposals = proposals.filter(p => !['accepted', 'rejected', 'withdrawn'].includes(p.status));
+  
+  const filteredProposals = proposalFilter === 'all' 
+    ? proposals 
+    : proposals.filter(p => p.status === proposalFilter);
 
   const activeInvites = rfpInvites.filter(invite => 
     ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status)
   );
 
   const displayedInvites = showActiveOnly ? activeInvites : rfpInvites;
-
-  const unsubmittedInvites = activeInvites.filter(invite => 
-    !proposals.some(p => p.id === invite.rfp_id)
-  );
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -770,18 +803,24 @@ const AdvisorDashboard = () => {
                             )}
                           </CardDescription>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge className={getStatusColor(invite.status)}>
-                            {getStatusLabel(invite.status)}
-                          </Badge>
-                          
-                          {proposalMap.has(invite.rfps?.projects?.id) && (
-                            <Badge className="bg-green-100 text-green-800 border-green-300 animate-fade-in">
-                              ✓ הצעה הוגשה
-                            </Badge>
-                          )}
-                          
-                          <span className="text-xs text-muted-foreground">סטטוס</span>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
+                          {(() => {
+                            const proposal = proposalMap.get(invite.rfps?.projects?.id);
+                            if (proposal) {
+                              return (
+                                <ProposalStatusBadge 
+                                  proposalStatus={proposal.status}
+                                  submittedAt={proposal.submitted_at}
+                                  approvedAt={proposal.project_advisors?.[0]?.selected_at}
+                                />
+                              );
+                            }
+                            return (
+                              <Badge className={getStatusColor(invite.status)}>
+                                {getStatusLabel(invite.status)}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardHeader>
@@ -875,51 +914,303 @@ const AdvisorDashboard = () => {
           </TabsContent>
 
           <TabsContent value="my-proposals" className="space-y-4">
-            {proposals.length === 0 ? (
+            {/* Filter Controls */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex gap-2 items-center flex-wrap">
+                  <Button 
+                    size="sm" 
+                    variant={proposalFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setProposalFilter('all')}
+                  >
+                    הכל ({proposals.length})
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={proposalFilter === 'submitted' ? 'default' : 'outline'}
+                    onClick={() => setProposalFilter('submitted')}
+                  >
+                    ממתינות ({proposals.filter(p => p.status === 'submitted').length})
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={proposalFilter === 'under_review' ? 'default' : 'outline'}
+                    onClick={() => setProposalFilter('under_review')}
+                  >
+                    בבדיקה ({proposals.filter(p => p.status === 'under_review').length})
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={proposalFilter === 'rejected' ? 'default' : 'outline'}
+                    onClick={() => setProposalFilter('rejected')}
+                  >
+                    נדחו ({proposals.filter(p => p.status === 'rejected').length})
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {filteredProposals.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">לא הוגשו הצעות מחיר עדיין</p>
+                  <p className="text-muted-foreground">
+                    {proposalFilter === 'all' ? 'לא הוגשו הצעות מחיר עדיין' : `אין הצעות ${proposalFilter === 'submitted' ? 'ממתינות' : proposalFilter === 'under_review' ? 'בבדיקה' : 'נדחות'}`}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
-              proposals.map((proposal) => (
-                <Card key={proposal.id} className="shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader>
+              filteredProposals.map((proposal) => (
+                <Card key={proposal.id} className={proposal.status === 'accepted' ? 'shadow-lg hover:shadow-xl transition-shadow border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-white' : 'shadow-md hover:shadow-lg transition-shadow'}>
+                  <CardHeader className={proposal.status === 'accepted' ? 'bg-gradient-to-r from-amber-100 to-amber-50' : ''}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{proposal.projects.name}</CardTitle>
+                        <CardTitle className={proposal.status === 'accepted' ? 'text-xl text-amber-900' : 'text-lg'}>{proposal.projects.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-2">
                           <MapPin className="h-4 w-4" />
                           {proposal.projects.location}
                         </CardDescription>
                       </div>
-                      <Badge className={getStatusColor(proposal.status)}>
-                        {proposal.status === 'submitted' ? 'הוגשה' : 
-                         proposal.status === 'accepted' ? 'אושרה' :
-                         proposal.status === 'rejected' ? 'נדחתה' :
-                         proposal.status === 'withdrawn' ? 'נמשכה' :
-                         proposal.status === 'under_review' ? 'בבדיקה' : proposal.status}
-                      </Badge>
+                      <ProposalStatusBadge 
+                        proposalStatus={proposal.status}
+                        submittedAt={proposal.submitted_at}
+                        approvedAt={proposal.project_advisors?.[0]?.selected_at}
+                      />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <CardContent className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-muted-foreground" />
-                        <span>המחיר שלי: ₪{proposal.price.toLocaleString()}</span>
+                        <Coins className={proposal.status === 'accepted' ? 'h-5 w-5 text-amber-600' : 'h-4 w-4 text-muted-foreground'} />
+                        <div>
+                          <p className="text-xs text-muted-foreground">המחיר שהוצע</p>
+                          <p className={proposal.status === 'accepted' ? 'font-bold text-lg' : 'font-semibold'}>₪{proposal.price.toLocaleString()}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>זמן ביצוע: {proposal.timeline_days} ימים</span>
+                        <Clock className={proposal.status === 'accepted' ? 'h-5 w-5 text-amber-600' : 'h-4 w-4 text-muted-foreground'} />
+                        <div>
+                          <p className="text-xs text-muted-foreground">זמן ביצוע</p>
+                          <p className={proposal.status === 'accepted' ? 'font-bold' : 'font-semibold'}>{proposal.timeline_days} ימים</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>הוגש: {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</span>
+                        <Calendar className={proposal.status === 'accepted' ? 'h-5 w-5 text-amber-600' : 'h-4 w-4 text-muted-foreground'} />
+                        <div>
+                          <p className="text-xs text-muted-foreground">תאריך הגשה</p>
+                          <p className={proposal.status === 'accepted' ? 'font-bold' : 'font-semibold'}>{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</p>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Approval Information */}
+                    {proposal.status === 'accepted' && proposal.project_advisors?.[0] && (
+                      <div className="mt-4 p-4 bg-white border border-amber-200 rounded-lg">
+                        <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4" />
+                          פרטי התקשרות
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-amber-700" />
+                            <span className="font-medium">תאריך אישור:</span>
+                            <span>{new Date(proposal.project_advisors[0].selected_at).toLocaleDateString('he-IL', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}</span>
+                          </div>
+                          {proposal.project_advisors[0].start_date && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-amber-700" />
+                              <span className="font-medium">תאריך התחלה:</span>
+                              <span>{new Date(proposal.project_advisors[0].start_date).toLocaleDateString('he-IL')}</span>
+                            </div>
+                          )}
+                          {proposal.project_advisors[0].end_date && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-amber-700" />
+                              <span className="font-medium">תאריך סיום:</span>
+                              <span>{new Date(proposal.project_advisors[0].end_date).toLocaleDateString('he-IL')}</span>
+                            </div>
+                          )}
+                          {proposal.project_advisors[0].fee_amount && (
+                            <div className="flex items-center gap-2">
+                              <Coins className="h-4 w-4 text-amber-700" />
+                              <span className="font-medium">שכר מוסכם:</span>
+                              <span className="font-bold">₪{proposal.project_advisors[0].fee_amount.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {proposal.project_advisors[0].payment_terms && (
+                            <div className="col-span-2">
+                              <p className="font-medium mb-1">תנאי תשלום:</p>
+                              <p className="text-muted-foreground">{proposal.project_advisors[0].payment_terms}</p>
+                            </div>
+                          )}
+                          {proposal.project_advisors[0].scope_of_work && (
+                            <div className="col-span-2">
+                              <p className="font-medium mb-1">היקף עבודה:</p>
+                              <p className="text-muted-foreground">{proposal.project_advisors[0].scope_of_work}</p>
+                            </div>
+                          )}
+                        </div>
+                        {proposal.project_advisors[0].agreement_url && (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 w-full"
+                            onClick={() => window.open(proposal.project_advisors![0].agreement_url, '_blank')}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            צפייה בהסכם
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))
+            )}
+          </TabsContent>
+
+          {/* Winning Proposals Tab - New Section */}
+          <TabsContent value="winning-proposals" className="space-y-4">
+            {winningProposals.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">אין הצעות זוכות עדיין</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    כאשר הצעה שלך תאושר, היא תופיע כאן
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {winningProposals.map((proposal) => (
+                  <Card key={proposal.id} className="shadow-lg hover:shadow-xl transition-shadow border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-white">
+                    <CardHeader className="bg-gradient-to-r from-amber-100 to-amber-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
+                            <CardTitle className="text-xl text-amber-900">{proposal.projects.name}</CardTitle>
+                          </div>
+                          <CardDescription className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            {proposal.projects.location}
+                          </CardDescription>
+                        </div>
+                        <Badge className="bg-amber-500 text-white border-amber-600 text-base px-4 py-2">
+                          ✓ הצעה אושרה
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="mt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 border-b">
+                        <div className="flex items-center gap-2">
+                          <Coins className="h-5 w-5 text-amber-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">המחיר שאושר</p>
+                            <p className="font-bold text-lg">₪{proposal.price.toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-amber-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">זמן ביצוע</p>
+                            <p className="font-bold">{proposal.timeline_days} ימים</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-amber-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">תאריך הגשה</p>
+                            <p className="font-bold">{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {proposal.project_advisors?.[0] && (
+                        <div className="bg-white p-4 rounded-lg border border-amber-200 mb-4">
+                          <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4" />
+                            פרטי התקשרות
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-amber-700" />
+                              <span className="font-medium">תאריך אישור:</span>
+                              <span>{new Date(proposal.project_advisors[0].selected_at).toLocaleDateString('he-IL', { 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</span>
+                            </div>
+                            {proposal.project_advisors[0].start_date && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-amber-700" />
+                                <span className="font-medium">תאריך התחלה:</span>
+                                <span>{new Date(proposal.project_advisors[0].start_date).toLocaleDateString('he-IL')}</span>
+                              </div>
+                            )}
+                            {proposal.project_advisors[0].end_date && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-amber-700" />
+                                <span className="font-medium">תאריך סיום:</span>
+                                <span>{new Date(proposal.project_advisors[0].end_date).toLocaleDateString('he-IL')}</span>
+                              </div>
+                            )}
+                            {proposal.project_advisors[0].fee_amount && (
+                              <div className="flex items-center gap-2">
+                                <Coins className="h-4 w-4 text-amber-700" />
+                                <span className="font-medium">שכר מוסכם:</span>
+                                <span className="font-bold">₪{proposal.project_advisors[0].fee_amount.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {proposal.project_advisors[0].payment_terms && (
+                              <div className="col-span-2">
+                                <p className="font-medium mb-1">תנאי תשלום:</p>
+                                <p className="text-muted-foreground">{proposal.project_advisors[0].payment_terms}</p>
+                              </div>
+                            )}
+                            {proposal.project_advisors[0].scope_of_work && (
+                              <div className="col-span-2">
+                                <p className="font-medium mb-1">היקף עבודה:</p>
+                                <p className="text-muted-foreground">{proposal.project_advisors[0].scope_of_work}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => navigate(`/projects/${proposal.project_id}`)}
+                          className="flex-1"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          צפייה בפרוייקט
+                        </Button>
+                        {proposal.project_advisors?.[0]?.agreement_url && (
+                          <Button 
+                            variant="default"
+                            onClick={() => window.open(proposal.project_advisors![0].agreement_url, '_blank')}
+                            className="flex-1 bg-amber-600 hover:bg-amber-700"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            צפייה בהסכם
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </TabsContent>
         </Tabs>
