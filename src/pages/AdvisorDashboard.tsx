@@ -550,7 +550,9 @@ const AdvisorDashboard = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
-        <Logo size="md" />
+        <div onClick={() => navigate('/advisor-dashboard')} className="cursor-pointer">
+          <Logo size="md" />
+        </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
