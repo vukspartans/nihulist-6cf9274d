@@ -234,6 +234,24 @@ export const useProposalSubmit = () => {
         }
       });
 
+      // Update RFP invite status to 'submitted'
+      if (data.rfpId) {
+        const { error: inviteUpdateError } = await supabase
+          .from('rfp_invites')
+          .update({ 
+            status: 'submitted' as const,
+            started_at: new Date().toISOString()
+          })
+          .eq('rfp_id', data.rfpId)
+          .eq('advisor_id', data.advisorId);
+        
+        if (inviteUpdateError) {
+          console.error('[Proposal Submit] Failed to update RFP invite status:', inviteUpdateError);
+        } else {
+          console.log('[Proposal Submit] Updated RFP invite status to submitted');
+        }
+      }
+
       toast({
         title: 'הצעת המחיר נשלחה בהצלחה',
         description: 'היזם יקבל התראה ויבחן את הצעתך',

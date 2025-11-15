@@ -58,6 +58,7 @@ interface AdvisorProposal {
   timeline_days: number;
   status: string;
   submitted_at: string;
+  project_id: string;
   projects: {
     name: string;
     type: string;
@@ -101,6 +102,7 @@ const AdvisorDashboard = () => {
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
+  const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
   const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
@@ -281,6 +283,12 @@ const AdvisorDashboard = () => {
           .order('submitted_at', { ascending: false });
 
         setProposals(proposalData || []);
+
+        // Create a map of project_id -> proposal for quick lookup
+        const proposalsByProject = new Map(
+          (proposalData || []).map(p => [p.project_id, p])
+        );
+        setProposalMap(proposalsByProject);
       }
     } catch (error) {
       toast({
@@ -766,6 +774,13 @@ const AdvisorDashboard = () => {
                           <Badge className={getStatusColor(invite.status)}>
                             {getStatusLabel(invite.status)}
                           </Badge>
+                          
+                          {proposalMap.has(invite.rfps?.projects?.id) && (
+                            <Badge className="bg-green-100 text-green-800 border-green-300">
+                              ✓ הצעה הוגשה
+                            </Badge>
+                          )}
+                          
                           <span className="text-xs text-muted-foreground">סטטוס</span>
                         </div>
                       </div>
@@ -817,9 +832,27 @@ const AdvisorDashboard = () => {
                         >
                           צפייה בפרטים
                         </Button>
-                        {canSubmitProposal(invite.status) && (
+                        
+                        {canSubmitProposal(invite.status) && !proposalMap.has(invite.rfps?.projects?.id) && (
                           <Button onClick={() => navigate(`/invite/${invite.id}/submit`)}>
                             הגשת הצעת מחיר
+                          </Button>
+                        )}
+                        
+                        {proposalMap.has(invite.rfps?.projects?.id) && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              const proposal = proposalMap.get(invite.rfps?.projects?.id);
+                              if (proposal) {
+                                toast({
+                                  title: "הצעה הוגשה",
+                                  description: `הוגשה ב-${new Date(proposal.submitted_at).toLocaleDateString('he-IL')} • סטטוס: ${proposal.status}`,
+                                });
+                              }
+                            }}
+                          >
+                            צפייה בהצעה שהוגשה
                           </Button>
                         )}
                         {['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && (

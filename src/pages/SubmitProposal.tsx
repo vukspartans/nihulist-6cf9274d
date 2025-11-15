@@ -25,6 +25,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { PROPOSAL_VALIDATION } from '@/utils/constants';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Lazy load heavy components
 const SignatureCanvas = lazy(() => import('@/components/SignatureCanvas').then(module => ({
@@ -57,6 +59,7 @@ const SubmitProposal = () => {
   const navigate = useNavigate();
   const { user, primaryRole } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
@@ -230,8 +233,8 @@ const SubmitProposal = () => {
       toast({ title: "שגיאה", description: "חתימה דיגיטלית נדרשת", variant: "destructive" });
       return false;
     }
-    if (!price || parseFloat(price) < 1000 || parseFloat(price) > 10000000) {
-      toast({ title: "שגיאה", description: "מחיר ההצעה חייב להיות בין ₪1,000 ל-₪10,000,000", variant: "destructive" });
+    if (!price || parseFloat(price) < PROPOSAL_VALIDATION.MIN_PRICE || parseFloat(price) > PROPOSAL_VALIDATION.MAX_PRICE) {
+      toast({ title: "שגיאה", description: `מחיר ההצעה חייב להיות בין ₪${PROPOSAL_VALIDATION.MIN_PRICE.toLocaleString('he-IL')} ל-₪${PROPOSAL_VALIDATION.MAX_PRICE.toLocaleString('he-IL')}`, variant: "destructive" });
       return false;
     }
     if (!timelineDays || parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000) {
@@ -357,10 +360,35 @@ const SubmitProposal = () => {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <CardTitle className="text-2xl font-bold text-green-700">הצעה נשלחה בהצלחה!</CardTitle>
-              <CardDescription>הצעת המחיר שלך נשלחה ללקוח ותופיע ברשימת ההצעות שלך</CardDescription>
+              <CardDescription className="space-y-2">
+                <p>הצעת המחיר שלך נשלחה ליזם ותופיע ברשימת ההצעות שלך</p>
+                <p className="text-sm font-medium text-foreground mt-4">
+                  מחיר הצעה: ₪{parseFloat(price).toLocaleString('he-IL')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  תאריך סיום: {completionDate ? format(completionDate, "PPP", { locale: he }) : `${timelineDays} ימים`}
+                </p>
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={() => navigate(getDashboardRouteForRole(primaryRole))} className="w-full">חזרה ללוח הבקרה</Button>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['rfp-invites'] });
+                  queryClient.invalidateQueries({ queryKey: ['proposals'] });
+                  queryClient.invalidateQueries({ queryKey: ['advisor-profile'] });
+                  navigate(getDashboardRouteForRole(primaryRole));
+                }} 
+                className="w-full"
+              >
+                חזרה ללוח הבקרה
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate(`/rfp/${rfp_id}/details`)}
+                className="w-full"
+              >
+                צפייה בפרטי הבקשה
+              </Button>
             </CardContent>
           </Card>
         </div>
