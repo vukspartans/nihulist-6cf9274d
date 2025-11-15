@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Building, Briefcase, Palette } from 'lucide-react';
 
 interface ConditionsBuilderProps {
   value: ProposalConditions;
@@ -19,6 +19,27 @@ export interface ProposalConditions {
   custom_conditions?: Array<{ key: string; value: string }>;
 }
 
+const TEMPLATES = {
+  construction: {
+    payment_terms: "30% מקדמה, 40% באמצע הפרויקט, 30% בסיום",
+    assumptions: "ההצעה מניחה קבלת כל האישורים מהרשויות המקומיות, גישה חופשית לאתר, וזמינות חשמל ומים",
+    exclusions: "ההצעה אינה כוללת עבודות עפר, פיתוח, או תשתיות חיצוניות",
+    validity_days: 90
+  },
+  consulting: {
+    payment_terms: "50% בתחילת הפרויקט, 50% בסיום",
+    assumptions: "שיתוף פעולה מלא מהלקוח, מתן גישה למידע ומסמכים נדרשים",
+    exclusions: "ההצעה אינה כוללת הטמעת המלצות או ליווי שוטף לאחר סיום הפרויקט",
+    validity_days: 60
+  },
+  design: {
+    payment_terms: "40% בקבלת הזמנה, 30% באישור תכנון ראשוני, 30% בסיום",
+    assumptions: "ההצעה מניחה עד 3 סבבי תיקונים לכל שלב",
+    exclusions: "ההצעה אינה כוללת דמי רישוי, הדפסה, או ייצור",
+    validity_days: 45
+  }
+};
+
 export function ConditionsBuilder({ value, onChange }: ConditionsBuilderProps) {
   const [customConditions, setCustomConditions] = useState<Array<{ key: string; value: string }>>(
     value.custom_conditions || []
@@ -26,6 +47,14 @@ export function ConditionsBuilder({ value, onChange }: ConditionsBuilderProps) {
 
   const handleChange = (field: keyof ProposalConditions, val: string | number) => {
     onChange({ ...value, [field]: val });
+  };
+
+  const applyTemplate = (templateKey: keyof typeof TEMPLATES) => {
+    const template = TEMPLATES[templateKey];
+    onChange({
+      ...value,
+      ...template
+    });
   };
 
   const addCustomCondition = () => {
@@ -53,10 +82,40 @@ export function ConditionsBuilder({ value, onChange }: ConditionsBuilderProps) {
       <CardHeader>
         <CardTitle>תנאים והנחות</CardTitle>
         <CardDescription>
-          פרטו את התנאים, ההנחות והאי-הכללות של ההצעה
+          פרטו את התנאים, ההנחות והאי-הכללות של ההצעה או בחרו תבנית מוכנה
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6" dir="rtl">
+        {/* Template Buttons */}
+        <div className="flex flex-wrap gap-2 pb-4 border-b">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            type="button"
+            onClick={() => applyTemplate('construction')}
+          >
+            <Building className="w-4 h-4 ml-2" />
+            תבנית בניה
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            type="button"
+            onClick={() => applyTemplate('consulting')}
+          >
+            <Briefcase className="w-4 h-4 ml-2" />
+            תבנית ייעוץ
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            type="button"
+            onClick={() => applyTemplate('design')}
+          >
+            <Palette className="w-4 h-4 ml-2" />
+            תבנית עיצוב
+          </Button>
+        </div>
         {/* Payment Terms */}
         <div className="space-y-2">
           <Label htmlFor="payment_terms">תנאי תשלום</Label>

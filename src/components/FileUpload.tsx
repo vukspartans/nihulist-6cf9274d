@@ -158,8 +158,8 @@ export function FileUpload({
         className={`
           border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
           transition-colors
-          ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted'}
-          ${uploading || files.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}
+          ${isDragActive ? 'border-primary bg-primary/10' : 'border-primary/30'}
+          ${uploading || files.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:bg-muted/50'}
         `}
       >
         <input {...getInputProps()} />
