@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -14,6 +14,7 @@ import { ProjectFilesManager } from '@/components/ProjectFilesManager';
 import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
 import { SentRFPsTab } from '@/components/SentRFPsTab';
 import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog';
+import { ProposalDetailDialog } from '@/components/ProposalDetailDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -35,6 +36,8 @@ export const ProjectDetail = () => {
   const [filesLoading, setFilesLoading] = useState(false);
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
 
 
   // Check for edit mode from URL params
@@ -202,6 +205,33 @@ export const ProjectDetail = () => {
       currency: 'ILS',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: any; label: string }> = {
+      submitted: { variant: 'secondary', label: 'הוגש' },
+      accepted: { variant: 'success', label: 'אושר' },
+      rejected: { variant: 'destructive', label: 'נדחה' },
+      withdrawn: { variant: 'muted', label: 'בוטל' },
+    };
+
+    const config = statusConfig[status] || { variant: 'secondary', label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleViewProposal = (proposal: any) => {
+    setSelectedProposal(proposal);
+    setDetailDialogOpen(true);
+  };
+
+  const getLowestPrice = () => {
+    if (proposals.length === 0) return null;
+    return Math.min(...proposals.map(p => p.price));
+  };
+
+  const getFastestTimeline = () => {
+    if (proposals.length === 0) return null;
+    return Math.min(...proposals.map(p => p.timeline_days));
   };
 
   const handleCompareProposals = () => {
@@ -391,37 +421,89 @@ export const ProjectDetail = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {proposals.map((proposal) => (
-                    <Card key={proposal.id} className="border-l-4 border-l-primary">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h4 className="font-semibold">{proposal.supplier_name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
-                            </p>
+                  {proposals.map((proposal) => {
+                    const lowestPrice = getLowestPrice();
+                    const fastestTimeline = getFastestTimeline();
+                    const isLowestPrice = lowestPrice === proposal.price;
+                    const isFastest = fastestTimeline === proposal.timeline_days;
+
+                    return (
+                      <Card 
+                        key={proposal.id} 
+                        className="border-l-4 border-l-primary hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => handleViewProposal(proposal)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-lg">{proposal.supplier_name}</h4>
+                                {getStatusBadge(proposal.status)}
+                                {isLowestPrice && (
+                                  <Badge variant="success" className="text-xs">
+                                    המחיר הנמוך ביותר
+                                  </Badge>
+                                )}
+                                {isFastest && (
+                                  <Badge variant="accent" className="text-xs">
+                                    הכי מהיר
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
+                              </p>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-2xl font-bold text-primary">
+                                {formatCurrency(proposal.price)}
+                              </p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+                                <Clock className="w-4 h-4" />
+                                {proposal.timeline_days} ימים
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-left">
-                            <p className="text-2xl font-bold text-primary">
-                              {new Intl.NumberFormat('he-IL', {
-                                style: 'currency',
-                                currency: 'ILS',
-                                minimumFractionDigits: 0,
-                              }).format(proposal.price)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {proposal.timeline_days} ימי עבודה
-                            </p>
+                          
+                          {proposal.scope_text && (
+                            <div className="border-t pt-3 mt-3">
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {proposal.scope_text}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              {proposal.files && proposal.files.length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <FileText className="w-4 h-4" />
+                                  {proposal.files.length} קבצים
+                                </span>
+                              )}
+                              {proposal.signature_blob && (
+                                <span className="flex items-center gap-1 text-green-600">
+                                  <FileSignature className="w-4 h-4" />
+                                  חתום
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewProposal(proposal);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 ml-2" />
+                              צפייה מלאה
+                            </Button>
                           </div>
-                        </div>
-                        {proposal.terms && (
-                          <p className="text-sm text-muted-foreground border-t pt-3 mt-3">
-                            {proposal.terms}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -467,6 +549,18 @@ export const ProjectDetail = () => {
         proposalIds={selectedProposalIds}
         advisorType={project.type || 'כללי'}
       />
+
+      {selectedProposal && (
+        <ProposalDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          proposal={selectedProposal}
+          onSuccess={() => {
+            fetchProposals();
+            setSelectedProposal(null);
+          }}
+        />
+      )}
     </div>
   );
 };
