@@ -86,6 +86,7 @@ export const RequestEditorDialog = ({
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("request");
   const [uploading, setUploading] = useState(false);
+  const [canAutoClose, setCanAutoClose] = useState(true);
   
   const defaultData = getDefaultData(projectName);
   const [formData, setFormData] = useState<AdvisorTypeRequestData>({
@@ -133,6 +134,19 @@ export const RequestEditorDialog = ({
 
     refreshSignedUrls();
   }, []);
+
+  // Prevent dialog from closing when returning from preview tab
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isOpen) {
+        setCanAutoClose(false);
+        setTimeout(() => setCanAutoClose(true), 300);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isOpen]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -341,6 +355,9 @@ export const RequestEditorDialog = ({
     const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
     
     try {
+      // Temporarily disable auto-close before opening new window
+      setCanAutoClose(false);
+      
       // Regenerate fresh signed URL for preview
       let previewUrl = file.url;
       
@@ -366,7 +383,13 @@ export const RequestEditorDialog = ({
         link.click();
         document.body.removeChild(link);
       }
+      
+      // Re-enable auto-close after a short delay
+      setTimeout(() => {
+        setCanAutoClose(true);
+      }, 500);
     } catch (error) {
+      setCanAutoClose(true); // Re-enable even if there's an error
       console.error('[RequestEditor] Preview error:', error);
       toast({
         title: "שגיאה בתצוגה מקדימה",
@@ -439,7 +462,18 @@ export const RequestEditorDialog = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Only allow closing if it's an explicit user action
+        // Prevent auto-close from focus changes
+        if (!open && canAutoClose) {
+          setIsOpen(false);
+        } else if (open) {
+          setIsOpen(true);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button 
           variant={hasBeenReviewed ? "outline" : "default"}
