@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -312,6 +312,14 @@ const RFPDetails = () => {
       <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
         <Logo size="md" />
         <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            חזרה לדשבורד
+          </Button>
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
