@@ -801,6 +801,7 @@ export type Database = {
           status: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
           supplier_id: string | null
+          token_used_at: string | null
         }
         Insert: {
           advisor_id?: string | null
@@ -825,6 +826,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
           supplier_id?: string | null
+          token_used_at?: string | null
         }
         Update: {
           advisor_id?: string | null
@@ -849,6 +851,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token?: string
           supplier_id?: string | null
+          token_used_at?: string | null
         }
         Relationships: [
           {
