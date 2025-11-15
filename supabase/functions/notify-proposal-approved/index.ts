@@ -34,7 +34,7 @@ serve(async (req) => {
         timeline_days,
         project_id,
         advisor_id,
-        projects (
+        projects!fk_proposals_project (
           id,
           name,
           owner_id,
