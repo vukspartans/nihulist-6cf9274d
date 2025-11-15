@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
@@ -10,10 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
 import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload, CalendarIcon } from 'lucide-react';
-import { SignatureCanvas } from '@/components/SignatureCanvas';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
@@ -25,6 +25,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
+
+// Lazy load heavy components
+const SignatureCanvas = lazy(() => import('@/components/SignatureCanvas').then(module => ({
+  default: module.SignatureCanvas
+})));
 
 interface RFPDetails {
   id: string;
@@ -265,10 +270,77 @@ const SubmitProposal = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg text-muted-foreground">טוען...</p>
+      <div className="min-h-screen bg-background" dir="rtl">
+        <UserHeader />
+        <div className="container max-w-4xl mx-auto px-4 py-8">
+          <Skeleton className="h-10 w-48 mb-6" />
+          <Skeleton className="h-16 w-full mb-8" />
+          
+          {/* Price and Timeline Skeleton */}
+          <Card className="mb-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Scope Skeleton */}
+          <Card className="mb-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+
+          {/* Conditions Skeleton */}
+          <Card className="mb-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+
+          {/* Files Skeleton */}
+          <Card className="mb-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-full" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-40 w-full" />
+            </CardContent>
+          </Card>
+
+          {/* Signature Skeleton */}
+          <Card className="mb-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-48 w-full" />
+            </CardContent>
+          </Card>
+
+          <Skeleton className="h-12 w-full" />
         </div>
       </div>
     );
@@ -399,8 +471,26 @@ const SubmitProposal = () => {
             <AlertDescription className="text-orange-900 dark:text-orange-200"><strong>שימו לב:</strong> חתימה דיגיטלית זו תהווה התחייבות משפטית מחייבת ותאושר באמצעות חותמת זמן וזיהוי דיגיטלי</AlertDescription>
           </Alert>
           <Card className="border-2 border-primary shadow-lg">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Edit3 className="h-5 w-5" />חתימה דיגיטלית</CardTitle><CardDescription>חתמו בתיבה למטה לאישור ההצעה</CardDescription></CardHeader>
-            <CardContent><SignatureCanvas onSign={setSignature} /></CardContent>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Edit3 className="h-5 w-5" />
+                חתימה דיגיטלית
+              </CardTitle>
+              <CardDescription>חתמו בתיבה למטה לאישור ההצעה</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={
+                <div className="space-y-3">
+                  <Skeleton className="h-48 w-full rounded-md" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-24" />
+                  </div>
+                </div>
+              }>
+                <SignatureCanvas onSign={setSignature} />
+              </Suspense>
+            </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
