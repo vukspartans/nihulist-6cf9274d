@@ -112,7 +112,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener FIRST - synchronous to avoid deadlocks
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[useAuth] Auth event:', event, 'session:', !!session);
+        console.log('[useAuth] Auth event:', event, 'session:', !!session, 'timestamp:', new Date().toISOString());
+        
+        // Log session expiry information
+        if (session) {
+          const expiresAt = new Date(session.expires_at! * 1000);
+          console.log('[useAuth] Session expires at:', expiresAt.toISOString());
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -164,6 +171,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Set up session refresh interval to keep session alive
+  useEffect(() => {
+    const refreshInterval = setInterval(async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('[useAuth] Session refresh error:', error);
+        return;
+      }
+      
+      if (session) {
+        console.log('[useAuth] Session refreshed successfully');
+        setSession(session);
+        setUser(session.user);
+      } else {
+        console.warn('[useAuth] No session found during refresh');
+      }
+    }, 50 * 60 * 1000); // 50 minutes
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const signOut = async () => {

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ToSAcceptanceModal } from '@/components/ToSAcceptanceModal';
@@ -9,6 +9,20 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Give it a moment before redirecting in case session is loading
+      const timer = setTimeout(() => {
+        setShouldRedirect(true);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShouldRedirect(false);
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (
@@ -21,7 +35,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user) {
+  if (!user && shouldRedirect) {
     return <Navigate to="/auth" replace />;
   }
 
