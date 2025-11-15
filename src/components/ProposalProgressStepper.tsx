@@ -30,8 +30,8 @@ export function ProposalProgressStepper({ steps, className }: ProposalProgressSt
           }}
         />
         
-        {/* Steps - reverse order for RTL */}
-        {steps.slice().reverse().map((step, index) => (
+        {/* Steps in RTL order */}
+        {steps.map((step, index) => (
           <div key={step.id} className="flex flex-col items-center relative z-10 flex-1">
             <div 
               className={cn(

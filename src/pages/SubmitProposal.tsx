@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload, CalendarIcon } from 'lucide-react';
+import { CheckCircle, ArrowRight, AlertCircle, Edit3, Upload, CalendarIcon } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
@@ -101,7 +101,7 @@ const SubmitProposal = () => {
 
   const steps = [
     { id: 1, title: 'פרטי הצעת מחיר', completed: !!(price && timelineDays) },
-    { id: 2, title: 'היקף העבודה', completed: scopeText.length >= 100 },
+    { id: 2, title: 'היקף העבודה', completed: scopeText.length >= 20 },
     { id: 3, title: 'תנאים והנחות', completed: !!(conditions.payment_terms || conditions.assumptions) },
     { id: 4, title: 'קבצים מצורפים', completed: files.length > 0 },
     { id: 5, title: 'חתימה דיגיטלית', completed: !!signature },
@@ -238,8 +238,8 @@ const SubmitProposal = () => {
       toast({ title: "שגיאה", description: "זמן ביצוע חייב להיות בין יום אחד ל-1000 ימים", variant: "destructive" });
       return false;
     }
-    if (scopeText.length < 100) {
-      toast({ title: "שגיאה", description: "היקף העבודה חייב להכיל לפחות 100 תווים", variant: "destructive" });
+    if (scopeText.length < 20) {
+      toast({ title: "שגיאה", description: "היקף העבודה חייב להכיל לפחות 20 תווים", variant: "destructive" });
       return false;
     }
     return true;
@@ -372,8 +372,13 @@ const SubmitProposal = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="flex justify-between items-center p-6 border-b"><UserHeader /></div>
       <div className="container max-w-4xl mx-auto px-4 py-8" dir="rtl">
-        <Button variant="ghost" onClick={() => navigate(getDashboardRouteForRole(primaryRole))} className="mb-6">
-          <ArrowLeft className="ml-2 h-4 w-4" />חזרה לדשבורד
+        <Button 
+          variant="outline" 
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))} 
+          className="mb-6 hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          <ArrowRight className="ml-2 h-4 w-4" />
+          חזרה לדשבורד
         </Button>
         <ProposalProgressStepper steps={steps} className="mb-8" />
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -451,10 +456,10 @@ const SubmitProposal = () => {
             <CardHeader><CardTitle>היקף העבודה</CardTitle><CardDescription>פרטו את היקף העבודה המוצע</CardDescription></CardHeader>
             <CardContent className="space-y-2" dir="rtl">
               <Label htmlFor="scope">תיאור מפורט</Label>
-              <Textarea id="scope" value={scopeText} onChange={(e) => setScopeText(e.target.value)} placeholder="פרט את היקף העבודה המוצע (מינימום 100 תווים)" rows={6} required />
+              <Textarea id="scope" value={scopeText} onChange={(e) => setScopeText(e.target.value)} placeholder="פרט את היקף העבודה המוצע (מינימום 20 תווים)" rows={6} required />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>מינימום 100 תווים</span>
-                <span className={cn("font-medium", scopeText.length < 100 ? "text-destructive" : "text-green-600")}>{scopeText.length} / 100</span>
+                <span>מינימום 20 תווים</span>
+                <span className={cn("font-medium", scopeText.length < 20 ? "text-destructive" : "text-green-600")}>{scopeText.length} / 20</span>
               </div>
             </CardContent>
           </Card>
