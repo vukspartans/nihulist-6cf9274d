@@ -538,7 +538,7 @@ const RFPDetails = () => {
                   }}
                   size="lg"
                 >
-                  <Send className="w-4 h-4 ml-2" />
+                  <Send className="w-4 h-4 mr-2" />
                   הגש הצעת מחיר
                 </Button>
                 <Button 

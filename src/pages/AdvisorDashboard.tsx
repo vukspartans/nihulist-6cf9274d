@@ -647,8 +647,8 @@ const AdvisorDashboard = () => {
           </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" dir="rtl">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8" dir="rtl">
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
@@ -658,14 +658,14 @@ const AdvisorDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <Bell className="h-8 w-8 text-orange-500" />
                 <div className="flex items-center gap-2">
                   <p className="text-2xl font-bold">{newInvites.length}</p>
                   {newInvites.length > 0 && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">חדש</span>
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-fade-in">חדש</span>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">הצעות חדשות שהתקבלו</p>
@@ -673,7 +673,7 @@ const AdvisorDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <Coins className="h-8 w-8 text-green-500" />
@@ -683,7 +683,7 @@ const AdvisorDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <Clock className="h-8 w-8 text-blue-500" />
@@ -747,7 +747,7 @@ const AdvisorDashboard = () => {
                 const projectDescription = invite.rfps?.projects?.description;
                 
                 return (
-                  <Card key={invite.id} className={`hover:shadow-md transition-shadow ${isNew ? 'border-2 border-orange-400' : ''}`}>
+                  <Card key={invite.id} className={`shadow-md hover:shadow-lg transition-shadow ${isNew ? 'border-2 border-orange-400' : ''}`}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -776,7 +776,7 @@ const AdvisorDashboard = () => {
                           </Badge>
                           
                           {proposalMap.has(invite.rfps?.projects?.id) && (
-                            <Badge className="bg-green-100 text-green-800 border-green-300">
+                            <Badge className="bg-green-100 text-green-800 border-green-300 animate-fade-in">
                               ✓ הצעה הוגשה
                             </Badge>
                           )}
@@ -862,7 +862,7 @@ const AdvisorDashboard = () => {
                             onClick={() => handleDeclineClick(invite.id)}
                             disabled={declining}
                           >
-                            <XCircle className="h-4 w-4 ml-2" />
+                            <XCircle className="h-4 w-4 mr-2" />
                             דחה הזמנה
                           </Button>
                         )}
@@ -883,7 +883,7 @@ const AdvisorDashboard = () => {
               </Card>
             ) : (
               proposals.map((proposal) => (
-                <Card key={proposal.id} className="hover:shadow-md transition-shadow">
+                <Card key={proposal.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
@@ -900,7 +900,7 @@ const AdvisorDashboard = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
                         <Coins className="h-4 w-4 text-muted-foreground" />
                         <span>המחיר שלי: ₪{proposal.price.toLocaleString()}</span>

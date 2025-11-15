@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowRight, AlertCircle, Edit3, Upload, CalendarIcon } from 'lucide-react';
+import { CheckCircle, ArrowRight, AlertCircle, Edit3, Upload, CalendarIcon, Send } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
@@ -434,30 +434,41 @@ const SubmitProposal = () => {
         </Button>
         <ProposalProgressStepper steps={steps} className="mb-8" />
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle>פרטי הצעת מחיר</CardTitle>
-              <CardDescription>הזינו את המחיר המוצע וזמן הביצוע</CardDescription>
+              <CardTitle>מחיר ולוח זמנים</CardTitle>
+              <CardDescription>הזינו את המחיר המוצע ולוח הזמנים המשוער</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4" dir="rtl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="price">מחיר ההצעה (₪)</Label>
-                  <Input
-                    id="price"
-                    type="text"
-                    value={priceDisplay}
-                    onChange={handlePriceChange}
-                    placeholder="0"
-                    required
-                    dir="ltr"
-                    className="text-right"
-                  />
+                  <Label htmlFor="price">מחיר הצעה (₪) *</Label>
+                  <div className="relative">
+                    <Input
+                      id="price"
+                      type="text"
+                      value={priceDisplay}
+                      onChange={handlePriceChange}
+                      placeholder="0"
+                      className="text-left pr-8 focus:ring-2 focus:ring-primary focus:border-primary"
+                      dir="ltr"
+                      required
+                      aria-describedby="price-helper"
+                      aria-invalid={!price || parseFloat(price) < PROPOSAL_VALIDATION.MIN_PRICE}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                  </div>
                   {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
                     <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
                       <CheckCircle className="h-4 w-4" />
                       <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
                     </div>
+                  )}
+                  {price && parseFloat(price) < PROPOSAL_VALIDATION.MIN_PRICE && (
+                    <p className="text-sm text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      מחיר מינימלי: ₪{PROPOSAL_VALIDATION.MIN_PRICE.toLocaleString('he-IL')}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -473,7 +484,7 @@ const SubmitProposal = () => {
                         )}
                         dir="rtl"
                       >
-                        <CalendarIcon className="ml-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4" />
                         {completionDate ? (
                           format(completionDate, "PPP", { locale: he })
                         ) : (
@@ -481,32 +492,32 @@ const SubmitProposal = () => {
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" dir="rtl">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={completionDate}
                         onSelect={handleDateSelect}
-                        disabled={(date) => date < new Date() || date > new Date(Date.now() + 1000 * 24 * 60 * 60 * 1000)}
+                        disabled={(date) => date < new Date()}
                         initialFocus
-                        locale={he}
-                        className="pointer-events-auto"
-                        dir="rtl"
                       />
                     </PopoverContent>
                   </Popover>
-                  {completionDate && timelineDays && (
-                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>זמן ביצוע: {timelineDays} ימים</span>
-                    </div>
+                  {timelineDays && (
+                    <p className="text-xs text-muted-foreground">
+                      משך ביצוע: {timelineDays} ימים
+                    </p>
                   )}
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader><CardTitle>היקף העבודה</CardTitle><CardDescription>פרטו את היקף העבודה המוצע</CardDescription></CardHeader>
-            <CardContent className="space-y-2" dir="rtl">
+
+          <Card className="shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle>היקף עבודה</CardTitle>
+              <CardDescription>תארו את היקף העבודה המוצע</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
               <Label htmlFor="scope">תיאור מפורט</Label>
               <Textarea id="scope" value={scopeText} onChange={(e) => setScopeText(e.target.value)} placeholder="פרט את היקף העבודה המוצע (מינימום 20 תווים)" rows={6} required />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
@@ -515,6 +526,7 @@ const SubmitProposal = () => {
               </div>
             </CardContent>
           </Card>
+          
           <ConditionsBuilder value={conditions} onChange={setConditions} />
           <Card className="border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
             <CardHeader>
@@ -547,6 +559,12 @@ const SubmitProposal = () => {
               }>
                 <SignatureCanvas onSign={setSignature} />
               </Suspense>
+              {signature && (
+                <div className="flex items-center gap-2 text-green-600 text-sm mt-2">
+                  <CheckCircle className="h-4 w-4" />
+                  חתימה נקלטה בהצלחה
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -557,7 +575,10 @@ const SubmitProposal = () => {
               </div>
             </CardContent>
           </Card>
-          <Button type="submit" size="lg" className="w-full" disabled={submitting}>{submitting ? "שולח..." : "המשך לסקירה"}</Button>
+          <Button type="submit" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all" disabled={submitting}>
+            {submitting ? "שולח..." : "המשך לסקירה"}
+            <Send className="mr-2 h-4 w-4" />
+          </Button>
         </form>
         <ConfirmProposalDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog} onConfirm={handleFinalSubmit} price={price} timelineDays={timelineDays} scopeText={scopeText} fileCount={files.length} hasSignature={!!signature} />
       </div>
