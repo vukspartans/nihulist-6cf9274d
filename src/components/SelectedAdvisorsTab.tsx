@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, FileText, Download, Trash2, Phone, Mail, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { Users, Plus, FileText, Download, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, Briefcase } from 'lucide-react';
 import { AddAdvisorDialog } from './AddAdvisorDialog';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -25,6 +25,7 @@ interface SelectedAdvisor {
   status: string;
   selected_at: string;
   notes: string | null;
+  advisor_type?: string;
   advisor: {
     company_name: string;
     location: string | null;
@@ -70,9 +71,36 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
 
       if (error) throw error;
 
-      // Fetch user profiles separately
+      // Fetch user profiles and advisor types separately
       const advisorData = data || [];
       const userIds = advisorData.map((item: any) => item.advisor.user_id).filter(Boolean);
+      
+      // Get advisor types from rfp_invites
+      const advisorIds = advisorData.map((item: any) => item.advisor_id);
+      const { data: rfpData } = await supabase
+        .from('rfps')
+        .select('id')
+        .eq('project_id', projectId)
+        .limit(1)
+        .single();
+
+      let advisorTypes: Record<string, string> = {};
+      if (rfpData) {
+        const { data: invites } = await supabase
+          .from('rfp_invites')
+          .select('advisor_id, advisor_type')
+          .eq('rfp_id', rfpData.id)
+          .in('advisor_id', advisorIds);
+
+        if (invites) {
+          advisorTypes = invites.reduce((acc: Record<string, string>, invite: any) => {
+            if (invite.advisor_type) {
+              acc[invite.advisor_id] = invite.advisor_type;
+            }
+            return acc;
+          }, {});
+        }
+      }
       
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
@@ -81,9 +109,10 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
           .in('user_id', userIds);
 
         if (!profilesError && profiles) {
-          // Merge profile data with advisor data
+          // Merge profile data and advisor types with advisor data
           const enrichedData = advisorData.map((item: any) => ({
             ...item,
+            advisor_type: advisorTypes[item.advisor_id],
             advisor: {
               ...item.advisor,
               user: profiles.find((p: any) => p.user_id === item.advisor.user_id) || {
@@ -233,6 +262,12 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
                       {item.advisor.user.name}
                     </p>
                     <div className="flex gap-2 flex-wrap">
+                      {item.advisor_type && (
+                        <Badge variant="outline" className="bg-blue-50">
+                          <Briefcase className="h-3 w-3 ml-1" />
+                          {item.advisor_type}
+                        </Badge>
+                      )}
                       <Badge variant="secondary">
                         {getFeeTypeLabel(item.fee_type)}
                       </Badge>
@@ -289,6 +324,16 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
                 </div>
 
                 <div className="space-y-3">
+                  {item.selected_at && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">נבחר ב:</span>
+                      <span className="font-medium">
+                        {format(new Date(item.selected_at), 'PPP', { locale: he })}
+                      </span>
+                    </div>
+                  )}
+                  
                   {item.start_date && (
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
