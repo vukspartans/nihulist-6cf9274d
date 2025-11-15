@@ -28,6 +28,7 @@ import {
   Target
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import HeroImageCarousel from "@/components/HeroImageCarousel";
 import LazySection from "@/components/LazySection";
 import MobileNav from "@/components/MobileNav";
@@ -42,6 +43,7 @@ const Landing = memo(() => {
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const navigate = useNavigate();
+  const { user, primaryRole } = useAuth();
 
   // Hero images array - optimized for performance
   const heroImages = [
@@ -100,7 +102,17 @@ const Landing = memo(() => {
       {/* Navigation */}
       <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
-          <Logo size="sm" className="sm:h-10" />
+          <div 
+            onClick={() => {
+              if (user && primaryRole) {
+                const dashboardRoute = primaryRole === 'entrepreneur' ? '/dashboard' : '/advisor-dashboard';
+                navigate(dashboardRoute);
+              }
+            }} 
+            className={user ? "cursor-pointer" : ""}
+          >
+            <Logo size="sm" className="sm:h-10" />
+          </div>
           
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-4">
