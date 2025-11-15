@@ -187,24 +187,38 @@ export const RequestEditorDialog = ({
           size: formatFileSize(file.size)
         });
 
-        // Upload to storage
+        // Upload to storage with explicit auth header
         const { error: uploadError } = await supabase.storage
           .from('rfp-request-files')
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            headers: {
+              Authorization: `Bearer ${session.access_token}`
+            }
           });
 
         if (uploadError) {
-          console.error('[RequestEditor] Upload error:', {
+          // Enhanced error logging
+          console.error('[RequestEditor] Upload error details:', {
             error: uploadError,
             message: uploadError.message,
             path: filePath,
             projectId,
-            userId: session?.user?.id
+            userId: session.user.id,
+            bucketId: 'rfp-request-files',
+            folderStructure: filePath.split('/'),
+            authToken: session.access_token ? 'Present' : 'Missing',
+            tokenExpiry: session.expires_at,
+            fileSize: file.size,
+            fileType: file.type
           });
           
-          const errorMessage = formatSupabaseError(uploadError);
+          // User-friendly error with actionable steps
+          const errorMessage = uploadError.message?.includes('row-level security')
+            ? 'בעיית הרשאות. נסה:\n1. לרענן את הדף\n2. להתחבר מחדש\n3. לנסות שוב'
+            : formatSupabaseError(uploadError);
+            
           errors.push(`${file.name}: ${errorMessage}`);
           continue;
         }
