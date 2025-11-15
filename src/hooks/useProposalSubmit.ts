@@ -8,6 +8,8 @@ import { UploadedFile } from '@/components/FileUpload';
 import { ProposalConditions } from '@/components/ConditionsBuilder';
 import { handleError } from '@/utils/errorHandling';
 import { PROPOSAL_VALIDATION, FILE_LIMITS } from '@/utils/constants';
+import { sanitizeText } from '@/utils/inputSanitization';
+import { validateSubmissionToken, validatePrice, validateTimeline, validateSignature, validateFileUploads, checkRateLimit } from '@/utils/securityValidation';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 type SignatureInsert = Database['public']['Tables']['signatures']['Insert'];
@@ -17,18 +19,20 @@ interface SubmitProposalData {
   rfpId: string;
   projectId: string;
   advisorId: string;
+  supplierName: string;
   price: number;
-  timeline_days: number;
-  scope_text: string;
+  timelineDays: number;
+  scopeText: string;
   conditions: ProposalConditions;
-  files: UploadedFile[];
+  uploadedFiles: UploadedFile[];
   signature: SignatureData;
-  declaration: string;
+  declarationText: string;
+  submitToken?: string;
 }
 
 /**
  * Hook for handling proposal submissions by advisors
- * Manages validation, signature capture, and database persistence
+ * Phase 1 Security: Enhanced validation, sanitization, and token verification
  */
 export const useProposalSubmit = () => {
   const [loading, setLoading] = useState(false);
@@ -36,39 +40,59 @@ export const useProposalSubmit = () => {
   const queryClient = useQueryClient();
 
   const submitProposal = async (data: SubmitProposalData) => {
-    // Input validation using constants
-    if (!data.projectId || !data.advisorId) {
-      throw new Error('Missing required project or advisor ID');
-    }
-
-    if (data.price < PROPOSAL_VALIDATION.MIN_PRICE || data.price > PROPOSAL_VALIDATION.MAX_PRICE) {
-      throw new Error(`מחיר לא תקין - חייב להיות בין ${PROPOSAL_VALIDATION.MIN_PRICE} ל-${PROPOSAL_VALIDATION.MAX_PRICE}`);
-    }
-
-    if (data.timeline_days < PROPOSAL_VALIDATION.MIN_TIMELINE_DAYS || data.timeline_days > PROPOSAL_VALIDATION.MAX_TIMELINE_DAYS) {
-      throw new Error(`לוח זמנים לא תקין - חייב להיות בין ${PROPOSAL_VALIDATION.MIN_TIMELINE_DAYS} ל-${PROPOSAL_VALIDATION.MAX_TIMELINE_DAYS} ימים`);
-    }
-
-    if (!data.scope_text || data.scope_text.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH) {
-      throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
-    }
-
-    if (!data.signature.png || !data.signature.vector || data.signature.vector.length === 0) {
-      throw new Error('חתימה לא תקינה');
-    }
-
-    if (data.files.length > FILE_LIMITS.MAX_FILES) {
-      throw new Error(`מקסימום ${FILE_LIMITS.MAX_FILES} קבצים מצורפים`);
-    }
-
-    const totalFileSize = data.files.reduce((sum, f) => sum + (f.size || 0), 0);
-    if (totalFileSize > FILE_LIMITS.MAX_TOTAL_SIZE_MB * 1024 * 1024) {
-      throw new Error(`גודל הקבצים המצורפים עולה על ${FILE_LIMITS.MAX_TOTAL_SIZE_MB}MB`);
-    }
-
     setLoading(true);
+    console.log('[Proposal Submit] Starting submission process...');
 
     try {
+      // SECURITY: Rate limiting check
+      const rateLimitKey = `proposal-submit-${data.advisorId}`;
+      const rateLimitCheck = checkRateLimit(rateLimitKey, 3, 60000);
+      if (!rateLimitCheck.allowed) {
+        throw new Error(rateLimitCheck.error);
+      }
+
+      // SECURITY: Validate required fields
+      if (!data.projectId || !data.advisorId) {
+        throw new Error('Missing required project or advisor information');
+      }
+
+      // SECURITY: Validate submission token if provided
+      if (data.submitToken) {
+        console.log('[Proposal Submit] Validating submission token...');
+        const tokenValidation = await validateSubmissionToken(data.submitToken, data.advisorId);
+        if (!tokenValidation.valid) {
+          throw new Error(tokenValidation.error);
+        }
+        console.log('[Proposal Submit] Token validation passed');
+      }
+
+      // SECURITY: Validate price, timeline, signature
+      const priceValidation = validatePrice(data.price);
+      if (!priceValidation.valid) throw new Error(priceValidation.error);
+
+      const timelineValidation = validateTimeline(data.timelineDays);
+      if (!timelineValidation.valid) throw new Error(timelineValidation.error);
+
+      const signatureValidation = validateSignature(data.signature);
+      if (!signatureValidation.valid) throw new Error(signatureValidation.error);
+
+      // SECURITY: Validate text fields
+      if (!data.declarationText || data.declarationText.trim().length === 0) {
+        throw new Error('Declaration text is required');
+      }
+      if (data.declarationText.length > 5000) {
+        throw new Error('Declaration text is too long');
+      }
+      
+      if (!data.scopeText || data.scopeText.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH) {
+        throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
+      }
+
+      // SECURITY: Validate files
+      if (data.uploadedFiles && data.uploadedFiles.length > 0) {
+        const fileValidation = validateFileUploads(data.uploadedFiles);
+        if (!fileValidation.valid) throw new Error(fileValidation.error);
+      }
       // Get user info for signature metadata
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');

@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { sanitizeText, sanitizeHtml } from '@/utils/inputSanitization';
 
 interface RFPWizardProps {
   projectId: string;
@@ -196,30 +197,30 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const emailBodyText = typeData?.emailBody || rfpContent.content;
     
     // Extract request data
-    const requestTitle = typeData?.requestTitle;
-    const requestContent = typeData?.requestContent;
-    const requestFiles = typeData?.requestAttachments;
     
-    // Format email body HTML
+    // SECURITY: Sanitize email content before sending
+    const sanitizedEmailBody = emailBodyText
+      .split('\n')
+      .map(line => {
+        const trimmed = sanitizeText(line.trim(), 500);
+        if (!trimmed) return '<div style="height: 12px;"></div>';
+        
+        if (trimmed.includes('היכנס/י עכשיו למערכת ניהוליסט')) {
+          return `<p style="margin: 16px 0;"><a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 500;">${sanitizeHtml(trimmed)}</a></p>`;
+        }
+        
+        if (trimmed.startsWith('✅')) {
+          return `<p style="margin: 8px 0 8px 20px;">${sanitizeHtml(trimmed)}</p>`;
+        }
+        
+        return `<p style="margin: 12px 0;">${sanitizeHtml(trimmed)}</p>`;
+      })
+      .join('');
+    
+    // Format email body HTML with sanitized content
     const emailBodyHtml = `
 <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: right; line-height: 1.6;">
-  ${emailBodyText
-    .split('\n')
-    .map(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return '<div style="height: 12px;"></div>';
-      
-      if (trimmed.includes('היכנס/י עכשיו למערכת ניהוליסט')) {
-        return `<p style="margin: 16px 0;"><a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 500;">${trimmed}</a></p>`;
-      }
-      
-      if (trimmed.startsWith('✅')) {
-        return `<p style="margin: 8px 0 8px 20px;">${trimmed}</p>`;
-      }
-      
-      return `<p style="margin: 12px 0;">${trimmed}</p>`;
-    })
-    .join('')}
+  ${sanitizedEmailBody}
 </div>
 `;
     
