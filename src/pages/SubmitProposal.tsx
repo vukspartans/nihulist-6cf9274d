@@ -257,7 +257,7 @@ const SubmitProposal = () => {
   const handleFinalSubmit = async () => {
     setShowConfirmDialog(false);
     const result = await submitProposal({
-      rfpId: rfp_id || '',
+      rfpId: (rfp_id || rfpDetails?.id || ''),
       projectId: rfpDetails?.projects.id || '',
       advisorId: advisorProfile?.id || '',
       price: parseFloat(price),
@@ -268,7 +268,31 @@ const SubmitProposal = () => {
       signature,
       declaration: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה"
     });
-    if (result.success) setSubmitted(true);
+    
+    console.log('[SubmitProposal] Submission result:', result);
+    
+    if (result.success) {
+      // Invalidate queries to refresh dashboard data
+      queryClient.invalidateQueries({ queryKey: ['rfp-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      queryClient.invalidateQueries({ queryKey: ['advisor-profile'] });
+      
+      // Show success toast
+      toast({
+        title: "הצעה נשלחה בהצלחה!",
+        description: "הצעת המחיר שלך נשלחה ליזם ותופיע ברשימת ההצעות שלך",
+      });
+      
+      // Navigate back to advisor dashboard
+      navigate(getDashboardRouteForRole(primaryRole));
+    } else {
+      console.error('[SubmitProposal] Submission failed:', result);
+      toast({
+        title: "שגיאה בהגשת הצעה",
+        description: "אירעה שגיאה בהגשת ההצעה. אנא נסה שוב.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
