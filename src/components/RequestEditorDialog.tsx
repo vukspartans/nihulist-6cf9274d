@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Mail, Paperclip, Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Edit, Save, FileText, Mail, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -253,6 +253,14 @@ export const RequestEditorDialog = ({
           title: "קבצים הועלו בהצלחה",
           description: `${uploadedFiles.length} קבצים הועלו`,
         });
+
+        // Auto-scroll to bottom to show new files
+        setTimeout(() => {
+          const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+          if (scrollArea) {
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+          }
+        }, 100);
       }
 
       // Show errors if any
@@ -284,6 +292,22 @@ export const RequestEditorDialog = ({
       setUploading(false);
       // Reset file input
       e.target.value = '';
+    }
+  };
+
+  const handleFilePreview = (file: UploadedFileMetadata) => {
+    const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
+    
+    if (isImage) {
+      window.open(file.url, '_blank');
+    } else {
+      const link = document.createElement('a');
+      link.href = file.url;
+      link.download = file.name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -400,8 +424,9 @@ export const RequestEditorDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="max-h-[calc(90vh-240px)] mt-4">
-            <TabsContent value="request" className="space-y-4 p-1">
+          <ScrollArea className="h-[calc(90vh-280px)] overflow-y-auto mt-4" dir="rtl">
+            <div className="pr-4">
+              <TabsContent value="request" className="space-y-4 p-1">
               {/* Request Title */}
               <div className="space-y-2">
                 <Label htmlFor="request-title" className="text-right block">כותרת הבקשה</Label>
@@ -455,32 +480,88 @@ export const RequestEditorDialog = ({
                   </Button>
                   <p className="text-xs text-muted-foreground text-right mt-1">
                     תוכל לצרף תוכניות, מפרטים, או מסמכים רלוונטיים (עד 10MB לקובץ)
+                    <br />
+                    <span className="text-primary">💡 לחץ על קובץ לתצוגה מקדימה</span>
                   </p>
                 </div>
                 
                 {formData.requestAttachments.length > 0 && (
                   <div className="space-y-2 mt-3">
-                    {formData.requestAttachments.map((file, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center gap-2 p-3 bg-muted rounded-lg"
-                        dir="rtl"
-                      >
-                        <Paperclip className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm flex-1 text-right">{file.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {formatFileSize(file.size)}
-                        </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeAttachment(index)}
+                    <p className="text-sm font-medium text-muted-foreground text-right">
+                      {formData.requestAttachments.length} קבצים מצורפים
+                    </p>
+                    {formData.requestAttachments.map((file, index) => {
+                      const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
+                      const isPDF = /\.pdf$/i.test(file.name);
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className="group relative flex items-center gap-3 p-4 bg-muted hover:bg-muted/80 rounded-lg border border-border hover:border-primary/50 transition-all"
+                          dir="rtl"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                          {/* File Icon or Thumbnail */}
+                          {isImage ? (
+                            <div className="w-12 h-12 rounded overflow-hidden bg-background flex-shrink-0">
+                              <img 
+                                src={file.url} 
+                                alt={file.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-background flex items-center justify-center flex-shrink-0">
+                              {isPDF ? (
+                                <FileText className="h-6 w-6 text-red-500" />
+                              ) : (
+                                <Paperclip className="h-6 w-6 text-muted-foreground" />
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* File Info - Clickable Area */}
+                          <button
+                            type="button"
+                            onClick={() => handleFilePreview(file)}
+                            className="flex-1 text-right hover:text-primary transition-colors"
+                          >
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-medium line-clamp-1">{file.name}</span>
+                              <div className="flex items-center gap-2 justify-end">
+                                <Badge variant="outline" className="text-xs">
+                                  {formatFileSize(file.size)}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {isImage ? 'תמונה' : isPDF ? 'PDF' : 'קובץ'}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                          
+                          {/* Preview Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleFilePreview(file)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Delete Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeAttachment(index)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -551,6 +632,7 @@ export const RequestEditorDialog = ({
                 </div>
               </div>
             </TabsContent>
+            </div>
           </ScrollArea>
         </Tabs>
 
