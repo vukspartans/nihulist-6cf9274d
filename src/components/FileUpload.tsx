@@ -14,6 +14,7 @@ interface FileUploadProps {
   accept?: string;
   onUpload: (files: UploadedFile[]) => void;
   proposalId?: string;
+  advisorId?: string; // Required for temp folder uploads when proposalId is not available
   existingFiles?: UploadedFile[];
 }
 
@@ -32,6 +33,7 @@ export function FileUpload({
   accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip',
   onUpload,
   proposalId,
+  advisorId,
   existingFiles = []
 }: FileUploadProps) {
   const [files, setFiles] = useState<UploadedFile[]>(existingFiles);
@@ -64,7 +66,14 @@ export function FileUpload({
         const file = acceptedFiles[i];
         setProgress(((i + 1) / acceptedFiles.length) * 100);
 
-        const filePath = `${proposalId || 'temp'}/${crypto.randomUUID()}-${file.name}`;
+        // Use temp-{advisorId} folder if no proposalId, otherwise use proposalId folder
+        const folderPath = proposalId 
+          ? proposalId 
+          : advisorId 
+            ? `temp-${advisorId}` 
+            : 'temp-unknown';
+        
+        const filePath = `${folderPath}/${crypto.randomUUID()}-${file.name}`;
         
         const { error: uploadError } = await supabase.storage
           .from('proposal-files')
@@ -103,7 +112,7 @@ export function FileUpload({
       setUploading(false);
       setProgress(0);
     }
-  }, [files, maxFiles, maxSize, proposalId, onUpload, toast]);
+  }, [files, maxFiles, maxSize, proposalId, advisorId, onUpload, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
