@@ -343,19 +343,19 @@ export const ProjectDetail = () => {
       {/* Main Content Tabs */}
       <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
         <TabsList className="grid w-full grid-cols-5 h-11">
-          <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות מחיר</TabsTrigger>
+          <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות</TabsTrigger>
           <TabsTrigger 
             value="sent-rfps" 
             className="text-right flex items-center gap-2"
           >
-            בקשות להצעות מחיר נשלחו
+            בקשות שנשלחו
           </TabsTrigger>
           <TabsTrigger 
             value="received" 
             className="text-right flex items-center gap-2"
             disabled={!rfpSent}
           >
-            הצעות מחיר שהתקבלו
+            הצעות שהתקבלו
             {proposals.length > 0 && (
               <Badge variant="secondary" className="mr-1">
                 {proposals.length}
@@ -364,7 +364,7 @@ export const ProjectDetail = () => {
           </TabsTrigger>
           <TabsTrigger value="advisors" className="text-right flex items-center gap-2">
             <Users className="w-4 h-4" />
-            יועצים שנבחרו
+            היועצים שלי
           </TabsTrigger>
           <TabsTrigger value="files" className="text-right flex items-center gap-2">
             <FileText className="w-4 h-4" />
@@ -400,7 +400,7 @@ export const ProjectDetail = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Package className="w-5 h-5" />
-                  הצעות מחיר שהתקבלו
+                  הצעות שהתקבלו
                   {proposals.length > 0 && (
                     <Badge variant="secondary">{proposals.length}</Badge>
                   )}
