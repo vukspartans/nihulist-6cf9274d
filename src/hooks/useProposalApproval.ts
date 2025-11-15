@@ -43,8 +43,9 @@ export const useProposalApproval = () => {
         throw new Error('חתימה לא תקינה - נדרש לחתום לפני אישור');
       }
 
-      if (!data.notes || data.notes.trim().length < 10) {
-        throw new Error('נדרש להוסיף הערות (מינימום 10 תווים)');
+      // Notes are now optional - only validate if provided
+      if (data.notes && data.notes.trim().length < 10) {
+        throw new Error('אם מוסיפים הערות, נדרש מינימום 10 תווים');
       }
 
       // Calculate content hash for signature verification
@@ -69,7 +70,7 @@ export const useProposalApproval = () => {
         'approve_proposal_atomic',
         {
           p_proposal_id: data.proposalId,
-          p_entrepreneur_notes: data.notes,
+          p_entrepreneur_notes: data.notes || '',
           p_signature_png: data.signature.png,
           p_signature_vector: { strokes: data.signature.vector },
           p_content_hash: contentHash,
