@@ -13,7 +13,7 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { ProjectFilters } from "@/components/ProjectFilters";
 import { UserHeader } from "@/components/UserHeader";
 import { ProjectSummary } from "@/types/project";
-import Logo from "@/components/Logo";
+import NavigationLogo from "@/components/NavigationLogo";
 import { useAuth } from "@/hooks/useAuth";
 import BackToTop from '@/components/BackToTop';
 
@@ -239,9 +239,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="sticky top-0 z-50 bg-background flex justify-between items-center p-6 border-b">
-        <div onClick={() => navigate('/dashboard')} className="cursor-pointer">
-          <Logo size="md" />
-        </div>
+          <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
           <Button
             onClick={() => navigate("/projects/new")}

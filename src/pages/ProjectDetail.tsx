@@ -20,7 +20,7 @@ import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { useAuth } from '@/hooks/useAuth';
-import Logo from '@/components/Logo';
+import NavigationLogo from '@/components/NavigationLogo';
 import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
 
@@ -281,9 +281,7 @@ export const ProjectDetail = () => {
     <div dir="rtl">
       {/* Sticky Top Bar - Consistent with Dashboard */}
       <div className="sticky top-0 z-50 bg-background flex justify-between items-center p-6 border-b">
-        <div onClick={() => navigate('/')} className="cursor-pointer">
-          <Logo size="md" />
-        </div>
+        <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
