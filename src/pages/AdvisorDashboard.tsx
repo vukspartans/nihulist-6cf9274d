@@ -813,12 +813,12 @@ const AdvisorDashboard = () => {
                       <div className="flex gap-2 flex-wrap">
                         <Button 
                           variant="outline" 
-                          onClick={() => navigate(`/rfp-details/${invite.rfp_id}`)}
+                          onClick={() => navigate(`/invite/${invite.id}/details`)}
                         >
                           צפייה בפרטים
                         </Button>
                         {canSubmitProposal(invite.status) && (
-                          <Button onClick={() => navigate(`/submit-proposal/${invite.rfp_id}`)}>
+                          <Button onClick={() => navigate(`/invite/${invite.id}/submit`)}>
                             הגשת הצעת מחיר
                           </Button>
                         )}

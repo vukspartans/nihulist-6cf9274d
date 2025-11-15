@@ -17,6 +17,7 @@ import { SignatureCanvas } from '@/components/SignatureCanvas';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
+import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 
 interface RFPDetails {
   id: string;
@@ -40,7 +41,7 @@ interface AdvisorProfile {
 }
 
 const SubmitProposal = () => {
-  const { rfp_id } = useParams();
+  const { rfp_id, invite_id } = useParams();
   const navigate = useNavigate();
   const { user, primaryRole } = useAuth();
   const { toast } = useToast();
@@ -62,10 +63,10 @@ const SubmitProposal = () => {
   const { submitProposal, loading: submitting } = useProposalSubmit();
 
   useEffect(() => {
-    if (user && rfp_id) {
+    if (user && (rfp_id || invite_id)) {
       fetchData();
     }
-  }, [user, rfp_id]);
+  }, [user, rfp_id, invite_id]);
 
   const fetchData = async () => {
     try {
@@ -95,8 +96,7 @@ const SubmitProposal = () => {
 
       console.log('[SubmitProposal] Session verified:', {
         userId: authUser.id,
-        sessionUserId: session.user.id,
-        rfpId: rfp_id,
+        param: invite_id ? `invite_id=${invite_id}` : `rfp_id=${rfp_id}`,
       });
 
       // Step 3: Fetch advisor profile
@@ -104,13 +104,17 @@ const SubmitProposal = () => {
         .from('advisors')
         .select('id, company_name')
         .eq('user_id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (advisorError || !advisor) {
         console.error('[SubmitProposal] Advisor fetch error:', advisorError);
         toast({
           title: "שגיאה",
-          description: "לא נמצא פרופיל יועץ. אנא השלם את הפרופיל תחילה.",
+          description: reportableError(
+            "שגיאה בטעינת פרופיל יועץ",
+            formatSupabaseError(advisorError),
+            { userId: authUser.id }
+          ),
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
@@ -119,47 +123,75 @@ const SubmitProposal = () => {
 
       setAdvisorProfile(advisor);
 
-      // Step 4: Fetch RFP details
-      const { data: rfp, error: rfpError } = await supabase
-        .from('rfp_invites')
-        .select(`
-          rfp_id,
-          rfps (
-            id,
-            subject,
-            body_html,
-            projects (*)
-          )
-        `)
-        .eq('rfp_id', rfp_id)
-        .eq('advisor_id', advisor.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      // Step 4: Fetch RFP invitation - prefer invite_id, fallback to rfp_id
+      let invite, inviteError;
+      
+      if (invite_id) {
+        // Primary path: fetch by unique invite_id
+        const result = await supabase
+          .from('rfp_invites')
+          .select(`
+            *,
+            rfps!inner (
+              *,
+              projects!inner (*)
+            )
+          `)
+          .eq('id', invite_id)
+          .maybeSingle();
+        
+        invite = result.data;
+        inviteError = result.error;
+      } else if (rfp_id) {
+        // Fallback path: fetch by rfp_id + advisor_id
+        const result = await supabase
+          .from('rfp_invites')
+          .select(`
+            *,
+            rfps!inner (
+              *,
+              projects!inner (*)
+            )
+          `)
+          .eq('rfp_id', rfp_id)
+          .eq('advisor_id', advisor.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        invite = result.data;
+        inviteError = result.error;
+      }
 
-      if (rfpError) {
-        console.error('[SubmitProposal] RFP fetch error:', rfpError);
+      if (inviteError || !invite) {
+        console.error('[SubmitProposal] Invite fetch error:', inviteError);
         toast({
-          title: "שגיאה",
-          description: "לא נמצאה הזמנה להצעת מחיר. ייתכן שאין לך הרשאות לצפות בבקשה זו.",
+          title: "שגיאה בטעינת ההזמנה",
+          description: reportableError(
+            "לא נמצאה הזמנה להצעת מחיר",
+            formatSupabaseError(inviteError),
+            { invite_id, rfp_id, advisor_id: advisor.id }
+          ),
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
-      if (!rfp) {
-        console.warn('[SubmitProposal] No RFP found (null result)');
+      // Check if invite is in a submittable state
+      if (invite.status === 'declined' || invite.status === 'expired') {
         toast({
-          title: "שגיאה",
-          description: "לא נמצאה הזמנה להצעת מחיר",
+          title: "לא ניתן להגיש הצעה",
+          description: invite.status === 'declined' 
+            ? "ההזמנה נדחתה"
+            : "תוקף ההזמנה פג",
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
         return;
       }
 
-      setRfpDetails(rfp.rfps as any);
+      setRfpDetails(invite.rfps as any);
     } catch (error) {
       console.error('[SubmitProposal] Unexpected error:', error);
       toast({

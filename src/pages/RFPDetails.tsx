@@ -13,6 +13,7 @@ import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText, Send, X } fro
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
+import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 
 interface RFPDetails {
   id: string;
@@ -48,7 +49,7 @@ interface RFPInvite {
 }
 
 const RFPDetails = () => {
-  const { rfp_id } = useParams();
+  const { rfp_id, invite_id } = useParams();
   const navigate = useNavigate();
   const { user, primaryRole } = useAuth();
   const { toast } = useToast();
@@ -62,35 +63,48 @@ const RFPDetails = () => {
   const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
-    if (user && rfp_id) {
+    if (user && (rfp_id || invite_id)) {
       fetchRFPDetails();
       markAsOpened();
     }
-  }, [user, rfp_id]);
+  }, [user, rfp_id, invite_id]);
 
   const markAsOpened = async () => {
-    if (!rfp_id || !user) return;
+    if (!user) return;
 
     try {
-      const { data: advisor } = await supabase
-        .from('advisors')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+      if (invite_id) {
+        // Mark by invite_id (most reliable)
+        await supabase
+          .from('rfp_invites')
+          .update({ 
+            status: 'opened',
+            opened_at: new Date().toISOString(),
+          })
+          .eq('id', invite_id)
+          .eq('status', 'sent');
+      } else if (rfp_id) {
+        // Fallback: mark by rfp_id
+        const { data: advisor } = await supabase
+          .from('advisors')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (!advisor) return;
-
-      await supabase
-        .from('rfp_invites')
-        .update({ 
-          status: 'opened',
-          opened_at: new Date().toISOString(),
-        })
-        .eq('rfp_id', rfp_id)
-        .eq('advisor_id', advisor.id)
-        .eq('status', 'sent');
+        if (advisor) {
+          await supabase
+            .from('rfp_invites')
+            .update({ 
+              status: 'opened',
+              opened_at: new Date().toISOString(),
+            })
+            .eq('rfp_id', rfp_id)
+            .eq('advisor_id', advisor.id)
+            .eq('status', 'sent');
+        }
+      }
     } catch (error) {
-      console.error('Error marking RFP as opened:', error);
+      console.warn('Error marking RFP as opened (non-critical):', error);
     }
   };
 
@@ -122,22 +136,25 @@ const RFPDetails = () => {
 
       console.log('[RFPDetails] Session verified:', {
         userId: authUser.id,
-        sessionUserId: session.user.id,
-        rfpId: rfp_id,
+        param: invite_id ? `invite_id=${invite_id}` : `rfp_id=${rfp_id}`,
       });
 
-      // Step 3: Get advisor profile
+      // Step 3: Fetch advisor profile
       const { data: advisor, error: advisorError } = await supabase
         .from('advisors')
         .select('id')
         .eq('user_id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (advisorError || !advisor) {
         console.error('[RFPDetails] Advisor fetch error:', advisorError);
         toast({
           title: "שגיאה",
-          description: "לא נמצא פרופיל יועץ",
+          description: reportableError(
+            "שגיאה בטעינת פרופיל יועץ",
+            formatSupabaseError(advisorError),
+            { userId: authUser.id }
+          ),
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
@@ -146,47 +163,55 @@ const RFPDetails = () => {
 
       setAdvisorId(advisor.id);
 
-      // Step 4: Fetch RFP details with invite info
-      const { data: invite, error: inviteError } = await supabase
-        .from('rfp_invites')
-        .select(`
-          id,
-          status,
-          created_at,
-          deadline_at,
-          request_title,
-          request_content,
-          request_files,
-          rfps (
-            id,
-            subject,
-            body_html,
-            sent_at,
-            projects (*)
-          )
-        `)
-        .eq('rfp_id', rfp_id)
-        .eq('advisor_id', advisor.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (inviteError) {
-        console.error('[RFPDetails] Invite fetch error:', inviteError);
-        toast({
-          title: "שגיאה",
-          description: "לא נמצאה הזמנה להצעת מחיר. ייתכן שאין לך הרשאות לצפות בפרטי בקשה זו.",
-          variant: "destructive",
-        });
-        navigate(getDashboardRouteForRole(primaryRole));
-        return;
+      // Step 4: Fetch RFP invitation - prefer invite_id, fallback to rfp_id
+      let invite, inviteError;
+      
+      if (invite_id) {
+        // Primary path: fetch by unique invite_id
+        const result = await supabase
+          .from('rfp_invites')
+          .select(`
+            *,
+            rfps!inner (
+              *,
+              projects!inner (*)
+            )
+          `)
+          .eq('id', invite_id)
+          .maybeSingle();
+        
+        invite = result.data;
+        inviteError = result.error;
+      } else if (rfp_id) {
+        // Fallback path: fetch by rfp_id + advisor_id
+        const result = await supabase
+          .from('rfp_invites')
+          .select(`
+            *,
+            rfps!inner (
+              *,
+              projects!inner (*)
+            )
+          `)
+          .eq('rfp_id', rfp_id)
+          .eq('advisor_id', advisor.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        invite = result.data;
+        inviteError = result.error;
       }
 
-      if (!invite) {
-        console.warn('[RFPDetails] No invite found (null result)');
+      if (inviteError || !invite) {
+        console.error('[RFPDetails] Invite fetch error:', inviteError);
         toast({
-          title: "שגיאה",
-          description: "לא נמצאה הזמנה להצעת מחיר",
+          title: "שגיאה בטעינת ההזמנה",
+          description: reportableError(
+            "לא נמצאה הזמנה להצעת מחיר",
+            formatSupabaseError(inviteError),
+            { invite_id, rfp_id, advisor_id: advisor.id }
+          ),
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
