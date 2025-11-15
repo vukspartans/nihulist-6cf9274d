@@ -314,7 +314,7 @@ const RFPDetails = () => {
           onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
         >
           <ArrowLeft className="w-4 h-4 ml-2" />
-          חזרה ללוח הבקרה
+          חזרה לדשבורד
         </Button>
       </div>
       

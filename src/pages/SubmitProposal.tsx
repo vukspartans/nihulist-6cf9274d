@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowRight, AlertCircle, Edit3, Upload, CalendarIcon, Send } from 'lucide-react';
+import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload, CalendarIcon, Send } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
@@ -422,16 +422,17 @@ const SubmitProposal = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-between items-center p-6 border-b"><UserHeader /></div>
-      <div className="container max-w-4xl mx-auto px-4 py-8" dir="rtl">
+      <div className="flex justify-between items-center p-6 border-b">
+        <UserHeader />
         <Button 
-          variant="outline" 
-          onClick={() => navigate(getDashboardRouteForRole(primaryRole))} 
-          className="mb-6 hover:bg-accent hover:text-accent-foreground transition-colors"
+          variant="ghost" 
+          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
         >
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowLeft className="w-4 h-4 ml-2" />
           חזרה לדשבורד
         </Button>
+      </div>
+      <div className="container max-w-4xl mx-auto px-4 py-8" dir="rtl">
         <ProposalProgressStepper steps={steps} className="mb-8" />
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="shadow-md hover:shadow-lg transition-shadow">
