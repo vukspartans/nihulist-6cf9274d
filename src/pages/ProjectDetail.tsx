@@ -112,21 +112,21 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('proposals')
-        .select(`
-          *,
-          advisors:advisor_id (
-            id,
-            company_name,
-            logo_url,
-            expertise,
-            rating,
-            location
-          )
-        `)
-        .eq('project_id', id)
-        .order('submitted_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('proposals')
+      .select(`
+        *,
+        advisors!proposals_advisor_id_fkey (
+          id,
+          company_name,
+          logo_url,
+          expertise,
+          rating,
+          location
+        )
+      `)
+      .eq('project_id', id)
+      .order('submitted_at', { ascending: false });
 
       if (error) throw error;
       setProposals(data || []);
