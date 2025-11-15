@@ -93,12 +93,17 @@ export const useProposalApproval = () => {
           body: {
             proposal_id: data.proposalId,
             entrepreneur_notes: data.notes,
-            test_mode: true, // Set to false in production
+            test_mode: false,
           },
         })
         .then(({ data: emailData, error: emailError }) => {
           if (emailError) {
             console.error('[Approval] Email notification failed:', emailError);
+            toast({
+              title: 'שים לב',
+              description: 'ההצעה אושרה אך שליחת המייל ליועץ נכשלה',
+              variant: 'destructive',
+            });
           } else {
             console.log('[Approval] Email notification sent:', emailData);
           }

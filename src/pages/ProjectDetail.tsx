@@ -244,9 +244,9 @@ export const ProjectDetail = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: any; label: string }> = {
-      submitted: { variant: 'secondary', label: 'הוגש' },
-      accepted: { variant: 'success', label: 'אושר' },
-      rejected: { variant: 'destructive', label: 'נדחה' },
+      submitted: { variant: 'outline', label: 'ממתין להחלטה' },
+      accepted: { variant: 'success', label: '✓ הצעה אושרה' },
+      rejected: { variant: 'destructive', label: 'נדחתה' },
       withdrawn: { variant: 'muted', label: 'בוטל' },
     };
 
@@ -470,7 +470,13 @@ export const ProjectDetail = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {proposals.map((proposal) => {
+                  {[...proposals]
+                    .sort((a, b) => {
+                      // Sort: accepted first, then submitted, then others
+                      const statusOrder: Record<string, number> = { 'accepted': 0, 'submitted': 1, 'rejected': 2 };
+                      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+                    })
+                    .map((proposal) => {
                     const lowestPrice = getLowestPrice();
                     const fastestTimeline = getFastestTimeline();
                     const isLowestPrice = lowestPrice === proposal.price;
