@@ -8,7 +8,7 @@ export interface AdvisorInviteDetail {
   advisorName: string;
   advisorType: string;
   status: 'pending' | 'sent' | 'opened' | 'in_progress' | 'submitted' | 'declined' | 'expired';
-  proposalId?: string;
+  proposalId?: string | undefined;
   declineReason?: string;
   email: string;
   deadlineAt?: string;
@@ -28,7 +28,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
     queryFn: async () => {
       console.log('[useRFPInvitesWithDetails] Fetching RFPs for project:', projectId);
 
-      // Fetch RFPs with invites and advisor details
+      // OPTIMIZED: Single query with all needed data using proper joins
       const { data: rfps, error: rfpsError } = await supabase
         .from('rfps')
         .select(`
@@ -48,6 +48,12 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
               company_name,
               expertise
             )
+          ),
+          projects!rfps_project_id_fkey (
+            proposals!proposals_project_id_fkey (
+              id,
+              advisor_id
+            )
           )
         `)
         .eq('project_id', projectId)
@@ -62,20 +68,12 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
 
       if (!rfps || rfps.length === 0) return [];
 
-      // Fetch all proposals for this project
-      const { data: proposals, error: proposalsError } = await supabase
-        .from('proposals')
-        .select('id, advisor_id')
-        .eq('project_id', projectId);
-
-      if (proposalsError) {
-        console.error('[useRFPInvitesWithDetails] Error fetching proposals:', proposalsError);
-        throw proposalsError;
-      }
-
-      // Create proposal map for quick lookup
-      const proposalMap = new Map(
-        proposals?.map(p => [p.advisor_id, p.id]) || []
+      // OPTIMIZED: Extract proposals from the join result
+      const proposals = (rfps[0] as any)?.projects?.proposals || [];
+      
+      // Create proposal map for quick lookup (string type)
+      const proposalMap = new Map<string, string>(
+        proposals.map((p: any) => [p.advisor_id as string, p.id as string])
       );
 
       // Transform data
@@ -85,7 +83,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
         const advisorInvites: AdvisorInviteDetail[] = invites.map(invite => {
           const advisor = invite.advisors;
           const advisorType = invite.advisor_type || advisor?.expertise?.[0] || 'לא מוגדר';
-          const proposalId = proposalMap.get(invite.advisor_id);
+          const proposalId: string | undefined = proposalMap.get(invite.advisor_id);
 
           return {
             inviteId: invite.id,
