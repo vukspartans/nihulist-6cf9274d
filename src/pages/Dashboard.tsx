@@ -15,6 +15,7 @@ import { UserHeader } from "@/components/UserHeader";
 import { ProjectSummary } from "@/types/project";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import BackToTop from '@/components/BackToTop';
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -237,7 +238,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-between items-center p-6 border-b">
+      <div className="sticky top-0 z-50 bg-background flex justify-between items-center p-6 border-b">
         <div onClick={() => navigate('/')} className="cursor-pointer">
           <Logo size="md" />
         </div>
@@ -425,6 +426,7 @@ const Dashboard = () => {
           </Card>
         )}
       </div>
+      <BackToTop />
     </div>
   );
 };

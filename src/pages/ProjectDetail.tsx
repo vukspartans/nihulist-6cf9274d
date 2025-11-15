@@ -20,6 +20,9 @@ import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { useAuth } from '@/hooks/useAuth';
+import Logo from '@/components/Logo';
+import { UserHeader } from '@/components/UserHeader';
+import BackToTop from '@/components/BackToTop';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -243,19 +246,29 @@ export const ProjectDetail = () => {
   };
 
   return (
-    <div className="container mx-auto p-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-          className="flex items-center gap-2"
-        >
-          <ArrowRight className="w-4 h-4" />
-          חזרה לדשבורד
-        </Button>
-        
-        <div className="flex items-center gap-4" dir="rtl">
+    <div dir="rtl">
+      {/* Sticky Top Bar - Consistent with Dashboard */}
+      <div className="sticky top-0 z-50 bg-background flex justify-between items-center p-6 border-b">
+        <div onClick={() => navigate('/')} className="cursor-pointer">
+          <Logo size="md" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+            className="flex items-center gap-2"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה לדשבורד
+          </Button>
+          <UserHeader />
+        </div>
+      </div>
+
+      {/* Main Content Container */}
+      <div className="container mx-auto p-6">
+        {/* Project Controls Bar */}
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">שלב הפרויקט:</span>
             <Select value={project.phase} onValueChange={handlePhaseChange}>
@@ -279,7 +292,6 @@ export const ProjectDetail = () => {
             onOpenChange={setEditDialogOpen}
           />
         </div>
-      </div>
 
       {/* Project Info Card */}
       <Card className="mb-6">
@@ -561,6 +573,8 @@ export const ProjectDetail = () => {
           }}
         />
       )}
+      </div>
+      <BackToTop />
     </div>
   );
 };

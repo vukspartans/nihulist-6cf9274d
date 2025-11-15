@@ -199,23 +199,23 @@ export const ProposalDetailDialog = ({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="details">
-                <FileText className="w-4 h-4 ml-2" />
+                <FileText className="w-4 h-4 mr-2" />
                 פרטים
               </TabsTrigger>
               <TabsTrigger value="conditions">
-                <Shield className="w-4 h-4 ml-2" />
+                <Shield className="w-4 h-4 mr-2" />
                 תנאים
               </TabsTrigger>
               <TabsTrigger value="files">
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 mr-2" />
                 קבצים ({proposal.files?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="signature">
-                <FileSignature className="w-4 h-4 ml-2" />
+                <FileSignature className="w-4 h-4 mr-2" />
                 חתימה
               </TabsTrigger>
               <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'}>
-                <CheckCircle className="w-4 h-4 ml-2" />
+                <CheckCircle className="w-4 h-4 mr-2" />
                 פעולות
               </TabsTrigger>
             </TabsList>
@@ -358,7 +358,7 @@ export const ProposalDetailDialog = ({
                             onClick={() => handleDownload(file)}
                             disabled={!file.signedUrl}
                           >
-                            <Download className="w-4 h-4 ml-2" />
+                            <Download className="w-4 h-4 mr-2" />
                             הורדה
                           </Button>
                         </div>
@@ -440,7 +440,7 @@ export const ProposalDetailDialog = ({
                       onClick={() => setApprovalDialogOpen(true)}
                       className="h-auto py-6"
                     >
-                      <CheckCircle className="w-5 h-5 ml-2" />
+                      <CheckCircle className="w-5 h-5 mr-2" />
                       <div className="text-right">
                         <p className="font-bold">אישור ההצעה</p>
                         <p className="text-xs opacity-90">בחר ספק זה לפרויקט</p>
@@ -454,7 +454,7 @@ export const ProposalDetailDialog = ({
                       disabled={rejectLoading}
                       className="h-auto py-6"
                     >
-                      <XCircle className="w-5 h-5 ml-2" />
+                      <XCircle className="w-5 h-5 mr-2" />
                       <div className="text-right">
                         <p className="font-bold">דחיית ההצעה</p>
                         <p className="text-xs opacity-90">הצעה זו אינה מתאימה</p>
