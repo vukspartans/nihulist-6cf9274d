@@ -407,7 +407,7 @@ const RFPDetails = () => {
                       </p>
                     </div>
                   )}
-                  {inviteDetails.request_files && inviteDetails.request_files.length > 0 && (
+                  {inviteDetails.request_files && Array.isArray(inviteDetails.request_files) && inviteDetails.request_files.length > 0 && (
                     <div>
                       <Label className="font-medium">קבצים מצורפים</Label>
                       <div className="mt-2 space-y-2">
