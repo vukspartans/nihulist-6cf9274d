@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -343,11 +343,15 @@ export const ProjectDetail = () => {
       {/* Main Content Tabs */}
       <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
         <TabsList className="grid w-full grid-cols-5 h-11">
-          <TabsTrigger value="proposals" className="text-right">שליחת בקשה להצעות</TabsTrigger>
+          <TabsTrigger value="proposals" className="text-right flex items-center gap-2">
+            <Send className="w-4 h-4" />
+            שליחת בקשה להצעות
+          </TabsTrigger>
           <TabsTrigger 
             value="sent-rfps" 
             className="text-right flex items-center gap-2"
           >
+            <FileSignature className="w-4 h-4" />
             בקשות שנשלחו
           </TabsTrigger>
           <TabsTrigger 
@@ -355,6 +359,7 @@ export const ProjectDetail = () => {
             className="text-right flex items-center gap-2"
             disabled={!rfpSent}
           >
+            <Inbox className="w-4 h-4" />
             הצעות שהתקבלו
             {proposals.length > 0 && (
               <Badge variant="secondary" className="mr-1">
