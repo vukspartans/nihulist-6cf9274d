@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText, Send, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare } from 'lucide-react';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
@@ -38,6 +38,7 @@ interface RFPInvite {
   status: string;
   created_at: string;
   deadline_at?: string;
+  advisor_type?: string;
   request_title?: string;
   request_content?: string;
   request_files?: Array<{
@@ -224,6 +225,7 @@ const RFPDetails = () => {
         status: invite.status,
         created_at: invite.created_at,
         deadline_at: invite.deadline_at,
+        advisor_type: invite.advisor_type,
         request_title: invite.request_title,
         request_content: invite.request_content,
         request_files: invite.request_files as any
@@ -332,6 +334,27 @@ const RFPDetails = () => {
           {/* Deadline Countdown */}
           {inviteDetails?.deadline_at && ['sent', 'opened', 'in_progress'].includes(inviteDetails.status) && (
             <DeadlineCountdown deadline={inviteDetails.deadline_at} />
+          )}
+
+          {/* Main Request from Entrepreneur - HIGHLIGHTED */}
+          {rfpDetails.body_html && (
+            <Card className="border-2 border-primary bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <MessageSquare className="h-6 w-6" />
+                  בקשת היזם - מה אנחנו מחפשים?
+                </CardTitle>
+                <CardDescription>
+                  קרא בעיון את הבקשה המפורטת להבנת הצרכים המדויקים של הפרויקט
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ol]:list-decimal [&_li]:mr-5"
+                  dangerouslySetInnerHTML={{ __html: rfpDetails.body_html }}
+                />
+              </CardContent>
+            </Card>
           )}
 
           {/* Project Overview */}
@@ -466,6 +489,14 @@ const RFPDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {inviteDetails?.advisor_type && (
+                    <div>
+                      <Label className="font-medium">סוג היועץ המבוקש</Label>
+                      <div className="mt-1">
+                        <Badge variant="outline">{inviteDetails.advisor_type}</Badge>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <Label className="font-medium">תאריך קבלת ההזמנה</Label>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -498,7 +529,13 @@ const RFPDetails = () => {
             {['sent', 'opened', 'pending'].includes(inviteDetails?.status || '') && (
               <>
                 <Button 
-                  onClick={() => navigate(`/submit-proposal/${rfp_id}`)}
+                  onClick={() => {
+                    if (invite_id) {
+                      navigate(`/invite/${invite_id}/submit`);
+                    } else if (rfp_id) {
+                      navigate(`/submit-proposal/${rfp_id}`);
+                    }
+                  }}
                   size="lg"
                 >
                   <Send className="w-4 h-4 ml-2" />
