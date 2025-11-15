@@ -894,8 +894,11 @@ const AdvisorDashboard = () => {
                         </CardDescription>
                       </div>
                       <Badge className={getStatusColor(proposal.status)}>
-                        {proposal.status === 'received' ? 'התקבל' : 
-                         proposal.status === 'reviewed' ? 'נבדק' : proposal.status}
+                        {proposal.status === 'submitted' ? 'הוגשה' : 
+                         proposal.status === 'accepted' ? 'אושרה' :
+                         proposal.status === 'rejected' ? 'נדחתה' :
+                         proposal.status === 'withdrawn' ? 'נמשכה' :
+                         proposal.status === 'under_review' ? 'בבדיקה' : proposal.status}
                       </Badge>
                     </div>
                   </CardHeader>
