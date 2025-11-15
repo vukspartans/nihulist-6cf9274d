@@ -13,7 +13,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload, CalendarIcon, Send } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, Bell } from 'lucide-react';
+import Logo from '@/components/Logo';
+import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
 import { useProposalSubmit } from '@/hooks/useProposalSubmit';
@@ -422,15 +424,17 @@ const SubmitProposal = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-between items-center p-6 border-b">
-        <UserHeader />
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-        >
-          <ArrowLeft className="w-4 h-4 ml-2" />
-          חזרה לדשבורד
-        </Button>
+      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
+        <Logo size="md" />
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+              3
+            </span>
+          </Button>
+          <UserHeader />
+        </div>
       </div>
       <div className="container max-w-4xl mx-auto px-4 py-8" dir="rtl">
         <ProposalProgressStepper steps={steps} className="mb-8" />
@@ -583,6 +587,7 @@ const SubmitProposal = () => {
         </form>
         <ConfirmProposalDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog} onConfirm={handleFinalSubmit} price={price} timelineDays={timelineDays} scopeText={scopeText} fileCount={files.length} hasSignature={!!signature} />
       </div>
+      <BackToTop />
     </div>
   );
 };

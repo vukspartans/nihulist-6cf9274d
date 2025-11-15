@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { ArrowLeft, MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell } from 'lucide-react';
+import Logo from '@/components/Logo';
+import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
@@ -307,15 +309,17 @@ const RFPDetails = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-between items-center p-6 border-b">
-        <UserHeader />
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-        >
-          <ArrowLeft className="w-4 h-4 ml-2" />
-          חזרה לדשבורד
-        </Button>
+      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
+        <Logo size="md" />
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+              3
+            </span>
+          </Button>
+          <UserHeader />
+        </div>
       </div>
       
       <div className="p-6">
@@ -568,6 +572,7 @@ const RFPDetails = () => {
           />
         </div>
       </div>
+      <BackToTop />
     </div>
   );
 };
