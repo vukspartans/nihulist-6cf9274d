@@ -36,6 +36,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
+// Scroll to top component for route changes
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const AppContent = () => {
   const { user, profile } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -65,6 +76,7 @@ const AppContent = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <RecoveryDeepLinkHandler />
             <AuthEventRouter />
             <Routes>
