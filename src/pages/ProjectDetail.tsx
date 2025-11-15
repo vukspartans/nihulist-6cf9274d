@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -33,6 +33,28 @@ export const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
+  
+  interface ProposalWithAdvisor {
+    id: string;
+    advisor_id: string;
+    project_id: string;
+    supplier_name: string;
+    price: number;
+    timeline_days: number;
+    submitted_at: string;
+    status: string;
+    scope_text?: string;
+    files?: any[];
+    signature_blob?: string;
+    advisors?: {
+      id: string;
+      company_name: string;
+      logo_url: string | null;
+      expertise: string[];
+      rating: number | null;
+      location: string | null;
+    };
+  }
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [rfpSent, setRfpSent] = useState(false);
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
@@ -92,7 +114,17 @@ export const ProjectDetail = () => {
     try {
       const { data, error } = await supabase
         .from('proposals')
-        .select('*')
+        .select(`
+          *,
+          advisors:advisor_id (
+            id,
+            company_name,
+            logo_url,
+            expertise,
+            rating,
+            location
+          )
+        `)
         .eq('project_id', id)
         .order('submitted_at', { ascending: false });
 
@@ -451,34 +483,102 @@ export const ProjectDetail = () => {
                         onClick={() => handleViewProposal(proposal)}
                       >
                         <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
+                          <div className="flex justify-between items-start mb-4">
+                            {/* LEFT SIDE: Advisor Info with Logo */}
+                            <div className="flex items-start gap-4 flex-1">
+                              {/* Advisor Logo */}
+                              {proposal.advisors?.logo_url ? (
+                                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-border flex-shrink-0">
+                                  <img 
+                                    src={proposal.advisors.logo_url}
+                                    alt={proposal.advisors.company_name || proposal.supplier_name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        parent.innerHTML = `
+                                          <div class="w-full h-full bg-primary/10 flex items-center justify-center">
+                                            <span class="text-xl font-bold text-primary">
+                                              ${(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+                                            </span>
+                                          </div>
+                                        `;
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border-2 border-border">
+                                  <span className="text-2xl font-bold text-primary">
+                                    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Advisor Details */}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <h4 className="font-bold text-lg">
+                                    {proposal.advisors?.company_name || proposal.supplier_name}
+                                  </h4>
+                                  {getStatusBadge(proposal.status)}
+                                </div>
+                                
+                                {/* Expertise badges */}
+                                {proposal.advisors?.expertise && proposal.advisors.expertise.length > 0 && (
+                                  <div className="flex gap-1 mb-2 flex-wrap">
+                                    {proposal.advisors.expertise.slice(0, 2).map((exp: string, idx: number) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {exp}
+                                      </Badge>
+                                    ))}
+                                    {proposal.advisors.expertise.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{proposal.advisors.expertise.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Rating */}
+                                {proposal.advisors?.rating && (
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-sm font-medium">{proposal.advisors.rating.toFixed(1)}</span>
+                                  </div>
+                                )}
+                                
+                                <p className="text-sm text-muted-foreground">
+                                  נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* RIGHT SIDE: Price & Timeline */}
+                            <div className="text-left mr-4">
                               <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-lg">{proposal.supplier_name}</h4>
-                                {getStatusBadge(proposal.status)}
+                                <p className="text-2xl font-bold text-primary">
+                                  {formatCurrency(proposal.price)}
+                                </p>
                                 {isLowestPrice && (
                                   <Badge variant="success" className="text-xs">
                                     המחיר הנמוך ביותר
                                   </Badge>
                                 )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+                                  <Clock className="w-4 h-4" />
+                                  {proposal.timeline_days} ימים
+                                </p>
                                 {isFastest && (
                                   <Badge variant="accent" className="text-xs">
                                     הכי מהיר
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
-                              </p>
-                            </div>
-                            <div className="text-left">
-                              <p className="text-2xl font-bold text-primary">
-                                {formatCurrency(proposal.price)}
-                              </p>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
-                                <Clock className="w-4 h-4" />
-                                {proposal.timeline_days} ימים
-                              </p>
                             </div>
                           </div>
                           
