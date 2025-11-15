@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload } from 'lucide-react';
+import { CheckCircle, ArrowLeft, AlertCircle, Edit3, Upload, CalendarIcon } from 'lucide-react';
 import { SignatureCanvas } from '@/components/SignatureCanvas';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
@@ -21,6 +21,10 @@ import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import { ProposalProgressStepper } from '@/components/ProposalProgressStepper';
 import { ConfirmProposalDialog } from '@/components/ConfirmProposalDialog';
 import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, differenceInDays } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 interface RFPDetails {
   id: string;
@@ -55,6 +59,8 @@ const SubmitProposal = () => {
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   
   const [price, setPrice] = useState('');
+  const [priceDisplay, setPriceDisplay] = useState('');
+  const [completionDate, setCompletionDate] = useState<Date>();
   const [timelineDays, setTimelineDays] = useState('');
   const [scopeText, setScopeText] = useState('');
   const [conditions, setConditions] = useState<Record<string, any>>({});
@@ -62,6 +68,29 @@ const SubmitProposal = () => {
   const [signature, setSignature] = useState<any>(null);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Format price with thousand separators
+  const formatPrice = (value: string): string => {
+    const num = parseFloat(value.replace(/[^\d]/g, ''));
+    if (isNaN(num) || num === 0) return '';
+    return num.toLocaleString('he-IL');
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^\d]/g, '');
+    setPrice(rawValue);
+    setPriceDisplay(formatPrice(rawValue));
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setCompletionDate(date);
+    if (date) {
+      const days = differenceInDays(date, new Date());
+      setTimelineDays(Math.max(1, days).toString());
+    } else {
+      setTimelineDays('');
+    }
+  };
 
   const { submitProposal, loading: submitting } = useProposalSubmit();
 
@@ -285,22 +314,62 @@ const SubmitProposal = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">מחיר ההצעה (₪)</Label>
-                  <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="הזן מחיר (בין ₪1,000 ל-₪10,000,000)" required />
-                  {price && (parseFloat(price) < 1000 || parseFloat(price) > 10000000) && (
-                    <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4" /><AlertDescription>המחיר חייב להיות בין ₪1,000 ל-₪10,000,000</AlertDescription></Alert>
-                  )}
+                  <Input
+                    id="price"
+                    type="text"
+                    value={priceDisplay}
+                    onChange={handlePriceChange}
+                    placeholder="0"
+                    required
+                    dir="ltr"
+                    className="text-right"
+                  />
                   {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
-                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm"><CheckCircle className="h-4 w-4" /><span>מחיר תקין</span></div>
+                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="timeline">זמן ביצוע (ימים)</Label>
-                  <Input id="timeline" type="number" value={timelineDays} onChange={(e) => setTimelineDays(e.target.value)} placeholder="הזן מספר ימים (בין 1 ל-1000)" required />
-                  {timelineDays && (parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000) && (
-                    <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4" /><AlertDescription>זמן ביצוע חייב להיות בין יום אחד ל-1000 ימים</AlertDescription></Alert>
-                  )}
-                  {timelineDays && parseInt(timelineDays) >= 1 && parseInt(timelineDays) <= 1000 && (
-                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm"><CheckCircle className="h-4 w-4" /><span>זמן ביצוע תקין</span></div>
+                  <Label htmlFor="timeline">תאריך סיום משוער</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="timeline"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-right font-normal",
+                          !completionDate && "text-muted-foreground"
+                        )}
+                        dir="rtl"
+                      >
+                        <CalendarIcon className="ml-2 h-4 w-4" />
+                        {completionDate ? (
+                          format(completionDate, "PPP", { locale: he })
+                        ) : (
+                          <span>בחרו תאריך סיום</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start" dir="rtl">
+                      <Calendar
+                        mode="single"
+                        selected={completionDate}
+                        onSelect={handleDateSelect}
+                        disabled={(date) => date < new Date() || date > new Date(Date.now() + 1000 * 24 * 60 * 60 * 1000)}
+                        initialFocus
+                        locale={he}
+                        className="pointer-events-auto"
+                        dir="rtl"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {completionDate && timelineDays && (
+                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>זמן ביצוע: {timelineDays} ימים</span>
+                    </div>
                   )}
                 </div>
               </div>
