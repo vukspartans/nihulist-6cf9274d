@@ -29,8 +29,8 @@ export const useDeclineRFP = () => {
 
       if (updateError) throw updateError;
 
-      // Log activity
-      await supabase.from('activity_log').insert({
+      // Log activity (non-blocking, fire-and-forget)
+      supabase.from('activity_log').insert({
         actor_id: user.id,
         actor_type: 'advisor',
         action: 'rfp_declined',
@@ -39,6 +39,10 @@ export const useDeclineRFP = () => {
         meta: {
           reason,
           note
+        }
+      }).then(({ error: logError }) => {
+        if (logError) {
+          console.warn('[Decline] Activity log failed (non-critical):', logError);
         }
       });
 

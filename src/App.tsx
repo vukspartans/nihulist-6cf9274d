@@ -142,7 +142,27 @@ const AppContent = () => {
               } 
             />
             <Route 
+              path="/invite/:invite_id/submit" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <SubmitProposal />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/rfp-details/:rfp_id" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <RFPDetails />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/invite/:invite_id/details" 
               element={
                 <ProtectedRoute>
                   <RoleBasedRoute allowedRoles={['advisor']}>
