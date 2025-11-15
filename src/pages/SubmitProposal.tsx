@@ -132,7 +132,7 @@ const SubmitProposal = () => {
           .from('rfp_invites')
           .select(`
             *,
-            rfps!inner (
+            rfps!rfp_invites_rfp_id_fkey!inner (
               *,
               projects!inner (*)
             )
@@ -148,7 +148,7 @@ const SubmitProposal = () => {
           .from('rfp_invites')
           .select(`
             *,
-            rfps!inner (
+            rfps!rfp_invites_rfp_id_fkey!inner (
               *,
               projects!inner (*)
             )

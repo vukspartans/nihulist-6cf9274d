@@ -172,7 +172,7 @@ const RFPDetails = () => {
           .from('rfp_invites')
           .select(`
             *,
-            rfps!inner (
+            rfps!rfp_invites_rfp_id_fkey!inner (
               *,
               projects!inner (*)
             )
@@ -188,7 +188,7 @@ const RFPDetails = () => {
           .from('rfp_invites')
           .select(`
             *,
-            rfps!inner (
+            rfps!rfp_invites_rfp_id_fkey!inner (
               *,
               projects!inner (*)
             )
