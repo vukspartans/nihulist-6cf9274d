@@ -314,6 +314,72 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_queue: {
+        Row: {
+          attempts: number | null
+          body_html: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number | null
+          notification_type: string
+          priority: number | null
+          recipient_email: string
+          recipient_id: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          template_data: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          body_html: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          notification_type: string
+          priority?: number | null
+          recipient_email: string
+          recipient_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          template_data?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          body_html?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          notification_type?: string
+          priority?: number | null
+          recipient_email?: string
+          recipient_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          template_data?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           admin_approved: boolean
@@ -438,27 +504,6 @@ export type Database = {
             columns: ["advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_project_advisors_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_project_advisors_proposal"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposal_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_project_advisors_proposal"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
           {
@@ -683,13 +728,6 @@ export type Database = {
             columns: ["advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_proposals_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -1098,13 +1136,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_proposals_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "proposals_advisor_id_fkey"
             columns: ["advisor_id"]
             isOneToOne: false
@@ -1137,6 +1168,21 @@ export type Database = {
         Returns: boolean
       }
       canonicalize_advisor_name: { Args: { name: string }; Returns: string }
+      enqueue_notification: {
+        Args: {
+          p_body_html: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_notification_type: string
+          p_priority?: number
+          p_recipient_email: string
+          p_recipient_id: string
+          p_scheduled_for?: string
+          p_subject: string
+          p_template_data?: Json
+        }
+        Returns: string
+      }
       expire_old_rfp_invites: { Args: never; Returns: undefined }
       generate_project_recommendations: {
         Args: { project_uuid: string }
