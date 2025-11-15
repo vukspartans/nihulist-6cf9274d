@@ -111,6 +111,44 @@ const RFPDetails = () => {
     }
   };
 
+  const refreshFileUrls = async (files: Array<{name: string, url: string, size: number, path: string}>) => {
+    try {
+      console.log('[RFPDetails] Refreshing signed URLs for files:', files.length);
+      
+      const refreshedFiles = await Promise.all(
+        files.map(async (file) => {
+          // Skip if no path (shouldn't happen, but safety check)
+          if (!file.path) {
+            console.warn('[RFPDetails] File has no path:', file.name);
+            return file;
+          }
+
+          // Generate fresh signed URL (24 hours expiry)
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('rfp-request-files')
+            .createSignedUrl(file.path, 86400); // 24 hours
+
+          if (signedError || !signedData) {
+            console.error('[RFPDetails] Error generating signed URL:', signedError);
+            return file; // Return original if refresh fails
+          }
+
+          console.log('[RFPDetails] Refreshed signed URL for:', file.name);
+          
+          return {
+            ...file,
+            url: signedData.signedUrl
+          };
+        })
+      );
+
+      return refreshedFiles;
+    } catch (error) {
+      console.error('[RFPDetails] Unexpected error refreshing URLs:', error);
+      return files; // Return original files if refresh fails
+    }
+  };
+
   const fetchRFPDetails = async () => {
     try {
       // Step 1: Verify user is authenticated
@@ -222,7 +260,8 @@ const RFPDetails = () => {
       }
 
       setRfpDetails(invite.rfps as any);
-      setInviteDetails({
+      
+      const inviteData = {
         id: invite.id,
         status: invite.status,
         created_at: invite.created_at,
@@ -231,7 +270,15 @@ const RFPDetails = () => {
         request_title: invite.request_title,
         request_content: invite.request_content,
         request_files: invite.request_files as any
-      });
+      };
+
+      // Refresh file URLs if files exist
+      if (inviteData.request_files && Array.isArray(inviteData.request_files) && inviteData.request_files.length > 0) {
+        const refreshedFiles = await refreshFileUrls(inviteData.request_files);
+        inviteData.request_files = refreshedFiles;
+      }
+
+      setInviteDetails(inviteData);
     } catch (error) {
       console.error('[RFPDetails] Unexpected error:', error);
       toast({
@@ -447,19 +494,27 @@ const RFPDetails = () => {
                       <Label className="font-medium">קבצים מצורפים</Label>
                       <div className="mt-2 space-y-2">
                         {inviteDetails.request_files.map((file, idx) => (
-                          <a 
+                          <div 
                             key={idx}
-                            href={file.url} 
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-primary hover:underline p-3 bg-muted rounded-lg"
+                            className="flex items-center gap-2 p-3 bg-muted rounded-lg"
                           >
-                            <FileText className="h-4 w-4" />
+                            <FileText className="h-4 w-4 text-primary" />
                             <span className="flex-1">{file.name}</span>
                             <Badge variant="outline" className="text-xs">
-                              {(file.size / 1024).toFixed(1)} KB
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
                             </Badge>
-                          </a>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                window.open(file.url, '_blank', 'noopener,noreferrer');
+                              }}
+                              className="gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              פתח
+                            </Button>
+                          </div>
                         ))}
                       </div>
                     </div>
