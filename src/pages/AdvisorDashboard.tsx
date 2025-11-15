@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import Logo from '@/components/Logo';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
+import BackToTop from '@/components/BackToTop';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -507,7 +508,7 @@ const AdvisorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="flex justify-between items-center p-6 border-b">
+      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
         <Logo size="md" />
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="relative">
@@ -895,6 +896,8 @@ const AdvisorDashboard = () => {
         onDecline={handleDeclineConfirm}
         loading={declining}
       />
+      
+      <BackToTop threshold={20} />
     </div>
   );
 };
