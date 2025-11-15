@@ -507,6 +507,11 @@ export const ProposalDetailDialog = ({
           supplier_name: proposal.supplier_name,
           price: proposal.price,
           timeline_days: proposal.timeline_days,
+          scope_text: proposal.scope_text,
+          conditions_json: proposal.conditions_json,
+          files: proposal.files,
+          signature_blob: proposal.signature_blob,
+          submitted_at: proposal.submitted_at,
         }}
         onSuccess={() => {
           setApprovalDialogOpen(false);
