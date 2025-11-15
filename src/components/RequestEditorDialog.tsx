@@ -100,6 +100,40 @@ export const RequestEditorDialog = ({
     });
   }, [initialData, projectName]);
 
+  // Refresh signed URLs for existing attachments
+  useEffect(() => {
+    const refreshSignedUrls = async () => {
+      if (!formData.requestAttachments || formData.requestAttachments.length === 0) {
+        return;
+      }
+
+      const refreshedAttachments = await Promise.all(
+        formData.requestAttachments.map(async (attachment) => {
+          if (attachment.path && attachment.url) {
+            const { data, error } = await supabase.storage
+              .from('rfp-request-files')
+              .createSignedUrl(attachment.path, 3600 * 24 * 7); // 7 days
+
+            if (!error && data) {
+              return {
+                ...attachment,
+                url: data.signedUrl
+              };
+            }
+          }
+          return attachment;
+        })
+      );
+
+      setFormData(prev => ({
+        ...prev,
+        requestAttachments: refreshedAttachments
+      }));
+    };
+
+    refreshSignedUrls();
+  }, []);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -223,14 +257,22 @@ export const RequestEditorDialog = ({
           continue;
         }
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+        // Get signed URL (private bucket)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('rfp-request-files')
-          .getPublicUrl(filePath);
+          .createSignedUrl(filePath, 3600 * 24 * 7); // 7 days expiry
+
+        if (signedUrlError || !signedUrlData) {
+          console.error('[RequestEditor] Signed URL error:', signedUrlError);
+          errors.push(`${file.name}: שגיאה ביצירת קישור לקובץ`);
+          continue;
+        }
+
+        const signedUrl = signedUrlData.signedUrl;
 
         uploadedFiles.push({
           name: file.name, // Keep original name for display
-          url: publicUrl,
+          url: signedUrl,
           size: file.size,
           path: filePath
         });
@@ -238,7 +280,7 @@ export const RequestEditorDialog = ({
         console.log('[RequestEditor] File uploaded successfully:', {
           name: file.name,
           path: filePath,
-          url: publicUrl
+          signedUrl: signedUrl.substring(0, 100) + '...'
         });
       }
 
@@ -295,19 +337,42 @@ export const RequestEditorDialog = ({
     }
   };
 
-  const handleFilePreview = (file: UploadedFileMetadata) => {
+  const handleFilePreview = async (file: UploadedFileMetadata) => {
     const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
     
-    if (isImage) {
-      window.open(file.url, '_blank');
-    } else {
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.download = file.name;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    try {
+      // Regenerate fresh signed URL for preview
+      let previewUrl = file.url;
+      
+      if (file.path) {
+        const { data, error } = await supabase.storage
+          .from('rfp-request-files')
+          .createSignedUrl(file.path, 3600); // 1 hour for preview
+        
+        if (!error && data) {
+          previewUrl = data.signedUrl;
+        }
+      }
+      
+      if (isImage) {
+        window.open(previewUrl, '_blank');
+      } else {
+        // For other files, trigger download
+        const link = document.createElement('a');
+        link.href = previewUrl;
+        link.download = file.name;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('[RequestEditor] Preview error:', error);
+      toast({
+        title: "שגיאה בתצוגה מקדימה",
+        description: "לא ניתן להציג את הקובץ כרגע",
+        variant: "destructive",
+      });
     }
   };
 
