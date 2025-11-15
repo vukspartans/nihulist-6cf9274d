@@ -201,7 +201,7 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">יועצים שנבחרו</h3>
+          <h3 className="text-lg font-semibold">היועצים שלי</h3>
           <p className="text-sm text-muted-foreground">
             {advisors.length} יועצים פעילים בפרויקט
           </p>

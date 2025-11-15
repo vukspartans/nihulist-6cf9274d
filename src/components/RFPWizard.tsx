@@ -302,7 +302,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between mb-4">
-            <CardTitle>שליחת בקשה להצעות מחיר</CardTitle>
+            <CardTitle>שליחת בקשה להצעות</CardTitle>
             <Badge variant="outline">
               שלב {currentStep} מתוך {totalSteps}
             </Badge>

@@ -124,7 +124,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" />
-            בקשות להצעות מחיר שנשלחו
+            בקשות שנשלחו
             <Badge variant="secondary">{rfpsWithInvites.length}</Badge>
           </CardTitle>
         </CardHeader>
