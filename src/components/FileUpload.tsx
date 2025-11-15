@@ -42,6 +42,25 @@ export function FileUpload({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Sanitize filename to remove Hebrew and special characters
+  const sanitizeFilename = (filename: string): string => {
+    const lastDotIndex = filename.lastIndexOf('.');
+    const ext = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+    const nameWithoutExt = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
+    
+    // Remove Hebrew chars, replace spaces and special chars with safe alternatives
+    const sanitized = nameWithoutExt
+      .replace(/[\u0590-\u05FF]/g, '') // Remove Hebrew
+      .replace(/[^\w\s-]/g, '') // Remove special chars
+      .replace(/\s+/g, '_') // Replace spaces with underscore
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .trim()
+      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+      .slice(0, 100); // Limit length
+    
+    return (sanitized || 'file') + ext;
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setError(null);
     
@@ -73,7 +92,9 @@ export function FileUpload({
             ? `temp-${advisorId}` 
             : 'temp-unknown';
         
-        const filePath = `${folderPath}/${crypto.randomUUID()}-${file.name}`;
+        // Sanitize filename for storage compatibility
+        const sanitizedName = sanitizeFilename(file.name);
+        const filePath = `${folderPath}/${crypto.randomUUID()}-${sanitizedName}`;
         
         const { error: uploadError } = await supabase.storage
           .from('proposal-files')
@@ -87,7 +108,7 @@ export function FileUpload({
 
         const uploadedFile: UploadedFile = {
           url: filePath,
-          name: file.name,
+          name: file.name, // Keep original name for display
           size: file.size,
           mime: file.type,
           uploaded_at: new Date().toISOString(),

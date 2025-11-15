@@ -13,26 +13,31 @@ interface ProposalProgressStepperProps {
 }
 
 export function ProposalProgressStepper({ steps, className }: ProposalProgressStepperProps) {
+  const completedCount = steps.filter(s => s.completed).length;
+  const progressPercent = (completedCount / steps.length) * 100;
+
   return (
-    <div className={cn("w-full py-6", className)}>
+    <div className={cn("w-full py-6", className)} dir="rtl">
       <div className="flex items-center justify-between relative">
-        {/* Progress line */}
+        {/* Background line */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-border z-0" />
+        
+        {/* Progress line (RTL - starts from right) */}
         <div 
-          className="absolute top-5 left-0 h-0.5 bg-primary z-0 transition-all duration-500"
+          className="absolute top-5 right-0 h-0.5 bg-green-600 z-0 transition-all duration-500"
           style={{ 
-            width: `${(steps.filter(s => s.completed).length / steps.length) * 100}%` 
+            width: `${progressPercent}%`
           }}
         />
         
-        {/* Steps */}
-        {steps.map((step, index) => (
+        {/* Steps - reverse order for RTL */}
+        {steps.slice().reverse().map((step, index) => (
           <div key={step.id} className="flex flex-col items-center relative z-10 flex-1">
             <div 
               className={cn(
                 "w-10 h-10 rounded-full border-2 flex items-center justify-center bg-background transition-all duration-300",
                 step.completed 
-                  ? "border-primary bg-primary text-primary-foreground" 
+                  ? "border-green-600 bg-green-600 text-white" 
                   : "border-border text-muted-foreground"
               )}
             >
@@ -45,7 +50,7 @@ export function ProposalProgressStepper({ steps, className }: ProposalProgressSt
             <span 
               className={cn(
                 "mt-2 text-xs text-center max-w-[100px] transition-colors",
-                step.completed ? "text-foreground font-medium" : "text-muted-foreground"
+                step.completed ? "text-green-700 font-medium" : "text-muted-foreground"
               )}
             >
               {step.title}
