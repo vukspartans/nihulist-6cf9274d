@@ -127,7 +127,16 @@ const SubmitProposal = () => {
           .eq('advisor_id', advisor.id)
           .maybeSingle();
 
-        if (inviteError) throw reportableError(formatSupabaseError(inviteError), { context: 'fetch_invite', inviteId: invite_id, error: inviteError });
+        if (inviteError) {
+          console.error('[SubmitProposal] Invite fetch error:', inviteError);
+          toast({
+            title: "שגיאה",
+            description: formatSupabaseError(inviteError),
+            variant: "destructive",
+          });
+          navigate(getDashboardRouteForRole(primaryRole));
+          return;
+        }
         if (!invite) {
           toast({ title: "שגיאה", description: "לא נמצאה הזמנה תקפה", variant: "destructive" });
           navigate(getDashboardRouteForRole(primaryRole));
@@ -142,7 +151,16 @@ const SubmitProposal = () => {
           .eq('advisor_id', advisor.id)
           .maybeSingle();
 
-        if (inviteError) throw reportableError(formatSupabaseError(inviteError), { context: 'fetch_invite_by_rfp', rfpId: rfp_id, error: inviteError });
+        if (inviteError) {
+          console.error('[SubmitProposal] Invite fetch error (via rfp_id):', inviteError);
+          toast({
+            title: "שגיאה",
+            description: formatSupabaseError(inviteError),
+            variant: "destructive",
+          });
+          navigate(getDashboardRouteForRole(primaryRole));
+          return;
+        }
         if (!invite) {
           toast({ title: "שגיאה", description: "לא נמצאה הזמנה תקפה לפרויקט זה", variant: "destructive" });
           navigate(getDashboardRouteForRole(primaryRole));
@@ -313,7 +331,7 @@ const SubmitProposal = () => {
           </Alert>
           <Card className="border-2 border-primary shadow-lg">
             <CardHeader><CardTitle className="flex items-center gap-2"><Edit3 className="h-5 w-5" />חתימה דיגיטלית</CardTitle><CardDescription>חתמו בתיבה למטה לאישור ההצעה</CardDescription></CardHeader>
-            <CardContent><SignatureCanvas onSignatureChange={setSignature} /></CardContent>
+            <CardContent><SignatureCanvas onSign={setSignature} /></CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
