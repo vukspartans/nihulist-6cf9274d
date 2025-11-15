@@ -187,36 +187,41 @@ export const ProposalDetailDialog = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
+          <DialogHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl">
-                הצעת מחיר - {proposal.supplier_name}
-              </DialogTitle>
+              <div className="text-right">
+                <DialogTitle className="text-2xl font-bold">
+                  הצעת מחיר
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {proposal.supplier_name}
+                </p>
+              </div>
               {getStatusBadge(proposal.status)}
             </div>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="w-full justify-start overflow-x-auto flex md:grid md:grid-cols-5">
               <TabsTrigger value="details">
-                <FileText className="w-4 h-4 mr-2" />
                 פרטים
+                <FileText className="w-4 h-4 ml-2" />
               </TabsTrigger>
               <TabsTrigger value="conditions">
-                <Shield className="w-4 h-4 mr-2" />
                 תנאים
+                <Shield className="w-4 h-4 ml-2" />
               </TabsTrigger>
               <TabsTrigger value="files">
-                <Download className="w-4 h-4 mr-2" />
                 קבצים ({proposal.files?.length || 0})
+                <Download className="w-4 h-4 ml-2" />
               </TabsTrigger>
               <TabsTrigger value="signature">
-                <FileSignature className="w-4 h-4 mr-2" />
                 חתימה
+                <FileSignature className="w-4 h-4 ml-2" />
               </TabsTrigger>
               <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'}>
-                <CheckCircle className="w-4 h-4 mr-2" />
                 פעולות
+                <CheckCircle className="w-4 h-4 ml-2" />
               </TabsTrigger>
             </TabsList>
 
@@ -229,34 +234,34 @@ export const ProposalDetailDialog = ({
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <DollarSign className="w-8 h-8 text-primary" />
-                      <div>
+                      <div className="flex-1 text-right">
                         <p className="text-sm text-muted-foreground">מחיר מוצע</p>
                         <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.price)}</p>
                       </div>
+                      <DollarSign className="w-8 h-8 text-primary" />
                     </div>
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <Clock className="w-8 h-8 text-primary" />
-                      <div>
+                      <div className="flex-1 text-right">
                         <p className="text-sm text-muted-foreground">זמן ביצוע</p>
                         <p className="text-2xl font-bold">{proposal.timeline_days} ימים</p>
                       </div>
+                      <Clock className="w-8 h-8 text-primary" />
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <Calendar className="w-6 h-6 text-muted-foreground" />
-                    <div>
+                    <div className="flex-1 text-right">
                       <p className="text-sm text-muted-foreground">תאריך הגשה</p>
                       <p className="font-medium">{formatDate(proposal.submitted_at)}</p>
                     </div>
+                    <Calendar className="w-6 h-6 text-muted-foreground" />
                   </div>
 
                   {proposal.scope_text && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold">היקף העבודה</h4>
+                      <h4 className="font-semibold text-right text-lg">היקף העבודה</h4>
                       <div className="bg-muted/30 p-4 rounded-lg">
-                        <p className="whitespace-pre-wrap">{proposal.scope_text}</p>
+                        <p className="whitespace-pre-wrap text-right">{proposal.scope_text}</p>
                       </div>
                     </div>
                   )}
@@ -273,11 +278,11 @@ export const ProposalDetailDialog = ({
                 <CardContent className="space-y-4">
                   {proposal.conditions_json?.payment_terms && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" />
-                        תנאי תשלום
-                      </h4>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap">
+                      <div className="flex items-center gap-2 justify-end">
+                        <h4 className="font-semibold text-lg">תנאי תשלום</h4>
+                        <DollarSign className="w-5 h-5 text-primary" />
+                      </div>
+                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
                         {proposal.conditions_json.payment_terms}
                       </p>
                     </div>
@@ -285,11 +290,11 @@ export const ProposalDetailDialog = ({
 
                   {proposal.conditions_json?.assumptions && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" />
-                        הנחות יסוד
-                      </h4>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap">
+                      <div className="flex items-center gap-2 justify-end">
+                        <h4 className="font-semibold text-lg">הנחות יסוד</h4>
+                        <AlertCircle className="w-5 h-5 text-primary" />
+                      </div>
+                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
                         {proposal.conditions_json.assumptions}
                       </p>
                     </div>
@@ -297,11 +302,11 @@ export const ProposalDetailDialog = ({
 
                   {proposal.conditions_json?.exclusions && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <XCircle className="w-4 h-4" />
-                        לא כלול במחיר
-                      </h4>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap">
+                      <div className="flex items-center gap-2 justify-end">
+                        <h4 className="font-semibold text-lg">לא כלול במחיר</h4>
+                        <XCircle className="w-5 h-5 text-destructive" />
+                      </div>
+                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
                         {proposal.conditions_json.exclusions}
                       </p>
                     </div>
@@ -319,9 +324,15 @@ export const ProposalDetailDialog = ({
                   {!proposal.conditions_json?.payment_terms && 
                    !proposal.conditions_json?.assumptions && 
                    !proposal.conditions_json?.exclusions && (
-                    <p className="text-center text-muted-foreground py-8">
-                      לא צוינו תנאים מיוחדים להצעה זו
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Shield className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                      <p className="text-center text-muted-foreground font-medium">
+                        לא צוינו תנאים מיוחדים להצעה זו
+                      </p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        ההצעה כוללת תנאים סטנדרטיים בלבד
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -343,31 +354,37 @@ export const ProposalDetailDialog = ({
                           key={index}
                           className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition"
                         >
-                          <div className="flex items-center gap-3">
-                            <FileText className="w-8 h-8 text-primary" />
-                            <div>
-                              <p className="font-medium">{file.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDownload(file)}
                             disabled={!file.signedUrl}
                           >
-                            <Download className="w-4 h-4 mr-2" />
                             הורדה
+                            <Download className="w-4 h-4 ml-2" />
                           </Button>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-medium">{file.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <FileText className="w-8 h-8 text-primary" />
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center text-muted-foreground py-8">
-                      לא צורפו קבצים להצעה זו
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                      <p className="text-center text-muted-foreground font-medium">
+                        לא צורפו קבצים להצעה זו
+                      </p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        הספק לא העלה מסמכים נוספים
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -412,9 +429,15 @@ export const ProposalDetailDialog = ({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-center text-muted-foreground py-8">
-                      אין חתימה דיגיטלית להצעה זו
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <FileSignature className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                      <p className="text-center text-muted-foreground font-medium">
+                        אין חתימה דיגיטלית להצעה זו
+                      </p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        הספק לא חתם על ההצעה באופן דיגיטלי
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -427,37 +450,43 @@ export const ProposalDetailDialog = ({
                   <CardTitle className="text-lg">פעולות על ההצעה</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      פעולות אלו הן סופיות ולא ניתן לבטל אותן. אנא ודא את בחירתך לפני המשך.
+                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-900 dark:text-amber-100 text-right">
+                      <strong>שים לב:</strong> לאחר אישור או דחיית ההצעה, לא ניתן לשנות את ההחלטה. הספק יקבל הודעה אוטומטית על ההחלטה.
                     </AlertDescription>
                   </Alert>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    {/* Primary Action - Approve */}
                     <Button
                       size="lg"
                       onClick={() => setApprovalDialogOpen(true)}
-                      className="h-auto py-6"
+                      className="w-full h-auto py-6 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                     >
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      <div className="text-right">
-                        <p className="font-bold">אישור ההצעה</p>
-                        <p className="text-xs opacity-90">בחר ספק זה לפרויקט</p>
+                      <div className="flex items-center gap-3 w-full justify-center">
+                        <div className="text-right">
+                          <p className="font-bold text-lg">אישור ההצעה</p>
+                          <p className="text-sm opacity-90">בחר ספק זה ולהמשיך לחוזה</p>
+                        </div>
+                        <CheckCircle className="w-6 h-6" />
                       </div>
                     </Button>
 
+                    {/* Secondary Action - Reject */}
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="lg"
                       onClick={handleReject}
                       disabled={rejectLoading}
-                      className="h-auto py-6"
+                      className="w-full h-auto py-4 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-950"
                     >
-                      <XCircle className="w-5 h-5 mr-2" />
-                      <div className="text-right">
-                        <p className="font-bold">דחיית ההצעה</p>
-                        <p className="text-xs opacity-90">הצעה זו אינה מתאימה</p>
+                      <div className="flex items-center gap-3 w-full justify-center">
+                        <div className="text-right">
+                          <p className="font-bold text-red-700 dark:text-red-400">דחיית ההצעה</p>
+                          <p className="text-xs text-red-600 dark:text-red-500">הצעה זו אינה מתאימה</p>
+                        </div>
+                        <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
                       </div>
                     </Button>
                   </div>
