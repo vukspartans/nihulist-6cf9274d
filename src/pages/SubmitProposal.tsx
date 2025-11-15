@@ -424,6 +424,8 @@ const SubmitProposal = () => {
                       <CardContent>
                         <FileUpload
                           onUpload={setFiles}
+                          proposalId={undefined}
+                          advisorId={advisorProfile?.id}
                           maxFiles={10}
                           maxSize={10 * 1024 * 1024}
                           existingFiles={files}

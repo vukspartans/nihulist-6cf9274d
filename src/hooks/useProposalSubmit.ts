@@ -125,6 +125,57 @@ export const useProposalSubmit = () => {
 
       if (proposalError) throw proposalError;
 
+      // Migrate files from temp folder to proposal folder
+      console.log('[Proposal Submit] Migrating files from temp to proposal folder');
+      const migratedFiles: UploadedFile[] = [];
+      
+      for (const file of data.files) {
+        // Check if file is in temp folder
+        if (file.url.startsWith(`temp-${data.advisorId}/`)) {
+          const fileName = file.url.split('/').pop();
+          const newFilePath = `${proposal.id}/${fileName}`;
+          
+          // Copy file to new location
+          const { error: copyError } = await supabase.storage
+            .from('proposal-files')
+            .copy(file.url, newFilePath);
+          
+          if (copyError) {
+            console.error('[Proposal Submit] Error copying file:', copyError);
+            // Keep original path if copy fails
+            migratedFiles.push(file);
+          } else {
+            // Delete old temp file
+            await supabase.storage
+              .from('proposal-files')
+              .remove([file.url]);
+            
+            // Update file URL
+            migratedFiles.push({
+              ...file,
+              url: newFilePath
+            });
+          }
+        } else {
+          // File already in correct location
+          migratedFiles.push(file);
+        }
+      }
+      
+      // Update proposal with migrated file paths
+      if (migratedFiles.length > 0 && migratedFiles.some(f => f.url !== data.files.find(df => df.name === f.name)?.url)) {
+        const { error: updateError } = await supabase
+          .from('proposals')
+          .update({ files: migratedFiles as any })
+          .eq('id', proposal.id);
+        
+        if (updateError) {
+          console.error('[Proposal Submit] Error updating file paths:', updateError);
+        } else {
+          console.log('[Proposal Submit] Successfully migrated', migratedFiles.length, 'files');
+        }
+      }
+
       // Create signature record
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       const { data: profile } = await supabase
