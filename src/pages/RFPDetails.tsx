@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
 import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, Bell, ArrowRight } from 'lucide-react';
-import Logo from '@/components/Logo';
+import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
@@ -357,7 +357,7 @@ const RFPDetails = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
-        <Logo size="md" />
+        <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 

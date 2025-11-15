@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
 import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, Bell, ArrowRight } from 'lucide-react';
-import Logo from '@/components/Logo';
+import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
 import { ConditionsBuilder } from '@/components/ConditionsBuilder';
@@ -426,7 +426,7 @@ const SubmitProposal = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
-        <Logo size="md" />
+        <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
