@@ -88,9 +88,14 @@ export const useProposalSubmit = () => {
         throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
       }
 
-      // SECURITY: Validate files
+      // SECURITY: Validate files (convert UploadedFile to expected format)
       if (data.uploadedFiles && data.uploadedFiles.length > 0) {
-        const fileValidation = validateFileUploads(data.uploadedFiles);
+        const filesWithType = data.uploadedFiles.map(f => ({ 
+          name: f.name, 
+          size: f.size, 
+          type: f.mime || 'application/octet-stream' 
+        }));
+        const fileValidation = validateFileUploads(filesWithType);
         if (!fileValidation.valid) throw new Error(fileValidation.error);
       }
       // Get user info for signature metadata
@@ -100,8 +105,8 @@ export const useProposalSubmit = () => {
       // Calculate content hash for signature verification
       const contentToHash = JSON.stringify({
         price: data.price,
-        timeline_days: data.timeline_days,
-        scope_text: data.scope_text,
+        timelineDays: data.timelineDays,
+        scopeText: data.scopeText,
         conditions: data.conditions,
         timestamp: data.signature.timestamp
       });
@@ -129,11 +134,11 @@ export const useProposalSubmit = () => {
         project_id: data.projectId,
         advisor_id: data.advisorId,
         price: data.price,
-        timeline_days: data.timeline_days,
-        scope_text: data.scope_text,
+        timeline_days: data.timelineDays,
+        scope_text: data.scopeText,
         conditions_json: data.conditions as any,
-        files: data.files as any,
-        declaration_text: data.declaration,
+        files: data.uploadedFiles as any,
+        declaration_text: data.declarationText,
         signature_blob: data.signature.png,
         signature_meta_json: signatureMetadata as any,
         supplier_name: '',
@@ -153,7 +158,7 @@ export const useProposalSubmit = () => {
       console.log('[Proposal Submit] Migrating files from temp to proposal folder');
       const migratedFiles: UploadedFile[] = [];
       
-      for (const file of data.files) {
+      for (const file of data.uploadedFiles) {
         // Check if file is in temp folder
         if (file.url.startsWith(`temp-${data.advisorId}/`)) {
           const fileName = file.url.split('/').pop();
@@ -187,7 +192,7 @@ export const useProposalSubmit = () => {
       }
       
       // Update proposal with migrated file paths
-      if (migratedFiles.length > 0 && migratedFiles.some(f => f.url !== data.files.find(df => df.name === f.name)?.url)) {
+      if (migratedFiles.length > 0 && migratedFiles.some(f => f.url !== data.uploadedFiles.find(df => df.name === f.name)?.url)) {
         const { error: updateError } = await supabase
           .from('proposals')
           .update({ files: migratedFiles as any })
@@ -213,7 +218,7 @@ export const useProposalSubmit = () => {
         .insert({
           entity_type: 'proposal',
           entity_id: proposal.id,
-          sign_text: data.declaration,
+          sign_text: data.declarationText,
           sign_png: data.signature.png,
           sign_vector_json: { strokes: data.signature.vector },
           content_hash: contentHash,
@@ -254,7 +259,7 @@ export const useProposalSubmit = () => {
           project_id: data.projectId,
           rfp_id: data.rfpId,
           price: data.price,
-          timeline_days: data.timeline_days
+          timeline_days: data.timelineDays
         }
       });
 

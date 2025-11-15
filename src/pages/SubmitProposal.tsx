@@ -262,13 +262,14 @@ const SubmitProposal = () => {
       rfpId: (rfp_id || rfpDetails?.id || ''),
       projectId: rfpDetails?.projects.id || '',
       advisorId: advisorProfile?.id || '',
+      supplierName: advisorProfile?.company_name || '',
       price: parseFloat(price),
-      timeline_days: parseInt(timelineDays),
-      scope_text: scopeText,
+      timelineDays: parseInt(timelineDays),
+      scopeText: scopeText,
       conditions,
-      files,
+      uploadedFiles: files,
       signature,
-      declaration: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה"
+      declarationText: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה"
     });
     
     console.log('[SubmitProposal] Submission result:', result);
