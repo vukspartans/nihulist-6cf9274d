@@ -35,7 +35,7 @@ serve(async (req) => {
         files,
         project_id,
         advisor_id,
-        projects (
+        projects!fk_proposals_project (
           id,
           name,
           owner_id,
@@ -44,7 +44,7 @@ serve(async (req) => {
             email
           )
         ),
-        advisors (
+        advisors!fk_proposals_advisor (
           id,
           company_name,
           user_id
