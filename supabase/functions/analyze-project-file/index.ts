@@ -128,6 +128,9 @@ serve(async (req) => {
 
     console.log('Analyzing file with OpenAI Responses API (Vision)');
 
+    let analysis = '';
+    let cleanupFileId = uploadResult.id;
+
     try {
       // Use Responses API with proper vision input format
       const analysisResponse = await fetch('https://api.openai.com/v1/responses', {
@@ -234,46 +237,31 @@ serve(async (req) => {
       }
     }
 
-      if (!analysis) {
-        throw new Error('No analysis content received from OpenAI');
-      }
-
-      console.log('AI Analysis completed:', analysis.substring(0, 200) + '...');
-
-      // Update the file with AI analysis
-      const { error: updateError } = await supabaseClient
-        .from('project_files')
-        .update({ ai_summary: analysis })
-        .eq('id', fileId);
-
-      if (updateError) {
-        console.error('Failed to update file with analysis:', updateError);
-        throw updateError;
-      }
-
-      console.log('File analysis saved successfully');
-
-      return new Response(JSON.stringify({ 
-        success: true, 
-        analysis 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
-    } finally {
-      // Clean up uploaded file from OpenAI
-      try {
-        await fetch(`https://api.openai.com/v1/files/${cleanupFileId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-          },
-        });
-        console.log('Cleaned up OpenAI file:', cleanupFileId);
-      } catch (cleanupError) {
-        console.warn('Failed to cleanup OpenAI file:', cleanupError);
-      }
+    if (!analysis) {
+      throw new Error('No analysis content received from OpenAI');
     }
+
+    console.log('AI Analysis completed:', analysis.substring(0, 200) + '...');
+
+    // Update the file with AI analysis
+    const { error: updateError } = await supabaseClient
+      .from('project_files')
+      .update({ ai_summary: analysis })
+      .eq('id', fileId);
+
+    if (updateError) {
+      console.error('Failed to update file with analysis:', updateError);
+      throw updateError;
+    }
+
+    console.log('File analysis saved successfully');
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      analysis 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     console.error('Error in analyze-project-file function:', error);
@@ -286,5 +274,20 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+  } finally {
+    // Clean up uploaded file from OpenAI
+    try {
+      if (cleanupFileId) {
+        await fetch(`https://api.openai.com/v1/files/${cleanupFileId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+          },
+        });
+        console.log('Cleaned up OpenAI file:', cleanupFileId);
+      }
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup OpenAI file:', cleanupError);
+    }
   }
 });
