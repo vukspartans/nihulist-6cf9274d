@@ -52,6 +52,7 @@ export const ProjectWizard = () => {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadErrors, setUploadErrors] = useState<Array<{fileName: string, error: string}>>([]);
   const [user, setUser] = useState<any>(null);
 
   const totalSteps = 3;
@@ -74,13 +75,20 @@ export const ProjectWizard = () => {
 
     fetchUser();
 
-    // Restore draft from localStorage
+  // Restore draft from localStorage
     const savedDraft = localStorage.getItem(DRAFT_KEY);
     if (savedDraft) {
       try {
-        const { currentStep: savedStep, formData: savedFormData } = JSON.parse(savedDraft);
+        const { currentStep: savedStep, formData: savedFormData, filesMetadata } = JSON.parse(savedDraft);
         setCurrentStep(savedStep || 1);
         setFormData(prev => ({ ...prev, ...savedFormData }));
+        
+        if (filesMetadata && filesMetadata.length > 0) {
+          toast({
+            title: "קבצים שנשמרו בטיוטה",
+            description: `נמצאו ${filesMetadata.length} קבצים בטיוטה. יש להעלותם מחדש.`,
+          });
+        }
       } catch (error) {
         console.error('Error restoring draft:', error);
       }
@@ -89,12 +97,53 @@ export const ProjectWizard = () => {
 
   // Save draft to localStorage whenever formData or currentStep changes
   useEffect(() => {
-    const draftData = { currentStep, formData };
+    const draftData = { 
+      currentStep, 
+      formData,
+      filesMetadata: filesWithMetadata.map(f => ({
+        name: f.file.name,
+        size: f.file.size,
+        type: f.file.type,
+        customName: f.customName,
+        description: f.description
+      }))
+    };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
-  }, [currentStep, formData]);
+  }, [currentStep, formData, filesWithMetadata]);
+
+  // Helper function for retry logic
+  const uploadWithRetry = async (fileName: string, file: File, maxRetries = 2) => {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { error } = await supabase.storage
+          .from('project-files')
+          .upload(fileName, file, { upsert: true });
+        
+        if (!error) return { error: null };
+        
+        if (attempt < maxRetries) {
+          console.warn(`[ProjectWizard] Upload attempt ${attempt + 1} failed, retrying...`, error);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        } else {
+          return { error };
+        }
+      } catch (err) {
+        if (attempt >= maxRetries) {
+          return { error: err };
+        }
+      }
+    }
+    return { error: new Error('Max retries exceeded') };
+  };
 
   const createProjectInternal = async () => {
     if (!user) return null;
+
+    console.log('[ProjectWizard] Pre-flight check:', {
+      hasUser: !!user,
+      filesCount: filesWithMetadata.length,
+      formValid: !!formData.projectType && !!formData.phase
+    });
 
     setCreating(true);
     try {
@@ -148,11 +197,17 @@ export const ProjectWizard = () => {
 
       if (error) throw error;
 
+      console.log('[ProjectWizard] Post-project creation check:', {
+        projectId: project.id,
+        filesWillBeUploaded: filesWithMetadata.length
+      });
+
       // Upload files if any and create project_files records
       const uploadedFileIds: string[] = [];
       if (filesWithMetadata.length > 0) {
         setUploading(true);
         setUploadProgress(0);
+        setUploadErrors([]);
         console.log('[ProjectWizard] Starting file upload for', filesWithMetadata.length, 'files');
         
         for (let i = 0; i < filesWithMetadata.length; i++) {
@@ -164,11 +219,23 @@ export const ProjectWizard = () => {
           try {
             const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(fileWithMeta.file.name)}`;
             
-            const { error: uploadError } = await supabase.storage
-              .from('project-files')
-              .upload(fileName, fileWithMeta.file, { upsert: true });
+            console.log('[ProjectWizard] Uploading file:', {
+              fileName: fileWithMeta.file.name,
+              storagePath: fileName
+            });
+
+            // Upload with retry logic
+            const { error: uploadError } = await uploadWithRetry(fileName, fileWithMeta.file);
 
             if (uploadError) {
+              console.error('[ProjectWizard] Upload error:', {
+                fileName: fileWithMeta.file.name,
+                error: uploadError
+              });
+              setUploadErrors(prev => [...prev, {
+                fileName: fileWithMeta.file.name,
+                error: `Upload failed: ${uploadError.message}`
+              }]);
               toast({
                 title: "שגיאה בהעלאת קובץ",
                 description: `לא ניתן להעלות את הקובץ ${fileWithMeta.file.name}`,
@@ -193,8 +260,26 @@ export const ProjectWizard = () => {
               .single();
 
             if (dbError) {
-              console.error('Error creating project_files record:', dbError);
+              console.error('[ProjectWizard] Database insert error:', {
+                fileName: fileWithMeta.file.name,
+                error: dbError,
+                errorMessage: dbError?.message,
+                errorDetails: dbError?.details
+              });
+              setUploadErrors(prev => [...prev, {
+                fileName: fileWithMeta.file.name,
+                error: `Database error: ${dbError.message}`
+              }]);
+              toast({
+                title: "שגיאה בשמירת קובץ",
+                description: `לא ניתן לשמור פרטי קובץ ${fileWithMeta.file.name}`,
+                variant: "destructive",
+              });
             } else if (insertedFile) {
+              console.log('[ProjectWizard] Successfully uploaded file:', {
+                fileName: fileWithMeta.file.name,
+                fileId: insertedFile.id
+              });
               uploadedFileIds.push(insertedFile.id);
             }
           } catch (fileError) {
@@ -206,8 +291,10 @@ export const ProjectWizard = () => {
             });
           }
         }
+        
         setUploading(false);
         setUploadProgress(0);
+        console.log('[ProjectWizard] File upload complete. Errors:', uploadErrors.length);
       }
 
       // Trigger AI analysis for uploaded files in background
@@ -646,6 +733,24 @@ export const ProjectWizard = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Upload Errors */}
+            {uploadErrors.length > 0 && (
+              <Card className="shadow-sm border-destructive">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-destructive">שגיאות בהעלאת קבצים</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc list-inside space-y-2">
+                    {uploadErrors.map((err, idx) => (
+                      <li key={idx} className="text-sm">
+                        <strong>{err.fileName}</strong>: {err.error}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Files Summary */}
             {filesWithMetadata.length > 0 && (
