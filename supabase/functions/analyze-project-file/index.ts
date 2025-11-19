@@ -126,98 +126,188 @@ serve(async (req) => {
 
 נתח את כל תוכן המסמך לעומק ותן ניתוח מקיף ומדויק.`;
 
-    console.log('Analyzing file with OpenAI Responses API');
+    console.log('Analyzing file with OpenAI Assistants API');
 
-    // Use OpenAI Responses API for comprehensive analysis
-    const analysisResponse = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
-        instructions: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide comprehensive, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, potential challenges, and how the document impacts the project.',
-        input: [{
-          role: 'user',
-          content: [
-            { type: 'input_file', file_id: uploadResult.id },
-            { type: 'input_text', text: analysisPrompt }
-          ]
-        }]
-      }),
-    });
-
-    let analysis = '';
-    let cleanupFileId = uploadResult.id;
+    let assistantId: string | null = null;
+    let threadId: string | null = null;
 
     try {
-      if (!analysisResponse.ok) {
-        const errorText = await analysisResponse.text();
-        console.error('OpenAI Responses API error:', errorText);
-        
-        // Fallback to Chat Completions API
-        console.log('Falling back to Chat Completions API');
-        
-        // For the fallback, we need to extract text from the file if possible
-        // For PDFs and text files, try to get some content for analysis
-        let fileContentPreview = '';
-        
-        try {
-          // For text-based files, try to read content
-          if (fileData.file_type.includes('text') || fileData.file_type.includes('pdf')) {
-            const arrayBuffer = await downloadData.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            
-            // For PDFs, we'll rely on filename analysis for now
-            // For text files, try to decode
-            if (fileData.file_type.includes('text')) {
-              fileContentPreview = new TextDecoder().decode(uint8Array.slice(0, 2000));
-            }
-          }
-        } catch (e) {
-          console.log('Could not extract file content preview:', e);
-        }
-        
-        const fallbackPrompt = `${analysisPrompt}
+      // Create assistant with file search capability
+      const assistantResponse = await fetch('https://api.openai.com/v1/assistants', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+          'OpenAI-Beta': 'assistants=v2'
+        },
+        body: JSON.stringify({
+          model: 'gpt-5-2025-08-07',
+          name: 'Project File Analyzer',
+          instructions: 'You are an expert construction project analyst specializing in Israeli construction projects. Provide comprehensive, actionable insights about project files that help with vendor selection and project management. Focus on technical requirements, regulatory compliance, potential challenges, and how the document impacts the project. Always respond in Hebrew for Hebrew documents.',
+          tools: [{ type: 'file_search' }]
+        })
+      });
 
-נתוני קובץ נוספים:
-- סוג קובץ: ${fileData.file_type}
-- תוכן חלקי (אם זמין): ${fileContentPreview || 'לא זמין'}
+      if (!assistantResponse.ok) {
+        throw new Error(`Failed to create assistant: ${await assistantResponse.text()}`);
+      }
 
-בצע ניתוח מבוסס על המידע הזמין.`;
+      const assistant = await assistantResponse.json();
+      assistantId = assistant.id;
+      console.log('[OpenAI] Assistant created:', assistantId);
 
-        const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
+      // Create thread with file attached
+      const threadResponse = await fetch('https://api.openai.com/v1/threads', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+          'OpenAI-Beta': 'assistants=v2'
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: analysisPrompt,
+            attachments: [{
+              file_id: uploadResult.id,
+              tools: [{ type: 'file_search' }]
+            }]
+          }]
+        })
+      });
+
+      if (!threadResponse.ok) {
+        throw new Error(`Failed to create thread: ${await threadResponse.text()}`);
+      }
+
+      const thread = await threadResponse.json();
+      threadId = thread.id;
+      console.log('[OpenAI] Thread created:', threadId);
+
+      // Run analysis
+      const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+          'OpenAI-Beta': 'assistants=v2'
+        },
+        body: JSON.stringify({
+          assistant_id: assistantId
+        })
+      });
+
+      if (!runResponse.ok) {
+        throw new Error(`Failed to start run: ${await runResponse.text()}`);
+      }
+
+      const run = await runResponse.json();
+      console.log('[OpenAI] Run started:', run.id);
+
+      // Poll for completion (max 60 seconds)
+      let runStatus = run;
+      let pollAttempts = 0;
+      const maxPollAttempts = 60;
+
+      while ((runStatus.status === 'queued' || runStatus.status === 'in_progress') && pollAttempts < maxPollAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        pollAttempts++;
+        
+        const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${run.id}`, {
           headers: {
             'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4.1-2025-04-14',
-            messages: [
-              {
-                role: 'system',
-                content: 'You are an expert document analyst. Analyze the provided file information and content to provide accurate insights. If the document is about software/platform specifications, focus on technical requirements, system architecture, user flows, and implementation considerations. If it\'s about construction, focus on technical requirements, regulatory compliance, and project management aspects.'
-              },
-              {
-                role: 'user',
-                content: fallbackPrompt
-              }
-            ],
-            max_completion_tokens: 1000,
-          }),
+            'OpenAI-Beta': 'assistants=v2'
+          }
         });
-
-        if (fallbackResponse.ok) {
-          const fallbackResult = await fallbackResponse.json();
-          analysis = fallbackResult.choices?.[0]?.message?.content?.trim() || '';
-        }
-      } else {
-        const analysisResult = await analysisResponse.json();
-        console.log('OpenAI analysis completed successfully');
-        analysis = analysisResult.output_text?.trim() || '';
+        
+        runStatus = await statusResponse.json();
+        console.log('[OpenAI] Run status:', runStatus.status, `(attempt ${pollAttempts})`);
       }
+
+      if (runStatus.status !== 'completed') {
+        throw new Error(`Run failed with status: ${runStatus.status}`);
+      }
+
+      // Get messages
+      const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'OpenAI-Beta': 'assistants=v2'
+        }
+      });
+
+      if (!messagesResponse.ok) {
+        throw new Error(`Failed to get messages: ${await messagesResponse.text()}`);
+      }
+
+      const messages = await messagesResponse.json();
+      analysis = messages.data[0]?.content?.[0]?.text?.value || '';
+      
+      console.log('[OpenAI] Analysis completed successfully');
+
+    } catch (assistantError) {
+      console.error('Assistants API failed, falling back to Chat Completions:', assistantError);
+      
+      // Improved fallback that provides metadata-based analysis
+      const fallbackPrompt = `נתח קובץ על בסיס המידע הבא:
+
+שם קובץ: ${fileData.custom_name || fileData.file_name}
+סוג קובץ: ${fileData.file_type}
+גודל: ${fileData.size_mb} MB
+פרויקט: ${projectData.name} (${projectData.type})
+מיקום: ${projectData.location}
+שלב: ${projectData.phase}
+
+על בסיס שם הקובץ, סוגו, והקשר הפרויקט, ספק ניתוח כללי של מה הקובץ עשוי להכיל ואיך הוא רלוונטי לפרויקט. הדגש את הצורך לבדוק את הקובץ ידנית לפרטים מדויקים.`;
+
+      const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-2025-04-14',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that analyzes file metadata to provide context about project documents.'
+            },
+            {
+              role: 'user',
+              content: fallbackPrompt
+            }
+          ],
+          max_completion_tokens: 500,
+        }),
+      });
+
+      if (fallbackResponse.ok) {
+        const fallbackResult = await fallbackResponse.json();
+        analysis = fallbackResult.choices?.[0]?.message?.content?.trim() || '';
+        
+        // Add disclaimer to fallback analysis
+        if (analysis) {
+          analysis = `⚠️ ניתוח זה מבוסס על מטא-דאטה בלבד (ללא גישה מלאה לתוכן הקובץ)\n\n${analysis}`;
+        }
+      }
+    } finally {
+      // Clean up OpenAI assistant
+      if (assistantId) {
+        try {
+          await fetch(`https://api.openai.com/v1/assistants/${assistantId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'OpenAI-Beta': 'assistants=v2'
+            }
+          });
+          console.log('[OpenAI] Cleaned up assistant:', assistantId);
+        } catch (e) {
+          console.warn('Failed to delete assistant:', e);
+        }
+      }
+    }
 
       if (!analysis) {
         throw new Error('No analysis content received from OpenAI');
