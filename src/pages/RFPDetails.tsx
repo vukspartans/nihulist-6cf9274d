@@ -483,7 +483,7 @@ const RFPDetails = () => {
                   )}
                   {inviteDetails.request_content && (
                     <div>
-                      <Label className="font-medium">תיאור הבקשה</Label>
+                      <Label className="font-medium">תיאור הבקשה (טקסט חופשי)</Label>
                       <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                         {inviteDetails.request_content}
                       </p>

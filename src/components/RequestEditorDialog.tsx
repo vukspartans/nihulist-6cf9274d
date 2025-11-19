@@ -541,7 +541,7 @@ export const RequestEditorDialog = ({
 
               {/* Request Content */}
               <div className="space-y-2">
-                <Label htmlFor="request-content" className="text-right block">תיאור הבקשה</Label>
+                <Label htmlFor="request-content" className="text-right block">תיאור הבקשה (טקסט חופשי)</Label>
                 <Textarea
                   id="request-content"
                   value={formData.requestContent}
