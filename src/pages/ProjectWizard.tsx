@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 import { PROJECT_PHASES } from '@/constants/project';
 import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
+import { useDropzone } from 'react-dropzone';
 
 interface FormData {
   address: string;
@@ -50,6 +51,7 @@ export const ProjectWizard = () => {
   const [filesWithMetadata, setFilesWithMetadata] = useState<FileWithMetadata[]>([]);
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [user, setUser] = useState<any>(null);
 
   const totalSteps = 3;
@@ -150,7 +152,15 @@ export const ProjectWizard = () => {
       const uploadedFileIds: string[] = [];
       if (filesWithMetadata.length > 0) {
         setUploading(true);
-        for (const fileWithMeta of filesWithMetadata) {
+        setUploadProgress(0);
+        console.log('[ProjectWizard] Starting file upload for', filesWithMetadata.length, 'files');
+        
+        for (let i = 0; i < filesWithMetadata.length; i++) {
+          const fileWithMeta = filesWithMetadata[i];
+          
+          // Update progress
+          setUploadProgress(Math.round(((i + 1) / filesWithMetadata.length) * 100));
+          
           try {
             const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(fileWithMeta.file.name)}`;
             
@@ -197,6 +207,7 @@ export const ProjectWizard = () => {
           }
         }
         setUploading(false);
+        setUploadProgress(0);
       }
 
       // Trigger AI analysis for uploaded files in background
@@ -286,15 +297,34 @@ export const ProjectWizard = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newFilesWithMeta = files.map(file => ({
-      file,
-      customName: file.name,
-      description: ''
-    }));
-    setFilesWithMetadata(prev => [...prev, ...newFilesWithMeta]);
-  };
+  // Drag and drop configuration
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles: File[]) => {
+      const newFilesWithMeta = acceptedFiles.map(file => ({
+        file,
+        customName: file.name,
+        description: ''
+      }));
+      setFilesWithMetadata(prev => [...prev, ...newFilesWithMeta]);
+    },
+    noClick: false,
+    noKeyboard: false,
+    multiple: true,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/webp': ['.webp'],
+      'application/zip': ['.zip'],
+      'application/x-rar-compressed': ['.rar'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
+    }
+  });
 
   const removeFile = (index: number) => {
     setFilesWithMetadata(prev => prev.filter((_, i) => i !== index));
@@ -459,25 +489,25 @@ export const ProjectWizard = () => {
           </div>
 
           <div className="space-y-6">
-            <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-gradient-to-br from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-all duration-300">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="cursor-pointer flex flex-col items-center gap-6 group"
-              >
+            <div 
+              {...getRootProps()} 
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                isDragActive 
+                  ? 'border-primary bg-primary/20' 
+                  : 'border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <div className="cursor-pointer flex flex-col items-center gap-6 group">
                 <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xl font-semibold text-foreground">לחץ כדי להעלות קבצים</p>
+                  <p className="text-xl font-semibold text-foreground">
+                    {isDragActive ? 'שחרר כאן...' : 'לחץ כדי להעלות קבצים'}
+                  </p>
                   <p className="text-muted-foreground">או גרור ושחרר קבצים כאן</p>
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
                     <span className="px-3 py-1 bg-background rounded-full border">PDF</span>
@@ -485,7 +515,7 @@ export const ProjectWizard = () => {
                     <span className="px-3 py-1 bg-background rounded-full border">מסמכים</span>
                   </div>
                 </div>
-              </label>
+              </div>
             </div>
 
             {filesWithMetadata.length > 0 && (
@@ -624,6 +654,15 @@ export const ProjectWizard = () => {
                   <CardTitle className="text-xl">קבצים ({filesWithMetadata.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {uploading && uploadProgress > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">מעלה קבצים...</span>
+                        <span className="font-medium">{uploadProgress}%</span>
+                      </div>
+                      <Progress value={uploadProgress} className="h-2" />
+                    </div>
+                  )}
                   <div className="space-y-3">
                     {filesWithMetadata.map((fileWithMeta, index) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
