@@ -14,8 +14,10 @@ import {
   Users, 
   Settings,
   CheckCircle,
-  Upload
+  Upload,
+  AlertCircle
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { PhasedAdvisorSelection } from './PhasedAdvisorSelection';
 import { AdvisorRecommendationsCard } from './AdvisorRecommendationsCard';
@@ -106,7 +108,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     loadExistingRfp();
   }, [projectId]);
 
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -140,23 +142,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     }));
   };
 
-  // Save project type to database when changed
-  const handleProjectTypeChange = async (newType: string) => {
-    setSelectedProjectType(newType);
-    
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ type: newType })
-        .eq('id', projectId);
-      
-      if (error) {
-        console.error('Error updating project type:', error);
-      }
-    } catch (error) {
-      console.error('Error saving project type:', error);
-    }
-  };
 
   const handleRequestDataChange = (advisorType: string, data: AdvisorTypeRequestData) => {
     setRequestDataByType(prev => ({
@@ -250,10 +235,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const canProceedFromStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!selectedProjectType;
-      case 2:
         return isAdvisorSelectionValid;
-      case 3:
+      case 2:
         return Object.values(selectedRecommendedAdvisors).some(ids => ids.length > 0);
       default:
         return true;
@@ -263,10 +246,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const getStepTitle = (step: number): string => {
     switch (step) {
       case 1:
-        return 'בחירת סוג פרויקט';
-      case 2:
         return 'בחירת יועצים';
-      case 3:
+      case 2:
         return 'בחירת יועצים מומלצים';
       default:
         return '';
@@ -303,6 +284,19 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
 
   return (
     <div className="space-y-6" dir="rtl">
+      {/* Missing Project Type Warning */}
+      {!selectedProjectType && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">חסר סוג פרויקט</p>
+              <p className="text-sm">יש להגדיר סוג פרויקט לפני שליחת בקשה להצעות מחיר. אנא ערוך את הפרויקט והוסף סוג פרויקט.</p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Progress Header */}
       <Card>
         <CardHeader>
@@ -328,35 +322,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center">
-                <Settings className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">בחירת סוג פרויקט</h3>
-                <p className="text-muted-foreground">
-                  {selectedProjectType ? 'סוג הפרויקט הנוכחי או בחר סוג אחר' : 'בחר את סוג הפרויקט'}
-                </p>
-              </div>
-
-              <div className="max-w-md mx-auto">
-                <ProjectTypeSelector
-                  selectedType={selectedProjectType}
-                  onTypeChange={handleProjectTypeChange}
-                  label="סוג פרויקט"
-                  placeholder="בחר סוג פרויקט"
-                />
-                {selectedProjectType && (
-                  <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    סוג פרויקט נבחר: {selectedProjectType}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="text-center">
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">בחירת יועצים לפי שלבים</h3>
+                <h3 className="text-xl font-semibold mb-2">בחירת יועצים</h3>
                 <p className="text-muted-foreground">
                   בחר את היועצים לפי סדר עדיפות - התחל משלב 1 (חובה), המשך לשלב 2 ו-3 לפי הצורך
                 </p>
@@ -371,7 +338,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
             </div>
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 2 && (
             <div className="space-y-6">
               <div className="text-center">
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
@@ -415,7 +382,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
             {currentStep < totalSteps ? (
               <Button
                 onClick={handleNext}
-                disabled={!canProceedFromStep(currentStep)}
+                disabled={!canProceedFromStep(currentStep) || !selectedProjectType}
                 className="flex items-center gap-2"
               >
                 הבא
@@ -424,7 +391,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
             ) : (
               <Button
                 onClick={handleSendRFP}
-                disabled={loading || !canProceedFromStep(currentStep)}
+                disabled={loading || !canProceedFromStep(currentStep) || !selectedProjectType}
                 className="flex items-center gap-2"
               >
                 <Send className="h-4 w-4" />

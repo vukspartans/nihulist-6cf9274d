@@ -119,7 +119,7 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild data-project-edit-trigger>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Edit className="w-4 h-4" />
           עריכת פרויקט
