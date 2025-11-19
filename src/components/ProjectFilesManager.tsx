@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -169,7 +170,15 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
         .from('project-files')
         .createSignedUrl(path, 60 * 60);
       if (error) throw error;
-      window.open(data.signedUrl, '_blank');
+      
+      // Use link click approach instead of window.open() to avoid popup blockers
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       console.error('Open file error:', error);
       toast({
@@ -319,7 +328,8 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <TooltipProvider>
+      <div className="space-y-6" dir="rtl">
       {/* Upload Area */}
       <Card>
         <CardHeader>
@@ -440,30 +450,51 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-row-reverse">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openFile(file)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => downloadFile(file)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => openEditDialog(file)}
+                              onClick={() => openFile(file)}
                             >
-                              <Edit3 className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          </DialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>צפייה בקובץ</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadFile(file)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>הורדת קובץ</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Dialog>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditDialog(file)}
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>עריכת פרטים</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>עריכת פרטי קובץ</DialogTitle>
@@ -496,25 +527,39 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                             </div>
                           </DialogContent>
                         </Dialog>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => analyzeFile(file.id)}
-                          disabled={analyzingFiles.has(file.id)}
-                        >
-                          {analyzingFiles.has(file.id) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Brain className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteFile(file)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => analyzeFile(file.id)}
+                              disabled={analyzingFiles.has(file.id)}
+                            >
+                              {analyzingFiles.has(file.id) ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Brain className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>ניתוח AI</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deleteFile(file)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>מחיקת קובץ</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -524,6 +569,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
