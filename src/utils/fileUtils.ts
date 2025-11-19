@@ -41,27 +41,38 @@ export const sanitizeFolderName = (name: string): string => {
 };
 
 /**
- * Sanitize file names to prevent directory traversal
+ * Sanitize file names to prevent directory traversal and convert to ASCII-safe format
  */
 export const sanitizeFileName = (fileName: string): string => {
-  // Remove directory traversal attempts
-  let sanitized = fileName.replace(/\.\./g, '');
+  // Get file extension first
+  const lastDotIndex = fileName.lastIndexOf('.');
+  const baseName = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+  const extension = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : '';
   
-  // Remove path separators
-  sanitized = sanitized.replace(/[\/\\]/g, '_');
+  // Hebrew to Latin transliteration map
+  const hebrewToLatin: Record<string, string> = {
+    'א': 'a', 'ב': 'b', 'ג': 'g', 'ד': 'd', 'ה': 'h',
+    'ו': 'v', 'ז': 'z', 'ח': 'ch', 'ט': 't', 'י': 'y',
+    'כ': 'k', 'ך': 'k', 'ל': 'l', 'מ': 'm', 'ם': 'm',
+    'נ': 'n', 'ן': 'n', 'ס': 's', 'ע': 'a', 'פ': 'p',
+    'ף': 'p', 'צ': 'tz', 'ץ': 'tz', 'ק': 'k', 'ר': 'r',
+    'ש': 'sh', 'ת': 't'
+  };
   
-  // Get file extension
-  const lastDotIndex = sanitized.lastIndexOf('.');
-  const baseName = lastDotIndex > 0 ? sanitized.substring(0, lastDotIndex) : sanitized;
-  const extension = lastDotIndex > 0 ? sanitized.substring(lastDotIndex) : '';
-  
-  // Clean base name - preserve original characters but remove dangerous ones
+  // Transliterate and clean base name
   const cleanBaseName = baseName
-    .replace(/[<>:"|?*]/g, '_') // Remove Windows-forbidden characters
-    .replace(/\0/g, '') // Remove null bytes
-    .substring(0, 200); // Limit length
+    .normalize('NFD') // Decompose Unicode
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[\u0590-\u05FF]/g, (char) => hebrewToLatin[char] || '') // Hebrew to Latin
+    .replace(/[^\w\s-]/g, '_') // Replace special chars with underscore
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/_+/g, '_') // Collapse multiple underscores
+    .replace(/^_+|_+$/g, '') // Trim underscores
+    .toLowerCase()
+    .substring(0, 100) // Limit length
+    || 'file'; // Fallback if empty
   
-  return cleanBaseName + extension;
+  return cleanBaseName + extension.toLowerCase();
 };
 
 /**

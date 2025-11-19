@@ -16,6 +16,7 @@ import { useAdvisorsValidation } from '@/hooks/useAdvisorsValidation';
 import { PROJECT_PHASES } from '@/constants/project';
 import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
 import { useDropzone } from 'react-dropzone';
+import { sanitizeFileName } from '@/utils/fileUtils';
 
 interface FormData {
   address: string;
@@ -217,10 +218,13 @@ export const ProjectWizard = () => {
           setUploadProgress(Math.round(((i + 1) / filesWithMetadata.length) * 100));
           
           try {
-            const fileName = `${project.id}/${Date.now()}-${encodeURIComponent(fileWithMeta.file.name)}`;
+            // Generate ASCII-safe filename for storage
+            const sanitizedName = sanitizeFileName(fileWithMeta.file.name);
+            const fileName = `${project.id}/${Date.now()}-${sanitizedName}`;
             
             console.log('[ProjectWizard] Uploading file:', {
-              fileName: fileWithMeta.file.name,
+              original: fileWithMeta.file.name,
+              sanitized: sanitizedName,
               storagePath: fileName
             });
 
@@ -249,8 +253,8 @@ export const ProjectWizard = () => {
               .from('project_files')
               .insert({
                 project_id: project.id,
-                file_name: fileWithMeta.file.name,
-                custom_name: fileWithMeta.customName || fileWithMeta.file.name,
+                file_name: sanitizedName, // ASCII-safe storage filename
+                custom_name: fileWithMeta.customName || fileWithMeta.file.name, // Original Hebrew name for display
                 description: fileWithMeta.description || null,
                 file_type: fileWithMeta.file.type || 'application/octet-stream',
                 file_url: fileName, // Store the storage key, not public URL
