@@ -32,6 +32,8 @@ interface RFPDetails {
     timeline_end: string;
     description: string;
     phase: string;
+    owner_id: string;
+    entrepreneur_name?: string;
   };
 }
 
@@ -215,7 +217,7 @@ const RFPDetails = () => {
             *,
             rfps!rfp_invites_rfp_id_fkey!inner (
               *,
-              projects!inner (*)
+              projects!inner (*, owner_id)
             )
           `)
           .eq('id', invite_id)
@@ -231,7 +233,7 @@ const RFPDetails = () => {
             *,
             rfps!rfp_invites_rfp_id_fkey!inner (
               *,
-              projects!inner (*)
+              projects!inner (*, owner_id)
             )
           `)
           .eq('rfp_id', rfp_id)
@@ -259,7 +261,30 @@ const RFPDetails = () => {
         return;
       }
 
-      setRfpDetails(invite.rfps as any);
+      // Fetch entrepreneur name
+      let entrepreneurName = 'יזם';
+      if (invite.rfps?.projects?.owner_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('user_id', invite.rfps.projects.owner_id)
+          .maybeSingle();
+        
+        if (profile?.name) {
+          entrepreneurName = profile.name;
+        }
+      }
+
+      // Merge entrepreneur name into rfpData
+      const enrichedRfpData = {
+        ...invite.rfps,
+        projects: {
+          ...invite.rfps.projects,
+          entrepreneur_name: entrepreneurName
+        }
+      };
+
+      setRfpDetails(enrichedRfpData as any);
       
       const inviteData = {
         id: invite.id,
@@ -395,73 +420,6 @@ const RFPDetails = () => {
             <DeadlineCountdown deadline={inviteDetails.deadline_at} />
           )}
 
-          {/* Main Request from Entrepreneur - HIGHLIGHTED */}
-          {rfpDetails.body_html && (
-            <Card className="border-2 border-primary bg-primary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <MessageSquare className="h-6 w-6" />
-                  בקשת היזם - מה אנחנו מחפשים?
-                </CardTitle>
-                <CardDescription>
-                  קרא בעיון את הבקשה המפורטת להבנת הצרכים המדויקים של הפרויקט
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ol]:list-decimal [&_li]:mr-5"
-                  dangerouslySetInnerHTML={{ __html: rfpDetails.body_html }}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Project Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                פרטי הפרויקט
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">מיקום</p>
-                    <p className="text-sm text-muted-foreground">{rfpDetails.projects.location}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">תקציב</p>
-                    <p className="text-sm text-muted-foreground">₪{rfpDetails.projects.budget?.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">תאריך התחלה</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(rfpDetails.projects.timeline_start).toLocaleDateString('he-IL')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">תאריך סיום</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(rfpDetails.projects.timeline_end).toLocaleDateString('he-IL')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Request Content from Entrepreneur */}
           {(inviteDetails?.request_title || inviteDetails?.request_content || inviteDetails?.request_files) && (
             <Card>
@@ -532,6 +490,18 @@ const RFPDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  <div>
+                    <Label className="font-medium">שם היזם</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {rfpDetails.projects.entrepreneur_name || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">מיקום</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {rfpDetails.projects.location || '—'}
+                    </p>
+                  </div>
                   <div>
                     <Label className="font-medium">סוג הפרויקט</Label>
                     <p className="text-sm text-muted-foreground mt-1">{rfpDetails.projects.type}</p>
