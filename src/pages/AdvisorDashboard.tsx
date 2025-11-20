@@ -33,6 +33,7 @@ interface RFPInvite {
   advisor_type?: string;
   status: string;
   created_at: string;
+  deadline_at?: string;
   decline_reason?: string;
   decline_note?: string;
   rfps: {
@@ -49,6 +50,8 @@ interface RFPInvite {
       timeline_start: string;
       timeline_end: string;
       description: string;
+      owner_id: string;
+      entrepreneur_name?: string;
     };
   };
 }
@@ -115,6 +118,8 @@ const AdvisorDashboard = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
+  const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals'>('rfp-invites');
+  const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
   const [proposalFilter, setProposalFilter] = useState<'all' | 'submitted' | 'under_review' | 'rejected'>('all');
   const { declineRFP, loading: declining } = useDeclineRFP();
 
@@ -249,14 +254,34 @@ const AdvisorDashboard = () => {
             
             const { data: projectsData, error: projectsError } = await supabase
               .from('projects')
-              .select('id, name, type, location, budget, timeline_start, timeline_end, description')
+              .select('id, name, type, location, budget, timeline_start, timeline_end, description, owner_id')
               .in('id', projectIds);
 
             if (projectsError) {
               console.error('[AdvisorDashboard] ❌ Projects error:', projectsError);
             }
             console.debug('[AdvisorDashboard] ✅ Fetched projects:', projectsData?.length || 0);
-            projects = projectsData || [];
+            
+            // Fetch entrepreneur names
+            let entrepreneurNames: Record<string, string> = {};
+            if (projectsData && projectsData.length > 0) {
+              const ownerIds = [...new Set(projectsData.map(p => p.owner_id))];
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('user_id, name')
+                .in('user_id', ownerIds);
+              
+              if (profiles) {
+                entrepreneurNames = Object.fromEntries(
+                  profiles.map(p => [p.user_id, p.name || 'יזם'])
+                );
+              }
+            }
+            
+            projects = projectsData?.map(project => ({
+              ...project,
+              entrepreneur_name: entrepreneurNames[project.owner_id] || 'יזם'
+            })) || [];
           }
 
           // Step 4: Client-side merge - always keep invites, attach data when available
@@ -545,7 +570,42 @@ const AdvisorDashboard = () => {
     ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status)
   );
 
-  const displayedInvites = showActiveOnly ? activeInvites : rfpInvites;
+  // Apply filter based on filterType
+  let displayedInvites = showActiveOnly ? activeInvites : rfpInvites;
+
+  if (filterType === 'new') {
+    displayedInvites = displayedInvites.filter(invite => 
+      newInvites.some(newInv => newInv.id === invite.id)
+    );
+  } else if (filterType === 'unsubmitted') {
+    displayedInvites = displayedInvites.filter(invite => 
+      !proposalMap.has(invite.rfps?.projects?.id)
+    );
+  }
+
+  const handleStatsCardClick = (cardType: 'all' | 'new' | 'submitted' | 'unsubmitted') => {
+    switch (cardType) {
+      case 'new':
+        setActiveTab('rfp-invites');
+        setFilterType('new');
+        setShowActiveOnly(false);
+        break;
+      case 'submitted':
+        setActiveTab('my-proposals');
+        break;
+      case 'unsubmitted':
+        setActiveTab('rfp-invites');
+        setFilterType('unsubmitted');
+        setShowActiveOnly(true);
+        break;
+      case 'all':
+      default:
+        setActiveTab('rfp-invites');
+        setFilterType('all');
+        setShowActiveOnly(false);
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -681,17 +741,23 @@ const AdvisorDashboard = () => {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8" dir="rtl">
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card 
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
+            onClick={() => handleStatsCardClick('all')}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
-                <p className="text-2xl font-bold">{rfpInvites.length}</p>
+                <p className="text-2xl font-bold">{activeInvites.length}</p>
                 <p className="text-sm text-muted-foreground">כלל הצעות המחיר הפעילות</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card 
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
+            onClick={() => handleStatsCardClick('new')}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <Bell className="h-8 w-8 text-orange-500" />
@@ -706,17 +772,23 @@ const AdvisorDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card 
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
+            onClick={() => handleStatsCardClick('submitted')}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
-                <Coins className="h-8 w-8 text-green-500" />
+                <ShieldCheck className="h-8 w-8 text-green-500" />
                 <p className="text-2xl font-bold">{proposals.length}</p>
                 <p className="text-sm text-muted-foreground">הצעות שהוגשו</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card 
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
+            onClick={() => handleStatsCardClick('unsubmitted')}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center gap-3">
                 <Clock className="h-8 w-8 text-blue-500" />
@@ -727,7 +799,7 @@ const AdvisorDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="rfp-invites" className="space-y-6" dir="rtl">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6" dir="rtl">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="rfp-invites" className="flex items-center gap-2">
               הזמנות להצעת מחיר
@@ -741,6 +813,25 @@ const AdvisorDashboard = () => {
           </TabsList>
 
           <TabsContent value="rfp-invites" className="space-y-4">
+            {/* Active Filter Feedback */}
+            {filterType !== 'all' && (
+              <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-900">
+                  {filterType === 'new' && 'מציג רק הזמנות חדשות'}
+                  {filterType === 'unsubmitted' && 'מציג רק הזמנות שטרם הוגשו'}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setFilterType('all')}
+                  className="mr-auto text-blue-600 hover:text-blue-700"
+                >
+                  נקה סינון
+                </Button>
+              </div>
+            )}
+            
             {/* Filter Toggle */}
             <div className="flex justify-between items-center mb-4">
               <div className="flex gap-2">
@@ -794,6 +885,17 @@ const AdvisorDashboard = () => {
                                 {invite.advisor_type}
                               </Badge>
                             )}
+                            {invite.deadline_at && (() => {
+                              const hoursUntilDeadline = (new Date(invite.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60);
+                              if (hoursUntilDeadline > 0 && hoursUntilDeadline <= 48) {
+                                return (
+                                  <Badge variant="destructive" className="text-xs animate-pulse">
+                                    נותרו {Math.floor(hoursUntilDeadline)} שעות
+                                  </Badge>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <CardDescription className="flex items-center gap-2 mt-2">
                             <MapPin className="h-4 w-4" />
@@ -825,22 +927,55 @@ const AdvisorDashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      {invite.status === 'declined' && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-red-900">הזמנה נדחתה</p>
+                              <p className="text-sm text-red-700 mt-1">
+                                סיבה: {getDeclineReasonText(invite.decline_reason)}
+                              </p>
+                              {invite.decline_note && (
+                                <p className="text-sm text-red-700 mt-1">
+                                  הערה: {invite.decline_note}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div className="flex items-center gap-2">
-                          <Coins className="h-4 w-4 text-muted-foreground" />
-                          <span>תקציב: {projectBudget ? `₪${projectBudget.toLocaleString()}` : '—'}</span>
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">יזם:</span>
+                          <span>{invite.rfps?.projects?.entrepreneur_name || '—'}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {projectTimelineStart && projectTimelineEnd ? (
-                              `${new Date(projectTimelineStart).toLocaleDateString('he-IL')} - ${new Date(projectTimelineEnd).toLocaleDateString('he-IL')}`
-                            ) : '—'}
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">סוג:</span>
+                          <span className="text-sm">{invite.rfps?.projects?.type || '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-red-500" />
+                          <span className="font-medium">מועד אחרון:</span>
+                          <span className={`text-sm ${
+                            invite.deadline_at && new Date(invite.deadline_at) < new Date() 
+                              ? 'text-red-600 font-semibold' 
+                              : ''
+                          }`}>
+                            {invite.deadline_at 
+                              ? new Date(invite.deadline_at).toLocaleDateString('he-IL', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '—'
+                            }
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>התקבל: {new Date(invite.created_at).toLocaleDateString('he-IL')}</span>
                         </div>
                       </div>
                       
