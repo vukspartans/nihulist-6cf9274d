@@ -89,6 +89,7 @@ const ProjectsManagement = () => {
       case 'active':
         return 'default';
       case 'completed':
+      case 'ended':
         return 'secondary';
       case 'cancelled':
         return 'destructive';
@@ -102,6 +103,7 @@ const ProjectsManagement = () => {
       case 'draft': return adminTranslations.projects.draft;
       case 'active': return adminTranslations.projects.active;
       case 'completed': return adminTranslations.projects.completed;
+      case 'ended': return adminTranslations.projects.ended;
       case 'cancelled': return adminTranslations.projects.cancelled;
       default: return status;
     }

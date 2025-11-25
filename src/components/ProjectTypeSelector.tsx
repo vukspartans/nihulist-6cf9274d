@@ -22,6 +22,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   showLegacyWarning = false
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('התחדשות עירונית');
+  const [isEditing, setIsEditing] = useState(!selectedType);
 
   const availableTypes = selectedCategory && selectedCategory !== 'all'
     ? getProjectTypesByCategory(selectedCategory)
@@ -70,8 +71,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => {
-                onTypeChange('');
-                setSelectedCategory('all');
+                setIsEditing(true);
               }}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -81,73 +81,81 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
         </div>
       )}
 
-      {/* Category Selection */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">בחר קטגוריה:</label>
-        <Select dir="rtl" value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory | 'all')}>
-          <SelectTrigger className="bg-background text-right justify-end">
-            <SelectValue placeholder="בחר קטגוריה..." className="text-right" />
-          </SelectTrigger>
-          <SelectContent dir="rtl" align="end" className="bg-background border z-50">
-            {PROJECT_CATEGORIES.map((category) => {
-              const isEnabled = category === 'התחדשות עירונית';
-              return (
-                <SelectItem 
-                  key={category} 
-                  value={category} 
-                  disabled={!isEnabled}
-                  className={`text-right ${!isEnabled ? 'opacity-50' : ''}`}
-                >
-                  <div className="flex items-center gap-2 w-full justify-end">
-                    {!isEnabled && (
-                      <Badge variant="outline" className="text-xs">בקרוב</Badge>
-                    )}
-                    <span>{category}</span>
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Category and Type Selection - Only show when editing or no selection */}
+      {(isEditing || !selectedType) && (
+        <>
+          {/* Category Selection */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">בחר קטגוריה:</label>
+            <Select dir="rtl" value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as ProjectCategory | 'all')}>
+              <SelectTrigger className="bg-background text-right justify-end">
+                <SelectValue placeholder="בחר קטגוריה..." className="text-right" />
+              </SelectTrigger>
+              <SelectContent dir="rtl" align="end" className="bg-background border z-50">
+                {PROJECT_CATEGORIES.map((category) => {
+                  const isEnabled = category === 'התחדשות עירונית';
+                  return (
+                    <SelectItem 
+                      key={category} 
+                      value={category} 
+                      disabled={!isEnabled}
+                      className={`text-right ${!isEnabled ? 'opacity-50' : ''}`}
+                    >
+                      <div className="flex items-center gap-2 w-full justify-end">
+                        {!isEnabled && (
+                          <Badge variant="outline" className="text-xs">בקרוב</Badge>
+                        )}
+                        <span>{category}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Project Type Selection */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">בחר סוג פרויקט:</label>
-        <Select dir="rtl" value={selectedType} onValueChange={onTypeChange}>
-          <SelectTrigger className="bg-background text-right justify-end">
-            <SelectValue placeholder={placeholder} className="text-right" />
-          </SelectTrigger>
-          <SelectContent dir="rtl" align="end" className="bg-background border z-50 max-h-80 overflow-y-auto">
-            {availableTypes.length === 0 ? (
-              <SelectItem value="no-results" disabled className="text-right">
-                לא נמצאו תוצאות
-              </SelectItem>
-            ) : (
-              availableTypes.map((type) => (
-                <SelectItem key={type} value={type} className="text-right">
-                  <div className="flex flex-col items-end w-full">
-                    <span className="text-right">{type}</span>
-                    {(!selectedCategory || selectedCategory === 'all') && (
-                      <Badge variant="outline" className="mt-1 text-xs">
-                        {PROJECT_CATEGORIES.find(cat => getProjectTypesByCategory(cat).includes(type))}
-                      </Badge>
-                    )}
-                  </div>
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-      </div>
+          {/* Project Type Selection */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">בחר סוג פרויקט:</label>
+            <Select dir="rtl" value={selectedType} onValueChange={(value) => {
+              onTypeChange(value);
+              setIsEditing(false);
+            }}>
+              <SelectTrigger className="bg-background text-right justify-end">
+                <SelectValue placeholder={placeholder} className="text-right" />
+              </SelectTrigger>
+              <SelectContent dir="rtl" align="end" className="bg-background border z-50 max-h-80 overflow-y-auto">
+                {availableTypes.length === 0 ? (
+                  <SelectItem value="no-results" disabled className="text-right">
+                    לא נמצאו תוצאות
+                  </SelectItem>
+                ) : (
+                  availableTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="text-right">
+                      <div className="flex flex-col items-end w-full">
+                        <span className="text-right">{type}</span>
+                        {(!selectedCategory || selectedCategory === 'all') && (
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {PROJECT_CATEGORIES.find(cat => getProjectTypesByCategory(cat).includes(type))}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Statistics */}
-      <div className="text-center text-xs text-muted-foreground">
-        {selectedCategory && selectedCategory !== 'all'
-          ? `${getProjectTypesByCategory(selectedCategory).length} סוגי פרויקטים זמינים בקטגוריה זו`
-          : `${availableTypes.length} סוגי פרויקטים זמינים`
-        }
-      </div>
+          {/* Statistics */}
+          <div className="text-center text-xs text-muted-foreground">
+            {selectedCategory && selectedCategory !== 'all'
+              ? `${getProjectTypesByCategory(selectedCategory).length} סוגי פרויקטים זמינים בקטגוריה זו`
+              : `${availableTypes.length} סוגי פרויקטים זמינים`
+            }
+          </div>
+        </>
+      )}
     </div>
   );
 };

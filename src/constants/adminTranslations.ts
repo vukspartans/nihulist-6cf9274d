@@ -199,6 +199,7 @@ export const adminTranslations = {
     draft: "טיוטה",
     active: "פעיל",
     completed: "הושלם",
+    ended: "הסתיים",
     cancelled: "בוטל",
   },
 

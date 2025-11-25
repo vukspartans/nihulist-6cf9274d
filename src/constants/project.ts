@@ -121,6 +121,7 @@ export const PROJECT_STATUSES = [
   'active', 
   'paused',
   'completed',
+  'ended',
   'deleted'
 ] as const;
 
