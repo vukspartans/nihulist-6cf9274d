@@ -113,7 +113,8 @@ export const PROJECT_PHASES = [
   'מכון בקרה',
   'אישור תחילת עבודות',
   'התקבל היתר',
-  'ביצוע'
+  'ביצוע',
+  'הסתיים'
 ] as const;
 
 export const PROJECT_STATUSES = [
