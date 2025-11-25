@@ -22,6 +22,9 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    let cleanupFileId = '';
+    let assistantId = '';
+
     const { fileId } = await req.json();
 
     if (!fileId) {
@@ -126,13 +129,79 @@ serve(async (req) => {
 
 נתח את כל תוכן המסמך לעומק ותן ניתוח מקיף ומדויק.`;
 
-    console.log('Analyzing file with OpenAI Assistants API');
+    // Check if file type is supported by OpenAI file_search
+    const supportedExtensions = ['.pdf', '.txt', '.md', '.doc', '.docx'];
+    const fileExtension = fileData.file_name.toLowerCase().match(/\.[^.]+$/)?.[0] || '';
+    const isSupported = supportedExtensions.some(ext => fileExtension === ext);
+
+    console.log(`File type ${fileExtension} supported by Assistants API:`, isSupported);
 
     let analysis = '';
-    let cleanupFileId = uploadResult.id;
-    let assistantId = '';
+    cleanupFileId = uploadResult.id;
 
-    try {
+    if (!isSupported) {
+      console.log('File type not supported by Assistants API, using metadata-based analysis');
+      
+      // Use metadata-based fallback for unsupported file types
+      const fallbackPrompt = `נתח קובץ על בסיס המידע הבא:
+
+שם קובץ: ${fileData.custom_name || fileData.file_name}
+סוג קובץ: ${fileData.file_type}
+גודל: ${fileData.size_mb} MB
+
+הקשר פרויקט:
+- שם: ${projectData.name}
+- סוג: ${projectData.type}
+- מיקום: ${projectData.location}
+- שלב: ${projectData.phase}
+- תיאור: ${projectData.description || 'לא סופק'}
+
+על בסיס שם הקובץ, סוגו, והקשר הפרויקט, ספק ניתוח כללי של:
+1. מה הקובץ עשוי להכיל (לדוגמה: תכניות בניין, מפרט טכני, אישורים, נתוני Excel)
+2. איך הוא רלוונטי לפרויקט ולשלב הנוכחי
+3. מה צריך לבדוק בקובץ בצורה ידנית
+4. איך זה משפיע על בחירת יועצים וספקים
+
+**חשוב**: זהו ניתוח מבוסס מטא-דאטה בלבד, ללא גישה לתוכן המלא של הקובץ.`;
+
+      const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-2025-04-14',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a construction project document analyst specializing in Israeli construction projects. Analyze file metadata to provide actionable insights about project documents.'
+            },
+            {
+              role: 'user',
+              content: fallbackPrompt
+            }
+          ],
+          max_completion_tokens: 800,
+        }),
+      });
+
+      if (!fallbackResponse.ok) {
+        const errorText = await fallbackResponse.text();
+        console.error('Fallback analysis failed:', errorText);
+        throw new Error(`Fallback analysis failed: ${fallbackResponse.status}`);
+      }
+
+      const fallbackResult = await fallbackResponse.json();
+      analysis = fallbackResult.choices?.[0]?.message?.content?.trim() || '';
+      
+      if (analysis) {
+        analysis = `⚠️ **הערה חשובה**: ניתוח זה מבוסס על מטא-דאטה של הקובץ בלבד (שם, סוג, הקשר), ללא גישה מלאה לתוכן הקובץ. קבצי ${fileExtension} לא נתמכים כרגע לניתוח אוטומטי מלא.\n\n${analysis}\n\n📋 **המלצה**: בדוק את הקובץ ידנית לפרטים מדויקים ומלאים.`;
+      }
+    } else {
+      console.log('Analyzing file with OpenAI Assistants API');
+
+      try {
       // Step 1: Create assistant with file_search capability
       const assistantResponse = await fetch('https://api.openai.com/v1/assistants', {
         method: 'POST',
@@ -273,8 +342,8 @@ serve(async (req) => {
       } catch (cleanupError) {
         console.warn('[OpenAI] Failed to cleanup assistant:', cleanupError);
       }
-    } catch (assistantError) {
-      console.error('Assistants API failed, falling back to metadata analysis:', assistantError);
+      } catch (assistantError) {
+        console.error('Assistants API failed, falling back to metadata analysis:', assistantError);
 
       // Enhanced fallback with clear disclaimer
       const fallbackPrompt = `נתח קובץ על בסיס המידע הבא:
@@ -320,15 +389,20 @@ serve(async (req) => {
         }),
       });
 
-      if (fallbackResponse.ok) {
+      if (!fallbackResponse.ok) {
+          const errorText = await fallbackResponse.text();
+          console.error('Fallback analysis failed:', errorText);
+          throw new Error(`Both Assistants API and fallback failed. Fallback error: ${errorText}`);
+        }
+
         const fallbackResult = await fallbackResponse.json();
         analysis = fallbackResult.choices?.[0]?.message?.content?.trim() || '';
         
         if (analysis) {
           analysis = `⚠️ **הערה חשובה**: ניתוח זה מבוסס על מטא-דאטה של הקובץ בלבד (שם, סוג, הקשר), ללא גישה מלאה לתוכן הקובץ.\n\n${analysis}\n\n📋 **המלצה**: בדוק את הקובץ ידנית לפרטים מדויקים ומלאים.`;
+        } else {
+          throw new Error('No analysis content received from fallback');
         }
-      } else {
-        throw new Error('Both Assistants API and fallback failed');
       }
     }
 
