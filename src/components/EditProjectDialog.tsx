@@ -8,18 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Edit, Save, AlertCircle, Percent, Calendar as CalendarIcon } from 'lucide-react';
+import { Edit, Save, AlertCircle, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
 import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 interface EditProjectDialogProps {
   project: Project;
@@ -41,8 +36,6 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
     advisors_budget: project.advisors_budget?.toString() || '',
     description: project.description || '',
     phase: project.phase || '',
-    timeline_start: project.timeline_start ? new Date(project.timeline_start) : undefined,
-    timeline_end: project.timeline_end ? new Date(project.timeline_end) : undefined,
   });
   const { toast } = useToast();
 
@@ -87,8 +80,8 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
         advisors_budget: finalAdvisorBudget,
         description: formData.description || null,
         phase: formData.phase,
-        timeline_start: formData.timeline_start?.toISOString() || project.timeline_start,
-        timeline_end: formData.timeline_end?.toISOString() || project.timeline_end,
+        timeline_start: project.timeline_start,
+        timeline_end: project.timeline_end,
       };
 
       const { error } = await supabase
@@ -182,75 +175,6 @@ export const EditProjectDialog = ({ project, onProjectUpdate, open: controlledOp
               dir="rtl"
               placeholder="עיר, אזור"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-right block">תאריך התחלה</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-right font-normal",
-                      !formData.timeline_start && "text-muted-foreground"
-                    )}
-                    dir="rtl"
-                  >
-                    <CalendarIcon className="ml-2 h-4 w-4" />
-                    {formData.timeline_start ? (
-                      format(formData.timeline_start, "PPP", { locale: he })
-                    ) : (
-                      <span>בחר תאריך</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.timeline_start}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, timeline_start: date }))}
-                    initialFocus
-                    className="pointer-events-auto"
-                    dir="rtl"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-right block">תאריך סיום</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-right font-normal",
-                      !formData.timeline_end && "text-muted-foreground"
-                    )}
-                    dir="rtl"
-                  >
-                    <CalendarIcon className="ml-2 h-4 w-4" />
-                    {formData.timeline_end ? (
-                      format(formData.timeline_end, "PPP", { locale: he })
-                    ) : (
-                      <span>בחר תאריך</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.timeline_end}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, timeline_end: date }))}
-                    disabled={(date) => formData.timeline_start ? date < formData.timeline_start : false}
-                    initialFocus
-                    className="pointer-events-auto"
-                    dir="rtl"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
           </div>
 
           <div className="space-y-2">
