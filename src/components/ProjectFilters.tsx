@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { PROJECT_PHASES } from '@/constants/project';
 import { 
   Search, 
   Filter, 
@@ -24,14 +25,10 @@ interface ProjectFiltersProps {
   onClearFilters: () => void;
 }
 
-const statusOptions = [
-  { value: 'all', label: 'כל הסטטוסים' },
-  { value: 'draft', label: 'טיוטה' },
-  { value: 'rfp_sent', label: 'הצעות מחיר נשלחו' },
-  { value: 'collecting', label: 'איסוף הצעות' },
-  { value: 'comparing', label: 'השוואה' },
-  { value: 'selected', label: 'נבחר ספק' },
-  { value: 'closed', label: 'סגור' }
+// Phase options derived from PROJECT_PHASES constant
+const phaseOptions = [
+  { value: 'all', label: 'כל השלבים' },
+  ...PROJECT_PHASES.map(phase => ({ value: phase, label: phase }))
 ];
 
 const sortOptions = [
@@ -39,7 +36,7 @@ const sortOptions = [
   { value: 'name', label: 'שם הפרויקט' },
   { value: 'budget', label: 'תקציב' },
   { value: 'timeline_start', label: 'תאריך התחלה' },
-  { value: 'status', label: 'סטטוס' }
+  { value: 'phase', label: 'שלב הפרויקט' }
 ];
 
 export const ProjectFilters = ({
@@ -86,15 +83,15 @@ export const ProjectFilters = ({
 
           {/* Filters Row */}
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Status Filter */}
+            {/* Phase Filter */}
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <Select value={statusFilter} onValueChange={onStatusFilterChange}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="סנן לפי סטטוס" />
+                  <SelectValue placeholder="סנן לפי שלב" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((option) => (
+                  {phaseOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
