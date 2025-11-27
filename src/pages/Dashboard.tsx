@@ -44,7 +44,7 @@ const getPhaseStatusColor = (phase: string | null) => {
 const Dashboard = () => {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [phaseFilter, setPhaseFilter] = useState("all");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [projectsLoading, setProjectsLoading] = useState(true);
@@ -180,8 +180,8 @@ const Dashboard = () => {
   const filteredProjects = projects
     .filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesPhase = phaseFilter === "all" || project.phase === phaseFilter;
+      return matchesSearch && matchesPhase;
     })
     .sort((a, b) => {
       let aValue = a[sortBy as keyof ProjectSummary];
@@ -195,11 +195,11 @@ const Dashboard = () => {
       return 0;
     });
 
-  const activeFiltersCount = (searchTerm ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
+  const activeFiltersCount = (searchTerm ? 1 : 0) + (phaseFilter !== "all" ? 1 : 0);
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("all");
+    setPhaseFilter("all");
     setSortBy("created_at");
     setSortOrder("desc");
   };
@@ -270,8 +270,8 @@ const Dashboard = () => {
           <ProjectFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
+            statusFilter={phaseFilter}
+            onStatusFilterChange={setPhaseFilter}
             sortBy={sortBy}
             onSortByChange={setSortBy}
             sortOrder={sortOrder}

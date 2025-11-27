@@ -185,7 +185,7 @@ export const ProjectWizard = () => {
         advisors_budget: advisorsBudget,
         description: formData.description || null,
         owner_id: user.id,
-        status: 'draft', // Set to draft status
+        status: 'active', // Set to active status
         timeline_start: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
         timeline_end: oneYearFromNow.toISOString().split('T')[0] // Format as YYYY-MM-DD
       };

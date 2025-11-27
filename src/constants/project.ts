@@ -117,12 +117,9 @@ export const PROJECT_PHASES = [
   'הסתיים'
 ] as const;
 
+// Project statuses (system-level states - simplified)
 export const PROJECT_STATUSES = [
-  'draft',
-  'active', 
-  'paused',
-  'completed',
-  'ended',
+  'active',
   'deleted'
 ] as const;
 
