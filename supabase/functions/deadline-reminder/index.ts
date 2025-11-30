@@ -12,6 +12,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get team member emails
+async function getTeamMemberEmails(
+  supabase: any, 
+  advisorId: string, 
+  notificationType: 'rfp_requests' | 'updates'
+): Promise<string[]> {
+  const { data: teamMembers, error } = await supabase
+    .from('advisor_team_members')
+    .select('email, notification_preferences')
+    .eq('advisor_id', advisorId)
+    .eq('is_active', true);
+
+  if (error || !teamMembers) {
+    console.log(`[getTeamMemberEmails] No team members found or error:`, error);
+    return [];
+  }
+
+  // Filter by notification preferences
+  return teamMembers
+    .filter((member: any) => 
+      member.notification_preferences.includes('all') || 
+      member.notification_preferences.includes(notificationType)
+    )
+    .map((member: any) => member.email);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -95,6 +121,10 @@ serve(async (req) => {
         const deadlineDate = new Date(invite.deadline_at);
         const hoursRemaining = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60));
 
+        // Get team member emails
+        const teamEmails = await getTeamMemberEmails(supabase, advisor.id, 'rfp_requests');
+        const allRecipients = [advisorProfile.email, ...teamEmails];
+
         // Submit URL - use advisor dashboard
         const submitUrl = `https://www.nihulist.co.il/advisor-dashboard`;
 
@@ -110,10 +140,12 @@ serve(async (req) => {
           })
         );
 
+        console.log(`[Deadline Reminder] Sending to ${allRecipients.length} recipient(s):`, allRecipients);
+
         // Send email via Resend
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'ניהוליסט <notifications@nihulist.co.il>',
-          to: [advisorProfile.email],
+          to: allRecipients,
           subject: `תזכורת: ${hoursRemaining} שעות נותרו להגשת הצעה - ${project.name}`,
           html,
         });
