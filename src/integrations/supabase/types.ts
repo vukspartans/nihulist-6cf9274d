@@ -103,6 +103,47 @@ export type Database = {
         }
         Relationships: []
       }
+      advisor_team_members: {
+        Row: {
+          advisor_id: string
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          notification_preferences: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_id: string
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notification_preferences?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notification_preferences?: string[]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advisor_team_members_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advisors: {
         Row: {
           activity_regions: string[] | null
