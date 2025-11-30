@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
+import { TeamMemberManager } from '@/components/TeamMemberManager';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
@@ -86,6 +87,7 @@ const Profile = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
+  const [advisorId, setAdvisorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
   const [editMode, setEditMode] = useState({ 
@@ -164,11 +166,12 @@ const Profile = () => {
         if (data.role === 'advisor') {
           const { data: advisorData, error: advisorError } = await supabase
             .from('advisors')
-            .select('specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url, facebook_url, logo_url, cover_image_url')
+            .select('id, specialties, expertise, company_name, location, founding_year, activity_regions, office_size, office_phone, position_in_office, website, linkedin_url, instagram_url, facebook_url, logo_url, cover_image_url')
             .eq('user_id', user?.id)
             .maybeSingle();
             
           if (!advisorError && advisorData) {
+            setAdvisorId(advisorData.id);
             setAdvisorProfile(advisorData);
             // Set expertise from advisors table
             const expertise = advisorData.expertise || advisorData.specialties || [];
@@ -765,7 +768,7 @@ const Profile = () => {
 
         {/* Tabs for Organization */}
         <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          <TabsList className={`grid w-full ${isAdvisor ? 'grid-cols-5' : 'grid-cols-2'} h-auto p-1`}>
             <TabsTrigger value="personal" className="gap-2 py-3 relative">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">פרטים אישיים</span>
@@ -794,6 +797,11 @@ const Profile = () => {
                     !advisorProfile?.activity_regions || advisorProfile.activity_regions.length === 0) && (
                     <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
                   )}
+                </TabsTrigger>
+                <TabsTrigger value="team" className="gap-2 py-3">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">צוות</span>
+                  <span className="sm:hidden">צוות</span>
                 </TabsTrigger>
               </>
             )}
@@ -1526,6 +1534,26 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+          )}
+
+          {/* Team Tab (Advisors Only) */}
+          {isAdvisor && (
+            <TabsContent value="team" className="space-y-4 mt-6 animate-fade-in">
+              <Card dir="rtl" className="hover-scale">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    צוות המשרד
+                  </CardTitle>
+                  <CardDescription>
+                    ניהול חברי צוות שיקבלו התראות והודעות על בקשות והצעות מחיר
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {advisorId && <TeamMemberManager advisorId={advisorId} />}
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
 
