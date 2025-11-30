@@ -150,6 +150,28 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     }));
   };
 
+  const handleRemoveAdvisorType = (advisorType: string) => {
+    // Remove from selected advisor types
+    setSelectedAdvisors(prev => prev.filter(t => t !== advisorType));
+    
+    // Remove selected advisors for this type
+    setSelectedRecommendedAdvisors(prev => {
+      const { [advisorType]: _, ...rest } = prev;
+      return rest;
+    });
+    
+    // Remove request data for this type
+    setRequestDataByType(prev => {
+      const { [advisorType]: _, ...rest } = prev;
+      return rest;
+    });
+    
+    toast({
+      title: "סוג יועץ הוסר",
+      description: `${advisorType} הוסר מהבקשה`,
+    });
+  };
+
   const handleSendRFP = async () => {
     console.log('[RFPWizard] Sending RFP with per-type data:', {
       projectId,
@@ -359,6 +381,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
                 onSelectAdvisors={setSelectedRecommendedAdvisors}
                 requestDataByType={requestDataByType}
                 onRequestDataChange={handleRequestDataChange}
+                onRemoveAdvisorType={handleRemoveAdvisorType}
               />
             </div>
           )}

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, RefreshCw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, RefreshCw, AlertCircle, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdvisorsByExpertise } from '@/hooks/useAdvisorsByExpertise';
 import { AdvisorTable } from '@/components/AdvisorTable';
 import { RequestEditorDialog, AdvisorTypeRequestData } from '@/components/RequestEditorDialog';
@@ -17,6 +19,7 @@ interface AdvisorRecommendationsCardProps {
   onSelectAdvisors: (advisors: Record<string, string[]>) => void;
   requestDataByType?: Record<string, AdvisorTypeRequestData>;
   onRequestDataChange?: (advisorType: string, data: AdvisorTypeRequestData) => void;
+  onRemoveAdvisorType?: (advisorType: string) => void;
 }
 
 export const AdvisorRecommendationsCard = ({
@@ -28,7 +31,8 @@ export const AdvisorRecommendationsCard = ({
   selectedAdvisors,
   onSelectAdvisors,
   requestDataByType = {},
-  onRequestDataChange
+  onRequestDataChange,
+  onRemoveAdvisorType
 }: AdvisorRecommendationsCardProps) => {
   const [reviewedTypes, setReviewedTypes] = useState<Record<string, boolean>>({});
   
@@ -136,6 +140,25 @@ export const AdvisorRecommendationsCard = ({
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
+              {onRemoveAdvisorType && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onRemoveAdvisorType(typeData.type)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>הסר סוג יועץ</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <h3 className="font-semibold text-lg">{typeData.type}</h3>
             </div>
             
