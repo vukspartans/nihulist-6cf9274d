@@ -1276,6 +1276,7 @@ export type Database = {
         Returns: boolean
       }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_user_advisor: { Args: { _user_id: string }; Returns: boolean }
       is_user_invited_to_rfp: {
         Args: { _rfp_id: string; _user_id: string }
         Returns: boolean
