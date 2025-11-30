@@ -12,6 +12,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to get team member emails
+async function getTeamMemberEmails(
+  supabase: any, 
+  advisorId: string, 
+  notificationType: 'rfp_requests' | 'updates'
+): Promise<string[]> {
+  const { data: teamMembers, error } = await supabase
+    .from('advisor_team_members')
+    .select('email, notification_preferences')
+    .eq('advisor_id', advisorId)
+    .eq('is_active', true);
+
+  if (error || !teamMembers) {
+    console.log(`[getTeamMemberEmails] No team members found or error:`, error);
+    return [];
+  }
+
+  // Filter by notification preferences
+  return teamMembers
+    .filter((member: any) => 
+      member.notification_preferences.includes('all') || 
+      member.notification_preferences.includes(notificationType)
+    )
+    .map((member: any) => member.email);
+}
+
 interface RFPInvite {
   id: string
   rfp_id: string
@@ -180,17 +206,24 @@ serve(async (req) => {
           })
         )
 
-        // Determine recipient email
-        const recipientEmail = test_mode 
+        // Get team member emails
+        const teamEmails = await getTeamMemberEmails(supabase, invite.advisor_id, 'rfp_requests');
+        
+        // Determine recipient emails
+        const mainRecipient = test_mode 
           ? 'lior+nihulist@spartans.tech'
-          : invite.email
+          : invite.email;
+        
+        const allRecipients = test_mode 
+          ? [mainRecipient]
+          : [mainRecipient, ...teamEmails];
 
-        console.log(`[send-rfp-email] Sending email to ${recipientEmail} (original: ${invite.email})`)
+        console.log(`[send-rfp-email] Sending email to ${allRecipients.length} recipient(s):`, allRecipients)
 
         // Send email via Resend
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'ניהוליסט <noreply@nihulist.co.il>',
-          to: [recipientEmail],
+          to: allRecipients,
           subject: `הזמנה להגשת הצעת מחיר: ${project.name}`,
           html,
           tags: [

@@ -12,6 +12,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get team member emails
+async function getTeamMemberEmails(
+  supabase: any, 
+  advisorId: string, 
+  notificationType: 'rfp_requests' | 'updates'
+): Promise<string[]> {
+  const { data: teamMembers, error } = await supabase
+    .from('advisor_team_members')
+    .select('email, notification_preferences')
+    .eq('advisor_id', advisorId)
+    .eq('is_active', true);
+
+  if (error || !teamMembers) {
+    console.log(`[getTeamMemberEmails] No team members found or error:`, error);
+    return [];
+  }
+
+  // Filter by notification preferences
+  return teamMembers
+    .filter((member: any) => 
+      member.notification_preferences.includes('all') || 
+      member.notification_preferences.includes(notificationType)
+    )
+    .map((member: any) => member.email);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -67,12 +93,19 @@ serve(async (req) => {
       throw new Error('Advisor email not found');
     }
 
-    // Determine recipient email
-    const recipientEmail = test_mode 
+    // Get team member emails
+    const teamEmails = await getTeamMemberEmails(supabase, proposal.advisor_id, 'updates');
+    
+    // Determine recipient emails
+    const mainRecipient = test_mode 
       ? 'lior+nihulist@spartans.tech' 
       : advisorProfile.email;
+    
+    const allRecipients = test_mode 
+      ? [mainRecipient]
+      : [mainRecipient, ...teamEmails];
 
-    console.log('[Proposal Rejected] Sending to:', recipientEmail, '(test_mode:', test_mode, ')');
+    console.log('[Proposal Rejected] Sending to:', allRecipients.length, 'recipient(s)', '(test_mode:', test_mode, ')');
 
     // Extract rejection reason from terms or use provided reason
     let finalRejectionReason = rejection_reason;
@@ -96,7 +129,7 @@ serve(async (req) => {
     // Send email via Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'ניהוליסט <notifications@nihulist.co.il>',
-      to: [recipientEmail],
+      to: allRecipients,
       subject: `עדכון לגבי הצעתך - ${project.name}`,
       html,
     });

@@ -125,16 +125,7 @@ export const TeamMemberManager = ({ advisorId }: TeamMemberManagerProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            צוות המשרד
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            ניהול חברי צוות שיקבלו התראות והודעות
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={() => setDialogOpen(true)} className="gap-2">
           <Plus className="w-4 h-4" />
           הוסף חבר צוות
