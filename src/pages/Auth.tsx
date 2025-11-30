@@ -1053,38 +1053,46 @@ const Auth = () => {
               </>
             )}
 
-            {isLogin && (
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-muted-foreground hover:bg-black hover:text-white transition-colors"
-                >
-                  שכחת סיסמה?
-                </Button>
-              </div>
-            )}
           </form>
           )}
 
-          <Separator />
+          {isLogin && (
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => setIsForgotPassword(true)}
+                className="text-sm text-muted-foreground hover:text-primary p-0 h-auto"
+              >
+                שכחתי סיסמה
+              </Button>
+              <Button
+                variant="link"
+                onClick={() => {
+                  setIsLogin(false);
+                  setSignupStep(1);
+                }}
+                className="text-sm text-primary hover:text-primary/80 font-medium p-0 h-auto"
+              >
+                צור חשבון חדש
+              </Button>
+            </div>
+          )}
 
-          <div className="text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {isLogin ? "אין לך חשבון?" : "יש לך כבר חשבון?"}
-            </p>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setSignupStep(1);
-              }}
-              className="text-primary hover:text-primary/80 font-medium"
-            >
-              {isLogin ? "הצטרף כעת" : "התחבר לחשבון קיים"}
-            </Button>
-          </div>
+          {!isLogin && (
+            <div className="text-center pt-4 mt-4 border-t border-border">
+              <Button
+                variant="link"
+                onClick={() => {
+                  setIsLogin(true);
+                  setSignupStep(1);
+                }}
+                className="text-sm text-primary hover:text-primary/80 font-medium"
+              >
+                יש לך כבר חשבון? התחבר
+              </Button>
+            </div>
+          )}
 
         </CardContent>
       </Card>
