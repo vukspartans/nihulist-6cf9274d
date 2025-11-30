@@ -14,6 +14,8 @@ import { ADVISOR_EXPERTISE } from '@/constants/advisor';
 import { PROJECT_TYPES } from '@/constants/project';
 import { UserHeader } from '@/components/UserHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TeamMemberManager } from '@/components/TeamMemberManager';
 import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInput from 'react-phone-number-input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -271,9 +273,17 @@ const AdvisorProfile = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="company_name">שם המשרד *</Label>
+            <Tabs defaultValue="basic" className="w-full" dir="rtl">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">בסיסי</TabsTrigger>
+                <TabsTrigger value="professional">מקצועי</TabsTrigger>
+                <TabsTrigger value="team">צוות</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basic" className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="company_name">שם המשרד *</Label>
                 <Input
                   id="company_name"
                   value={profile.company_name}
@@ -328,268 +338,291 @@ const AdvisorProfile = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="office_phone">מספר טלפון במשרד</Label>
-                  <PhoneInput
-                    id="office_phone"
-                    international
-                    defaultCountry="IL"
-                    value={profile.office_phone || ''}
-                    onChange={(value) => setProfile(prev => ({ ...prev, office_phone: value || '' }))}
-                    className="phone-input"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>גודל המשרד *</Label>
-                <Select 
-                  value={profile.office_size} 
-                  onValueChange={(value) => setProfile(prev => ({ ...prev, office_size: value }))}
-                >
-                  <SelectTrigger dir="rtl">
-                    <SelectValue placeholder="בחר גודל משרד" />
-                  </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    {OFFICE_SIZES.map((size) => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label className="text-base font-semibold">אזורי פעילות *</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (profile.activity_regions?.length === ACTIVITY_REGIONS.length) {
-                        setProfile(prev => ({ ...prev, activity_regions: [] }));
-                      } else {
-                        setProfile(prev => ({ ...prev, activity_regions: [...ACTIVITY_REGIONS] }));
-                      }
-                    }}
-                  >
-                    {profile.activity_regions?.length === ACTIVITY_REGIONS.length ? 'נקה הכל' : 'בחר הכל'}
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ACTIVITY_REGIONS.map((region) => (
-                    <div key={region} className="flex items-center space-x-2 space-x-reverse">
-                      <Checkbox
-                        id={`region-${region}`}
-                        checked={profile.activity_regions?.includes(region)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setProfile(prev => ({ 
-                              ...prev, 
-                              activity_regions: [...(prev.activity_regions || []), region] 
-                            }));
-                          } else {
-                            setProfile(prev => ({ 
-                              ...prev, 
-                              activity_regions: (prev.activity_regions || []).filter(r => r !== region) 
-                            }));
-                          }
-                        }}
+                    <div className="space-y-2">
+                      <Label htmlFor="office_phone">מספר טלפון במשרד</Label>
+                      <PhoneInput
+                        id="office_phone"
+                        international
+                        defaultCountry="IL"
+                        value={profile.office_phone || ''}
+                        onChange={(value) => setProfile(prev => ({ ...prev, office_phone: value || '' }))}
+                        className="phone-input"
+                        dir="ltr"
                       />
-                      <label
-                        htmlFor={`region-${region}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    </div>
+                  </div>
+
+                    <div className="space-y-2">
+                      <Label>גודל המשרד *</Label>
+                      <Select 
+                        value={profile.office_size} 
+                        onValueChange={(value) => setProfile(prev => ({ ...prev, office_size: value }))}
                       >
-                        {region}
-                      </label>
+                        <SelectTrigger dir="rtl">
+                          <SelectValue placeholder="בחר גודל משרד" />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          {OFFICE_SIZES.map((size) => (
+                            <SelectItem key={size} value={size}>{size}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
-                </div>
-                {profile.activity_regions && profile.activity_regions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {profile.activity_regions.map((region) => (
-                      <Badge key={region} variant="secondary">
-                        {region}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              <div className="space-y-4">
-                <Label>התמחות מקצועית *</Label>
-                <p className="text-sm text-muted-foreground">בחר את תפקידך המקצועי</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
-                  {ADVISOR_EXPERTISE.map((type) => (
-                    <Button
-                      key={type}
-                      type="button"
-                      variant={profile.expertise.includes(type) ? "default" : "outline"}
-                      onClick={() => {
-                        if (profile.expertise.includes(type)) {
-                          removeExpertise(type);
-                        } else {
-                          addExpertise(type);
-                        }
-                      }}
-                      className="justify-start text-sm h-auto py-2 px-3"
-                    >
-                      {type}
-                    </Button>
-                  ))}
-                </div>
-                
-                {profile.expertise.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.expertise.length}):</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.expertise.map((exp) => (
-                        <Badge key={exp} variant="secondary" className="gap-1">
-                          {exp}
-                          <X 
-                            className="h-3 w-3 cursor-pointer" 
-                            onClick={() => removeExpertise(exp)}
-                          />
-                        </Badge>
-                      ))}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-base font-semibold">אזורי פעילות *</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (profile.activity_regions?.length === ACTIVITY_REGIONS.length) {
+                              setProfile(prev => ({ ...prev, activity_regions: [] }));
+                            } else {
+                              setProfile(prev => ({ ...prev, activity_regions: [...ACTIVITY_REGIONS] }));
+                            }
+                          }}
+                        >
+                          {profile.activity_regions?.length === ACTIVITY_REGIONS.length ? 'נקה הכל' : 'בחר הכל'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {ACTIVITY_REGIONS.map((region) => (
+                          <div key={region} className="flex items-center space-x-2 space-x-reverse">
+                            <Checkbox
+                              id={`region-${region}`}
+                              checked={profile.activity_regions?.includes(region)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setProfile(prev => ({ 
+                                    ...prev, 
+                                    activity_regions: [...(prev.activity_regions || []), region] 
+                                  }));
+                                } else {
+                                  setProfile(prev => ({ 
+                                    ...prev, 
+                                    activity_regions: (prev.activity_regions || []).filter(r => r !== region) 
+                                  }));
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`region-${region}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {region}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {profile.activity_regions && profile.activity_regions.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {profile.activity_regions.map((region) => (
+                            <Badge key={region} variant="secondary">
+                              {region}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
 
-              <div className="space-y-4">
-                <Label>התמחויות המשרד *</Label>
-                <p className="text-sm text-muted-foreground">בחר את סוגי הפרויקטים שהמשרד שלך מתמחה בהם</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
-                  {PROJECT_TYPES.map((type) => (
-                    <Button
-                      key={type}
-                      type="button"
-                      variant={profile.specialties.includes(type) ? "default" : "outline"}
-                      onClick={() => {
-                        if (profile.specialties.includes(type)) {
-                          removeSpecialty(type);
-                        } else {
-                          addSpecialty(type);
-                        }
-                      }}
-                      className="justify-start text-sm h-auto py-2 px-3"
-                    >
-                      {type}
-                    </Button>
-                  ))}
-                </div>
-                
-                {profile.specialties.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.specialties.length}):</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.specialties.map((spec) => (
-                        <Badge key={spec} variant="secondary" className="gap-1">
-                          {spec}
-                          <X 
-                            className="h-3 w-3 cursor-pointer" 
-                            onClick={() => removeSpecialty(spec)}
-                          />
-                        </Badge>
-                      ))}
+                    <div className="flex gap-4 pt-4">
+                      <Button type="submit" disabled={loading}>
+                        {loading ? 'שומר...' : 'שמירת פרופיל'}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => navigate('/advisor-dashboard')}
+                      >
+                        ביטול
+                      </Button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  </form>
+                </TabsContent>
 
-              <div className="space-y-4">
-                <Label>הסמכות ותעודות</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newCertification}
-                    onChange={(e) => setNewCertification(e.target.value)}
-                    placeholder="הוסיפו הסמכה או תעודה"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())}
-                  />
-                  <Button type="button" onClick={addCertification} size="icon">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {profile.certifications.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {profile.certifications.map((cert) => (
-                      <Badge key={cert} variant="outline" className="gap-1">
-                        {cert}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
-                          onClick={() => removeCertification(cert)}
+                <TabsContent value="professional" className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-4">
+                      <Label>התמחות מקצועית *</Label>
+                      <p className="text-sm text-muted-foreground">בחר את תפקידך המקצועי</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
+                        {ADVISOR_EXPERTISE.map((type) => (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={profile.expertise.includes(type) ? "default" : "outline"}
+                            onClick={() => {
+                              if (profile.expertise.includes(type)) {
+                                removeExpertise(type);
+                              } else {
+                                addExpertise(type);
+                              }
+                            }}
+                            className="justify-start text-sm h-auto py-2 px-3"
+                          >
+                            {type}
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      {profile.expertise.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.expertise.length}):</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {profile.expertise.map((exp) => (
+                              <Badge key={exp} variant="secondary" className="gap-1">
+                                {exp}
+                                <X 
+                                  className="h-3 w-3 cursor-pointer" 
+                                  onClick={() => removeExpertise(exp)}
+                                />
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label>התמחויות המשרד *</Label>
+                      <p className="text-sm text-muted-foreground">בחר את סוגי הפרויקטים שהמשרד שלך מתמחה בהם</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto border rounded-lg p-4">
+                        {PROJECT_TYPES.map((type) => (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={profile.specialties.includes(type) ? "default" : "outline"}
+                            onClick={() => {
+                              if (profile.specialties.includes(type)) {
+                                removeSpecialty(type);
+                              } else {
+                                addSpecialty(type);
+                              }
+                            }}
+                            className="justify-start text-sm h-auto py-2 px-3"
+                          >
+                            {type}
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      {profile.specialties.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">התמחויות נבחרות ({profile.specialties.length}):</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {profile.specialties.map((spec) => (
+                              <Badge key={spec} variant="secondary" className="gap-1">
+                                {spec}
+                                <X 
+                                  className="h-3 w-3 cursor-pointer" 
+                                  onClick={() => removeSpecialty(spec)}
+                                />
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label>הסמכות ותעודות</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newCertification}
+                          onChange={(e) => setNewCertification(e.target.value)}
+                          placeholder="הוסיפו הסמכה או תעודה"
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())}
                         />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        <Button type="button" onClick={addCertification} size="icon">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      {profile.certifications.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {profile.certifications.map((cert) => (
+                            <Badge key={cert} variant="outline" className="gap-1">
+                              {cert}
+                              <X 
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => removeCertification(cert)}
+                              />
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">קישורים חברתיים ואתר (אופציונלי)</Label>
-                <div className="space-y-2">
-                  <Label htmlFor="website" className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    אתר אינטרנט
-                  </Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={profile.website || ''}
-                    onChange={(e) => setProfile(prev => ({ ...prev, website: e.target.value }))}
-                    placeholder="https://www.example.com"
-                    dir="ltr"
-                    className="text-left"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin" className="flex items-center gap-2">
-                    <Linkedin className="h-4 w-4" />
-                    לינקדאין
-                  </Label>
-                  <Input
-                    id="linkedin"
-                    type="url"
-                    value={profile.linkedin_url || ''}
-                    onChange={(e) => setProfile(prev => ({ ...prev, linkedin_url: e.target.value }))}
-                    placeholder="https://www.linkedin.com/in/username"
-                    dir="ltr"
-                    className="text-left"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="instagram" className="flex items-center gap-2">
-                    <Instagram className="h-4 w-4" />
-                    אינסטגרם
-                  </Label>
-                  <Input
-                    id="instagram"
-                    type="url"
-                    value={profile.instagram_url || ''}
-                    onChange={(e) => setProfile(prev => ({ ...prev, instagram_url: e.target.value }))}
-                    placeholder="https://www.instagram.com/username"
-                    dir="ltr"
-                    className="text-left"
-                  />
-                </div>
-              </div>
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold">קישורים חברתיים ואתר (אופציונלי)</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="website" className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          אתר אינטרנט
+                        </Label>
+                        <Input
+                          id="website"
+                          type="url"
+                          value={profile.website || ''}
+                          onChange={(e) => setProfile(prev => ({ ...prev, website: e.target.value }))}
+                          placeholder="https://www.example.com"
+                          dir="ltr"
+                          className="text-left"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="linkedin" className="flex items-center gap-2">
+                          <Linkedin className="h-4 w-4" />
+                          לינקדאין
+                        </Label>
+                        <Input
+                          id="linkedin"
+                          type="url"
+                          value={profile.linkedin_url || ''}
+                          onChange={(e) => setProfile(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                          placeholder="https://www.linkedin.com/in/username"
+                          dir="ltr"
+                          className="text-left"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="instagram" className="flex items-center gap-2">
+                          <Instagram className="h-4 w-4" />
+                          אינסטגרם
+                        </Label>
+                        <Input
+                          id="instagram"
+                          type="url"
+                          value={profile.instagram_url || ''}
+                          onChange={(e) => setProfile(prev => ({ ...prev, instagram_url: e.target.value }))}
+                          placeholder="https://www.instagram.com/username"
+                          dir="ltr"
+                          className="text-left"
+                        />
+                      </div>
+                    </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'שומר...' : 'שמירת פרופיל'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate('/advisor-dashboard')}
-                >
-                  ביטול
-                </Button>
-              </div>
-            </form>
+                    <div className="flex gap-4 pt-4">
+                      <Button type="submit" disabled={loading}>
+                        {loading ? 'שומר...' : 'שמירת פרופיל'}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => navigate('/advisor-dashboard')}
+                      >
+                        ביטול
+                      </Button>
+                    </div>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="team" className="space-y-6">
+                  <TeamMemberManager advisorId={profile.id || ''} />
+                </TabsContent>
+              </Tabs>
           </CardContent>
           </Card>
         </div>
