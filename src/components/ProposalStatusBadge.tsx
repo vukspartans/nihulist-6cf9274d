@@ -19,13 +19,13 @@ export const ProposalStatusBadge = ({
     switch (proposalStatus) {
       case 'accepted':
         return {
-          text: '✓ הצעה אושרה',
+          text: 'הצעה אושרה',
           icon: Check,
           className: 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600',
         };
       case 'submitted':
         return {
-          text: '✓ הצעה הוגשה',
+          text: 'הצעה הוגשה',
           icon: Check,
           className: 'bg-green-500 text-white border-green-600 hover:bg-green-600',
         };
