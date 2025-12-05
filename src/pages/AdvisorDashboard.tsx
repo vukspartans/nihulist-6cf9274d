@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import BackToTop from '@/components/BackToTop';
 import { ProposalStatusBadge } from '@/components/ProposalStatusBadge';
+import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -34,6 +35,7 @@ interface RFPInvite {
   status: string;
   created_at: string;
   deadline_at?: string;
+  opened_at?: string | null;
   decline_reason?: string;
   decline_note?: string;
   rfps: {
@@ -178,7 +180,7 @@ const AdvisorDashboard = () => {
         
         const { data: invites, error: invitesError, status, statusText } = await supabase
           .from('rfp_invites')
-          .select('id, rfp_id, advisor_type, status, created_at, deadline_at, decline_reason, decline_note')
+          .select('id, rfp_id, advisor_type, status, created_at, deadline_at, opened_at, decline_reason, decline_note')
           .eq('advisor_id', advisor.id)
           .order('created_at', { ascending: false });
 
@@ -547,10 +549,13 @@ const AdvisorDashboard = () => {
   const profileStatus = checkRequiredFields();
   const isProfileIncomplete = !profileStatus.isComplete;
 
+  // New invites: created in last 24 hours OR not yet viewed (opened_at is null)
   const newInvites = rfpInvites.filter(invite => {
     const createdDate = new Date(invite.created_at);
-    const daysSinceCreation = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysSinceCreation <= 7;
+    const hoursSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+    const isRecent = hoursSinceCreation <= 24;
+    const isUnviewed = !invite.opened_at;
+    return isRecent || isUnviewed;
   });
 
   const unsubmittedInvites = rfpInvites.filter(invite => 
@@ -612,12 +617,14 @@ const AdvisorDashboard = () => {
       <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
           <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <NotificationsDropdown 
+            notifications={newInvites.map(inv => ({
+              id: inv.id,
+              projectName: inv.rfps?.projects?.name || 'פרויקט',
+              advisorType: inv.advisor_type,
+              createdAt: inv.created_at
+            }))}
+          />
           <UserHeader />
         </div>
       </div>
@@ -836,18 +843,18 @@ const AdvisorDashboard = () => {
             <div className="flex justify-between items-center mb-4">
               <div className="flex gap-2">
                 <Button 
-                  variant={showActiveOnly ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => setShowActiveOnly(true)}
-                >
-                  הצג רק פעילים ({activeInvites.length})
-                </Button>
-                <Button 
                   variant={!showActiveOnly ? "default" : "outline"} 
                   size="sm"
                   onClick={() => setShowActiveOnly(false)}
                 >
                   הצג הכל ({rfpInvites.length})
+                </Button>
+                <Button 
+                  variant={showActiveOnly ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setShowActiveOnly(true)}
+                >
+                  הצג רק פעילים ({activeInvites.length})
                 </Button>
               </div>
             </div>
