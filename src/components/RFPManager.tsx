@@ -7,17 +7,31 @@ import { RecommendationsCard } from './RecommendationsCard';
 import { AdvisorSelection } from './AdvisorSelection';
 import { useRFP } from '@/hooks/useRFP';
 
+interface AdvisorValidation {
+  Status: string;
+  Missing?: string[];
+  Notes?: string;
+  SelectedCount?: number;
+  RequiredCount?: number;
+}
+
 interface RFPManagerProps {
   projectId: string;
   projectName: string;
   projectType: string;
+  /** Callback when RFP is sent successfully */
+  onRfpSent?: () => void;
 }
 
-export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerProps) => {
+export const RFPManager = ({ 
+  projectId, 
+  projectName, 
+  projectType,
+  onRfpSent 
+}: RFPManagerProps) => {
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
-  const [currentProjectType, setCurrentProjectType] = useState(projectType);
-  const [advisorValidation, setAdvisorValidation] = useState<any>(null);
+  const [advisorValidation, setAdvisorValidation] = useState<AdvisorValidation | null>(null);
   const [isAdvisorSelectionValid, setIsAdvisorSelectionValid] = useState(false);
   const [rfpSent, setRfpSent] = useState(false);
   const { sendRFPInvitations, loading } = useRFP();
@@ -38,10 +52,11 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
     );
     if (result) {
       setRfpSent(true);
+      onRfpSent?.();
     }
   };
 
-  const handleAdvisorValidationChange = (isValid: boolean, validation: any) => {
+  const handleAdvisorValidationChange = (isValid: boolean, validation: AdvisorValidation) => {
     setIsAdvisorSelectionValid(isValid);
     setAdvisorValidation(validation);
   };
@@ -75,7 +90,7 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
     <div className="space-y-6" dir="rtl">
       {/* Advisor Selection */}
       <AdvisorSelection
-        projectType={currentProjectType}
+        projectType={projectType}
         selectedAdvisors={selectedAdvisors}
         onAdvisorsChange={setSelectedAdvisors}
         onValidationChange={handleAdvisorValidationChange}
@@ -99,7 +114,7 @@ export const RFPManager = ({ projectId, projectName, projectType }: RFPManagerPr
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
                 לא ניתן לשלוח הצעות מחיר ללא השלמת בחירת היועצים הנדרשים.
-                {advisorValidation.Missing?.length > 0 && (
+                {advisorValidation.Missing && advisorValidation.Missing.length > 0 && (
                   <span> חסרים: {advisorValidation.Missing.join(', ')}</span>
                 )}
               </AlertDescription>
