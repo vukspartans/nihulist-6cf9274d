@@ -434,8 +434,17 @@ const AdvisorDashboard = () => {
     }
   };
 
-  const canSubmitProposal = (status: string) => {
-    return ['sent', 'opened', 'in_progress', 'pending'].includes(status);
+  const canSubmitProposal = (status: string, deadline?: string) => {
+    const statusAllows = ['sent', 'opened', 'in_progress', 'pending'].includes(status);
+    const deadlineNotPassed = !deadline || new Date(deadline) > new Date();
+    return statusAllows && deadlineNotPassed;
+  };
+
+  // Check if an invite is inactive (declined, expired, or past deadline)
+  const isInactiveInvite = (invite: RFPInvite) => {
+    if (['declined', 'expired'].includes(invite.status)) return true;
+    if (invite.deadline_at && new Date(invite.deadline_at) < new Date()) return true;
+    return false;
   };
 
   const handleDeclineClick = (inviteId: string) => {
@@ -549,14 +558,8 @@ const AdvisorDashboard = () => {
   const profileStatus = checkRequiredFields();
   const isProfileIncomplete = !profileStatus.isComplete;
 
-  // New invites: created in last 24 hours OR not yet viewed (opened_at is null)
-  const newInvites = rfpInvites.filter(invite => {
-    const createdDate = new Date(invite.created_at);
-    const hoursSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
-    const isRecent = hoursSinceCreation <= 24;
-    const isUnviewed = !invite.opened_at;
-    return isRecent || isUnviewed;
-  });
+  // New invites: not yet viewed (opened_at is null) - viewing marks them as read
+  const newInvites = rfpInvites.filter(invite => !invite.opened_at);
 
   const unsubmittedInvites = rfpInvites.filter(invite => 
     ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && 
@@ -877,8 +880,10 @@ const AdvisorDashboard = () => {
                 const projectTimelineEnd = invite.rfps?.projects?.timeline_end;
                 const projectDescription = invite.rfps?.projects?.description;
                 
+                const isInactive = isInactiveInvite(invite);
+                
                 return (
-                  <Card key={invite.id} className={`shadow-md hover:shadow-lg transition-shadow ${isNew ? 'border-2 border-orange-400' : ''}`}>
+                  <Card key={invite.id} className={`shadow-md transition-shadow ${isInactive ? 'opacity-60 bg-muted/50' : 'hover:shadow-lg'} ${isNew && !isInactive ? 'border-2 border-orange-400' : ''}`}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -996,7 +1001,7 @@ const AdvisorDashboard = () => {
                           צפייה בפרטים
                         </Button>
                         
-                        {canSubmitProposal(invite.status) && !proposalMap.has(invite.rfps?.projects?.id) && (
+                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.rfps?.projects?.id) && (
                           <Button onClick={() => navigate(`/invite/${invite.id}/submit`)}>
                             הגשת הצעת מחיר
                           </Button>
@@ -1018,7 +1023,7 @@ const AdvisorDashboard = () => {
                             צפייה בהצעה שהוגשה
                           </Button>
                         )}
-                        {['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && (
+                        {canSubmitProposal(invite.status, invite.deadline_at) && (
                           <Button 
                             variant="outline"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
