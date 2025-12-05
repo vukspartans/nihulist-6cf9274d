@@ -67,6 +67,7 @@ const SubmitProposal = () => {
   const [submitted, setSubmitted] = useState(false);
   const [rfpDetails, setRfpDetails] = useState<RFPDetails | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
+  const [currentInviteId, setCurrentInviteId] = useState<string | null>(null);
   
   const [price, setPrice] = useState('');
   const [priceDisplay, setPriceDisplay] = useState('');
@@ -182,6 +183,7 @@ const SubmitProposal = () => {
           return;
         }
         inviteDetails = invite;
+        setCurrentInviteId(invite.id);
       } else if (rfp_id) {
         const { data: invite, error: inviteError } = await supabase
           .from('rfp_invites')
@@ -206,6 +208,7 @@ const SubmitProposal = () => {
           return;
         }
         inviteDetails = invite;
+        setCurrentInviteId(invite.id);
       }
 
       if (['declined', 'expired', 'submitted'].includes(inviteDetails?.status || '')) {
@@ -271,6 +274,7 @@ const SubmitProposal = () => {
   const handleFinalSubmit = async () => {
     setShowConfirmDialog(false);
     const result = await submitProposal({
+      inviteId: currentInviteId || invite_id || '', // Pass specific invite ID
       rfpId: (rfp_id || rfpDetails?.id || ''),
       projectId: rfpDetails?.projects.id || '',
       advisorId: advisorProfile?.id || '',

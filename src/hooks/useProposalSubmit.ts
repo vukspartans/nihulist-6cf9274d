@@ -16,6 +16,7 @@ type SignatureInsert = Database['public']['Tables']['signatures']['Insert'];
 type ActivityLogInsert = Database['public']['Tables']['activity_log']['Insert'];
 
 interface SubmitProposalData {
+  inviteId?: string; // Specific invite ID for precise status update
   rfpId: string;
   projectId: string;
   advisorId: string;
@@ -263,8 +264,25 @@ export const useProposalSubmit = () => {
         }
       });
 
-      // Update RFP invite status to 'submitted'
-      if (data.rfpId) {
+      // Update RFP invite status to 'submitted' - use inviteId for precise update
+      if (data.inviteId) {
+        // Precise update using specific invite ID (prevents updating other invites)
+        const { error: inviteUpdateError } = await supabase
+          .from('rfp_invites')
+          .update({ 
+            status: 'submitted' as const,
+            started_at: new Date().toISOString()
+          })
+          .eq('id', data.inviteId);
+        
+        if (inviteUpdateError) {
+          console.error('[Proposal Submit] Failed to update RFP invite status:', inviteUpdateError);
+        } else {
+          console.log('[Proposal Submit] Updated RFP invite status to submitted (invite:', data.inviteId, ')');
+        }
+      } else if (data.rfpId) {
+        // Fallback for legacy calls - not recommended as it may affect multiple invites
+        console.warn('[Proposal Submit] Using rfpId+advisorId fallback - may affect multiple invites');
         const { error: inviteUpdateError } = await supabase
           .from('rfp_invites')
           .update({ 
@@ -276,8 +294,6 @@ export const useProposalSubmit = () => {
         
         if (inviteUpdateError) {
           console.error('[Proposal Submit] Failed to update RFP invite status:', inviteUpdateError);
-        } else {
-          console.log('[Proposal Submit] Updated RFP invite status to submitted');
         }
       }
 
