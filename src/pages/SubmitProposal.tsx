@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, Bell, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, ArrowRight } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -216,6 +216,18 @@ const SubmitProposal = () => {
         });
         navigate(getDashboardRouteForRole(primaryRole));
         return;
+      }
+
+      // Mark invite as opened if not already opened
+      if (!inviteDetails.opened_at) {
+        await supabase
+          .from('rfp_invites')
+          .update({ 
+            status: 'opened',
+            opened_at: new Date().toISOString(),
+          })
+          .eq('id', inviteDetails.id)
+          .is('opened_at', null);
       }
 
       setRfpDetails(inviteDetails.rfps as any);
@@ -435,12 +447,6 @@ const SubmitProposal = () => {
           >
             <ArrowRight className="h-4 w-4" />
             חזרה לדשבורד
-          </Button>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -left-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
-            </span>
           </Button>
           <UserHeader />
         </div>
