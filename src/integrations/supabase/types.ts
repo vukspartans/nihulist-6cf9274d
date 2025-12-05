@@ -1235,6 +1235,7 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      get_advisor_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_user_profile: {
         Args: { user_uuid?: string }
         Returns: {
