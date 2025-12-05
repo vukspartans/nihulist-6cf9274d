@@ -79,7 +79,7 @@ const RFPDetails = () => {
 
     try {
       if (invite_id) {
-        // Mark by invite_id (most reliable)
+        // Mark by invite_id - only update if opened_at is null (not already opened)
         await supabase
           .from('rfp_invites')
           .update({ 
@@ -87,7 +87,7 @@ const RFPDetails = () => {
             opened_at: new Date().toISOString(),
           })
           .eq('id', invite_id)
-          .eq('status', 'sent');
+          .is('opened_at', null);
       } else if (rfp_id) {
         // Fallback: mark by rfp_id
         const { data: advisor } = await supabase
@@ -105,7 +105,7 @@ const RFPDetails = () => {
             })
             .eq('rfp_id', rfp_id)
             .eq('advisor_id', advisor.id)
-            .eq('status', 'sent');
+            .is('opened_at', null);
         }
       }
     } catch (error) {
