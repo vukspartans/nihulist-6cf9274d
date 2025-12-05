@@ -574,9 +574,7 @@ const AdvisorDashboard = () => {
     ? proposals 
     : proposals.filter(p => p.status === proposalFilter);
 
-  const activeInvites = rfpInvites.filter(invite => 
-    ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status)
-  );
+  const activeInvites = rfpInvites.filter(invite => !isInactiveInvite(invite));
 
   // Apply filter based on filterType
   let displayedInvites = showActiveOnly ? activeInvites : rfpInvites;
