@@ -69,8 +69,8 @@ export const NotificationsDropdown = ({ notifications }: NotificationsDropdownPr
             <p className="text-sm text-muted-foreground">אין התראות חדשות</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[300px]">
-            <div className="divide-y">
+          <ScrollArea className="h-[300px]">
+            <div className="divide-y overflow-y-auto">
               {notifications.map((notification) => (
                 <button
                   key={notification.id}
