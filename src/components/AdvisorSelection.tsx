@@ -236,17 +236,10 @@ export const AdvisorSelection = ({
           
           {/* Show message when no project type selected */}
           {!projectType && (
-            <div className="text-center py-4 text-muted-foreground">
-              בחר סוג פרויקט כדי לראות את היועצים הנדרשים
-            </div>
-          )}
-
-          {/* Show message when no project type */}
-          {!projectType && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                יש לבחור סוג פרויקט בשלב הקודם כדי לראות את היועצים הנדרשים
+                יש לבחור סוג פרויקט כדי לראות את היועצים הנדרשים
               </AlertDescription>
             </Alert>
           )}
