@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -122,7 +122,7 @@ const AdvisorDashboard = () => {
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
   const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals'>('rfp-invites');
   const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
-  const [proposalFilter, setProposalFilter] = useState<'all' | 'submitted' | 'under_review' | 'rejected'>('all');
+  const [proposalFilter, setProposalFilter] = useState<'all' | 'accepted' | 'submitted' | 'under_review' | 'rejected'>('all');
   const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
@@ -1056,6 +1056,15 @@ const AdvisorDashboard = () => {
                   </Button>
                   <Button 
                     size="sm" 
+                    variant={proposalFilter === 'accepted' ? 'default' : 'outline'}
+                    onClick={() => setProposalFilter('accepted')}
+                    className={proposalFilter === 'accepted' ? '' : 'text-amber-600 hover:text-amber-700'}
+                  >
+                    <Trophy className="h-4 w-4 ml-1" />
+                    אושרו ({proposals.filter(p => p.status === 'accepted').length})
+                  </Button>
+                  <Button 
+                    size="sm" 
                     variant={proposalFilter === 'submitted' ? 'default' : 'outline'}
                     onClick={() => setProposalFilter('submitted')}
                   >
@@ -1083,7 +1092,10 @@ const AdvisorDashboard = () => {
               <Card>
                 <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground">
-                    {proposalFilter === 'all' ? 'לא הוגשו הצעות מחיר עדיין' : `אין הצעות ${proposalFilter === 'submitted' ? 'ממתינות' : proposalFilter === 'under_review' ? 'בבדיקה' : 'נדחות'}`}
+                    {proposalFilter === 'all' ? 'לא הוגשו הצעות מחיר עדיין' : 
+                     proposalFilter === 'accepted' ? 'אין הצעות שאושרו' :
+                     proposalFilter === 'submitted' ? 'אין הצעות ממתינות' : 
+                     proposalFilter === 'under_review' ? 'אין הצעות בבדיקה' : 'אין הצעות נדחות'}
                   </p>
                 </CardContent>
               </Card>
