@@ -63,15 +63,22 @@ export const ProjectDetail = () => {
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState('proposals');
 
 
-  // Check for edit mode from URL params
+  // Check for edit mode and tab from URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('edit') === 'true') {
       setEditDialogOpen(true);
-      // Clean up URL after opening dialog
+    }
+    if (urlParams.get('tab')) {
+      setActiveTab(urlParams.get('tab') || 'proposals');
+    }
+    // Clean up URL after reading params
+    if (urlParams.get('edit') || urlParams.get('tab')) {
       urlParams.delete('edit');
+      urlParams.delete('tab');
       navigate(`/projects/${id}${urlParams.toString() ? '?' + urlParams.toString() : ''}`, { replace: true });
     }
   }, [id, navigate]);
@@ -371,7 +378,7 @@ export const ProjectDetail = () => {
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="proposals" className="space-y-6" dir="rtl">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir="rtl">
         <TabsList className="grid w-full grid-cols-5 h-11">
           <TabsTrigger value="proposals" className="text-right flex items-center gap-2">
             <Send className="w-4 h-4" />

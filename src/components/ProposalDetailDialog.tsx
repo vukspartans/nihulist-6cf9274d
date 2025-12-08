@@ -9,6 +9,7 @@ import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { getProposalFilesSignedUrls } from '@/utils/storageUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   FileText, 
   Banknote, 
@@ -73,11 +74,36 @@ export const ProposalDetailDialog = ({
   const { toast } = useToast();
   const { rejectProposal, loading: rejectLoading } = useProposalApproval();
 
+  // Mark proposal as seen when dialog opens
+  useEffect(() => {
+    if (open && proposal.id) {
+      markProposalAsSeen(proposal.id);
+    }
+  }, [open, proposal.id]);
+
   useEffect(() => {
     if (open && proposal.files && proposal.files.length > 0) {
       loadSignedUrls();
     }
   }, [open, proposal.id]);
+
+  const markProposalAsSeen = async (proposalId: string) => {
+    try {
+      const { error } = await supabase
+        .from('proposals')
+        .update({ seen_by_entrepreneur_at: new Date().toISOString() })
+        .eq('id', proposalId)
+        .is('seen_by_entrepreneur_at', null); // Only update if not already seen
+
+      if (error) {
+        console.error('[ProposalDetail] Error marking proposal as seen:', error);
+      } else {
+        console.info('[ProposalDetail] Marked proposal as seen:', proposalId);
+      }
+    } catch (error) {
+      console.error('[ProposalDetail] Error in markProposalAsSeen:', error);
+    }
+  };
 
   const loadSignedUrls = async () => {
     setLoadingFiles(true);

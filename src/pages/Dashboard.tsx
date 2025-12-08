@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, MoreVertical, MapPin, Coins, Edit, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, MapPin, Coins, Edit, Trash2, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +48,7 @@ const Dashboard = () => {
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [unseenProposalCounts, setUnseenProposalCounts] = useState<Record<string, number>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -141,6 +142,11 @@ const Dashboard = () => {
         console.info('[Dashboard] First project:', data[0].name);
       }
       setProjects(data || []);
+      
+      // Fetch unseen proposal counts for all projects
+      if (data && data.length > 0) {
+        fetchUnseenProposalCounts(data.map(p => p.id));
+      }
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast({
@@ -150,6 +156,33 @@ const Dashboard = () => {
       });
     } finally {
       setProjectsLoading(false);
+    }
+  };
+
+  const fetchUnseenProposalCounts = async (projectIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('project_id')
+        .in('project_id', projectIds)
+        .is('seen_by_entrepreneur_at', null)
+        .eq('status', 'submitted');
+
+      if (error) {
+        console.error('[Dashboard] Error fetching unseen proposal counts:', error);
+        return;
+      }
+
+      // Group by project_id and count
+      const counts: Record<string, number> = {};
+      data?.forEach(p => {
+        counts[p.project_id] = (counts[p.project_id] || 0) + 1;
+      });
+      
+      console.info('[Dashboard] Unseen proposal counts:', counts);
+      setUnseenProposalCounts(counts);
+    } catch (error) {
+      console.error('[Dashboard] Error in fetchUnseenProposalCounts:', error);
     }
   };
 
@@ -322,6 +355,7 @@ const Dashboard = () => {
                        <TableHead>תקציב פרויקט</TableHead>
                        <TableHead>תקציב יועצים</TableHead>
                        <TableHead>תאריך יצירה</TableHead>
+                       <TableHead>הצעות חדשות</TableHead>
                        <TableHead>פעולות</TableHead>
                      </TableRow>
                   </TableHeader>
@@ -366,6 +400,29 @@ const Dashboard = () => {
                             </div>
                           </TableCell>
                          <TableCell>{formatDate(project.created_at)}</TableCell>
+                         <TableCell 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             const count = unseenProposalCounts[project.id] || 0;
+                             if (count > 0) {
+                               navigate(`/projects/${project.id}?tab=received`);
+                             }
+                           }}
+                         >
+                           {(unseenProposalCounts[project.id] || 0) > 0 && (
+                             <div className="flex items-center justify-center cursor-pointer">
+                               <div className="relative">
+                                 <FileText className="w-5 h-5 text-primary" />
+                                 <Badge 
+                                   variant="destructive"
+                                   className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1 text-xs flex items-center justify-center"
+                                 >
+                                   {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
+                                 </Badge>
+                               </div>
+                             </div>
+                           )}
+                         </TableCell>
                          <TableCell onClick={(e) => e.stopPropagation()}>
                            <DropdownMenu dir="rtl">
                              <DropdownMenuTrigger asChild>
