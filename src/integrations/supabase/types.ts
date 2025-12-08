@@ -697,6 +697,7 @@ export type Database = {
           price: number
           project_id: string
           scope_text: string | null
+          seen_by_entrepreneur_at: string | null
           signature_blob: string | null
           signature_meta_json: Json | null
           status: Database["public"]["Enums"]["proposal_status"]
@@ -724,6 +725,7 @@ export type Database = {
           price: number
           project_id: string
           scope_text?: string | null
+          seen_by_entrepreneur_at?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -751,6 +753,7 @@ export type Database = {
           price?: number
           project_id?: string
           scope_text?: string | null
+          seen_by_entrepreneur_at?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
