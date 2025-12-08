@@ -639,7 +639,10 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="advisors">
-          <SelectedAdvisorsTab projectId={project.id} />
+          <SelectedAdvisorsTab 
+            projectId={project.id} 
+            onNavigateToProposals={() => setActiveTab('received')}
+          />
         </TabsContent>
 
         <TabsContent value="files">
