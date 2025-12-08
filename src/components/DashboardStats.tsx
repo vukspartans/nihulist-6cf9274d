@@ -5,20 +5,15 @@ import { BarChart, TrendingUp, Users, FileText, Clock, Coins, CheckCircle, Alert
 import { supabase } from '@/integrations/supabase/client';
 interface DashboardStatsData {
   totalProjects: number;
-  activeProjects: number;
-  activeProposals: number;
+  projectsWithRfps: number;
+  rfpsSent: number;
   totalProposals: number;
-  pendingProposals: number;
-  totalBudget: number;
-  projectsByStatus: Record<string, number>;
-  avgProjectValue: number;
-  completionRate: number;
 }
 export const DashboardStats = () => {
   const [stats, setStats] = useState({
     totalProjects: 0,
-    activeProjects: 0,
-    activeProposals: 0,
+    projectsWithRfps: 0,
+    rfpsSent: 0,
     totalProposals: 0
   });
   const [loading, setLoading] = useState(true);
@@ -63,14 +58,14 @@ export const DashboardStats = () => {
         .select('id, project_id')
         .in('project_id', projects?.map(p => p.id) || []);
       
-      // Count active projects (projects that have at least one RFP sent)
+      // Count projects that have at least one RFP sent
       const projectsWithRFPs = new Set(rfps?.map(r => r.project_id) || []);
-      const activeProjectsCount = projectsWithRFPs.size;
+      const projectsWithRfpsCount = projectsWithRFPs.size;
       
       setStats({
         totalProjects: projects?.length || 0,
-        activeProjects: activeProjectsCount,
-        activeProposals: rfps?.length || 0,
+        projectsWithRfps: projectsWithRfpsCount,
+        rfpsSent: rfps?.length || 0,
         totalProposals: proposals?.length || 0
       });
     } catch (error) {
@@ -108,8 +103,8 @@ export const DashboardStats = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">פרויקטים פעילים</p>
-              <p className="text-2xl font-bold text-foreground">{stats.activeProjects}</p>
+              <p className="text-sm font-medium text-muted-foreground">פרויקטים עם בקשות</p>
+              <p className="text-2xl font-bold text-foreground">{stats.projectsWithRfps}</p>
             </div>
             <div className="p-3 rounded-full bg-muted">
               <TrendingUp className="w-6 h-6 text-success" />
@@ -122,8 +117,8 @@ export const DashboardStats = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">הצעות מחיר פעילות</p>
-              <p className="text-2xl font-bold text-foreground">{stats.activeProposals}</p>
+              <p className="text-sm font-medium text-muted-foreground">בקשות שנשלחו</p>
+              <p className="text-2xl font-bold text-foreground">{stats.rfpsSent}</p>
             </div>
             <div className="p-3 rounded-full bg-muted">
               <FileText className="w-6 h-6 text-accent" />

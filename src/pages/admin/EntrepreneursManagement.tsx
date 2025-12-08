@@ -57,12 +57,17 @@ export default function EntrepreneursManagement() {
     );
   });
 
-  // Delete entrepreneur mutation
+  // Delete entrepreneur mutation - uses edge function for proper auth admin access
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete auth user (will cascade to profiles)
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: { 
+          action: 'delete',
+          userId,
+        },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: async (_, userId) => {
       await logAdminAction("delete", "profiles", userId);
