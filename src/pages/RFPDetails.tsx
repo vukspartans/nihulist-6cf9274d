@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -66,6 +66,71 @@ const RFPDetails = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
+  const [fileLoading, setFileLoading] = useState<string | null>(null);
+
+  // Open file via blob URL to bypass ad blockers
+  const openFileViaBlob = async (file: { url: string; name: string }) => {
+    try {
+      setFileLoading(file.name);
+      toast({
+        title: "טוען קובץ...",
+        description: file.name,
+      });
+
+      const response = await fetch(file.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      // Revoke blob URL after delay to free memory
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error('[RFPDetails] Error opening file:', error);
+      toast({
+        title: "שגיאה בפתיחת הקובץ",
+        description: "נסה שוב או הורד את הקובץ",
+        variant: "destructive",
+      });
+    } finally {
+      setFileLoading(null);
+    }
+  };
+
+  const downloadFile = async (file: { url: string; name: string }) => {
+    try {
+      setFileLoading(file.name);
+      const response = await fetch(file.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('[RFPDetails] Error downloading file:', error);
+      toast({
+        title: "שגיאה בהורדת הקובץ",
+        variant: "destructive",
+      });
+    } finally {
+      setFileLoading(null);
+    }
+  };
 
   useEffect(() => {
     if (user && (rfp_id || invite_id)) {
@@ -481,20 +546,22 @@ const RFPDetails = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                // Use link click approach to avoid popup blockers
-                                const link = document.createElement('a');
-                                link.href = file.url;
-                                link.target = '_blank';
-                                link.rel = 'noopener noreferrer';
-                                document.body.appendChild(link);
-                                link.click();
-                                link.remove();
-                              }}
+                              onClick={() => openFileViaBlob(file)}
+                              disabled={fileLoading === file.name}
                               className="gap-2"
                             >
                               <FileText className="h-4 w-4" />
-                              פתח
+                              {fileLoading === file.name ? 'טוען...' : 'פתח'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadFile(file)}
+                              disabled={fileLoading === file.name}
+                              className="gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              הורד
                             </Button>
                           </div>
                         ))}
