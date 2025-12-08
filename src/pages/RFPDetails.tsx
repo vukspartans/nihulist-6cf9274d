@@ -16,6 +16,7 @@ import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
+import JSZip from 'jszip';
 
 interface RFPDetails {
   id: string;
@@ -68,45 +69,6 @@ const RFPDetails = () => {
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
 
-  // Open file via blob URL to bypass ad blockers
-  const openFileViaBlob = async (file: { url: string; name: string }) => {
-    try {
-      setFileLoading(file.name);
-      toast({
-        title: "טוען קובץ...",
-        description: file.name,
-      });
-
-      const response = await fetch(file.url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      // Revoke blob URL after delay to free memory
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    } catch (error) {
-      console.error('[RFPDetails] Error opening file:', error);
-      toast({
-        title: "שגיאה בפתיחת הקובץ",
-        description: "נסה שוב או הורד את הקובץ",
-        variant: "destructive",
-      });
-    } finally {
-      setFileLoading(null);
-    }
-  };
-
   const downloadFile = async (file: { url: string; name: string }) => {
     try {
       setFileLoading(file.name);
@@ -125,6 +87,52 @@ const RFPDetails = () => {
       console.error('[RFPDetails] Error downloading file:', error);
       toast({
         title: "שגיאה בהורדת הקובץ",
+        variant: "destructive",
+      });
+    } finally {
+      setFileLoading(null);
+    }
+  };
+
+  const downloadAllFiles = async (files: Array<{ url: string; name: string }>) => {
+    try {
+      setFileLoading('all');
+      toast({
+        title: "מכין הורדה...",
+        description: `מוריד ${files.length} קבצים`,
+      });
+
+      const zip = new JSZip();
+      
+      for (const file of files) {
+        const response = await fetch(file.url);
+        if (!response.ok) {
+          console.error(`Failed to fetch ${file.name}`);
+          continue;
+        }
+        const blob = await response.blob();
+        zip.file(file.name, blob);
+      }
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const blobUrl = URL.createObjectURL(zipBlob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'rfp-attachments.zip';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+      
+      toast({
+        title: "ההורדה הושלמה",
+        description: `${files.length} קבצים הורדו בהצלחה`,
+      });
+    } catch (error) {
+      console.error('[RFPDetails] Error downloading all files:', error);
+      toast({
+        title: "שגיאה בהורדת הקבצים",
         variant: "destructive",
       });
     } finally {
@@ -531,8 +539,22 @@ const RFPDetails = () => {
                   )}
                   {inviteDetails.request_files && Array.isArray(inviteDetails.request_files) && inviteDetails.request_files.length > 0 && (
                     <div>
-                      <Label className="font-medium">קבצים מצורפים</Label>
-                      <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="font-medium">קבצים מצורפים</Label>
+                        {inviteDetails.request_files.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadAllFiles(inviteDetails.request_files!)}
+                            disabled={fileLoading === 'all'}
+                            className="gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            {fileLoading === 'all' ? 'מוריד...' : 'הורד הכל'}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         {inviteDetails.request_files.map((file, idx) => (
                           <div 
                             key={idx}
@@ -546,22 +568,12 @@ const RFPDetails = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openFileViaBlob(file)}
-                              disabled={fileLoading === file.name}
-                              className="gap-2"
-                            >
-                              <FileText className="h-4 w-4" />
-                              {fileLoading === file.name ? 'טוען...' : 'פתח'}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
                               onClick={() => downloadFile(file)}
-                              disabled={fileLoading === file.name}
+                              disabled={fileLoading === file.name || fileLoading === 'all'}
                               className="gap-2"
                             >
                               <Download className="h-4 w-4" />
-                              הורד
+                              {fileLoading === file.name ? 'מוריד...' : 'הורד'}
                             </Button>
                           </div>
                         ))}
