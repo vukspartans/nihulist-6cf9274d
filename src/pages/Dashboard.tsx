@@ -350,6 +350,7 @@ const Dashboard = () => {
                   <TableHeader>
                      <TableRow>
                        <TableHead>שם הפרויקט</TableHead>
+                       <TableHead>שלב</TableHead>
                        <TableHead>סוג</TableHead>
                        <TableHead>מיקום</TableHead>
                        <TableHead>תקציב פרויקט</TableHead>
@@ -367,19 +368,21 @@ const Dashboard = () => {
                          className="cursor-pointer hover:bg-muted/50 transition-colors"
                        >
                           <TableCell className="font-medium">
-                           <div className="flex items-center gap-3 justify-start">
-                             <div 
-                               className={`w-3 h-3 min-w-[12px] min-h-[12px] rounded-full shrink-0 ${getPhaseStatusColor(project.phase)}`}
-                               title={project.phase || 'לא צוין שלב'}
-                             />
-                             <button
-                               onClick={() => handleProjectClick(project.id)}
-                               className="text-right hover:text-primary transition-colors cursor-pointer flex-1 text-start"
-                             >
-                               {project.name}
-                             </button>
-                           </div>
+                           <button
+                             onClick={() => handleProjectClick(project.id)}
+                             className="text-right hover:text-primary transition-colors cursor-pointer text-start"
+                           >
+                             {project.name}
+                           </button>
                          </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={`${getPhaseStatusColor(project.phase)} text-white border-0`}
+                          >
+                            {project.phase || "לא צוין"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{project.type || "לא צוין"}</TableCell>
                         <TableCell>
                           <div className="flex items-center">
