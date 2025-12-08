@@ -113,6 +113,26 @@ const RFPDetails = () => {
     }
   };
 
+  // Helper to safely parse request_files (handles double-encoded JSON string data)
+  const parseRequestFiles = (files: any): Array<{name: string, url: string, size: number, path: string}> => {
+    if (!files) return [];
+    
+    // If it's already an array, use it directly
+    if (Array.isArray(files)) return files;
+    
+    // If it's a string (double-encoded JSON), parse it
+    if (typeof files === 'string') {
+      try {
+        const parsed = JSON.parse(files);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    
+    return [];
+  };
+
   const refreshFileUrls = async (files: Array<{name: string, url: string, size: number, path: string}>) => {
     try {
       console.log('[RFPDetails] Refreshing signed URLs for files:', files.length);
@@ -286,6 +306,9 @@ const RFPDetails = () => {
 
       setRfpDetails(enrichedRfpData as any);
       
+      // Parse request_files (handles double-encoded JSON from database)
+      const parsedFiles = parseRequestFiles(invite.request_files);
+      
       const inviteData = {
         id: invite.id,
         status: invite.status,
@@ -294,11 +317,11 @@ const RFPDetails = () => {
         advisor_type: invite.advisor_type,
         request_title: invite.request_title,
         request_content: invite.request_content,
-        request_files: invite.request_files as any
+        request_files: parsedFiles
       };
 
       // Refresh file URLs if files exist
-      if (inviteData.request_files && Array.isArray(inviteData.request_files) && inviteData.request_files.length > 0) {
+      if (inviteData.request_files.length > 0) {
         const refreshedFiles = await refreshFileUrls(inviteData.request_files);
         inviteData.request_files = refreshedFiles;
       }

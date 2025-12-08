@@ -55,10 +55,10 @@ export const useRFP = () => {
     setLoading(true);
 
     try {
-      // Prepare request files for database (JSONB format)
-      const requestFilesJson = requestFiles ? JSON.stringify(
-        requestFiles.map(f => ({ name: f.name, url: f.url, size: f.size, path: f.path }))
-      ) : null;
+      // Prepare request files for database - pass as array directly (JSONB handles it)
+      const requestFilesArray = requestFiles 
+        ? requestFiles.map(f => ({ name: f.name, url: f.url, size: f.size, path: f.path }))
+        : null;
 
       const { data, error } = await supabase.rpc('send_rfp_invitations_to_advisors', {
         project_uuid: projectId,
@@ -68,7 +68,7 @@ export const useRFP = () => {
         email_body_html: emailBodyHtml || null,
         request_title: requestTitle || null,
         request_content: requestContent || null,
-        request_files: requestFilesJson
+        request_files: requestFilesArray
       });
 
       if (error) throw error;
