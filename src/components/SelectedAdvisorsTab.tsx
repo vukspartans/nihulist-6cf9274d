@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, FileText, Download, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, Briefcase } from 'lucide-react';
-import { AddAdvisorDialog } from './AddAdvisorDialog';
+import { Users, FileText, Download, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, Briefcase, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -42,12 +41,12 @@ interface SelectedAdvisor {
 
 interface SelectedAdvisorsTabProps {
   projectId: string;
+  onNavigateToProposals?: () => void;
 }
 
-export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => {
+export const SelectedAdvisorsTab = ({ projectId, onNavigateToProposals }: SelectedAdvisorsTabProps) => {
   const [advisors, setAdvisors] = useState<SelectedAdvisor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchAdvisors = async () => {
@@ -207,21 +206,16 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
         </div>
         <h3 className="text-xl font-semibold mb-2">טרם נבחרו יועצים לפרויקט זה</h3>
         <p className="text-muted-foreground text-center mb-6 max-w-md">
-          בחר יועצים מתוך ההצעות שהתקבלו או הוסף יועץ חדש למעקב
+          יועצים נוספים לפרויקט באופן אוטומטי לאחר אישור הצעת מחיר.
+          <br />
+          עבור ללשונית "הצעות שהתקבלו" כדי לאשר הצעות ולהוסיף יועצים.
         </p>
-        <div className="flex gap-3">
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 ml-2" />
-            הוסף יועץ
+        {onNavigateToProposals && (
+          <Button variant="outline" onClick={onNavigateToProposals}>
+            <ArrowRight className="h-4 w-4 ml-2" />
+            עבור להצעות שהתקבלו
           </Button>
-        </div>
-        
-        <AddAdvisorDialog
-          projectId={projectId}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSuccess={fetchAdvisors}
-        />
+        )}
       </div>
     );
   }
@@ -235,10 +229,6 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
             {advisors.length} יועצים פעילים בפרויקט
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 ml-2" />
-          הוסף יועץ
-        </Button>
       </div>
 
       <div className="grid gap-4">
@@ -385,13 +375,6 @@ export const SelectedAdvisorsTab = ({ projectId }: SelectedAdvisorsTabProps) => 
           </Card>
         ))}
       </div>
-
-      <AddAdvisorDialog
-        projectId={projectId}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={fetchAdvisors}
-      />
     </div>
   );
 };
