@@ -12,16 +12,16 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
     <div className="space-y-4" dir="rtl">
       <ScrollArea className="h-64 border rounded-md p-4 bg-muted/30 text-right" dir="rtl">
         <div className="space-y-3 text-sm text-right" dir="rtl">
-          <h3 className="font-bold text-lg text-primary">תנאי שימוש - מערכת ניהוליסט</h3>
+          <h3 className="font-bold text-lg text-primary">תנאי שימוש - מערכת Billding</h3>
           
           <p className="text-muted-foreground">
-            ברוכים הבאים לפלטפורמת ניהוליסט. השימוש במערכת מהווה הסכמה מלאה לתנאי שימוש אלה.
+            ברוכים הבאים לפלטפורמת Billding. השימוש במערכת מהווה הסכמה מלאה לתנאי שימוש אלה.
           </p>
 
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">1. כללי</h4>
             <p className="text-muted-foreground">
-              תנאי שימוש אלה מסדירים את הגישה והשימוש בפלטפורמת ניהוליסט ("המערכת"). 
+              תנאי שימוש אלה מסדירים את הגישה והשימוש בפלטפורמת Billding ("המערכת"). 
               השימוש במערכת מהווה הסכמה מלאה לתנאים אלה.
             </p>
           </div>
@@ -75,7 +75,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">7. קניין רוחני</h4>
             <p className="text-muted-foreground">
-              • כל התכנים במערכת הינם קניינה של ניהוליסט<br/>
+              • כל התכנים במערכת הינם קניינה של Billding<br/>
               • אסור להעתיק או להפיץ תכנים ללא אישור
             </p>
           </div>
@@ -83,7 +83,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">8. שינויים לתנאי השימוש</h4>
             <p className="text-muted-foreground">
-              • ניהוליסט שומרת לעצמה את הזכות לעדכן תנאים אלה<br/>
+              • Billding שומרת לעצמה את הזכות לעדכן תנאים אלה<br/>
               • שימוש מתמשך מהווה הסכמה לתנאים המעודכנים
             </p>
           </div>
@@ -92,21 +92,21 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
             <h4 className="font-semibold text-foreground">9. סיום השימוש</h4>
             <p className="text-muted-foreground">
               • המשתמש רשאי לסגור את חשבונו בכל עת<br/>
-              • ניהוליסט שומרת לעצמה את הזכות לחסום משתמשים
+              • Billding שומרת לעצמה את הזכות לחסום משתמשים
             </p>
           </div>
 
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">10. יצירת קשר</h4>
             <p className="text-muted-foreground">
-              לשאלות ובירורים: support@nihulist.co.il
+              לשאלות ובירורים: support@billding.ai
             </p>
           </div>
 
           <div className="mt-6 pt-4 border-t">
             <p className="text-xs text-muted-foreground">
-              תאריך עדכון אחרון: נובמבר 2025<br/>
-              גרסה: 1.0
+              תאריך עדכון אחרון: דצמבר 2025<br/>
+              גרסה: 2.0
             </p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
           htmlFor="tos" 
           className="text-sm cursor-pointer leading-relaxed font-medium"
         >
-          אני מאשר/ת את תנאי השימוש של ניהוליסט ומתחייב/ת לפעול על פיהם
+          אני מאשר/ת את תנאי השימוש של Billding ומתחייב/ת לפעול על פיהם
         </Label>
       </div>
     </div>

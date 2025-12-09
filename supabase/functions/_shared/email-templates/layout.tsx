@@ -26,10 +26,10 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
       <Container style={container}>
         <Section style={header}>
           <Img
-            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/advisor-assets/nihulist-logo.png"
+            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/advisor-assets/billding-logo.png"
             width="120"
             height="40"
-            alt="Nihulist"
+            alt="Billding"
             style={logo}
           />
         </Section>
@@ -40,15 +40,15 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
           {footer || (
             <>
               <Text style={footerText}>
-                צוות ניהוליסט - הפלטפורמה המובילה לניהול פרויקטי בנייה
+                צוות Billding - הפלטפורמה המובילה לניהול פרויקטי בנייה
               </Text>
               <Text style={footerText}>
-                <Link href="https://www.nihulist.co.il" style={footerLink}>
-                  nihulist.co.il
+                <Link href="https://www.billding.ai" style={footerLink}>
+                  billding.ai
                 </Link>
                 {' | '}
-                <Link href="mailto:support@nihulist.co.il" style={footerLink}>
-                  support@nihulist.co.il
+                <Link href="mailto:support@billding.ai" style={footerLink}>
+                  support@billding.ai
                 </Link>
               </Text>
             </>

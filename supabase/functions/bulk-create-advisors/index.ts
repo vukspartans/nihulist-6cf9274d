@@ -85,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
       created: [],
     };
 
-    const DEFAULT_PASSWORD = "Nihulist2026!";
+    const DEFAULT_PASSWORD = "Billding2026!";
 
     for (let i = 0; i < advisors.length; i++) {
       const advisor = advisors[i];
@@ -207,9 +207,9 @@ const handler = async (req: Request): Promise<Response> => {
         // Send welcome email
         try {
           await resend.emails.send({
-            from: "Nihulist <onboarding@resend.dev>",
+            from: "Billding <onboarding@billding.ai>",
             to: [email],
-            subject: "ברוך הבא למערכת ניהוליסט!",
+            subject: "ברוך הבא למערכת Billding!",
             html: `
               <!DOCTYPE html>
               <html dir="rtl" lang="he">
@@ -219,12 +219,12 @@ const handler = async (req: Request): Promise<Response> => {
               </head>
               <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; direction: rtl;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px;">
-                  <h1 style="color: #333; text-align: center;">ברוך הבא למערכת ניהוליסט!</h1>
+                  <h1 style="color: #333; text-align: center;">ברוך הבא למערכת Billding!</h1>
                   
                   <p style="color: #666; font-size: 16px;">שלום ${advisor.fullName},</p>
                   
                   <p style="color: #666; font-size: 16px;">
-                    חשבון יועץ נוצר עבורך במערכת ניהוליסט על ידי מנהל המערכת.
+                    חשבון יועץ נוצר עבורך במערכת Billding על ידי מנהל המערכת.
                   </p>
                   
                   <div style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -245,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
                   </div>
                   
                   <p style="text-align: center; margin-top: 30px;">
-                    <a href="https://www.nihulist.co.il/auth?type=advisor&mode=login" 
+                    <a href="https://www.billding.ai/auth?type=advisor&mode=login" 
                        style="display: inline-block; background-color: #4F46E5; color: white; padding: 14px 40px; 
                               text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
                       התחבר למערכת
@@ -254,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
                   
                   <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px; 
                             border-top: 1px solid #eee; padding-top: 20px;">
-                    ניהוליסט - מערכת ניהול פרויקטים ויועצים
+                    Billding - מערכת ניהול פרויקטים ויועצים
                   </p>
                 </div>
               </body>

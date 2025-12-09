@@ -126,7 +126,7 @@ serve(async (req) => {
         const allRecipients = [advisorProfile.email, ...teamEmails];
 
         // Submit URL - use advisor dashboard
-        const submitUrl = `https://www.nihulist.co.il/advisor-dashboard`;
+        const submitUrl = `https://www.billding.ai/advisor-dashboard`;
 
         // Render email
         const html = await renderAsync(
@@ -144,7 +144,7 @@ serve(async (req) => {
 
         // Send email via Resend
         const { data: emailData, error: emailError } = await resend.emails.send({
-          from: 'ניהוליסט <notifications@nihulist.co.il>',
+          from: 'Billding <notifications@billding.ai>',
           to: allRecipients,
           subject: `תזכורת: ${hoursRemaining} שעות נותרו להגשת הצעה - ${project.name}`,
           html,

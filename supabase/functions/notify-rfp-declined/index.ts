@@ -84,13 +84,13 @@ serve(async (req) => {
 
     // Determine recipient email
     const recipientEmail = test_mode 
-      ? 'lior+nihulist@spartans.tech' 
+      ? 'lior+billding@spartans.tech' 
       : entrepreneurProfile.email;
 
     console.log('[RFP Declined] Sending to:', recipientEmail, '(test_mode:', test_mode, ')');
 
     // Project URL
-    const projectUrl = `https://www.nihulist.co.il/project/${project.id}`;
+    const projectUrl = `https://www.billding.ai/project/${project.id}`;
 
     // Render email
     const html = await renderAsync(
@@ -107,7 +107,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'ניהוליסט <notifications@nihulist.co.il>',
+      from: 'Billding <notifications@billding.ai>',
       to: [recipientEmail],
       subject: `יועץ דחה הזמנה לפרויקט ${project.name}`,
       html,

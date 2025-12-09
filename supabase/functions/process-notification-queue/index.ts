@@ -89,7 +89,7 @@ serve(async (req) => {
           emailResponse = { data: { id: `test-${notification.id}` }, error: null }
         } else {
           emailResponse = await resend.emails.send({
-            from: 'Nihulist <notifications@nihulist.co.il>',
+            from: 'Billding <notifications@billding.ai>',
             to: [notification.recipient_email],
             subject: notification.subject,
             html: notification.body_html,

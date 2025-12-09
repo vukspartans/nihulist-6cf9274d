@@ -61,7 +61,7 @@ export const PasswordChangeModal = ({ open, userId, onSuccess }: PasswordChangeM
       return;
     }
 
-    if (newPassword === "Nihulist2026!") {
+    if (newPassword === "Billding2026!") {
       setError("אינך יכול להשתמש בסיסמה הזמנית כסיסמה חדשה");
       return;
     }
@@ -144,7 +144,7 @@ export const PasswordChangeModal = ({ open, userId, onSuccess }: PasswordChangeM
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Nihulist2026!"
+              placeholder="Billding2026!"
               disabled={loading}
               required
             />

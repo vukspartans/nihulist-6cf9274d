@@ -116,7 +116,7 @@ export const TestRFPDecline = () => {
         <CardDescription>
           בדוק את שליחת המייל ליזם כאשר יועץ דוחה הזמנת RFP.
           <br />
-          <strong>כל המיילים נשלחים אל: lior+nihulist@spartans.tech</strong>
+          <strong>כל המיילים נשלחים אל: lior+billding@spartans.tech</strong>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -191,7 +191,7 @@ export const TestRFPDecline = () => {
             <li>לחץ על "טען הזמנה אחרונה" או הזן מזהה הזמנה ידנית</li>
             <li>בחר סיבת דחייה והוסף הערה (אופציונלי)</li>
             <li>לחץ על "דחה הזמנה ושלח מייל"</li>
-            <li>בדוק את המייל ב-lior+nihulist@spartans.tech</li>
+            <li>בדוק את המייל ב-lior+billding@spartans.tech</li>
             <li>בדוק את הלוגים בקישור למטה</li>
           </ol>
           <div className="pt-2">

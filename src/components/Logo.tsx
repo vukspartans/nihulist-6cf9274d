@@ -1,4 +1,4 @@
-import logoImage from "@/assets/nihulist-logo.png";
+import logoImage from "@/assets/billding-logo.png";
 
 interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -18,7 +18,7 @@ const Logo = ({ size = 'md', className = '', variant = 'default' }: LogoProps) =
   return (
     <img
       src={logoImage}
-      alt="ניהוליסט - NihuList"
+      alt="Billding"
       className={`${sizeClasses[size]} w-auto ${variant === 'white' ? 'brightness-0 invert' : ''} ${className}`}
       loading="eager"
     />

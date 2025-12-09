@@ -75,7 +75,7 @@ serve(async (req) => {
 
     // Determine recipient email
     const recipientEmail = test_mode 
-      ? 'lior+nihulist@spartans.tech' 
+      ? 'lior+billding@spartans.tech' 
       : entrepreneurProfile.email;
 
     console.log('[Proposal Submitted] Sending to:', recipientEmail, '(test_mode:', test_mode, ')');
@@ -84,7 +84,7 @@ serve(async (req) => {
     const filesCount = Array.isArray(proposal.files) ? proposal.files.length : 0;
 
     // Project URL
-    const projectUrl = `https://www.nihulist.co.il/project/${project.id}`;
+    const projectUrl = `https://www.billding.ai/project/${project.id}`;
 
     // Render email
     const html = await renderAsync(
@@ -102,7 +102,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'ניהוליסט <notifications@nihulist.co.il>',
+      from: 'Billding <notifications@billding.ai>',
       to: [recipientEmail],
       subject: `הצעה חדשה התקבלה לפרויקט ${project.name}`,
       html,

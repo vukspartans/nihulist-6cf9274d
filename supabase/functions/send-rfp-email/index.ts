@@ -176,7 +176,7 @@ serve(async (req) => {
         })
 
         // Build login URL with context
-        const loginUrl = `https://www.nihulist.co.il/auth?type=advisor&mode=login&rfp=${rfp_id}`
+        const loginUrl = `https://www.billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
 
         // Parse request files if they exist
         let requestFiles = null
@@ -211,7 +211,7 @@ serve(async (req) => {
         
         // Determine recipient emails
         const mainRecipient = test_mode 
-          ? 'lior+nihulist@spartans.tech'
+          ? 'lior+billding@spartans.tech'
           : invite.email;
         
         const allRecipients = test_mode 
@@ -222,7 +222,7 @@ serve(async (req) => {
 
         // Send email via Resend
         const { data: emailData, error: emailError } = await resend.emails.send({
-          from: 'ניהוליסט <noreply@nihulist.co.il>',
+          from: 'Billding <noreply@billding.ai>',
           to: allRecipients,
           subject: `הזמנה להגשת הצעת מחיר: ${project.name}`,
           html,
