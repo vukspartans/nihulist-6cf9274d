@@ -39,7 +39,7 @@ import BackToTop from "@/components/BackToTop";
 const OptimizedTestimonials = lazy(() => import("@/components/OptimizedTestimonials"));
 
 const Landing = memo(() => {
-  // NihuList Landing Page - Cache Bust v2
+  // Billding Landing Page
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const navigate = useNavigate();
@@ -58,7 +58,7 @@ const Landing = memo(() => {
       role: "אדריכלית ראשית", 
       company: "כהן אדריכלות",
       image: "👩‍💼",
-      quote: "NihuList שינה לי את המשחק לחלוטין. מחברת אותי עם יזמי נדל\"ן איכותיים שמבינים את הערך של תכנון מקצועי ומוכנים לשלם עליו בהתאם."
+      quote: "Billding שינה לי את המשחק לחלוטין. מחברת אותי עם יזמי נדל\"ן איכותיים שמבינים את הערך של תכנון מקצועי ומוכנים לשלם עליו בהתאם."
     },
     {
       name: "רון אברהם",
@@ -164,7 +164,7 @@ const Landing = memo(() => {
 
               {/* Main headline - Mobile optimized */}
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
-                <span className="gradient-text">ניהוליסט</span>
+                <span className="gradient-text">Billding</span>
                 <br />
                 <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
@@ -602,7 +602,7 @@ const Landing = memo(() => {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-white/70">
-            <p>© 2026 NihuList. כל הזכויות שמורות. Made with ❤️</p>
+            <p>© 2026 Billding. כל הזכויות שמורות. Made with ❤️</p>
           </div>
         </div>
       </footer>

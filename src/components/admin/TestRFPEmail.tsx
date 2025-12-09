@@ -11,7 +11,7 @@ import { Mail, Loader2 } from 'lucide-react';
 export const TestRFPEmail = () => {
   const [loading, setLoading] = useState(false);
   const [rfpId, setRfpId] = useState('');
-  const [testEmail, setTestEmail] = useState('lior+nihulist@spartans.tech');
+  const [testEmail, setTestEmail] = useState('lior+billding@spartans.tech');
   const [result, setResult] = useState<string>('');
   const { toast } = useToast();
 

@@ -104,7 +104,7 @@ serve(async (req) => {
     
     // Determine recipient emails
     const mainRecipient = test_mode 
-      ? 'lior+nihulist@spartans.tech' 
+      ? 'lior+billding@spartans.tech' 
       : advisorProfile.email;
     
     const allRecipients = test_mode 
@@ -114,7 +114,7 @@ serve(async (req) => {
     console.log('[Proposal Approved] Sending to:', allRecipients.length, 'recipient(s)', '(test_mode:', test_mode, ')');
 
     // Project URL for advisor
-    const projectUrl = `https://www.nihulist.co.il/advisor-dashboard`;
+    const projectUrl = `https://www.billding.ai/advisor-dashboard`;
 
     // Render email
     const html = await renderAsync(
@@ -131,7 +131,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'ניהוליסט <notifications@nihulist.co.il>',
+      from: 'Billding <notifications@billding.ai>',
       to: allRecipients,
       subject: `🎉 הצעתך אושרה! - ${project.name}`,
       html,
@@ -153,7 +153,7 @@ serve(async (req) => {
       entity_id: proposal_id,
       project_id: project.id,
       meta: {
-        recipient: recipientEmail,
+        recipients: allRecipients,
         test_mode,
         email_id: emailData?.id,
       },
@@ -170,7 +170,7 @@ serve(async (req) => {
         success: true, 
         email_id: emailData?.id,
         test_mode,
-        recipient: recipientEmail,
+        recipients: allRecipients,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
