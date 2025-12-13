@@ -173,12 +173,12 @@ serve(async (req) => {
                   }
                 ]
               }],
-              generationConfig: {
-                maxOutputTokens: 800,
-                thinkingConfig: {
-                  thinkingLevel: "low"
-                }
+            generationConfig: {
+              maxOutputTokens: 600,
+              thinkingConfig: {
+                thinkingLevel: "low"
               }
+            }
             }),
           }
         );
@@ -209,29 +209,30 @@ serve(async (req) => {
     if (!analysis) {
       console.log('[analyze-project-file] Using metadata-based analysis');
       
-      const metadataPrompt = `נתח קובץ פרויקט בניה על בסיס המטאדאטה:
+      const metadataPrompt = `נתח קובץ פרויקט על בסיס המטאדאטה:
 
-שם קובץ: ${fileData.custom_name || fileData.file_name}
-סוג קובץ: ${fileData.file_type}
-גודל: ${fileData.size_mb} MB
+שם: ${fileData.custom_name || fileData.file_name}
+סוג: ${fileData.file_type} | גודל: ${fileData.size_mb} MB
 
-הקשר פרויקט:
-- שם: ${projectData.name}
-- סוג: ${projectData.type || 'לא צוין'}
-- מיקום: ${projectData.location || 'לא צוין'}
-- שלב: ${projectData.phase || 'לא צוין'}
-- תיאור: ${projectData.description || 'לא סופק'}
+פרויקט: ${projectData.name} (${projectData.type || 'לא צוין'})
+מיקום: ${projectData.location || 'לא צוין'}
 
-הנחיות לפלט:
-1. התחל ב‑TL;DR של 2–3 משפטים
-2. לאחר מכן רשימת נקודות תמציתית (•) הכוללת:
-   - מה הקובץ כנראה מכיל על בסיס שם הקובץ וסוגו
-   - דרישות טכניות עיקריות שעשויות להיות בקובץ
-   - תקנים/ציות רגולטורי רלוונטיים לסוג קובץ זה
-   - השפעה על בחירת ספקים ויועצים
-   - נקודות פעולה מומלצות
+### 📋 TL;DR
+[2 משפטים על מה הקובץ כנראה מכיל]
 
-כתוב בעברית. היה תמציתי ומועיל.`;
+### 📄 סוג משוער
+[סוג הקובץ המשוער]
+
+### 🔍 תוכן צפוי
+• [מה כנראה יש בקובץ]
+
+### 👥 יועצים רלוונטיים
+[איזה סוג יועץ צריך לעבוד עם קובץ כזה]
+
+### ✅ פעולות מומלצות
+• [מה לעשות עם הקובץ]
+
+⚠️ ניתוח על בסיס מטאדאטה בלבד`;
 
       const aiResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
@@ -246,7 +247,7 @@ serve(async (req) => {
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 600,
+              maxOutputTokens: 450,
               thinkingConfig: {
                 thinkingLevel: "low"
               }
