@@ -691,6 +691,8 @@ export type Database = {
         Row: {
           advisor_id: string
           advisor_notified_at: string | null
+          ai_analysis: string | null
+          ai_analysis_generated_at: string | null
           ai_flags: Json | null
           amended_from_id: string | null
           attachment_url: string | null
@@ -708,6 +710,7 @@ export type Database = {
           extracted_at: string | null
           extracted_text: string | null
           extracted_text_hash: string | null
+          file_summaries: Json | null
           files: Json | null
           id: string
           price: number
@@ -729,6 +732,8 @@ export type Database = {
         Insert: {
           advisor_id: string
           advisor_notified_at?: string | null
+          ai_analysis?: string | null
+          ai_analysis_generated_at?: string | null
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
@@ -746,6 +751,7 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          file_summaries?: Json | null
           files?: Json | null
           id?: string
           price: number
@@ -767,6 +773,8 @@ export type Database = {
         Update: {
           advisor_id?: string
           advisor_notified_at?: string | null
+          ai_analysis?: string | null
+          ai_analysis_generated_at?: string | null
           ai_flags?: Json | null
           amended_from_id?: string | null
           attachment_url?: string | null
@@ -784,6 +792,7 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          file_summaries?: Json | null
           files?: Json | null
           id?: string
           price?: number

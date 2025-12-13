@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const { proposalId, fileName, fileUrl } = await req.json();
+    const { proposalId, fileName, fileUrl, forceRefresh = false } = await req.json();
 
     if (!proposalId || !fileName) {
       return new Response(JSON.stringify({ error: 'Proposal ID and file name are required' }), {
@@ -31,17 +31,31 @@ serve(async (req) => {
       });
     }
 
-    console.log('[analyze-proposal-file] Analyzing file:', fileName, 'for proposal:', proposalId);
+    console.log('[analyze-proposal-file] Analyzing file:', fileName, 'for proposal:', proposalId, 'forceRefresh:', forceRefresh);
 
-    // Get proposal details for context
+    // Get proposal details for context including cached summaries
     const { data: proposal, error: proposalError } = await supabaseClient
       .from('proposals')
-      .select('supplier_name, project_id')
+      .select('supplier_name, project_id, file_summaries')
       .eq('id', proposalId)
       .single();
 
     if (proposalError) {
       console.error('[analyze-proposal-file] Proposal not found:', proposalError);
+    }
+
+    // Check cache - return cached summary if exists and not forcing refresh
+    const existingSummaries = (proposal?.file_summaries as Record<string, string>) || {};
+    if (!forceRefresh && existingSummaries[fileName]) {
+      console.log('[analyze-proposal-file] Returning cached summary for:', fileName);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        summary: existingSummaries[fileName],
+        fileName,
+        cached: true
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Get project details for context
@@ -137,12 +151,24 @@ ${projectContext}
       throw new Error('No summary received from AI');
     }
 
-    console.log('[analyze-proposal-file] Summary generated successfully');
+    // Save summary to database for caching
+    const updatedSummaries = { ...existingSummaries, [fileName]: summary };
+    const { error: updateError } = await supabaseClient
+      .from('proposals')
+      .update({ file_summaries: updatedSummaries })
+      .eq('id', proposalId);
+
+    if (updateError) {
+      console.error('[analyze-proposal-file] Failed to cache summary:', updateError);
+    } else {
+      console.log('[analyze-proposal-file] Summary cached successfully');
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
       summary,
-      fileName
+      fileName,
+      cached: false
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
