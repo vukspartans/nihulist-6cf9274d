@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Enhanced system prompt optimized for GPT-5.2's reasoning capabilities
+// Enhanced system prompt optimized for proposal analysis
 const SYSTEM_PROMPT = `אתה יועץ בכיר לניהול פרויקטי בנייה בישראל עם 20+ שנות ניסיון. 
 אתה מייעץ ליזמי נדל"ן בהערכת הצעות מחיר מספקים ויועצים.
 
@@ -54,9 +54,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check for Lovable API key first (preferred), then OpenAI
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OPENAI_API_KEY not configured');
+    
+    if (!lovableApiKey && !openaiApiKey) {
+      throw new Error('No AI API key configured (LOVABLE_API_KEY or OPENAI_API_KEY)');
     }
 
     const { proposalId, forceRefresh = false } = await req.json();
@@ -81,6 +84,20 @@ serve(async (req) => {
       console.error('[analyze-proposal] Proposal not found:', proposalError);
       return new Response(JSON.stringify({ error: 'Proposal not found' }), {
         status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check cache - return cached analysis if available and not forcing refresh
+    if (!forceRefresh && proposal.ai_analysis) {
+      console.log('[analyze-proposal] Returning cached analysis');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        analysis: proposal.ai_analysis,
+        cached: true,
+        generatedAt: proposal.ai_analysis_generated_at,
+        model: 'cached'
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -156,55 +173,100 @@ serve(async (req) => {
 
 נתח את ההצעה על פי המבנה שהוגדר.`;
 
-    console.log('[analyze-proposal] Sending to OpenAI GPT-5.2');
+    let analysis = '';
+    let modelUsed = '';
 
-    // Call OpenAI GPT-5.2 directly
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
-        max_completion_tokens: 1500,
-        // Note: GPT-5.2 doesn't support temperature parameter
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: analysisPrompt }
-        ],
-      }),
-    });
+    // Try Lovable Gateway first (uses gemini-2.5-flash by default)
+    if (lovableApiKey) {
+      console.log('[analyze-proposal] Using Lovable AI Gateway');
+      
+      try {
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-5',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: analysisPrompt }
+            ],
+          }),
+        });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('[analyze-proposal] OpenAI API error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          console.error('[analyze-proposal] Lovable Gateway error:', aiResponse.status, errorText);
+          
+          if (aiResponse.status === 429) {
+            return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
+              status: 429,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          if (aiResponse.status === 402) {
+            return new Response(JSON.stringify({ error: 'נדרש טעינת קרדיטים לשירות AI' }), {
+              status: 402,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          throw new Error(`Lovable Gateway error: ${aiResponse.status}`);
+        }
+
+        const aiResult = await aiResponse.json();
+        console.log('[analyze-proposal] Lovable Gateway response:', JSON.stringify(aiResult).substring(0, 200));
+        
+        analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
+        modelUsed = 'openai/gpt-5';
+      } catch (gatewayError) {
+        console.error('[analyze-proposal] Lovable Gateway failed:', gatewayError);
+        // Will fall through to OpenAI if available
       }
-      
-      if (aiResponse.status === 402 || aiResponse.status === 403) {
-        return new Response(JSON.stringify({ error: 'בעיית הרשאות בשירות AI, פנה לתמיכה' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText}`);
     }
 
-    const aiResult = await aiResponse.json();
-    const analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
+    // Fallback to direct OpenAI if Lovable Gateway failed or not available
+    if (!analysis && openaiApiKey) {
+      console.log('[analyze-proposal] Falling back to direct OpenAI API');
+      
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 1500,
+          temperature: 0.3,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: analysisPrompt }
+          ],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('[analyze-proposal] OpenAI API error:', aiResponse.status, errorText);
+        throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText}`);
+      }
+
+      const aiResult = await aiResponse.json();
+      console.log('[analyze-proposal] OpenAI response:', JSON.stringify(aiResult).substring(0, 200));
+      
+      analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
+      modelUsed = 'gpt-4o';
+    }
 
     if (!analysis) {
       throw new Error('No analysis content received from AI');
     }
 
-    console.log('[analyze-proposal] Analysis received, length:', analysis.length);
+    console.log('[analyze-proposal] Analysis received, length:', analysis.length, 'model:', modelUsed);
 
     // Save analysis to database for caching
     const { error: updateError } = await supabaseClient
@@ -226,7 +288,7 @@ serve(async (req) => {
       analysis,
       cached: false,
       generatedAt: new Date().toISOString(),
-      model: 'gpt-5.2'
+      model: modelUsed
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
