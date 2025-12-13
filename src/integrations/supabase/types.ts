@@ -633,6 +633,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_large_scale: boolean | null
           location: string | null
           name: string
           owner_id: string
@@ -641,6 +642,7 @@ export type Database = {
           timeline_end: string
           timeline_start: string
           type: string | null
+          units: number | null
           updated_at: string
         }
         Insert: {
@@ -651,6 +653,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_large_scale?: boolean | null
           location?: string | null
           name: string
           owner_id: string
@@ -659,6 +662,7 @@ export type Database = {
           timeline_end: string
           timeline_start: string
           type?: string | null
+          units?: number | null
           updated_at?: string
         }
         Update: {
@@ -669,6 +673,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_large_scale?: boolean | null
           location?: string | null
           name?: string
           owner_id?: string
@@ -677,6 +682,7 @@ export type Database = {
           timeline_end?: string
           timeline_start?: string
           type?: string | null
+          units?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -692,6 +698,16 @@ export type Database = {
           currency: string | null
           declaration_text: string | null
           entrepreneur_notified_at: string | null
+          evaluation_completed_at: string | null
+          evaluation_error: string | null
+          evaluation_metadata: Json | null
+          evaluation_rank: number | null
+          evaluation_result: Json | null
+          evaluation_score: number | null
+          evaluation_status: string | null
+          extracted_at: string | null
+          extracted_text: string | null
+          extracted_text_hash: string | null
           files: Json | null
           id: string
           price: number
@@ -720,6 +736,16 @@ export type Database = {
           currency?: string | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
+          evaluation_completed_at?: string | null
+          evaluation_error?: string | null
+          evaluation_metadata?: Json | null
+          evaluation_rank?: number | null
+          evaluation_result?: Json | null
+          evaluation_score?: number | null
+          evaluation_status?: string | null
+          extracted_at?: string | null
+          extracted_text?: string | null
+          extracted_text_hash?: string | null
           files?: Json | null
           id?: string
           price: number
@@ -748,6 +774,16 @@ export type Database = {
           currency?: string | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
+          evaluation_completed_at?: string | null
+          evaluation_error?: string | null
+          evaluation_metadata?: Json | null
+          evaluation_rank?: number | null
+          evaluation_result?: Json | null
+          evaluation_score?: number | null
+          evaluation_status?: string | null
+          extracted_at?: string | null
+          extracted_text?: string | null
+          extracted_text_hash?: string | null
           files?: Json | null
           id?: string
           price?: number
