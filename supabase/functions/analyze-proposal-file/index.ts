@@ -183,7 +183,8 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048
+              maxOutputTokens: 8192,
+              mediaResolution: "medium"
             }
           };
         } else if (isDocxFormat) {
@@ -212,7 +213,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048
+              maxOutputTokens: 8192
             }
           };
         } else if (isExcelFormat) {
@@ -249,7 +250,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048
+              maxOutputTokens: 8192
             }
           };
         } else if (isTextFormat) {
@@ -277,15 +278,15 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048
+              maxOutputTokens: 8192
             }
           };
         }
 
         // Send to Gemini 3 Pro Preview
-        console.log('[analyze-proposal-file] Sending to Gemini API...');
+        console.log('[analyze-proposal-file] Sending to Gemini 3 Pro Preview...');
         const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
           {
             method: 'POST',
             headers: { 
@@ -346,7 +347,7 @@ ${projectContext}
 ⚠️ ניתוח על בסיס שם הקובץ בלבד`;
 
       const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
         {
           method: 'POST',
           headers: { 
@@ -358,7 +359,7 @@ ${projectContext}
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 1024
+              maxOutputTokens: 4096
             }
           }),
         }
