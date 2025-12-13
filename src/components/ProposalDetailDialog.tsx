@@ -34,12 +34,13 @@ interface ProposalDetailDialogProps {
     status: string; submitted_at: string; ai_analysis?: string | null; ai_analysis_generated_at?: string | null; file_summaries?: Record<string, string> | null;
     advisors?: AdvisorInfo; rfp_invite?: RfpInviteContext; seen_by_entrepreneur_at?: string | null;
   };
-  projectId: string;
-  projectName: string;
+  projectId?: string;
+  projectName?: string;
   onStatusChange?: () => void;
+  onSuccess?: () => void;
 }
 
-export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange }: ProposalDetailDialogProps) {
+export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange, onSuccess }: ProposalDetailDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('details');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -120,7 +121,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     try {
       await supabase.from('proposals').update({ status: 'rejected' }).eq('id', proposal.id);
       await supabase.functions.invoke('notify-proposal-rejected', { body: { proposalId: proposal.id, reason } });
-      toast({ title: "ההצעה נדחתה" }); onStatusChange?.(); onOpenChange(false);
+      toast({ title: "ההצעה נדחתה" }); onStatusChange?.(); onSuccess?.(); onOpenChange(false);
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
   };
 
@@ -183,7 +184,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {advisorInfo && (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="p-4">
-                      <h4 className="flex items-center gap-2 mb-3 text-sm font-semibold text-primary"><Building2 className="w-4 h-4" />פרטי הספק</h4>
+                      <h4 className="flex items-center gap-2 mb-3 text-sm font-semibold text-primary flex-row-reverse justify-end"><Building2 className="w-4 h-4" />פרטי הספק</h4>
                       <div className="flex items-start gap-4">
                         {advisorInfo.logo_url && <img src={advisorInfo.logo_url} alt="" className="w-16 h-16 rounded-lg object-cover border" />}
                         <div className="flex-1 space-y-2">
@@ -211,7 +212,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {rfpContext && (rfpContext.advisor_type || rfpContext.request_title) && (
                   <Card className="border-blue-200 bg-blue-50/50">
                     <CardContent className="p-4">
-                      <h4 className="flex items-center gap-2 mb-2 text-sm font-semibold text-blue-700"><Target className="w-4 h-4" />הגשה עבור</h4>
+                      <h4 className="flex items-center gap-2 mb-2 text-sm font-semibold text-blue-700 flex-row-reverse justify-end"><Target className="w-4 h-4" />הגשה עבור</h4>
                       <div className="space-y-1 text-sm">
                         {rfpContext.advisor_type && <p><span className="font-medium">סוג יועץ:</span> {rfpContext.advisor_type}</p>}
                         {rfpContext.request_title && <p><span className="font-medium">כותרת:</span> {rfpContext.request_title}</p>}
@@ -225,9 +226,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <Card><CardContent className="p-4 text-center"><Clock className="w-5 h-5 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-lg">{proposal.timeline_days} ימים</p></CardContent></Card>
                   <Card><CardContent className="p-4 text-center"><Calendar className="w-5 h-5 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-lg">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
                 </div>
-                {proposal.scope_text && <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><Briefcase className="w-4 h-4" />היקף העבודה</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap leading-relaxed">{proposal.scope_text}</p></CardContent></Card></div>}
+                {proposal.scope_text && <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><Briefcase className="w-4 h-4" />היקף העבודה</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap leading-relaxed">{proposal.scope_text}</p></CardContent></Card></div>}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between"><h4 className="font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" />ניתוח AI</h4><Button variant="outline" size="sm" onClick={generateAiAnalysis} disabled={isGeneratingAi}>{isGeneratingAi ? <><Loader2 className="w-3.5 h-3.5 animate-spin ml-1" />מנתח...</> : aiAnalysis ? <><RefreshCw className="w-3.5 h-3.5 ml-1" />רענן</> : <><Sparkles className="w-3.5 h-3.5 ml-1" />ייצר ניתוח</>}</Button></div>
+                  <div className="flex items-center justify-between"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><Sparkles className="w-4 h-4 text-primary" />ניתוח AI</h4><Button variant="outline" size="sm" onClick={generateAiAnalysis} disabled={isGeneratingAi}>{isGeneratingAi ? <><Loader2 className="w-3.5 h-3.5 animate-spin me-1" />מנתח...</> : aiAnalysis ? <><RefreshCw className="w-3.5 h-3.5 me-1" />רענן</> : <><Sparkles className="w-3.5 h-3.5 me-1" />ייצר ניתוח</>}</Button></div>
                   {isGeneratingAi && <Card><CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />מייצר ניתוח AI...</CardContent></Card>}
                   {aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-4"><AIAnalysisDisplay content={aiAnalysis} /></CardContent></Card>}
                   {!aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לחץ על "ייצר ניתוח" לקבלת ניתוח AI של ההצעה</CardContent></Card>}
@@ -235,14 +236,14 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               </TabsContent>
 
               <TabsContent value="conditions" className="p-6 space-y-4 m-0">
-                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><Banknote className="w-4 h-4 text-green-600" />תנאי תשלום</h4><Card><CardContent className="p-4"><p className="text-sm">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card></div>
-                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><FileCheck className="w-4 h-4 text-blue-600" />הנחות יסוד</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card></div>
-                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><Scale className="w-4 h-4 text-purple-600" />החרגות</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card></div>
-                {conditions.validity_days && <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><Clock className="w-4 h-4" />תוקף ההצעה</h4><Card><CardContent className="p-4"><p className="text-sm">{conditions.validity_days} ימים</p></CardContent></Card></div>}
+                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><Banknote className="w-4 h-4 text-green-600" />תנאי תשלום</h4><Card><CardContent className="p-4"><p className="text-sm">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card></div>
+                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><FileCheck className="w-4 h-4 text-blue-600" />הנחות יסוד</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card></div>
+                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><Scale className="w-4 h-4 text-purple-600" />החרגות</h4><Card><CardContent className="p-4"><p className="text-sm whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card></div>
+                {conditions.validity_days && <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><Clock className="w-4 h-4" />תוקף ההצעה</h4><Card><CardContent className="p-4"><p className="text-sm">{conditions.validity_days} ימים</p></CardContent></Card></div>}
               </TabsContent>
 
               <TabsContent value="files" className="p-6 space-y-4 m-0">
-                {files.length > 1 && <div className="flex justify-start"><Button variant="outline" size="sm" onClick={handleDownloadAll}><FolderDown className="w-4 h-4 ml-1.5" />הורד הכל</Button></div>}
+                {files.length > 1 && <div className="flex justify-start"><Button variant="outline" size="sm" onClick={handleDownloadAll}><FolderDown className="w-4 h-4 me-1.5" />הורד הכל</Button></div>}
                 {loadingUrls ? <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />טוען קבצים...</div>
                 : files.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground"><FileText className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>לא צורפו קבצים להצעה זו</p></CardContent></Card>
                 : <div className="space-y-3">{files.map((file, i) => { const Icon = getFileIcon(file.name); const hasSummary = !!fileSummaries[file.name]; const isGen = generatingFileSummary === file.name; return (
@@ -261,7 +262,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               </TabsContent>
 
               <TabsContent value="signature" className="p-6 space-y-4 m-0">
-                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2"><FileCheck className="w-4 h-4" />חתימה דיגיטלית</h4>
+                <div className="space-y-2"><h4 className="font-semibold flex items-center gap-2 flex-row-reverse justify-end"><FileCheck className="w-4 h-4" />חתימה דיגיטלית</h4>
                   {proposal.signature_blob ? <Card><CardContent className="p-4 space-y-4"><div className="bg-white border rounded-lg p-4"><img src={proposal.signature_blob} alt="חתימה" className="max-h-24 mx-auto" /></div>{proposal.signature_meta_json && <div className="text-sm text-muted-foreground space-y-1">{proposal.signature_meta_json.timestamp && <p>נחתם: {formatDate(proposal.signature_meta_json.timestamp)}</p>}{proposal.signature_meta_json.signer_name && <p>חותם: {proposal.signature_meta_json.signer_name}</p>}</div>}</CardContent></Card>
                   : <Card><CardContent className="p-6 text-center text-muted-foreground"><FileText className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>לא נמצאה חתימה</p></CardContent></Card>}
                 </div>
@@ -272,8 +273,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <h4 className="font-semibold text-center">פעולות על ההצעה</h4>
                   <p className="text-sm text-muted-foreground text-center">בחר פעולה לביצוע על הצעת המחיר</p>
                   <div className="flex flex-col gap-3">
-                    <Button className="w-full" size="lg" onClick={()=>setShowApprovalDialog(true)}><CheckCircle className="w-4 h-4 ml-2" />אשר הצעה</Button>
-                    <Button variant="destructive" className="w-full" size="lg" onClick={handleReject}><XCircle className="w-4 h-4 ml-2" />דחה הצעה</Button>
+                    <Button className="w-full" size="lg" onClick={()=>setShowApprovalDialog(true)}><CheckCircle className="w-4 h-4 me-2" />אשר הצעה</Button>
+                    <Button variant="destructive" className="w-full" size="lg" onClick={handleReject}><XCircle className="w-4 h-4 me-2" />דחה הצעה</Button>
                   </div>
                 </CardContent></Card>
               </TabsContent>}
@@ -282,7 +283,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         </DialogContent>
       </Dialog>
 
-      <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} projectId={projectId} projectName={projectName} onSuccess={()=>{ onStatusChange?.(); onOpenChange(false); }} />
+      <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} />
     </TooltipProvider>
   );
 }
