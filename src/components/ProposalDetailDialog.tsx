@@ -356,412 +356,309 @@ export const ProposalDetailDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div className="text-right">
-                <DialogTitle className="text-2xl font-bold text-right">
-                  הצעת מחיר
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1 text-right">
-                  {proposal.supplier_name}
-                </p>
-              </div>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader className="border-b pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="text-lg font-bold">
+                הצעת מחיר - {proposal.supplier_name}
+              </DialogTitle>
               {getStatusBadge(proposal.status)}
             </div>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            {/* RTL Tab ordering - flex-row-reverse ensures פרטים is on the right */}
-            <TabsList className="w-full flex flex-row-reverse justify-end overflow-x-auto md:grid md:grid-cols-5" dir="rtl">
-              <TabsTrigger value="details" className="flex-row-reverse">
-                <FileText className="w-4 h-4 mr-2" />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
+            <TabsList className="w-full flex flex-row-reverse justify-end overflow-x-auto md:grid md:grid-cols-5 h-9" dir="rtl">
+              <TabsTrigger value="details" className="flex-row-reverse gap-1.5 text-xs px-2">
+                <FileText className="w-3.5 h-3.5" />
                 פרטים
               </TabsTrigger>
-              <TabsTrigger value="conditions" className="flex-row-reverse">
-                <Shield className="w-4 h-4 mr-2" />
+              <TabsTrigger value="conditions" className="flex-row-reverse gap-1.5 text-xs px-2">
+                <Shield className="w-3.5 h-3.5" />
                 תנאים
               </TabsTrigger>
-              <TabsTrigger value="files" className="flex-row-reverse">
-                <Download className="w-4 h-4 mr-2" />
+              <TabsTrigger value="files" className="flex-row-reverse gap-1.5 text-xs px-2">
+                <Download className="w-3.5 h-3.5" />
                 קבצים ({proposal.files?.length || 0})
               </TabsTrigger>
-              <TabsTrigger value="signature" className="flex-row-reverse">
-                <FileSignature className="w-4 h-4 mr-2" />
+              <TabsTrigger value="signature" className="flex-row-reverse gap-1.5 text-xs px-2">
+                <FileSignature className="w-3.5 h-3.5" />
                 חתימה
               </TabsTrigger>
-              <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'} className="flex-row-reverse">
-                <CheckCircle className="w-4 h-4 mr-2" />
+              <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'} className="flex-row-reverse gap-1.5 text-xs px-2">
+                <CheckCircle className="w-3.5 h-3.5" />
                 פעולות
               </TabsTrigger>
             </TabsList>
 
             {/* Details Tab */}
-            <TabsContent value="details" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg text-right">סיכום ההצעה</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="flex-1 text-right">
-                        <p className="text-sm text-muted-foreground">מחיר מוצע</p>
-                        <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.price)}</p>
-                      </div>
-                      <Banknote className="w-8 h-8 text-primary" />
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="flex-1 text-right">
-                        <p className="text-sm text-muted-foreground">זמן ביצוע</p>
-                        <p className="text-2xl font-bold">{proposal.timeline_days} ימים</p>
-                      </div>
-                      <Clock className="w-8 h-8 text-primary" />
-                    </div>
+            <TabsContent value="details" className="space-y-3 mt-3">
+              {/* Compact Summary Grid */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg">
+                  <Banknote className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 text-right min-w-0">
+                    <p className="text-xs text-muted-foreground">מחיר</p>
+                    <p className="text-base font-bold text-primary truncate">{formatCurrency(proposal.price)}</p>
                   </div>
-
-                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <div className="flex-1 text-right">
-                      <p className="text-sm text-muted-foreground text-right">תאריך הגשה</p>
-                      <p className="font-medium text-right" dir="rtl">{formatDate(proposal.submitted_at)}</p>
-                    </div>
-                    <Calendar className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg">
+                  <Clock className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 text-right min-w-0">
+                    <p className="text-xs text-muted-foreground">ביצוע</p>
+                    <p className="text-base font-bold">{proposal.timeline_days} ימים</p>
                   </div>
-
-                  {proposal.scope_text && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-right text-lg">היקף העבודה</h4>
-                      <div className="bg-muted/30 p-4 rounded-lg">
-                        <p className="whitespace-pre-wrap text-right">{proposal.scope_text}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* AI Analysis Section */}
-              <Card className="border-primary/20">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-lg">ניתוח AI</CardTitle>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg">
+                  <Calendar className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 text-right min-w-0">
+                    <p className="text-xs text-muted-foreground">הוגש</p>
+                    <p className="text-sm font-medium truncate">{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</p>
                   </div>
+                </div>
+              </div>
+
+              {proposal.scope_text && (
+                <div className="space-y-1.5">
+                  <h4 className="font-semibold text-right text-sm">היקף העבודה</h4>
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <p className="whitespace-pre-wrap text-right text-sm">{proposal.scope_text}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Analysis Section - Streamlined */}
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => generateAiAnalysis(!!aiAnalysis)}
                     disabled={aiAnalysisLoading}
+                    className="h-7 px-2 text-xs"
                   >
                     {aiAnalysisLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        מנתח...
-                      </>
+                      <><Loader2 className="w-3 h-3 ml-1 animate-spin" />מנתח...</>
                     ) : aiAnalysis ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        רענן ניתוח
-                      </>
+                      <><RefreshCw className="w-3 h-3 ml-1" />רענן</>
                     ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        ייצר ניתוח
-                      </>
+                      <><Sparkles className="w-3 h-3 ml-1" />ייצר ניתוח</>
                     )}
                   </Button>
-                </CardHeader>
-                <CardContent>
-                  {aiAnalysisLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <span className="mr-3 text-muted-foreground">מנתח את ההצעה...</span>
-                    </div>
-                  ) : aiAnalysis ? (
-                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
-                      <AIAnalysisDisplay content={aiAnalysis} />
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>לחץ על "ייצר ניתוח" לקבלת הערכה מקצועית של ההצעה</p>
-                      <p className="text-sm mt-1">הניתוח משווה את ההצעה לדרישות המקוריות</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-semibold">ניתוח AI</span>
+                  </div>
+                </div>
+                
+                {aiAnalysisLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="mr-2 text-sm text-muted-foreground">מנתח את ההצעה...</span>
+                  </div>
+                ) : aiAnalysis ? (
+                  <div className="bg-primary/5 p-3 rounded-lg border border-primary/10" dir="rtl">
+                    <AIAnalysisDisplay content={aiAnalysis} />
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">לחץ על "ייצר ניתוח" לקבלת הערכה מקצועית</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             {/* Conditions Tab */}
-            <TabsContent value="conditions" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg text-right">תנאי ההצעה</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {proposal.conditions_json?.payment_terms && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 justify-end">
-                        <h4 className="font-semibold text-lg">תנאי תשלום</h4>
-                        <Banknote className="w-5 h-5 text-primary" />
-                      </div>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
-                        {proposal.conditions_json.payment_terms}
-                      </p>
+            <TabsContent value="conditions" className="space-y-3 mt-3">
+              <div className="space-y-3">
+                {proposal.conditions_json?.payment_terms && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <h4 className="font-semibold text-sm">תנאי תשלום</h4>
+                      <Banknote className="w-4 h-4 text-primary" />
                     </div>
-                  )}
+                    <p className="bg-muted/30 p-2.5 rounded-lg whitespace-pre-wrap text-right text-sm">
+                      {proposal.conditions_json.payment_terms}
+                    </p>
+                  </div>
+                )}
 
-                  {proposal.conditions_json?.assumptions && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 justify-end">
-                        <h4 className="font-semibold text-lg">הנחות יסוד</h4>
-                        <AlertCircle className="w-5 h-5 text-primary" />
-                      </div>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
-                        {proposal.conditions_json.assumptions}
-                      </p>
+                {proposal.conditions_json?.assumptions && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <h4 className="font-semibold text-sm">הנחות יסוד</h4>
+                      <AlertCircle className="w-4 h-4 text-primary" />
                     </div>
-                  )}
+                    <p className="bg-muted/30 p-2.5 rounded-lg whitespace-pre-wrap text-right text-sm">
+                      {proposal.conditions_json.assumptions}
+                    </p>
+                  </div>
+                )}
 
-                  {proposal.conditions_json?.exclusions && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 justify-end">
-                        <h4 className="font-semibold text-lg">לא כלול במחיר</h4>
-                        <XCircle className="w-5 h-5 text-destructive" />
-                      </div>
-                      <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
-                        {proposal.conditions_json.exclusions}
-                      </p>
+                {proposal.conditions_json?.exclusions && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <h4 className="font-semibold text-sm">לא כלול במחיר</h4>
+                      <XCircle className="w-4 h-4 text-destructive" />
                     </div>
-                  )}
+                    <p className="bg-muted/30 p-2.5 rounded-lg whitespace-pre-wrap text-right text-sm">
+                      {proposal.conditions_json.exclusions}
+                    </p>
+                  </div>
+                )}
 
-                  {proposal.conditions_json?.validity_days && (
-                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
-                      <Clock className="h-4 w-4 text-blue-600" />
-                      <AlertDescription className="text-blue-900 dark:text-blue-100 text-right">
-                        <strong>תקופת תוקף:</strong> ההצעה תקפה ל-{proposal.conditions_json.validity_days} ימים מיום ההגשה
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                {proposal.conditions_json?.validity_days && (
+                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 py-2">
+                    <Clock className="h-3.5 w-3.5 text-blue-600" />
+                    <AlertDescription className="text-blue-900 dark:text-blue-100 text-right text-sm">
+                      <strong>תקופת תוקף:</strong> ההצעה תקפה ל-{proposal.conditions_json.validity_days} ימים
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-                  {!proposal.conditions_json?.payment_terms && 
-                   !proposal.conditions_json?.assumptions && 
-                   !proposal.conditions_json?.exclusions && (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <Shield className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                      <p className="text-right text-muted-foreground font-medium">
-                        לא הוגדרו תנאים נוספים להצעה זו
-                      </p>
-                      <p className="text-sm text-muted-foreground/70 mt-1 text-right">
-                        התנאים הבסיסיים מופיעים בסעיפי המחיר והזמן
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                {!proposal.conditions_json?.payment_terms && 
+                 !proposal.conditions_json?.assumptions && 
+                 !proposal.conditions_json?.exclusions && (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <Shield className="w-10 h-10 text-muted-foreground/50 mb-2" />
+                    <p className="text-right text-muted-foreground text-sm">לא הוגדרו תנאים נוספים להצעה זו</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             {/* Files Tab */}
-            <TabsContent value="files" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg text-right">קבצים מצורפים</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loadingFiles ? (
-                    <p className="text-center text-muted-foreground py-8">טוען קבצים...</p>
-                  ) : filesWithUrls.length > 0 ? (
-                    <div className="space-y-4">
-                      {filesWithUrls.map((file, index) => (
-                        <div key={index} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewFile(file)}
-                                disabled={!file.signedUrl}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                צפייה
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownload(file)}
-                                disabled={!file.signedUrl}
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                הורדה
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <p className="font-medium text-right">{file.name}</p>
-                                <p className="text-sm text-muted-foreground text-right">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                              <FileText className="w-8 h-8 text-primary" />
-                            </div>
-                          </div>
-                          
-                          {/* AI File Summary Section */}
-                          <div className="border-t pt-3">
-                            {fileSummaryLoading[file.name] ? (
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>מייצר תקציר...</span>
-                              </div>
-                            ) : fileSummaries[file.name] ? (
-                              <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-                                <div className="flex items-center justify-between mb-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => generateFileSummary(file, true)}
-                                    className="h-6 px-2 text-muted-foreground hover:text-primary"
-                                  >
-                                    <RefreshCw className="w-3 h-3" />
-                                  </Button>
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-medium">תקציר בינה</span>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-right">{fileSummaries[file.name]}</p>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => generateFileSummary(file, false)}
-                                className="text-primary hover:text-primary/80"
-                              >
-                                <Sparkles className="w-4 h-4 mr-2" />
-                                תקציר בינה
-                              </Button>
-                            )}
-                          </div>
+            <TabsContent value="files" className="space-y-3 mt-3">
+              {loadingFiles ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">טוען קבצים...</p>
+              ) : filesWithUrls.length > 0 ? (
+                <div className="space-y-2">
+                  {filesWithUrls.map((file, index) => (
+                    <div key={index} className="border rounded-lg p-2.5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-1.5">
+                          <Button variant="outline" size="sm" onClick={() => handleViewFile(file)} disabled={!file.signedUrl} className="h-7 px-2 text-xs">
+                            <Eye className="w-3.5 h-3.5 ml-1" />צפייה
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDownload(file)} disabled={!file.signedUrl} className="h-7 px-2 text-xs">
+                            <Download className="w-3.5 h-3.5 ml-1" />הורדה
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                      <p className="text-right text-muted-foreground font-medium">
-                        לא צורפו קבצים להצעה זו
-                      </p>
-                      <p className="text-sm text-muted-foreground/70 mt-1 text-right">
-                        הספק לא העלה מסמכים נוספים
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Signature Tab */}
-            <TabsContent value="signature" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg text-right">חתימה דיגיטלית</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {proposal.signature_blob ? (
-                    <div className="space-y-4">
-                      <div className="border-2 border-primary/20 rounded-lg p-4 bg-muted/30">
-                        <img
-                          src={proposal.signature_blob}
-                          alt="חתימה"
-                          className="max-w-md mx-auto"
-                        />
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="font-medium text-sm truncate max-w-[200px]">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <FileText className="w-6 h-6 text-primary flex-shrink-0" />
+                        </div>
                       </div>
                       
-                      <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <h4 className="font-semibold text-green-900 dark:text-green-100 text-right">חתימה מאומתת</h4>
-                        </div>
-                        
-                        {proposal.signature_meta_json && (
-                          <div className="space-y-1 text-sm text-green-800 dark:text-green-200">
-                            {proposal.signature_meta_json.signer_name && (
-                              <p className="text-right">חותם: {proposal.signature_meta_json.signer_name}</p>
-                            )}
-                            {proposal.signature_meta_json.signer_email && (
-                              <p className="text-right">דוא"ל: {proposal.signature_meta_json.signer_email}</p>
-                            )}
-                            {proposal.signature_meta_json.timestamp && (
-                              <p className="text-right">תאריך חתימה: {formatDate(proposal.signature_meta_json.timestamp)}</p>
-                            )}
+                      {/* AI File Summary */}
+                      <div className="border-t pt-2">
+                        {fileSummaryLoading[file.name] ? (
+                          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>מייצר תקציר...</span>
                           </div>
+                        ) : fileSummaries[file.name] ? (
+                          <div className="bg-primary/5 p-2 rounded border border-primary/10">
+                            <div className="flex items-center justify-between mb-1">
+                              <Button variant="ghost" size="sm" onClick={() => generateFileSummary(file, true)} className="h-5 px-1.5">
+                                <RefreshCw className="w-3 h-3" />
+                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-primary" />
+                                <span className="text-xs font-medium">תקציר בינה</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-right">{fileSummaries[file.name]}</p>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => generateFileSummary(file, false)} className="text-primary hover:text-primary/80 h-6 text-xs">
+                            <Sparkles className="w-3 h-3 ml-1" />תקציר בינה
+                          </Button>
                         )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <FileSignature className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                      <p className="text-center text-muted-foreground font-medium">
-                        אין חתימה דיגיטלית להצעה זו
-                      </p>
-                      <p className="text-sm text-muted-foreground/70 mt-1">
-                        הספק לא חתם על ההצעה באופן דיגיטלי
-                      </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <FileText className="w-10 h-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground text-sm">לא צורפו קבצים להצעה זו</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Signature Tab */}
+            <TabsContent value="signature" className="space-y-3 mt-3">
+              {proposal.signature_blob ? (
+                <div className="space-y-3">
+                  <div className="border-2 border-primary/20 rounded-lg p-3 bg-muted/30">
+                    <img src={proposal.signature_blob} alt="חתימה" className="max-w-xs mx-auto" />
+                  </div>
+                  
+                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <h4 className="font-semibold text-green-900 dark:text-green-100 text-sm">חתימה מאומתת</h4>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    
+                    {proposal.signature_meta_json && (
+                      <div className="space-y-0.5 text-xs text-green-800 dark:text-green-200">
+                        {proposal.signature_meta_json.signer_name && <p className="text-right">חותם: {proposal.signature_meta_json.signer_name}</p>}
+                        {proposal.signature_meta_json.signer_email && <p className="text-right">דוא"ל: {proposal.signature_meta_json.signer_email}</p>}
+                        {proposal.signature_meta_json.timestamp && <p className="text-right">תאריך: {formatDate(proposal.signature_meta_json.timestamp)}</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <FileSignature className="w-10 h-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground text-sm">אין חתימה דיגיטלית להצעה זו</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* Actions Tab */}
-            <TabsContent value="actions" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg text-right">פעולות על ההצעה</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-900 dark:text-amber-100 text-right">
-                      <strong>שים לב:</strong> לאחר אישור או דחיית ההצעה, לא ניתן לשנות את ההחלטה. הספק יקבל הודעה אוטומטית על ההחלטה.
-                    </AlertDescription>
-                  </Alert>
+            <TabsContent value="actions" className="space-y-3 mt-3">
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950 py-2">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                <AlertDescription className="text-amber-900 dark:text-amber-100 text-right text-sm">
+                  <strong>שים לב:</strong> לאחר אישור או דחייה, לא ניתן לשנות את ההחלטה.
+                </AlertDescription>
+              </Alert>
 
-                  <div className="space-y-3">
-                    {/* Primary Action - Approve */}
-                    <Button
-                      size="lg"
-                      onClick={() => setApprovalDialogOpen(true)}
-                      className="w-full h-auto py-6 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
-                    >
-                      <div className="flex items-center gap-3 w-full justify-center">
-                        <div className="text-right">
-                          <p className="font-bold text-lg text-right">אישור ההצעה</p>
-                          <p className="text-sm opacity-90 text-right">בחר ספק זה ולהמשיך לחוזה</p>
-                        </div>
-                        <CheckCircle className="w-6 h-6" />
-                      </div>
-                    </Button>
-
-                    {/* Secondary Action - Reject */}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={handleReject}
-                      disabled={rejectLoading}
-                      className="w-full h-auto py-4 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-950"
-                    >
-                      <div className="flex items-center gap-3 w-full justify-center">
-                        <div className="text-right">
-                          <p className="font-bold text-red-700 dark:text-red-400 text-right">דחיית ההצעה</p>
-                          <p className="text-xs text-red-600 dark:text-red-500 text-right">הצעה זו אינה מתאימה</p>
-                        </div>
-                        <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                      </div>
-                    </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="lg"
+                  onClick={() => setApprovalDialogOpen(true)}
+                  className="h-auto py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                >
+                  <div className="flex items-center gap-2 justify-center">
+                    <CheckCircle className="w-5 h-5" />
+                    <div className="text-right">
+                      <p className="font-bold text-sm">אישור ההצעה</p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleReject}
+                  disabled={rejectLoading}
+                  className="h-auto py-3 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-950"
+                >
+                  <div className="flex items-center gap-2 justify-center">
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <div className="text-right">
+                      <p className="font-bold text-red-700 dark:text-red-400 text-sm">דחיית ההצעה</p>
+                    </div>
+                  </div>
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </DialogContent>

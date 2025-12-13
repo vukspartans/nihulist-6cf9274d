@@ -6,7 +6,7 @@ interface AIAnalysisDisplayProps {
 }
 
 /**
- * Renders AI analysis content with proper markdown-like formatting:
+ * Renders AI analysis content with proper RTL markdown-like formatting:
  * - Headers (###) as bold sections
  * - Bullet points (• or -) as styled lists
  * - Emoji headers highlighted
@@ -24,10 +24,10 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
   const flushList = () => {
     if (currentList.length > 0) {
       elements.push(
-        <ul key={`list-${listKey++}`} className="space-y-1 mr-4 my-2">
+        <ul key={`list-${listKey++}`} className="space-y-1 my-2" dir="rtl">
           {currentList.map((item, idx) => (
             <li key={idx} className="flex items-start gap-2 text-right">
-              <span className="text-primary mt-1.5 text-xs">●</span>
+              <span className="text-primary mt-1 text-xs flex-shrink-0">●</span>
               <span className="flex-1">{item}</span>
             </li>
           ))}
@@ -58,7 +58,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       flushList();
       const headerText = trimmedLine.replace(/^#{2,3}\s*/, '').replace(/\*\*/g, '');
       elements.push(
-        <h4 key={`h-${index}`} className="font-semibold text-base mt-4 mb-2 text-right flex items-center gap-2 flex-row-reverse">
+        <h4 key={`h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
           {headerText}
         </h4>
       );
@@ -70,7 +70,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       flushList();
       const headerText = trimmedLine.replace(/\*\*/g, '');
       elements.push(
-        <h4 key={`h-${index}`} className="font-semibold text-base mt-4 mb-2 text-right">
+        <h4 key={`h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
           {headerText}
         </h4>
       );
@@ -89,11 +89,11 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       flushList();
       const [num, ...rest] = trimmedLine.split(/\.\s/);
       elements.push(
-        <div key={`num-${index}`} className="flex items-start gap-2 my-1 text-right flex-row-reverse">
-          <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium flex-shrink-0">
+        <div key={`num-${index}`} className="flex items-start gap-2 my-1 text-right" dir="rtl">
+          <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0">
             {num}
           </span>
-          <span className="flex-1 text-right">{rest.join('. ')}</span>
+          <span className="flex-1">{rest.join('. ')}</span>
         </div>
       );
       return;
@@ -107,9 +107,10 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
         <div 
           key={`rec-${index}`} 
           className={cn(
-            "p-3 rounded-lg border my-3 text-right font-medium",
+            "p-2.5 rounded-lg border my-2 text-right text-sm font-medium",
             recommendationStyle
           )}
+          dir="rtl"
         >
           {trimmedLine}
         </div>
@@ -121,7 +122,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     if (trimmedLine.includes('⚠️')) {
       flushList();
       elements.push(
-        <div key={`warn-${index}`} className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-3 rounded-lg my-2 text-right text-orange-800 dark:text-orange-200">
+        <div key={`warn-${index}`} className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-2.5 rounded-lg my-2 text-right text-sm text-orange-800 dark:text-orange-200" dir="rtl">
           {trimmedLine}
         </div>
       );
@@ -132,7 +133,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     if (trimmedLine.startsWith('📋') || trimmedLine.startsWith('⏱️')) {
       flushList();
       elements.push(
-        <p key={`meta-${index}`} className="text-xs text-muted-foreground mt-4 pt-2 border-t text-right">
+        <p key={`meta-${index}`} className="text-xs text-muted-foreground mt-3 pt-2 border-t text-right" dir="rtl">
           {trimmedLine}
         </p>
       );
@@ -143,7 +144,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     if (/^[📋📄🔍📐⚖️👥✅💡💰📅🔑⚠️]/.test(trimmedLine)) {
       flushList();
       elements.push(
-        <h4 key={`emoji-h-${index}`} className="font-semibold text-base mt-4 mb-2 text-right">
+        <h4 key={`emoji-h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
           {trimmedLine}
         </h4>
       );
@@ -153,7 +154,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     // Regular paragraph
     flushList();
     elements.push(
-      <p key={`p-${index}`} className="text-right leading-relaxed my-1">
+      <p key={`p-${index}`} className="text-right text-sm leading-relaxed my-1" dir="rtl">
         {trimmedLine}
       </p>
     );
@@ -163,7 +164,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
   flushList();
 
   return (
-    <div className={cn("space-y-1", className)} dir="rtl">
+    <div className={cn("space-y-0.5", className)} dir="rtl">
       {elements}
     </div>
   );
