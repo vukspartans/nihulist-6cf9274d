@@ -179,7 +179,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6">
+            <TabsList className="w-full flex-row-reverse justify-end rounded-none border-b bg-transparent px-6">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
               <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
@@ -196,7 +196,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       <div className="flex items-start gap-4">
                         <div className="flex-1 space-y-2 text-right">
                           <div className="flex items-center justify-end gap-3">
-                            {advisorInfo.rating && <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-sm">{advisorInfo.rating.toFixed(1)}<Star className="w-4 h-4 fill-amber-500" /></div>}
+                            {advisorInfo.rating > 0 && <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-sm">{advisorInfo.rating.toFixed(1)}<Star className="w-4 h-4 fill-amber-500" /></div>}
                             <h3 className="font-bold text-lg">{advisorInfo.company_name || proposal.supplier_name}</h3>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground justify-end">
