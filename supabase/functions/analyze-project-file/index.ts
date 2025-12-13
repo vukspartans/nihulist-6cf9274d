@@ -1,10 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Enhanced system prompt optimized for Gemini 3's construction document analysis
+const SYSTEM_PROMPT = `אתה מהנדס בניין בכיר עם התמחות בניתוח מסמכי פרויקטים בישראל.
+
+## יכולותיך
+- קריאת תוכניות אדריכליות וקונסטרוקציה
+- הבנת מפרטים טכניים ותקנים ישראליים
+- זיהוי דרישות רגולטוריות (תמ"א, היתרי בנייה, תקני בטיחות)
+
+## משימה
+נתח את קובץ הפרויקט וספק:
+
+### 📋 TL;DR
+[2-3 משפטים - מה הקובץ ומה חשוב בו]
+
+### 📄 סוג המסמך
+[היתר בנייה / תוכנית אדריכלית / מפרט טכני / דוח קרקע / אחר]
+
+### 🔍 נקודות מפתח
+• [נקודה 1]
+• [נקודה 2]
+• [נקודה 3]
+
+### 📐 דרישות טכניות
+[דרישות עיקריות שעולות מהמסמך]
+
+### ⚖️ רגולציה ותקנים
+[תקנים ישראליים רלוונטיים, דרישות ציות]
+
+### 👥 השפעה על בחירת יועצים
+[אילו סוגי יועצים נדרשים בהתבסס על המסמך?]
+
+### ✅ פעולות מומלצות
+1. [פעולה 1]
+2. [פעולה 2]
+
+## סגנון
+- עברית מקצועית
+- מבנה ברור עם כותרות
+- מקסימום 400 מילים`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,9 +58,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+    if (!googleApiKey) {
+      throw new Error('GOOGLE_API_KEY not configured');
     }
 
     const { fileId } = await req.json();
@@ -31,7 +72,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('Analyzing file:', fileId);
+    console.log('[analyze-project-file] Analyzing file:', fileId);
 
     // Get file details from database
     const { data: fileData, error: fileError } = await supabaseClient
@@ -41,14 +82,14 @@ serve(async (req) => {
       .single();
 
     if (fileError || !fileData) {
-      console.error('File not found:', fileError);
+      console.error('[analyze-project-file] File not found:', fileError);
       return new Response(JSON.stringify({ error: 'File not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('File data:', fileData);
+    console.log('[analyze-project-file] File data:', fileData.file_name);
 
     // Get project details for context
     const { data: projectData, error: projectError } = await supabaseClient
@@ -58,15 +99,112 @@ serve(async (req) => {
       .single();
 
     if (projectError) {
-      console.error('Project not found:', projectError);
+      console.error('[analyze-project-file] Project not found:', projectError);
       return new Response(JSON.stringify({ error: 'Project not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Build analysis prompt
-    const analysisPrompt = `נתח קובץ פרויקט בניה על בסיס המידע הבא:
+    // Determine file type
+    const fileExtension = fileData.file_name.split('.').pop()?.toLowerCase() || '';
+    const mimeType = getMimeType(fileExtension);
+    const isImageOrPdf = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+
+    let analysis = '';
+
+    // Try to download and analyze actual file content if it's a supported format
+    if (isImageOrPdf && fileData.file_url) {
+      console.log('[analyze-project-file] Attempting to analyze actual file content');
+      
+      try {
+        // Extract file path from URL
+        const filePath = extractFilePath(fileData.file_url);
+        console.log('[analyze-project-file] Downloading file from path:', filePath);
+        
+        const { data: fileBlob, error: downloadError } = await supabaseClient.storage
+          .from('project-files')
+          .download(filePath);
+
+        if (downloadError || !fileBlob) {
+          console.log('[analyze-project-file] Could not download file, falling back to metadata');
+          throw new Error('File download failed');
+        }
+
+        // Convert blob to base64
+        const arrayBuffer = await fileBlob.arrayBuffer();
+        const base64Data = base64Encode(new Uint8Array(arrayBuffer));
+        
+        console.log('[analyze-project-file] File downloaded, size:', arrayBuffer.byteLength, 'bytes');
+
+        // Build prompt with file content
+        const analysisPrompt = `נתח את קובץ הפרויקט המצורף:
+
+שם קובץ: ${fileData.custom_name || fileData.file_name}
+גודל: ${fileData.size_mb} MB
+
+פרטי פרויקט:
+- שם: ${projectData.name}
+- סוג: ${projectData.type || 'לא צוין'}
+- מיקום: ${projectData.location || 'לא צוין'}
+- שלב: ${projectData.phase || 'לא צוין'}
+- תיאור: ${projectData.description || 'לא סופק'}
+
+נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
+
+        // Send to Gemini 3 with actual file content
+        const aiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: SYSTEM_PROMPT + "\n\n" + analysisPrompt },
+                  { 
+                    inlineData: { 
+                      mimeType: mimeType, 
+                      data: base64Data 
+                    } 
+                  }
+                ]
+              }],
+              generationConfig: {
+                maxOutputTokens: 800,
+                temperature: 0.3
+              }
+            }),
+          }
+        );
+
+        if (aiResponse.ok) {
+          const result = await aiResponse.json();
+          analysis = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+          console.log('[analyze-project-file] Gemini analysis with file content successful');
+        } else {
+          const errorText = await aiResponse.text();
+          console.error('[analyze-project-file] Gemini API error:', aiResponse.status, errorText);
+          
+          if (aiResponse.status === 429) {
+            return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
+              status: 429,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          throw new Error('Gemini API error');
+        }
+      } catch (fileError) {
+        console.log('[analyze-project-file] File content analysis failed, using metadata:', fileError);
+      }
+    }
+
+    // Fallback to metadata-based analysis if file content analysis failed
+    if (!analysis) {
+      console.log('[analyze-project-file] Using metadata-based analysis');
+      
+      const metadataPrompt = `נתח קובץ פרויקט בניה על בסיס המטאדאטה:
 
 שם קובץ: ${fileData.custom_name || fileData.file_name}
 סוג קובץ: ${fileData.file_type}
@@ -90,53 +228,40 @@ serve(async (req) => {
 
 כתוב בעברית. היה תמציתי ומועיל.`;
 
-    console.log('Sending analysis request to Lovable AI Gateway');
+      const aiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: metadataPrompt }]
+            }],
+            generationConfig: {
+              maxOutputTokens: 600,
+              temperature: 0.3
+            }
+          }),
+        }
+      );
 
-    // Call Lovable AI Gateway
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'אתה מומחה לניתוח מסמכי פרויקטים בתחום הבנייה בישראל. תפקידך לנתח קבצי פרויקט ולספק תובנות מעשיות ליזמים. התמקד בדרישות טכניות, תקנים, רגולציה, והשפעה על בחירת ספקים ויועצים.'
-          },
-          {
-            role: 'user',
-            content: analysisPrompt
-          }
-        ],
-      }),
-    });
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('[analyze-project-file] Gemini API error:', aiResponse.status, errorText);
+        
+        if (aiResponse.status === 429) {
+          return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        throw new Error(`Gemini API error: ${aiResponse.status}`);
+      }
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('Lovable AI Gateway error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'נדרש טעינת קרדיטים לשירות AI' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      const result = await aiResponse.json();
+      analysis = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     }
-
-    const aiResult = await aiResponse.json();
-    let analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
 
     if (!analysis) {
       throw new Error('No analysis content received from AI');
@@ -145,7 +270,7 @@ serve(async (req) => {
     // Add metadata disclaimer
     analysis = `📄 **ניתוח קובץ**: ${fileData.custom_name || fileData.file_name}\n\n${analysis}\n\n📋 **המלצה**: לפרטים מדויקים, עיין בקובץ המקורי.`;
 
-    console.log('AI Analysis completed:', analysis.substring(0, 200) + '...');
+    console.log('[analyze-project-file] Analysis completed, length:', analysis.length);
 
     // Update the file with AI analysis
     const { error: updateError } = await supabaseClient
@@ -154,21 +279,22 @@ serve(async (req) => {
       .eq('id', fileId);
 
     if (updateError) {
-      console.error('Failed to update file with analysis:', updateError);
+      console.error('[analyze-project-file] Failed to update file with analysis:', updateError);
       throw updateError;
     }
 
-    console.log('File analysis saved successfully');
+    console.log('[analyze-project-file] File analysis saved successfully');
 
     return new Response(JSON.stringify({ 
       success: true, 
-      analysis 
+      analysis,
+      model: 'gemini-3'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in analyze-project-file function:', error);
+    console.error('[analyze-project-file] Error:', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Analysis failed' 
@@ -180,3 +306,39 @@ serve(async (req) => {
     );
   }
 });
+
+function getMimeType(extension: string): string {
+  const mimeMap: Record<string, string> = {
+    'pdf': 'application/pdf',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+  return mimeMap[extension] || 'application/octet-stream';
+}
+
+function extractFilePath(fileUrl: string): string {
+  try {
+    const url = new URL(fileUrl);
+    const pathParts = url.pathname.split('/project-files/');
+    if (pathParts.length > 1) {
+      return decodeURIComponent(pathParts[1]);
+    }
+    // Fallback: return everything after the last /object/
+    const objectParts = url.pathname.split('/object/');
+    if (objectParts.length > 1) {
+      const afterObject = objectParts[1];
+      const bucketAndPath = afterObject.split('/').slice(1).join('/');
+      return decodeURIComponent(bucketAndPath);
+    }
+    return fileUrl.split('/').pop() || 'unknown';
+  } catch {
+    return fileUrl.split('/').pop() || 'unknown';
+  }
+}
