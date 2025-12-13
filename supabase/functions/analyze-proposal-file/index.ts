@@ -183,7 +183,10 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 400
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isDocxFormat) {
@@ -212,7 +215,10 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 400
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isExcelFormat) {
@@ -249,7 +255,10 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 400
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isTextFormat) {
@@ -277,7 +286,10 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 400
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         }
@@ -358,7 +370,10 @@ ${projectContext}
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 300
+              maxOutputTokens: 1024,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           }),
         }

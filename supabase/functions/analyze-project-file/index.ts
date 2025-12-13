@@ -184,7 +184,10 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 600
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isDocxFormat) {
@@ -213,7 +216,10 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 600
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isExcelFormat) {
@@ -250,7 +256,10 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 600
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         } else if (isTextFormat) {
@@ -278,7 +287,10 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 600
+              maxOutputTokens: 2048,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           };
         }
@@ -395,7 +407,10 @@ serve(async (req) => {
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 450
+              maxOutputTokens: 1024,
+              thinkingConfig: {
+                thinkingBudget: 0
+              }
             }
           }),
         }
