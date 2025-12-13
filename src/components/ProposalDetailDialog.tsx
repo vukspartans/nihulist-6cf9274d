@@ -173,13 +173,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
           <DialogHeader className="p-6 pb-0">
             <div className="flex items-center justify-between">
-              {getStatusBadge(proposal.status)}
               <DialogTitle className="text-xl font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
+              {getStatusBadge(proposal.status)}
             </div>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full justify-end rounded-none border-b bg-transparent px-6">
+            <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
               <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
@@ -289,7 +289,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <Card key={i}><CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1">
-                        {!hasSummary && <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>generateFileSummary(file)} disabled={isGen}>{isGen?<Loader2 className="w-4 h-4 animate-spin"/>:<Sparkles className="w-4 h-4"/>}</Button></TooltipTrigger><TooltipContent>ניתוח AI</TooltipContent></Tooltip>}
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>generateFileSummary(file)} disabled={isGen}>{isGen?<Loader2 className="w-4 h-4 animate-spin"/>:hasSummary?<RefreshCw className="w-4 h-4"/>:<Sparkles className="w-4 h-4"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleDownload(file)}><Download className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleViewFile(file)}><Eye className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
                       </div>
