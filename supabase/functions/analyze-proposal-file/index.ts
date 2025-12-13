@@ -110,13 +110,13 @@ serve(async (req) => {
     // Determine file type from extension
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
     const mimeType = getMimeType(fileExtension);
-    const isImageOrPdf = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+    const isSupportedForContentAnalysis = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx'].includes(fileExtension);
 
     let aiResponse;
     let summary = '';
 
     // Try to download and analyze actual file content if it's a supported format
-    if (isImageOrPdf && fileUrl) {
+    if (isSupportedForContentAnalysis && fileUrl) {
       console.log('[analyze-proposal-file] Attempting to analyze actual file content');
       
       try {

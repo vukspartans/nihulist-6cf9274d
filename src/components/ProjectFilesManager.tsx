@@ -216,38 +216,48 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     }
   };
 
-  const analyzeFile = async (fileId: string) => {
-    setAnalyzingFiles(prev => new Set(prev).add(fileId));
+  const analyzeFile = async (fileId: string, forceRefresh = false) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) {
+      toast({ title: 'הקובץ לא נמצא', variant: 'destructive' });
+      return;
+    }
+
+    // Check if analysis already exists and not forcing refresh
+    if (file.ai_summary && !forceRefresh) {
+      toast({
+        title: 'ניתוח AI כבר קיים לקובץ זה',
+        description: 'לחץ על "נתח מחדש" כדי לבצע ניתוח חדש',
+        action: (
+          <Button variant="outline" size="sm" onClick={() => analyzeFile(fileId, true)}>
+            נתח מחדש
+          </Button>
+        )
+      });
+      return;
+    }
+
+    setAnalyzingFiles(prev => new Set([...prev, fileId]));
     
     try {
       const { data, error } = await supabase.functions.invoke('analyze-project-file', {
-        body: { fileId }
+        body: { fileId, forceRefresh }
       });
-
-      console.log('Analysis response:', data, error);
 
       if (error) throw error;
 
-      toast({
-        title: "הקובץ נותח בהצלחה",
-        description: "ניתוח ה-AI הושלם ונשמר.",
-      });
-      
-      // Immediately refresh the files to show the updated analysis
-      onFilesUpdate();
-      
+      if (data?.summary) {
+        onFilesUpdate();
+        toast({ title: forceRefresh ? 'הניתוח עודכן בהצלחה' : 'הניתוח הושלם בהצלחה' });
+      }
     } catch (error) {
-      console.error('Analysis error:', error);
-      toast({
-        title: "ניתוח נכשל",
-        description: error instanceof Error ? error.message : "נכשל בניתוח הקובץ",
-        variant: "destructive",
-      });
+      console.error('Error analyzing file:', error);
+      toast({ title: 'שגיאה בניתוח הקובץ', variant: 'destructive' });
     } finally {
       setAnalyzingFiles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(fileId);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
       });
     }
   };
