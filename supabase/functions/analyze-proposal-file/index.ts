@@ -183,10 +183,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isDocxFormat) {
@@ -215,10 +212,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isExcelFormat) {
@@ -255,10 +249,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isTextFormat) {
@@ -286,10 +277,7 @@ ${projectContext}
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         }
@@ -297,7 +285,7 @@ ${projectContext}
         // Send to Gemini 3 Pro Preview
         console.log('[analyze-proposal-file] Sending to Gemini API...');
         const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
           {
             method: 'POST',
             headers: { 
@@ -358,7 +346,7 @@ ${projectContext}
 ⚠️ ניתוח על בסיס שם הקובץ בלבד`;
 
       const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
         {
           method: 'POST',
           headers: { 
@@ -370,10 +358,7 @@ ${projectContext}
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 1024,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 1024
             }
           }),
         }
