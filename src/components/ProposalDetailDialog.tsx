@@ -60,6 +60,10 @@ interface ProposalDetailDialogProps {
     };
     status: string;
     submitted_at: string;
+    // Cached AI analysis fields
+    ai_analysis?: string | null;
+    ai_analysis_generated_at?: string | null;
+    file_summaries?: Record<string, string> | null;
   };
   onSuccess?: () => void;
 }
@@ -91,11 +95,27 @@ export const ProposalDetailDialog = ({
     }
   }, [open, proposal.id]);
 
+  // Load cached AI data when dialog opens
   useEffect(() => {
-    if (open && proposal.files && proposal.files.length > 0) {
-      loadSignedUrls();
+    if (open) {
+      // Load cached AI analysis if available
+      if (proposal.ai_analysis) {
+        setAiAnalysis(proposal.ai_analysis);
+      }
+      // Load cached file summaries if available
+      if (proposal.file_summaries && typeof proposal.file_summaries === 'object') {
+        setFileSummaries(proposal.file_summaries);
+      }
+      // Load signed URLs for files
+      if (proposal.files && proposal.files.length > 0) {
+        loadSignedUrls();
+      }
+    } else {
+      // Reset state when dialog closes
+      setAiAnalysis(null);
+      setFileSummaries({});
     }
-  }, [open, proposal.id]);
+  }, [open, proposal.id, proposal.ai_analysis, proposal.file_summaries]);
 
   const markProposalAsSeen = async (proposalId: string) => {
     try {
@@ -235,11 +255,16 @@ export const ProposalDetailDialog = ({
   };
 
   // AI Analysis functions
-  const generateAiAnalysis = async () => {
+  const generateAiAnalysis = async (forceRefresh = false) => {
+    // If cached and not forcing refresh, use cached version
+    if (!forceRefresh && aiAnalysis) {
+      return;
+    }
+
     setAiAnalysisLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('analyze-proposal', {
-        body: { proposalId: proposal.id }
+        body: { proposalId: proposal.id, forceRefresh }
       });
 
       if (error) throw error;
@@ -261,14 +286,20 @@ export const ProposalDetailDialog = ({
     }
   };
 
-  const generateFileSummary = async (file: UploadedFile) => {
+  const generateFileSummary = async (file: UploadedFile, forceRefresh = false) => {
+    // If cached and not forcing refresh, use cached version
+    if (!forceRefresh && fileSummaries[file.name]) {
+      return;
+    }
+
     setFileSummaryLoading(prev => ({ ...prev, [file.name]: true }));
     try {
       const { data, error } = await supabase.functions.invoke('analyze-proposal-file', {
         body: { 
           proposalId: proposal.id,
           fileName: file.name,
-          fileUrl: file.url
+          fileUrl: file.url,
+          forceRefresh
         }
       });
 
@@ -417,7 +448,7 @@ export const ProposalDetailDialog = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={generateAiAnalysis}
+                    onClick={() => generateAiAnalysis(!!aiAnalysis)}
                     disabled={aiAnalysisLoading}
                   >
                     {aiAnalysisLoading ? (
@@ -582,9 +613,19 @@ export const ProposalDetailDialog = ({
                               </div>
                             ) : fileSummaries[file.name] ? (
                               <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Sparkles className="w-4 h-4 text-primary" />
-                                  <span className="text-sm font-medium">תקציר בינה</span>
+                                <div className="flex items-center justify-between mb-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => generateFileSummary(file, true)}
+                                    className="h-6 px-2 text-muted-foreground hover:text-primary"
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-primary" />
+                                    <span className="text-sm font-medium">תקציר בינה</span>
+                                  </div>
                                 </div>
                                 <p className="text-sm text-right">{fileSummaries[file.name]}</p>
                               </div>
@@ -592,7 +633,7 @@ export const ProposalDetailDialog = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => generateFileSummary(file)}
+                                onClick={() => generateFileSummary(file, false)}
                                 className="text-primary hover:text-primary/80"
                               >
                                 <Sparkles className="w-4 h-4 mr-2" />

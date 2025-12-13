@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const { proposalId } = await req.json();
+    const { proposalId, forceRefresh = false } = await req.json();
 
     if (!proposalId) {
       return new Response(JSON.stringify({ error: 'Proposal ID is required' }), {
@@ -31,22 +31,14 @@ serve(async (req) => {
       });
     }
 
-    console.log('[analyze-proposal] Analyzing proposal:', proposalId);
+    console.log('[analyze-proposal] Analyzing proposal:', proposalId, 'forceRefresh:', forceRefresh);
 
-    // Get proposal details
+    // Get proposal details including cached analysis
     const { data: proposal, error: proposalError } = await supabaseClient
       .from('proposals')
-      .select('*')
+      .select('*, ai_analysis, ai_analysis_generated_at')
       .eq('id', proposalId)
       .single();
-
-    if (proposalError || !proposal) {
-      console.error('[analyze-proposal] Proposal not found:', proposalError);
-      return new Response(JSON.stringify({ error: 'Proposal not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     // Get the RFP invite with request details
     const { data: invite, error: inviteError } = await supabaseClient
@@ -178,11 +170,27 @@ serve(async (req) => {
       throw new Error('No analysis content received from AI');
     }
 
-    console.log('[analyze-proposal] Analysis completed successfully');
+    // Save analysis to database for caching
+    const { error: updateError } = await supabaseClient
+      .from('proposals')
+      .update({
+        ai_analysis: analysis,
+        ai_analysis_generated_at: new Date().toISOString()
+      })
+      .eq('id', proposalId);
+
+    if (updateError) {
+      console.error('[analyze-proposal] Failed to cache analysis:', updateError);
+      // Continue anyway - analysis was generated successfully
+    } else {
+      console.log('[analyze-proposal] Analysis cached successfully');
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      analysis 
+      analysis,
+      cached: false,
+      generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
