@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import RoleBasedRoute from "@/components/RoleBasedRoute";
 import { PasswordChangeModal } from "@/components/PasswordChangeModal";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -32,6 +33,7 @@ import ProjectsManagement from "./pages/admin/ProjectsManagement";
 import RFPsManagement from "./pages/admin/RFPsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
+import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
@@ -75,6 +77,7 @@ const AppContent = () => {
         <ErrorBoundary>
           <Toaster />
           <Sonner />
+          <FeedbackWidget />
           <BrowserRouter>
             <ScrollToTop />
             <RecoveryDeepLinkHandler />
@@ -191,6 +194,7 @@ const AppContent = () => {
             <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
+            <Route path="/heyadmin/feedback" element={<AdminRoute><FeedbackManagement /></AdminRoute>} />
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
