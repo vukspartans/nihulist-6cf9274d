@@ -184,10 +184,7 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isDocxFormat) {
@@ -216,10 +213,7 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isExcelFormat) {
@@ -256,10 +250,7 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         } else if (isTextFormat) {
@@ -287,10 +278,7 @@ serve(async (req) => {
               ]
             }],
             generationConfig: {
-              maxOutputTokens: 2048,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 2048
             }
           };
         }
@@ -298,7 +286,7 @@ serve(async (req) => {
         // Send to Gemini 3 Pro Preview
         console.log('[analyze-project-file] Sending to Gemini API...');
         const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
           {
             method: 'POST',
             headers: { 
@@ -395,7 +383,7 @@ serve(async (req) => {
 ⚠️ ניתוח על בסיס מטאדאטה בלבד`;
 
       const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
         {
           method: 'POST',
           headers: { 
@@ -407,10 +395,7 @@ serve(async (req) => {
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
-              maxOutputTokens: 1024,
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              maxOutputTokens: 1024
             }
           }),
         }
