@@ -171,20 +171,31 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
-          <DialogHeader className="p-6 pb-0">
+          <DialogHeader className="p-6 pb-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
               {getStatusBadge(proposal.status)}
             </div>
+            {proposal.status === 'submitted' && (
+              <div className="flex items-center gap-2 pt-3 justify-end">
+                <Button variant="destructive" size="sm" onClick={handleReject}>
+                  <XCircle className="w-4 h-4 me-1" />
+                  דחה הצעה
+                </Button>
+                <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
+                  <CheckCircle className="w-4 h-4 me-1" />
+                  אשר הצעה
+                </Button>
+              </div>
+            )}
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full flex-row-reverse justify-end rounded-none border-b bg-transparent px-6">
+            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-6">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
               <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
-              {proposal.status === 'submitted' && <TabsTrigger value="actions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פעולות</TabsTrigger>}
             </TabsList>
 
             <ScrollArea className="h-[calc(90vh-180px)]">
@@ -325,26 +336,6 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 </div>
               </TabsContent>
 
-              {proposal.status === 'submitted' && (
-                <TabsContent value="actions" className="p-6 space-y-4 m-0">
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <h4 className="font-semibold text-center">פעולות על ההצעה</h4>
-                      <p className="text-sm text-muted-foreground text-center">בחר פעולה לביצוע על הצעת המחיר</p>
-                      <div className="flex flex-col gap-3">
-                        <Button className="w-full" size="lg" onClick={()=>setShowApprovalDialog(true)}>
-                          אשר הצעה
-                          <CheckCircle className="w-4 h-4 ms-2" />
-                        </Button>
-                        <Button variant="destructive" className="w-full" size="lg" onClick={handleReject}>
-                          דחה הצעה
-                          <XCircle className="w-4 h-4 ms-2" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
             </ScrollArea>
           </Tabs>
         </DialogContent>
