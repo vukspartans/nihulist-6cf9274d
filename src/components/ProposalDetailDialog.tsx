@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
+import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { useToast } from '@/hooks/use-toast';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { supabase } from '@/integrations/supabase/client';
@@ -477,7 +478,7 @@ export const ProposalDetailDialog = ({
                     </div>
                   ) : aiAnalysis ? (
                     <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
-                      <p className="whitespace-pre-wrap text-right leading-relaxed">{aiAnalysis}</p>
+                      <AIAnalysisDisplay content={aiAnalysis} />
                     </div>
                   ) : (
                     <div className="text-center py-6 text-muted-foreground">

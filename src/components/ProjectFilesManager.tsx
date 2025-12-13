@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -430,9 +431,9 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                             <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mt-2">
                               <div className="flex items-start gap-2 mb-2">
                                 <Brain className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-foreground/90 line-clamp-3 leading-relaxed text-right">
-                                  {file.ai_summary}
-                                </p>
+                                <div className="text-xs text-foreground/90 line-clamp-3 leading-relaxed text-right flex-1">
+                                  <AIAnalysisDisplay content={file.ai_summary.split('\n').slice(0, 4).join('\n')} />
+                                </div>
                               </div>
                               <HoverCard>
                                 <HoverCardTrigger asChild>
@@ -440,15 +441,15 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                                     הצג ניתוח מלא ←
                                   </Button>
                                 </HoverCardTrigger>
-                                <HoverCardContent className="w-96" align="start">
+                                <HoverCardContent className="w-[450px]" align="start">
                                   <div className="space-y-2">
                                     <h5 className="font-semibold text-sm flex items-center gap-2">
                                       <Brain className="h-4 w-4 text-primary" />
                                       ניתוח AI מלא
                                     </h5>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap text-right">
-                                      {file.ai_summary}
-                                    </p>
+                                    <div className="max-h-[400px] overflow-y-auto">
+                                      <AIAnalysisDisplay content={file.ai_summary} className="text-sm" />
+                                    </div>
                                   </div>
                                 </HoverCardContent>
                               </HoverCard>
