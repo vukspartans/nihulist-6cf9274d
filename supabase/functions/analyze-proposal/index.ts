@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
@@ -5,6 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Enhanced system prompt optimized for GPT-5.2's reasoning capabilities
+const SYSTEM_PROMPT = `אתה יועץ בכיר לניהול פרויקטי בנייה בישראל עם 20+ שנות ניסיון. 
+אתה מייעץ ליזמי נדל"ן בהערכת הצעות מחיר מספקים ויועצים.
+
+## כללי ניתוח
+1. **השווה בקפדנות** את ההצעה לדרישות המקוריות בבקשת הצעת המחיר
+2. **זהה פערים** - מה נדרש אך לא נכלל בהצעה
+3. **העריך סבירות** - מחיר, לוחות זמנים, היקף ביחס לשוק הישראלי
+4. **סמן סיכונים** - תנאים חריגים, הנחות בעייתיות, החרגות משמעותיות
+
+## מבנה תשובה
+השתמש במבנה הבא בדיוק:
+
+### התאמה לדרישות
+[ניתוח קצר - האם ההצעה עונה על הדרישות?]
+
+### ניתוח מחיר
+[האם המחיר סביר? השווה לטווחי מחירים מקובלים בשוק]
+
+### לוח זמנים
+[האם ריאלי? זהה תלויות וסיכונים]
+
+### נקודות לתשומת לב ⚠️
+• [נקודה 1]
+• [נקודה 2]
+• [נקודה 3]
+
+### המלצה
+🟢 מומלץ לאשר | 🟡 דורש בדיקה/משא ומתן | 🔴 לא מומלץ
+[נימוק קצר]
+
+## סגנון
+- עברית מקצועית וברורה
+- ישיר ותמציתי
+- מקסימום 300 מילים`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,9 +54,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY not configured');
     }
 
     const { proposalId, forceRefresh = false } = await req.json();
@@ -40,6 +77,14 @@ serve(async (req) => {
       .eq('id', proposalId)
       .single();
 
+    if (proposalError || !proposal) {
+      console.error('[analyze-proposal] Proposal not found:', proposalError);
+      return new Response(JSON.stringify({ error: 'Proposal not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Get the RFP invite with request details
     const { data: invite, error: inviteError } = await supabaseClient
       .from('rfp_invites')
@@ -58,6 +103,10 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
+
+    if (inviteError) {
+      console.log('[analyze-proposal] Invite not found:', inviteError);
+    }
 
     // Get project details
     const { data: project, error: projectError } = await supabaseClient
@@ -105,46 +154,31 @@ serve(async (req) => {
 לא כלול: ${conditionsJson.exclusions || 'לא צוין'}
 תוקף ההצעה: ${conditionsJson.validity_days || 'לא צוין'} ימים
 
-=== הנחיות לניתוח ===
-ספק ניתוח קצר וממוקד הכולל:
-1. **התאמה לדרישות** - האם ההצעה עונה על מה שנדרש בבקשה?
-2. **סבירות המחיר** - האם המחיר סביר ביחס להיקף?
-3. **לוח זמנים** - האם הזמנים ריאליים?
-4. **נקודות לתשומת לב** - דברים שכדאי לבדוק או להבהיר
-5. **המלצה** - מומלץ / דורש בדיקה נוספת / לא מומלץ
+נתח את ההצעה על פי המבנה שהוגדר.`;
 
-כתוב בעברית פשוטה וטבעית. היה תמציתי ומעשי.`;
+    console.log('[analyze-proposal] Sending to OpenAI GPT-5.2');
 
-    console.log('[analyze-proposal] Sending to Lovable AI Gateway');
-
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call OpenAI GPT-5.2 directly
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-5-2025-08-07',
+        max_completion_tokens: 1500,
+        // Note: GPT-5.2 doesn't support temperature parameter
         messages: [
-          {
-            role: 'system',
-            content: `אתה מנהל פרויקטי בנייה מקצועי העובד עבור יזם נדל"ן. תפקידך לנתח הצעות מחיר מספקים ולספק הערכה קצרה וברורה.
-
-המטרה שלך היא לעזור ליזם לקבל החלטה מושכלת על ההצעה. התמקד בעובדות, השווה לדרישות המקוריות, והצבע על נקודות חשובות.
-
-כתוב בעברית פשוטה וטבעית. היה ישיר ותמציתי - לא יותר מ-200 מילים.`
-          },
-          {
-            role: 'user',
-            content: analysisPrompt
-          }
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: analysisPrompt }
         ],
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('[analyze-proposal] AI Gateway error:', aiResponse.status, errorText);
+      console.error('[analyze-proposal] OpenAI API error:', aiResponse.status, errorText);
       
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
@@ -153,14 +187,14 @@ serve(async (req) => {
         });
       }
       
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'נדרש טעינת קרדיטים לשירות AI' }), {
+      if (aiResponse.status === 402 || aiResponse.status === 403) {
+        return new Response(JSON.stringify({ error: 'בעיית הרשאות בשירות AI, פנה לתמיכה' }), {
           status: 402,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiResult = await aiResponse.json();
@@ -169,6 +203,8 @@ serve(async (req) => {
     if (!analysis) {
       throw new Error('No analysis content received from AI');
     }
+
+    console.log('[analyze-proposal] Analysis received, length:', analysis.length);
 
     // Save analysis to database for caching
     const { error: updateError } = await supabaseClient
@@ -181,7 +217,6 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('[analyze-proposal] Failed to cache analysis:', updateError);
-      // Continue anyway - analysis was generated successfully
     } else {
       console.log('[analyze-proposal] Analysis cached successfully');
     }
@@ -190,7 +225,8 @@ serve(async (req) => {
       success: true, 
       analysis,
       cached: false,
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      model: 'gpt-5.2'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -1,10 +1,41 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Enhanced system prompt optimized for Gemini 3's document processing
+const SYSTEM_PROMPT = `אתה מומחה לניתוח מסמכים בתחום הבנייה והנדל"ן בישראל.
+
+## יכולותיך
+- קריאת OCR מתקדמת של מסמכים סרוקים
+- זיהוי סוגי מסמכים (חוזים, מפרטים, תוכניות, רישיונות)
+- חילוץ מידע מובנה מקבצים
+
+## משימה
+נתח את הקובץ המצורף להצעת מחיר וספק:
+
+### סוג המסמך
+[זהה את סוג המסמך: הצעת מחיר / מפרט טכני / תעודת ביטוח / רישיון / אחר]
+
+### תוכן עיקרי
+• [נקודה מרכזית 1]
+• [נקודה מרכזית 2]
+• [נקודה מרכזית 3]
+
+### רלוונטיות להחלטה
+[למה המסמך הזה חשוב לבחירת הספק?]
+
+### פעולות מומלצות
+[מה כדאי לבדוק או לוודא?]
+
+## סגנון
+- עברית פשוטה וברורה
+- תמציתי - מקסימום 150 מילים
+- התמקד בעובדות, לא בהשערות`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,9 +48,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+    if (!googleApiKey) {
+      throw new Error('GOOGLE_API_KEY not configured');
     }
 
     const { proposalId, fileName, fileUrl, forceRefresh = false } = await req.json();
@@ -31,17 +62,21 @@ serve(async (req) => {
       });
     }
 
-    console.log('[analyze-proposal-file] Analyzing file:', fileName, 'for proposal:', proposalId, 'forceRefresh:', forceRefresh);
+    console.log('[analyze-proposal-file] Analyzing file:', fileName, 'for proposal:', proposalId);
 
     // Get proposal details for context including cached summaries
     const { data: proposal, error: proposalError } = await supabaseClient
       .from('proposals')
-      .select('supplier_name, project_id, file_summaries')
+      .select('supplier_name, project_id, file_summaries, files')
       .eq('id', proposalId)
       .single();
 
     if (proposalError) {
       console.error('[analyze-proposal-file] Proposal not found:', proposalError);
+      return new Response(JSON.stringify({ error: 'Proposal not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Check cache - return cached summary if exists and not forcing refresh
@@ -74,14 +109,90 @@ serve(async (req) => {
 
     // Determine file type from extension
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-    const fileTypeDescription = getFileTypeDescription(fileExtension);
+    const mimeType = getMimeType(fileExtension);
+    const isImageOrPdf = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
 
-    // Build analysis prompt based on file metadata
-    const analysisPrompt = `נתח קובץ מצורף להצעת מחיר:
+    let aiResponse;
+    let summary = '';
+
+    // Try to download and analyze actual file content if it's a supported format
+    if (isImageOrPdf && fileUrl) {
+      console.log('[analyze-proposal-file] Attempting to analyze actual file content');
+      
+      try {
+        // Extract file path from URL and download from storage
+        const filePath = extractFilePath(fileUrl, proposalId);
+        console.log('[analyze-proposal-file] Downloading file from path:', filePath);
+        
+        const { data: fileBlob, error: downloadError } = await supabaseClient.storage
+          .from('proposal-files')
+          .download(filePath);
+
+        if (downloadError || !fileBlob) {
+          console.log('[analyze-proposal-file] Could not download file, falling back to metadata analysis');
+          throw new Error('File download failed');
+        }
+
+        // Convert blob to base64
+        const arrayBuffer = await fileBlob.arrayBuffer();
+        const base64Data = base64Encode(new Uint8Array(arrayBuffer));
+        
+        console.log('[analyze-proposal-file] File downloaded, size:', arrayBuffer.byteLength, 'bytes');
+
+        // Build prompt with file content
+        const analysisPrompt = `נתח את הקובץ המצורף להצעת מחיר:
+
+שם קובץ: ${fileName}
+ספק: ${proposal?.supplier_name || 'לא ידוע'}
+${projectContext}
+
+נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
+
+        // Send to Gemini 3 with actual file content
+        aiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: SYSTEM_PROMPT + "\n\n" + analysisPrompt },
+                  { 
+                    inlineData: { 
+                      mimeType: mimeType, 
+                      data: base64Data 
+                    } 
+                  }
+                ]
+              }],
+              generationConfig: {
+                maxOutputTokens: 500,
+                temperature: 0.3
+              }
+            }),
+          }
+        );
+
+        if (aiResponse.ok) {
+          const result = await aiResponse.json();
+          summary = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+          console.log('[analyze-proposal-file] Gemini analysis with file content successful');
+        }
+      } catch (fileError) {
+        console.log('[analyze-proposal-file] File content analysis failed, using metadata:', fileError);
+      }
+    }
+
+    // Fallback to metadata-based analysis if file content analysis failed or not applicable
+    if (!summary) {
+      console.log('[analyze-proposal-file] Using metadata-based analysis');
+      
+      const metadataPrompt = `נתח קובץ מצורף להצעת מחיר על בסיס המטאדאטה:
 
 === פרטי הקובץ ===
 שם קובץ: ${fileName}
-סוג: ${fileTypeDescription}
+סוג: ${getFileTypeDescription(fileExtension)}
 ספק: ${proposal?.supplier_name || 'לא ידוע'}
 ${projectContext}
 
@@ -91,65 +202,48 @@ ${projectContext}
 2. למה זה רלוונטי להחלטה על ההצעה
 3. מה כדאי לבדוק בקובץ
 
-כתוב בעברית פשוטה וטבעית. היה תמציתי.`;
+כתוב בעברית פשוטה וטבעית.`;
 
-    console.log('[analyze-proposal-file] Sending to Lovable AI Gateway');
+      aiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: metadataPrompt }]
+            }],
+            generationConfig: {
+              maxOutputTokens: 300,
+              temperature: 0.3
+            }
+          }),
+        }
+      );
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `אתה עוזר מקצועי לחברת יזמות נדל"ן. תפקידך לסייע בבחירת הצעות המחיר הטובות ביותר לפרויקטים.
-
-כשמנתחים קבצים מצורפים להצעות מחיר, התמקד ב:
-- מה הקובץ כנראה מכיל על בסיס השם והסוג
-- למה זה חשוב להחלטה
-- מה כדאי לבדוק
-
-כתוב בעברית פשוטה. תמציתי מאוד - 2-3 משפטים בלבד.`
-          },
-          {
-            role: 'user',
-            content: analysisPrompt
-          }
-        ],
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('[analyze-proposal-file] AI Gateway error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'שירות AI עמוס, נסה שוב' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('[analyze-proposal-file] Gemini API error:', aiResponse.status, errorText);
+        
+        if (aiResponse.status === 429) {
+          return new Response(JSON.stringify({ error: 'שירות AI עמוס, נסה שוב' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        throw new Error(`Gemini API error: ${aiResponse.status}`);
       }
-      
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'נדרש טעינת קרדיטים' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+
+      const result = await aiResponse.json();
+      summary = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     }
-
-    const aiResult = await aiResponse.json();
-    const summary = aiResult.choices?.[0]?.message?.content?.trim() || '';
 
     if (!summary) {
       throw new Error('No summary received from AI');
     }
+
+    console.log('[analyze-proposal-file] Summary generated, length:', summary.length);
 
     // Save summary to database for caching
     const updatedSummaries = { ...existingSummaries, [fileName]: summary };
@@ -168,7 +262,8 @@ ${projectContext}
       success: true, 
       summary,
       fileName,
-      cached: false
+      cached: false,
+      model: 'gemini-3'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -186,6 +281,22 @@ ${projectContext}
     );
   }
 });
+
+function getMimeType(extension: string): string {
+  const mimeMap: Record<string, string> = {
+    'pdf': 'application/pdf',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+  return mimeMap[extension] || 'application/octet-stream';
+}
 
 function getFileTypeDescription(extension: string): string {
   const typeMap: Record<string, string> = {
@@ -205,6 +316,21 @@ function getFileTypeDescription(extension: string): string {
     'zip': 'קובץ דחוס',
     'rar': 'קובץ דחוס',
   };
-  
   return typeMap[extension] || `קובץ ${extension.toUpperCase()}`;
+}
+
+function extractFilePath(fileUrl: string, proposalId: string): string {
+  // Handle various URL formats to extract the file path
+  try {
+    const url = new URL(fileUrl);
+    const pathParts = url.pathname.split('/proposal-files/');
+    if (pathParts.length > 1) {
+      return decodeURIComponent(pathParts[1]);
+    }
+    // Fallback: assume path includes proposal ID
+    return `${proposalId}/${fileUrl.split('/').pop() || 'unknown'}`;
+  } catch {
+    // If URL parsing fails, try to extract filename
+    return `${proposalId}/${fileUrl.split('/').pop() || 'unknown'}`;
+  }
 }
