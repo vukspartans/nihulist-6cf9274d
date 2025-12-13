@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
-import { getProposalFilesSignedUrls } from '@/utils/storageUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +19,11 @@ import {
   FileSignature, 
   AlertCircle,
   Calendar,
-  Shield
+  Shield,
+  Eye,
+  Sparkles,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 
 interface UploadedFile {
@@ -71,6 +74,13 @@ export const ProposalDetailDialog = ({
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  
+  // AI Analysis states
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [fileSummaries, setFileSummaries] = useState<Record<string, string>>({});
+  const [fileSummaryLoading, setFileSummaryLoading] = useState<Record<string, boolean>>({});
+  
   const { toast } = useToast();
   const { rejectProposal, loading: rejectLoading } = useProposalApproval();
 
@@ -93,7 +103,7 @@ export const ProposalDetailDialog = ({
         .from('proposals')
         .update({ seen_by_entrepreneur_at: new Date().toISOString() })
         .eq('id', proposalId)
-        .is('seen_by_entrepreneur_at', null); // Only update if not already seen
+        .is('seen_by_entrepreneur_at', null);
 
       if (error) {
         console.error('[ProposalDetail] Error marking proposal as seen:', error);
@@ -109,13 +119,26 @@ export const ProposalDetailDialog = ({
     setLoadingFiles(true);
     try {
       const files = proposal.files || [];
-      const fileNames = files.map(f => f.name);
-      const signedUrlsMap = await getProposalFilesSignedUrls(proposal.id, fileNames, 3600);
       
-      const filesWithSignedUrls = files.map(file => ({
-        ...file,
-        signedUrl: signedUrlsMap.get(file.name),
-      }));
+      const filesWithSignedUrls = await Promise.all(
+        files.map(async (file) => {
+          // Use the stored url path directly
+          const filePath = file.url || `${proposal.id}/${file.name}`;
+          
+          const { data, error } = await supabase.storage
+            .from('proposal-files')
+            .createSignedUrl(filePath, 3600);
+          
+          if (error) {
+            console.error('[ProposalDetail] Error getting signed URL for:', file.name, error);
+          }
+          
+          return {
+            ...file,
+            signedUrl: error ? undefined : data?.signedUrl,
+          };
+        })
+      );
       
       setFilesWithUrls(filesWithSignedUrls);
     } catch (error) {
@@ -127,6 +150,38 @@ export const ProposalDetailDialog = ({
       });
     } finally {
       setLoadingFiles(false);
+    }
+  };
+
+  const handleViewFile = async (file: UploadedFile & { signedUrl?: string }) => {
+    if (!file.signedUrl) {
+      toast({
+        title: 'שגיאה',
+        description: 'לא ניתן לצפות בקובץ',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(file.signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('[ProposalDetail] View error:', error);
+      toast({
+        title: 'שגיאה',
+        description: 'לא ניתן לפתוח את הקובץ',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -179,6 +234,63 @@ export const ProposalDetailDialog = ({
     }
   };
 
+  // AI Analysis functions
+  const generateAiAnalysis = async () => {
+    setAiAnalysisLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-proposal', {
+        body: { proposalId: proposal.id }
+      });
+
+      if (error) throw error;
+
+      if (data?.analysis) {
+        setAiAnalysis(data.analysis);
+      } else {
+        throw new Error('No analysis returned');
+      }
+    } catch (error) {
+      console.error('[ProposalDetail] AI analysis error:', error);
+      toast({
+        title: 'שגיאה בניתוח',
+        description: 'לא ניתן לייצר ניתוח AI כרגע',
+        variant: 'destructive',
+      });
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
+
+  const generateFileSummary = async (file: UploadedFile) => {
+    setFileSummaryLoading(prev => ({ ...prev, [file.name]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-proposal-file', {
+        body: { 
+          proposalId: proposal.id,
+          fileName: file.name,
+          fileUrl: file.url
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.summary) {
+        setFileSummaries(prev => ({ ...prev, [file.name]: data.summary }));
+      } else {
+        throw new Error('No summary returned');
+      }
+    } catch (error) {
+      console.error('[ProposalDetail] File summary error:', error);
+      toast({
+        title: 'שגיאה',
+        description: 'לא ניתן לייצר תקציר לקובץ',
+        variant: 'destructive',
+      });
+    } finally {
+      setFileSummaryLoading(prev => ({ ...prev, [file.name]: false }));
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
       style: 'currency',
@@ -213,59 +325,60 @@ export const ProposalDetailDialog = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
-      <DialogHeader className="border-b pb-4">
-        <div className="flex items-center justify-between">
-          <div className="text-right">
-            <DialogTitle className="text-2xl font-bold text-right">
-              הצעת מחיר
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1 text-right">
-              {proposal.supplier_name}
-            </p>
-          </div>
-          {getStatusBadge(proposal.status)}
-        </div>
-      </DialogHeader>
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <DialogTitle className="text-2xl font-bold text-right">
+                  הצעת מחיר
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1 text-right">
+                  {proposal.supplier_name}
+                </p>
+              </div>
+              {getStatusBadge(proposal.status)}
+            </div>
+          </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="w-full justify-start overflow-x-auto flex md:grid md:grid-cols-5">
-              <TabsTrigger value="details">
+            {/* RTL Tab ordering - flex-row-reverse ensures פרטים is on the right */}
+            <TabsList className="w-full flex flex-row-reverse justify-end overflow-x-auto md:grid md:grid-cols-5" dir="rtl">
+              <TabsTrigger value="details" className="flex-row-reverse">
+                <FileText className="w-4 h-4 mr-2" />
                 פרטים
-                <FileText className="w-4 h-4 ml-2" />
               </TabsTrigger>
-              <TabsTrigger value="conditions">
+              <TabsTrigger value="conditions" className="flex-row-reverse">
+                <Shield className="w-4 h-4 mr-2" />
                 תנאים
-                <Shield className="w-4 h-4 ml-2" />
               </TabsTrigger>
-              <TabsTrigger value="files">
+              <TabsTrigger value="files" className="flex-row-reverse">
+                <Download className="w-4 h-4 mr-2" />
                 קבצים ({proposal.files?.length || 0})
-                <Download className="w-4 h-4 ml-2" />
               </TabsTrigger>
-              <TabsTrigger value="signature">
+              <TabsTrigger value="signature" className="flex-row-reverse">
+                <FileSignature className="w-4 h-4 mr-2" />
                 חתימה
-                <FileSignature className="w-4 h-4 ml-2" />
               </TabsTrigger>
-              <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'}>
+              <TabsTrigger value="actions" disabled={proposal.status !== 'submitted'} className="flex-row-reverse">
+                <CheckCircle className="w-4 h-4 mr-2" />
                 פעולות
-                <CheckCircle className="w-4 h-4 ml-2" />
               </TabsTrigger>
             </TabsList>
 
             {/* Details Tab */}
             <TabsContent value="details" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-right">סיכום ההצעה</CardTitle>
-            </CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg text-right">סיכום ההצעה</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                       <div className="flex-1 text-right">
                         <p className="text-sm text-muted-foreground">מחיר מוצע</p>
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.price)}</p>
-                </div>
-              <Banknote className="w-8 h-8 text-primary" />
-              </div>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.price)}</p>
+                      </div>
+                      <Banknote className="w-8 h-8 text-primary" />
+                    </div>
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                       <div className="flex-1 text-right">
                         <p className="text-sm text-muted-foreground">זמן ביצוע</p>
@@ -276,10 +389,10 @@ export const ProposalDetailDialog = ({
                   </div>
 
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="flex-1 text-right">
-                  <p className="text-sm text-muted-foreground text-right">תאריך הגשה</p>
-                  <p className="font-medium text-right" dir="rtl">{formatDate(proposal.submitted_at)}</p>
-                </div>
+                    <div className="flex-1 text-right">
+                      <p className="text-sm text-muted-foreground text-right">תאריך הגשה</p>
+                      <p className="font-medium text-right" dir="rtl">{formatDate(proposal.submitted_at)}</p>
+                    </div>
                     <Calendar className="w-6 h-6 text-muted-foreground" />
                   </div>
 
@@ -293,21 +406,72 @@ export const ProposalDetailDialog = ({
                   )}
                 </CardContent>
               </Card>
+
+              {/* AI Analysis Section */}
+              <Card className="border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <CardTitle className="text-lg">ניתוח AI</CardTitle>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateAiAnalysis}
+                    disabled={aiAnalysisLoading}
+                  >
+                    {aiAnalysisLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        מנתח...
+                      </>
+                    ) : aiAnalysis ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        רענן ניתוח
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        ייצר ניתוח
+                      </>
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {aiAnalysisLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <span className="mr-3 text-muted-foreground">מנתח את ההצעה...</span>
+                    </div>
+                  ) : aiAnalysis ? (
+                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
+                      <p className="whitespace-pre-wrap text-right leading-relaxed">{aiAnalysis}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>לחץ על "ייצר ניתוח" לקבלת הערכה מקצועית של ההצעה</p>
+                      <p className="text-sm mt-1">הניתוח משווה את ההצעה לדרישות המקוריות</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Conditions Tab */}
             <TabsContent value="conditions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-right">תנאי ההצעה</CardTitle>
-            </CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg text-right">תנאי ההצעה</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   {proposal.conditions_json?.payment_terms && (
                     <div className="space-y-2">
-                  <div className="flex items-center gap-2 justify-end">
-                    <h4 className="font-semibold text-lg">תנאי תשלום</h4>
-                    <Banknote className="w-5 h-5 text-primary" />
-                  </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <h4 className="font-semibold text-lg">תנאי תשלום</h4>
+                        <Banknote className="w-5 h-5 text-primary" />
+                      </div>
                       <p className="bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-right">
                         {proposal.conditions_json.payment_terms}
                       </p>
@@ -366,51 +530,89 @@ export const ProposalDetailDialog = ({
 
             {/* Files Tab */}
             <TabsContent value="files" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-right">קבצים מצורפים</CardTitle>
-            </CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg text-right">קבצים מצורפים</CardTitle>
+                </CardHeader>
                 <CardContent>
                   {loadingFiles ? (
                     <p className="text-center text-muted-foreground py-8">טוען קבצים...</p>
                   ) : filesWithUrls.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       {filesWithUrls.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition"
-                        >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(file)}
-                            disabled={!file.signedUrl}
-                          >
-                            הורדה
-                            <Download className="w-4 h-4 ml-2" />
-                          </Button>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-medium text-right">{file.name}</p>
-                        <p className="text-sm text-muted-foreground text-right">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <FileText className="w-8 h-8 text-primary" />
-                    </div>
+                        <div key={index} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewFile(file)}
+                                disabled={!file.signedUrl}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                צפייה
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownload(file)}
+                                disabled={!file.signedUrl}
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                הורדה
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <p className="font-medium text-right">{file.name}</p>
+                                <p className="text-sm text-muted-foreground text-right">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                              <FileText className="w-8 h-8 text-primary" />
+                            </div>
+                          </div>
+                          
+                          {/* AI File Summary Section */}
+                          <div className="border-t pt-3">
+                            {fileSummaryLoading[file.name] ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>מייצר תקציר...</span>
+                              </div>
+                            ) : fileSummaries[file.name] ? (
+                              <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Sparkles className="w-4 h-4 text-primary" />
+                                  <span className="text-sm font-medium">תקציר בינה</span>
+                                </div>
+                                <p className="text-sm text-right">{fileSummaries[file.name]}</p>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => generateFileSummary(file)}
+                                className="text-primary hover:text-primary/80"
+                              >
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                תקציר בינה
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-            <div className="flex flex-col items-center justify-center py-12">
-              <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-              <p className="text-right text-muted-foreground font-medium">
-                לא צורפו קבצים להצעה זו
-              </p>
-              <p className="text-sm text-muted-foreground/70 mt-1 text-right">
-                הספק לא העלה מסמכים נוספים
-              </p>
-            </div>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                      <p className="text-right text-muted-foreground font-medium">
+                        לא צורפו קבצים להצעה זו
+                      </p>
+                      <p className="text-sm text-muted-foreground/70 mt-1 text-right">
+                        הספק לא העלה מסמכים נוספים
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -418,10 +620,10 @@ export const ProposalDetailDialog = ({
 
             {/* Signature Tab */}
             <TabsContent value="signature" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-right">חתימה דיגיטלית</CardTitle>
-            </CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg text-right">חתימה דיגיטלית</CardTitle>
+                </CardHeader>
                 <CardContent>
                   {proposal.signature_blob ? (
                     <div className="space-y-4">
@@ -471,10 +673,10 @@ export const ProposalDetailDialog = ({
 
             {/* Actions Tab */}
             <TabsContent value="actions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-right">פעולות על ההצעה</CardTitle>
-            </CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg text-right">פעולות על ההצעה</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
