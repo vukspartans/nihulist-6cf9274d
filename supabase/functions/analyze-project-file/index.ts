@@ -118,8 +118,8 @@ serve(async (req) => {
       console.log('[analyze-project-file] Attempting to analyze actual file content');
       
       try {
-        // Extract file path from URL
-        const filePath = extractFilePath(fileData.file_url);
+        // Use file_url directly as it's already the storage path
+        const filePath = fileData.file_url;
         console.log('[analyze-project-file] Downloading file from path:', filePath);
         
         const { data: fileBlob, error: downloadError } = await supabaseClient.storage
@@ -152,9 +152,9 @@ serve(async (req) => {
 
 נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
 
-        // Send to Gemini 3 Pro Preview with actual file content
+        // Send to Gemini 2.5 Flash (stable model for direct API)
         const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${googleApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -229,7 +229,7 @@ serve(async (req) => {
 כתוב בעברית. היה תמציתי ומועיל.`;
 
       const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${googleApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
