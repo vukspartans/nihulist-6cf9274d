@@ -176,9 +176,48 @@ serve(async (req) => {
     let analysis = '';
     let modelUsed = '';
 
-    // Try Lovable Gateway first (uses gemini-2.5-flash by default)
-    if (lovableApiKey) {
-      console.log('[analyze-proposal] Using Lovable AI Gateway');
+    // Try direct OpenAI with gpt-5.2 first (preferred)
+    if (openaiApiKey) {
+      console.log('[analyze-proposal] Using OpenAI gpt-5.2');
+      
+      try {
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-5.2',
+            max_completion_tokens: 1500, // gpt-5.2 uses max_completion_tokens, not max_tokens
+            // Note: temperature is NOT supported by gpt-5.2
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: analysisPrompt }
+            ],
+          }),
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          console.error('[analyze-proposal] OpenAI gpt-5.2 error:', aiResponse.status, errorText);
+          // Will fall through to Lovable Gateway fallback
+        } else {
+          const aiResult = await aiResponse.json();
+          console.log('[analyze-proposal] OpenAI gpt-5.2 response:', JSON.stringify(aiResult).substring(0, 200));
+          
+          analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
+          modelUsed = 'gpt-5.2';
+        }
+      } catch (openaiError) {
+        console.error('[analyze-proposal] OpenAI gpt-5.2 failed:', openaiError);
+        // Will fall through to Lovable Gateway fallback
+      }
+    }
+
+    // Fallback to Lovable Gateway with gemini-2.5-flash if OpenAI failed
+    if (!analysis && lovableApiKey) {
+      console.log('[analyze-proposal] Falling back to Lovable Gateway (gemini-2.5-flash)');
       
       try {
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -188,7 +227,8 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'openai/gpt-5',
+            model: 'google/gemini-2.5-flash',
+            max_completion_tokens: 1500,
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
               { role: 'user', content: analysisPrompt }
@@ -213,53 +253,16 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
+        } else {
+          const aiResult = await aiResponse.json();
+          console.log('[analyze-proposal] Lovable Gateway response:', JSON.stringify(aiResult).substring(0, 200));
           
-          throw new Error(`Lovable Gateway error: ${aiResponse.status}`);
+          analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
+          modelUsed = 'google/gemini-2.5-flash';
         }
-
-        const aiResult = await aiResponse.json();
-        console.log('[analyze-proposal] Lovable Gateway response:', JSON.stringify(aiResult).substring(0, 200));
-        
-        analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
-        modelUsed = 'openai/gpt-5';
       } catch (gatewayError) {
         console.error('[analyze-proposal] Lovable Gateway failed:', gatewayError);
-        // Will fall through to OpenAI if available
       }
-    }
-
-    // Fallback to direct OpenAI if Lovable Gateway failed or not available
-    if (!analysis && openaiApiKey) {
-      console.log('[analyze-proposal] Falling back to direct OpenAI API');
-      
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 1500,
-          temperature: 0.3,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: analysisPrompt }
-          ],
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error('[analyze-proposal] OpenAI API error:', aiResponse.status, errorText);
-        throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText}`);
-      }
-
-      const aiResult = await aiResponse.json();
-      console.log('[analyze-proposal] OpenAI response:', JSON.stringify(aiResult).substring(0, 200));
-      
-      analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
-      modelUsed = 'gpt-4o';
     }
 
     if (!analysis) {
