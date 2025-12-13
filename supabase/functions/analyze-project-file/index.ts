@@ -301,8 +301,40 @@ serve(async (req) => {
 
         if (aiResponse.ok) {
           const result = await aiResponse.json();
-          analysis = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-          console.log('[analyze-project-file] Content analysis successful, length:', analysis.length);
+          console.log('[analyze-project-file] Full API response structure:', JSON.stringify(result).substring(0, 1000));
+          
+          // Handle various response structures - Gemini 3 may have different format
+          const candidate = result.candidates?.[0];
+          if (candidate) {
+            // Check for content filtering
+            if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'BLOCKED') {
+              console.log('[analyze-project-file] Response blocked by safety filter');
+              throw new Error('Content blocked by safety filter');
+            }
+            
+            // Try to extract text from various possible locations
+            const parts = candidate.content?.parts;
+            if (parts && parts.length > 0) {
+              // Look for text in any part
+              for (const part of parts) {
+                if (part.text) {
+                  analysis = part.text.trim();
+                  break;
+                }
+              }
+            }
+            
+            // Also check modelVersion and other fields for debugging
+            console.log('[analyze-project-file] Candidate finishReason:', candidate.finishReason);
+            console.log('[analyze-project-file] Candidate parts count:', parts?.length || 0);
+          }
+          
+          console.log('[analyze-project-file] Content analysis result, length:', analysis.length);
+          
+          if (!analysis && result.promptFeedback?.blockReason) {
+            console.error('[analyze-project-file] Prompt blocked:', result.promptFeedback.blockReason);
+            throw new Error('Prompt blocked: ' + result.promptFeedback.blockReason);
+          }
         } else {
           const errorText = await aiResponse.text();
           console.error('[analyze-project-file] Gemini API error:', aiResponse.status, errorText);
@@ -371,7 +403,7 @@ serve(async (req) => {
 
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
-        console.error('[analyze-project-file] Gemini API error:', aiResponse.status, errorText);
+        console.error('[analyze-project-file] Gemini metadata API error:', aiResponse.status, errorText);
         
         if (aiResponse.status === 429) {
           return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
@@ -384,7 +416,18 @@ serve(async (req) => {
       }
 
       const result = await aiResponse.json();
-      analysis = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      console.log('[analyze-project-file] Metadata analysis response:', JSON.stringify(result).substring(0, 500));
+      
+      // Extract text from response
+      const candidate = result.candidates?.[0];
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.text) {
+            analysis = part.text.trim();
+            break;
+          }
+        }
+      }
     }
 
     if (!analysis) {
