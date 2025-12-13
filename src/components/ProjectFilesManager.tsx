@@ -246,7 +246,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
 
       if (error) throw error;
 
-      if (data?.summary) {
+      if (data?.success || data?.analysis) {
         onFilesUpdate();
         toast({ title: forceRefresh ? 'הניתוח עודכן בהצלחה' : 'הניתוח הושלם בהצלחה' });
       }
