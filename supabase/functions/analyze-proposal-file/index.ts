@@ -148,9 +148,9 @@ ${projectContext}
 
 נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
 
-        // Send to Gemini 3 with actual file content
+        // Send to Gemini 3 Pro Preview with actual file content
         aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -205,7 +205,7 @@ ${projectContext}
 כתוב בעברית פשוטה וטבעית.`;
 
       aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -263,7 +263,7 @@ ${projectContext}
       summary,
       fileName,
       cached: false,
-      model: 'gemini-3'
+      model: 'gemini-3-pro-preview'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
