@@ -161,12 +161,17 @@ const Dashboard = () => {
 
   const fetchUnseenProposalCounts = async (projectIds: string[]) => {
     try {
+      // Calculate 24 hours ago
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
       const { data, error } = await supabase
         .from('proposals')
         .select('project_id')
         .in('project_id', projectIds)
         .is('seen_by_entrepreneur_at', null)
-        .eq('status', 'submitted');
+        .eq('status', 'submitted')
+        .gte('submitted_at', twentyFourHoursAgo.toISOString()); // Within last 24 hours
 
       if (error) {
         console.error('[Dashboard] Error fetching unseen proposal counts:', error);
@@ -179,7 +184,7 @@ const Dashboard = () => {
         counts[p.project_id] = (counts[p.project_id] || 0) + 1;
       });
       
-      console.info('[Dashboard] Unseen proposal counts:', counts);
+      console.info('[Dashboard] Unseen proposal counts (24h + unseen):', counts);
       setUnseenProposalCounts(counts);
     } catch (error) {
       console.error('[Dashboard] Error in fetchUnseenProposalCounts:', error);
