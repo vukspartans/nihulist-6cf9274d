@@ -135,12 +135,12 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     finally { setIsGeneratingAi(false); }
   };
 
-  const generateFileSummary = async (file: UploadedFile) => {
+  const generateFileSummary = async (file: UploadedFile, forceRefresh: boolean = false) => {
     setGeneratingFileSummary(file.name);
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-proposal-file', { body: { proposalId: proposal.id, fileName: file.name, fileUrl: fileUrls[file.name] || file.url } });
+      const { data, error } = await supabase.functions.invoke('analyze-proposal-file', { body: { proposalId: proposal.id, fileName: file.name, fileUrl: fileUrls[file.name] || file.url, forceRefresh } });
       if (error) throw error;
-      if (data?.summary) { const updated = { ...fileSummaries, [file.name]: data.summary }; setFileSummaries(updated); await supabase.from('proposals').update({ file_summaries: updated }).eq('id', proposal.id); toast({ title: "סיכום הקובץ הושלם" }); }
+      if (data?.summary) { const updated = { ...fileSummaries, [file.name]: data.summary }; setFileSummaries(updated); await supabase.from('proposals').update({ file_summaries: updated }).eq('id', proposal.id); toast({ title: forceRefresh ? "סיכום הקובץ רוענן" : "סיכום הקובץ הושלם" }); }
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
     finally { setGeneratingFileSummary(null); }
   };
@@ -300,7 +300,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <Card key={i}><CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1">
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>generateFileSummary(file)} disabled={isGen}>{isGen?<Loader2 className="w-4 h-4 animate-spin"/>:hasSummary?<RefreshCw className="w-4 h-4"/>:<Sparkles className="w-4 h-4"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>generateFileSummary(file, !!fileSummaries[file.name])} disabled={isGen}>{isGen?<Loader2 className="w-4 h-4 animate-spin"/>:hasSummary?<RefreshCw className="w-4 h-4"/>:<Sparkles className="w-4 h-4"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleDownload(file)}><Download className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleViewFile(file)}><Eye className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
                       </div>
