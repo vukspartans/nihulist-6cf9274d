@@ -148,12 +148,15 @@ ${projectContext}
 
 נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
 
-        // Send to Gemini 2.5 Flash (stable model for direct API)
+        // Send to Gemini 3 Pro Preview
         aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-goog-api-key': googleApiKey
+            },
             body: JSON.stringify({
               contents: [{
                 parts: [
@@ -168,7 +171,9 @@ ${projectContext}
               }],
               generationConfig: {
                 maxOutputTokens: 500,
-                temperature: 0.3
+                thinkingConfig: {
+                  thinkingLevel: "low"
+                }
               }
             }),
           }
@@ -205,17 +210,22 @@ ${projectContext}
 כתוב בעברית פשוטה וטבעית.`;
 
       aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-goog-api-key': googleApiKey
+          },
           body: JSON.stringify({
             contents: [{
               parts: [{ text: metadataPrompt }]
             }],
             generationConfig: {
               maxOutputTokens: 300,
-              temperature: 0.3
+              thinkingConfig: {
+                thinkingLevel: "low"
+              }
             }
           }),
         }
@@ -263,7 +273,7 @@ ${projectContext}
       summary,
       fileName,
       cached: false,
-      model: 'gemini-2.5-flash'
+      model: 'gemini-3-pro-preview'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
