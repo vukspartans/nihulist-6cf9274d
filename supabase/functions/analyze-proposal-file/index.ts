@@ -184,7 +184,7 @@ ${projectContext}
             }],
             generationConfig: {
               maxOutputTokens: 8192,
-              mediaResolution: "medium"
+              mediaResolution: "MEDIA_RESOLUTION_MEDIUM"
             }
           };
         } else if (isDocxFormat) {
