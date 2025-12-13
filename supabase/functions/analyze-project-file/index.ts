@@ -152,9 +152,9 @@ serve(async (req) => {
 
 נא לנתח את תוכן המסמך על פי המבנה שהוגדר.`;
 
-        // Send to Gemini 3 with actual file content
+        // Send to Gemini 3 Pro Preview with actual file content
         const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -229,7 +229,7 @@ serve(async (req) => {
 כתוב בעברית. היה תמציתי ומועיל.`;
 
       const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${googleApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -288,7 +288,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true, 
       analysis,
-      model: 'gemini-3'
+      model: 'gemini-3-pro-preview'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

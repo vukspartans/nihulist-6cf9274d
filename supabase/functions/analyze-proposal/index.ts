@@ -54,12 +54,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check for Lovable API key first (preferred), then OpenAI
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    // Require OpenAI API key for GPT-5.2
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     
-    if (!lovableApiKey && !openaiApiKey) {
-      throw new Error('No AI API key configured (LOVABLE_API_KEY or OPENAI_API_KEY)');
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY is required for proposal analysis');
     }
 
     const { proposalId, forceRefresh = false } = await req.json();
@@ -174,96 +173,38 @@ serve(async (req) => {
 נתח את ההצעה על פי המבנה שהוגדר.`;
 
     let analysis = '';
-    let modelUsed = '';
+    const modelUsed = 'gpt-5.2';
 
-    // Try direct OpenAI with gpt-5.2 first (preferred)
-    if (openaiApiKey) {
-      console.log('[analyze-proposal] Using OpenAI gpt-5.2');
-      
-      try {
-        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-5.2',
-            max_completion_tokens: 1500, // gpt-5.2 uses max_completion_tokens, not max_tokens
-            // Note: temperature is NOT supported by gpt-5.2
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: analysisPrompt }
-            ],
-          }),
-        });
+    // Use OpenAI GPT-5.2 directly (no fallback to Lovable Gateway)
+    console.log('[analyze-proposal] Using OpenAI gpt-5.2');
+    
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5.2',
+        max_completion_tokens: 1500, // gpt-5.2 uses max_completion_tokens, not max_tokens
+        // Note: temperature is NOT supported by gpt-5.2
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: analysisPrompt }
+        ],
+      }),
+    });
 
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error('[analyze-proposal] OpenAI gpt-5.2 error:', aiResponse.status, errorText);
-          // Will fall through to Lovable Gateway fallback
-        } else {
-          const aiResult = await aiResponse.json();
-          console.log('[analyze-proposal] OpenAI gpt-5.2 response:', JSON.stringify(aiResult).substring(0, 200));
-          
-          analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
-          modelUsed = 'gpt-5.2';
-        }
-      } catch (openaiError) {
-        console.error('[analyze-proposal] OpenAI gpt-5.2 failed:', openaiError);
-        // Will fall through to Lovable Gateway fallback
-      }
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('[analyze-proposal] OpenAI gpt-5.2 error:', aiResponse.status, errorText);
+      throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText}`);
     }
 
-    // Fallback to Lovable Gateway with gemini-2.5-flash if OpenAI failed
-    if (!analysis && lovableApiKey) {
-      console.log('[analyze-proposal] Falling back to Lovable Gateway (gemini-2.5-flash)');
-      
-      try {
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            max_completion_tokens: 1500,
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: analysisPrompt }
-            ],
-          }),
-        });
-
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error('[analyze-proposal] Lovable Gateway error:', aiResponse.status, errorText);
-          
-          if (aiResponse.status === 429) {
-            return new Response(JSON.stringify({ error: 'שירות AI עמוס כרגע, נסה שוב מאוחר יותר' }), {
-              status: 429,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          
-          if (aiResponse.status === 402) {
-            return new Response(JSON.stringify({ error: 'נדרש טעינת קרדיטים לשירות AI' }), {
-              status: 402,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-        } else {
-          const aiResult = await aiResponse.json();
-          console.log('[analyze-proposal] Lovable Gateway response:', JSON.stringify(aiResult).substring(0, 200));
-          
-          analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
-          modelUsed = 'google/gemini-2.5-flash';
-        }
-      } catch (gatewayError) {
-        console.error('[analyze-proposal] Lovable Gateway failed:', gatewayError);
-      }
-    }
+    const aiResult = await aiResponse.json();
+    console.log('[analyze-proposal] OpenAI gpt-5.2 response:', JSON.stringify(aiResult).substring(0, 200));
+    
+    analysis = aiResult.choices?.[0]?.message?.content?.trim() || '';
 
     if (!analysis) {
       throw new Error('No analysis content received from AI');
