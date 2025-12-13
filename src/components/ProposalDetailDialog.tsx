@@ -125,12 +125,12 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
   };
 
-  const generateAiAnalysis = async () => {
+  const generateAiAnalysis = async (forceRefresh: boolean = false) => {
     setIsGeneratingAi(true);
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-proposal', { body: { proposalId: proposal.id, projectId } });
+      const { data, error } = await supabase.functions.invoke('analyze-proposal', { body: { proposalId: proposal.id, projectId, forceRefresh } });
       if (error) throw error;
-      if (data?.analysis) { setAiAnalysis(data.analysis); toast({ title: "ניתוח AI הושלם" }); }
+      if (data?.analysis) { setAiAnalysis(data.analysis); toast({ title: forceRefresh ? "ניתוח AI רוענן" : "ניתוח AI הושלם" }); }
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
     finally { setIsGeneratingAi(false); }
   };
@@ -253,7 +253,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 )}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Button variant="outline" size="sm" onClick={generateAiAnalysis} disabled={isGeneratingAi}>
+                    <Button variant="outline" size="sm" onClick={() => generateAiAnalysis(!!aiAnalysis)} disabled={isGeneratingAi}>
                       {isGeneratingAi ? <>מנתח...<Loader2 className="w-3.5 h-3.5 animate-spin ms-1" /></> : aiAnalysis ? <>רענן<RefreshCw className="w-3.5 h-3.5 ms-1" /></> : <>ייצר ניתוח<Sparkles className="w-3.5 h-3.5 ms-1" /></>}
                     </Button>
                     <SectionHeader icon={Sparkles} className="text-primary">ניתוח AI</SectionHeader>
