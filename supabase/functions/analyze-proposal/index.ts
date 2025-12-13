@@ -104,7 +104,8 @@ serve(async (req) => {
       });
     }
 
-    // Get the RFP invite with request details
+    // Get the RFP invite with request details - filter by BOTH advisor_id AND project_id
+    // to ensure we get the correct invite for this specific proposal
     const { data: invite, error: inviteError } = await supabaseClient
       .from('rfp_invites')
       .select(`
@@ -119,12 +120,13 @@ serve(async (req) => {
         )
       `)
       .eq('advisor_id', proposal.advisor_id)
+      .eq('rfps.project_id', proposal.project_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
     if (inviteError) {
-      console.log('[analyze-proposal] Invite not found:', inviteError);
+      console.log('[analyze-proposal] Invite not found:', inviteError, 'for advisor:', proposal.advisor_id, 'project:', proposal.project_id);
     }
 
     // Get project details
