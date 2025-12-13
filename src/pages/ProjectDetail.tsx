@@ -119,24 +119,58 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-    const { data, error } = await supabase
-      .from('proposals')
-      .select(`
-        *,
-        advisors!proposals_advisor_id_fkey (
-          id,
-          company_name,
-          logo_url,
-          expertise,
-          rating,
-          location
-        )
-      `)
-      .eq('project_id', id)
-      .order('submitted_at', { ascending: false });
+      // First fetch proposals with advisor data
+      const { data: proposalsData, error: proposalsError } = await supabase
+        .from('proposals')
+        .select(`
+          *,
+          advisors!proposals_advisor_id_fkey (
+            id,
+            company_name,
+            logo_url,
+            expertise,
+            rating,
+            location,
+            founding_year,
+            office_size,
+            website,
+            linkedin_url
+          )
+        `)
+        .eq('project_id', id)
+        .order('submitted_at', { ascending: false });
 
-      if (error) throw error;
-      setProposals(data || []);
+      if (proposalsError) throw proposalsError;
+
+      // Fetch RFP invite context for each proposal
+      const proposalsWithContext = await Promise.all(
+        (proposalsData || []).map(async (proposal) => {
+          // Get the RFP invite for this advisor
+          const { data: inviteData } = await supabase
+            .from('rfp_invites')
+            .select('advisor_type, request_title, deadline_at')
+            .eq('advisor_id', proposal.advisor_id)
+            .eq('rfp_id', (
+              await supabase
+                .from('rfps')
+                .select('id')
+                .eq('project_id', id)
+                .order('sent_at', { ascending: false })
+                .limit(1)
+                .single()
+            ).data?.id || '')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          return {
+            ...proposal,
+            rfp_invite: inviteData || undefined
+          };
+        })
+      );
+
+      setProposals(proposalsWithContext);
     } catch (error) {
       console.error('Error fetching proposals:', error);
     } finally {
