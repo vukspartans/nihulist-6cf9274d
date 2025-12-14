@@ -244,7 +244,7 @@ const Auth = () => {
         });
       } else {
         // Signup - step 2
-        const redirectUrl = `${window.location.origin}/`;
+        const redirectUrl = `${window.location.origin}/auth/verified`;
         
         const { error } = await supabase.auth.signUp({
           email: formData.email,
@@ -337,7 +337,7 @@ const Auth = () => {
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${window.location.origin}/auth/verified`
         }
       });
 

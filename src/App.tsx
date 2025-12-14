@@ -13,6 +13,7 @@ import { PasswordChangeModal } from "@/components/PasswordChangeModal";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import EmailVerified from "./pages/EmailVerified";
 import Dashboard from "./pages/Dashboard";
 import AdvisorDashboard from "./pages/AdvisorDashboard";
 import AdvisorProfile from "./pages/AdvisorProfile";
@@ -87,6 +88,7 @@ const AppContent = () => {
             <Route path="/for-entrepreneurs" element={<ForEntrepreneurs />} />
             <Route path="/for-consultants" element={<ForConsultants />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/verified" element={<EmailVerified />} />
             <Route path="/submit" element={<SupplierSubmit />} />
             <Route 
               path="/dashboard" 
