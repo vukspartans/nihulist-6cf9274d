@@ -67,61 +67,81 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);
     
-    try {
-      const uploadedFileIds: string[] = [];
-      
-      for (const file of acceptedFiles) {
+    const uploadedFileIds: string[] = [];
+    const failedFiles: { file: File; error: string }[] = [];
+    
+    for (const file of acceptedFiles) {
+      try {
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${projectId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         
-          const { error: uploadError } = await supabase.storage
-            .from('project-files')
-            .upload(fileName, file, { upsert: false, contentType: file.type });
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(fileName, file, { upsert: false, contentType: file.type });
 
-          if (uploadError) throw uploadError;
+        if (uploadError) {
+          failedFiles.push({ file, error: uploadError.message });
+          continue; // Continue with next file instead of throwing
+        }
 
-          // Save file metadata to database (store the storage path, not a public URL)
-          const { data: insertedFile, error: dbError } = await supabase
-            .from('project_files')
-            .insert({
-              project_id: projectId,
-              file_name: file.name,
-              file_type: file.type || 'application/octet-stream',
-              file_url: fileName,
-              size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
-            })
-            .select('id')
-            .single();
+        // Save file metadata to database (store the storage path, not a public URL)
+        const { data: insertedFile, error: dbError } = await supabase
+          .from('project_files')
+          .insert({
+            project_id: projectId,
+            file_name: file.name,
+            file_type: file.type || 'application/octet-stream',
+            file_url: fileName,
+            size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
+          })
+          .select('id')
+          .single();
 
-          if (dbError) throw dbError;
-          if (insertedFile) {
-            uploadedFileIds.push(insertedFile.id);
-          }
+        if (dbError) {
+          failedFiles.push({ file, error: dbError.message });
+          continue;
+        }
+        
+        if (insertedFile) {
+          uploadedFileIds.push(insertedFile.id);
+        }
+      } catch (error) {
+        failedFiles.push({ 
+          file, 
+          error: error instanceof Error ? error.message : 'שגיאה לא ידועה' 
+        });
       }
+    }
 
+    // Show appropriate toast based on results
+    if (uploadedFileIds.length > 0 && failedFiles.length === 0) {
       toast({
         title: "הקבצים הועלו בהצלחה",
-        description: `${acceptedFiles.length} קבצים הועלו לפרויקט.`,
+        description: `${uploadedFileIds.length} קבצים הועלו לפרויקט.`,
       });
-      
-      onFilesUpdate();
-      
-      // Automatically trigger analysis for uploaded files
-      for (const fileId of uploadedFileIds) {
-        analyzeFile(fileId);
-      }
-      
-    } catch (error) {
-      console.error('Upload error:', error);
+    } else if (uploadedFileIds.length > 0 && failedFiles.length > 0) {
       toast({
-        title: "העלאה נכשלה",
-        description: error instanceof Error ? error.message : "נכשל בהעלאת הקבצים",
+        title: "חלק מהקבצים הועלו",
+        description: `${uploadedFileIds.length} הצליחו, ${failedFiles.length} נכשלו: ${failedFiles.map(f => f.file.name).join(', ')}`,
         variant: "destructive",
       });
-    } finally {
-      setUploading(false);
+    } else if (failedFiles.length > 0) {
+      toast({
+        title: "העלאה נכשלה",
+        description: `כל ${failedFiles.length} הקבצים נכשלו: ${failedFiles[0].error}`,
+        variant: "destructive",
+      });
     }
+
+    onFilesUpdate();
+    
+    // Trigger analysis for successfully uploaded files
+    for (const fileId of uploadedFileIds) {
+      analyzeFile(fileId);
+    }
+    
+    setUploading(false);
   }, [projectId, onFilesUpdate, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
