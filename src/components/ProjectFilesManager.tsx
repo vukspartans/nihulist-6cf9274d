@@ -218,29 +218,35 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
   };
 
   const analyzeFile = async (fileId: string, forceRefresh = false) => {
-    const file = files.find(f => f.id === fileId);
-    if (!file) {
-      toast({ title: 'הקובץ לא נמצא', variant: 'destructive' });
-      return;
-    }
-
-    // Check if analysis already exists and not forcing refresh
-    if (file.ai_summary && !forceRefresh) {
-      toast({
-        title: 'ניתוח AI כבר קיים לקובץ זה',
-        description: 'לחץ על "נתח מחדש" כדי לבצע ניתוח חדש',
-        action: (
-          <Button variant="outline" size="sm" onClick={() => analyzeFile(fileId, true)}>
-            נתח מחדש
-          </Button>
-        )
-      });
-      return;
-    }
-
     setAnalyzingFiles(prev => new Set([...prev, fileId]));
     
     try {
+      // Fetch file data fresh from database instead of using stale props
+      const { data: file, error: fetchError } = await supabase
+        .from('project_files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
+      
+      if (fetchError || !file) {
+        toast({ title: 'הקובץ לא נמצא', variant: 'destructive' });
+        return;
+      }
+
+      // Check if analysis already exists and not forcing refresh
+      if (file.ai_summary && !forceRefresh) {
+        toast({
+          title: 'ניתוח AI כבר קיים לקובץ זה',
+          description: 'לחץ על "נתח מחדש" כדי לבצע ניתוח חדש',
+          action: (
+            <Button variant="outline" size="sm" onClick={() => analyzeFile(fileId, true)}>
+              נתח מחדש
+            </Button>
+          )
+        });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('analyze-project-file', {
         body: { fileId, forceRefresh }
       });
