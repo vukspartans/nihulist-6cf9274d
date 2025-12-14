@@ -193,7 +193,7 @@ ${projectContext}
           
           let extractedText = '';
           try {
-            const result = await mammoth.extractRawText({ arrayBuffer });
+            const result = await mammoth.extractRawText({ buffer: new Uint8Array(arrayBuffer) });
             extractedText = result.value;
             console.log('[analyze-proposal-file] Extracted text length:', extractedText.length);
           } catch (mammothError) {
