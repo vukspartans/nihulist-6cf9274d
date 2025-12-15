@@ -546,7 +546,7 @@ const SubmitProposal = () => {
               <Textarea id="scope" value={scopeText} onChange={(e) => setScopeText(e.target.value)} placeholder="פרט את היקף העבודה המוצע (מינימום 20 תווים)" rows={6} required />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>מינימום 20 תווים</span>
-                <span className={cn("font-medium", scopeText.length < 20 ? "text-destructive" : "text-green-600")}>{scopeText.length} / 20</span>
+                <span className={cn("font-medium", scopeText.length < 20 ? "text-destructive" : "text-green-600")} dir="rtl">20 / {scopeText.length}</span>
               </div>
             </CardContent>
           </Card>

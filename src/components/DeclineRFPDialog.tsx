@@ -121,8 +121,8 @@ export function DeclineRFPDialog({
               maxLength={500}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground text-left">
-              {note.length}/500 תווים
+            <p className="text-xs text-muted-foreground text-left" dir="rtl">
+              500 / {note.length} תווים
             </p>
           </div>
         </div>

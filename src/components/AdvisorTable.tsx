@@ -106,9 +106,9 @@ export const AdvisorTable = ({ advisors, selectedAdvisors, advisorType, onToggle
                 
                 <TableCell>
                   {advisor.rating ? (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" dir="rtl">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{advisor.rating.toFixed(1)}/5</span>
+                      <span className="font-medium">5 / {advisor.rating.toFixed(1)}</span>
                     </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">אין דירוג</span>

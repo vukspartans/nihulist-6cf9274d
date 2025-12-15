@@ -349,6 +349,7 @@ interface EvaluateRequest {
     price_benchmark: number;
     timeline_benchmark_days: number;
   };
+  force_reevaluate?: boolean; // If true, re-evaluate even if results exist
 }
 
 serve(async (req) => {
@@ -362,7 +363,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { project_id, proposal_ids, benchmark_data }: EvaluateRequest = await req.json();
+    const { project_id, proposal_ids, benchmark_data, force_reevaluate = false }: EvaluateRequest = await req.json();
 
     if (!project_id) {
       return new Response(
@@ -459,6 +460,58 @@ serve(async (req) => {
     }
 
     console.log(`[Evaluate] Found ${proposals.length} proposals to evaluate`);
+    
+    // Check if proposals already have evaluation results (unless force_reevaluate is true)
+    if (!force_reevaluate) {
+      const proposalIds = proposals.map(p => p.id);
+      const { data: existingEvaluations } = await supabase
+        .from('proposals')
+        .select('id, evaluation_status, evaluation_result, evaluation_score, evaluation_rank')
+        .in('id', proposalIds)
+        .eq('evaluation_status', 'completed');
+      
+      // If all proposals are already evaluated, return existing results
+      if (existingEvaluations && existingEvaluations.length === proposals.length) {
+        console.log('[Evaluate] All proposals already evaluated, returning cached results');
+        
+        // Build response from existing evaluations
+        const rankedProposals = existingEvaluations
+          .map(e => ({
+            proposal_id: e.id,
+            ...(e.evaluation_result as any),
+            final_score: e.evaluation_score,
+            rank: e.evaluation_rank
+          }))
+          .sort((a, b) => (a.rank || 0) - (b.rank || 0));
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            cached: true,
+            project_id,
+            batch_summary: {
+              total_proposals: proposals.length,
+              project_type_detected: "STANDARD",
+              price_benchmark_used: null,
+              evaluation_mode: proposals.length === 1 ? 'SINGLE' : 'BATCH',
+              market_context: 'Using cached evaluation results'
+            },
+            ranked_proposals: rankedProposals,
+            evaluation_metadata: {
+              cached: true,
+              note: 'These are cached results from a previous evaluation. Set force_reevaluate=true to re-run evaluation.'
+            }
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+    
+    // Deterministic sort: Sort proposals by ID to ensure consistent ordering
+    proposals.sort((a, b) => a.id.localeCompare(b.id));
+    console.log('[Evaluate] Proposals sorted deterministically by ID');
     
     // Validate that all proposals have advisors
     for (const proposal of proposals) {

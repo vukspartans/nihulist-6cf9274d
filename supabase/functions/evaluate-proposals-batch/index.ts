@@ -19,6 +19,7 @@ interface EvaluateRequest {
     price_benchmark: number;
     timeline_benchmark_days: number;
   };
+  force_reevaluate?: boolean; // If true, re-evaluate even if results exist
 }
 
 // Helper to calculate years experience
@@ -53,7 +54,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { project_id, proposal_ids, benchmark_data }: EvaluateRequest = await req.json();
+    const { project_id, proposal_ids, benchmark_data, force_reevaluate = false }: EvaluateRequest = await req.json();
 
     if (!project_id) {
       return new Response(
@@ -103,10 +104,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch project
+    // Fetch project (including phase)
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('id, name, type, location, budget, advisors_budget, units, description, is_large_scale')
+      .select('id, name, type, location, budget, advisors_budget, units, description, is_large_scale, phase')
       .eq('id', project_id)
       .single();
 
@@ -172,6 +173,57 @@ serve(async (req) => {
 
     console.log(`[Evaluate] Found ${proposals.length} proposals to evaluate`);
     
+    // Check if proposals already have evaluation results (unless force_reevaluate is true)
+    if (!force_reevaluate) {
+      const proposalIds = proposals.map(p => p.id);
+      const { data: existingEvaluations } = await supabase
+        .from('proposals')
+        .select('id, evaluation_status, evaluation_result, evaluation_score, evaluation_rank')
+        .in('id', proposalIds)
+        .eq('evaluation_status', 'completed');
+      
+      // If all proposals are already evaluated, return existing results
+      if (existingEvaluations && existingEvaluations.length === proposals.length) {
+        console.log('[Evaluate] All proposals already evaluated, returning cached results');
+        
+        // Build response from existing evaluations
+        const rankedProposals = existingEvaluations
+          .map(e => ({
+            proposal_id: e.id,
+            ...(e.evaluation_result as any),
+            final_score: e.evaluation_score,
+            rank: e.evaluation_rank
+          }))
+          .sort((a, b) => (a.rank || 0) - (b.rank || 0));
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            cached: true,
+            project_id,
+            batch_summary: {
+              total_proposals: proposals.length,
+              evaluation_mode: proposals.length === 1 ? 'SINGLE' : 'BATCH',
+              price_benchmark_used: null, // We don't have this in cache
+              market_context: 'Using cached evaluation results'
+            },
+            ranked_proposals: rankedProposals,
+            evaluation_metadata: {
+              cached: true,
+              note: 'These are cached results from a previous evaluation. Set force_reevaluate=true to re-run evaluation.'
+            }
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+    
+    // Deterministic sort: Sort proposals by ID to ensure consistent ordering
+    proposals.sort((a, b) => a.id.localeCompare(b.id));
+    console.log('[Evaluate] Proposals sorted deterministically by ID');
+    
     // Validate that all proposals have advisors
     for (const proposal of proposals) {
       if (!proposal.advisors || !proposal.advisor_id) {
@@ -179,6 +231,45 @@ serve(async (req) => {
         throw new Error(`Proposal ${proposal.id} is missing advisor information`);
       }
     }
+
+    // Fetch RFP invite data for proposals (to get request_title, request_content, advisor_type)
+    // We need to find RFP invites that match proposal advisor_id and project
+    const advisorIds = proposals.map(p => p.advisor_id).filter(Boolean);
+    let rfpInvitesMap = new Map<string, { request_title: string | null; request_content: string | null; advisor_type: string | null }>();
+    
+    if (advisorIds.length > 0) {
+      // Find RFPs for this project
+      const { data: rfps, error: rfpsError } = await supabase
+        .from('rfps')
+        .select('id')
+        .eq('project_id', project_id);
+      
+      if (!rfpsError && rfps && rfps.length > 0) {
+        const rfpIds = rfps.map(r => r.id);
+        
+        // Fetch RFP invites for these RFPs and advisors
+        const { data: invites, error: invitesError } = await supabase
+          .from('rfp_invites')
+          .select('advisor_id, request_title, request_content, advisor_type')
+          .in('rfp_id', rfpIds)
+          .in('advisor_id', advisorIds);
+        
+        if (!invitesError && invites) {
+          // Create map: advisor_id -> RFP invite data
+          for (const invite of invites) {
+            if (invite.advisor_id) {
+              rfpInvitesMap.set(invite.advisor_id, {
+                request_title: invite.request_title || null,
+                request_content: invite.request_content || null,
+                advisor_type: invite.advisor_type || null
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`[Evaluate] Found RFP invite data for ${rfpInvitesMap.size} proposals`);
 
     // Ensure extracted text exists for all proposals
     for (const proposal of proposals) {
@@ -230,6 +321,9 @@ serve(async (req) => {
         throw new Error(`Proposal ${p.id} is missing advisor data`);
       }
       
+      // Get RFP invite data for this proposal's advisor
+      const rfpInviteData = p.advisor_id ? rfpInvitesMap.get(p.advisor_id) : null;
+      
       return {
         proposal_id: p.id,
         vendor_name: p.supplier_name,
@@ -245,6 +339,10 @@ serve(async (req) => {
         expertise: advisor.expertise || [],
         certifications: advisor.certifications || [],
         company_name: advisor.company_name,
+        // RFP invite data (may be null if proposal wasn't from RFP)
+        rfp_request_title: rfpInviteData?.request_title || null,
+        rfp_request_content: rfpInviteData?.request_content || null,
+        rfp_advisor_type: rfpInviteData?.advisor_type || null,
       };
     });
     
@@ -261,6 +359,7 @@ serve(async (req) => {
         advisors_budget: project.advisors_budget,
         units: project.units,
         description: project.description,
+        phase: project.phase || null,
       },
       benchmark
     );

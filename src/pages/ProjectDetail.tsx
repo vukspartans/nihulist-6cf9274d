@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox, Star } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -508,7 +508,7 @@ export const ProjectDetail = () => {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {[...proposals]
                     .sort((a, b) => {
                       // Sort: accepted first, then submitted, then others
@@ -524,16 +524,41 @@ export const ProjectDetail = () => {
                     return (
                       <Card 
                         key={proposal.id} 
-                        className="border-l-4 border-l-primary hover:shadow-lg transition-shadow cursor-pointer"
+                        className="border-r-4 border-r-primary hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col"
                         onClick={() => handleViewProposal(proposal)}
                       >
-                        <CardContent className="p-3">
-                          <div className="flex justify-between items-start mb-4">
-                            {/* LEFT SIDE: Advisor Info with Logo */}
-                            <div className="flex items-start gap-4 flex-1">
+                        <CardContent className="p-2.5 flex flex-col flex-1">
+                          <div className="flex justify-between items-start gap-3 mb-2" dir="rtl">
+                            {/* RIGHT SIDE (RTL): Price & Timeline */}
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xl font-bold text-primary">
+                                  {formatCurrency(proposal.price)}
+                                </p>
+                                {isLowestPrice && (
+                                  <Badge variant="success" className="text-xs px-1.5 py-0">
+                                    נמוך
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {proposal.timeline_days} ימים
+                                </p>
+                                {isFastest && (
+                                  <Badge variant="accent" className="text-xs px-1.5 py-0">
+                                    מהיר
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* LEFT SIDE (RTL): Advisor Info with Logo */}
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
                               {/* Advisor Logo */}
                               {proposal.advisors?.logo_url ? (
-                                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-border flex-shrink-0">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden border border-border flex-shrink-0">
                                   <img 
                                     src={proposal.advisors.logo_url}
                                     alt={proposal.advisors.company_name || proposal.supplier_name}
@@ -545,7 +570,7 @@ export const ProjectDetail = () => {
                                       if (parent) {
                                         parent.innerHTML = `
                                           <div class="w-full h-full bg-primary/10 flex items-center justify-center">
-                                            <span class="text-xl font-bold text-primary">
+                                            <span class="text-base font-bold text-primary">
                                               ${(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
                                             </span>
                                           </div>
@@ -555,17 +580,17 @@ export const ProjectDetail = () => {
                                   />
                                 </div>
                               ) : (
-                                <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border-2 border-border">
-                                  <span className="text-2xl font-bold text-primary">
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border border-border">
+                                  <span className="text-base font-bold text-primary">
                                     {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
                                   </span>
                                 </div>
                               )}
                               
                               {/* Advisor Details */}
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <h4 className="font-bold text-lg">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                  <h4 className="font-bold text-sm truncate">
                                     {proposal.advisors?.company_name || proposal.supplier_name}
                                   </h4>
                                   {getStatusBadge(proposal.status)}
@@ -573,76 +598,41 @@ export const ProjectDetail = () => {
                                 
                                 {/* Expertise badges */}
                                 {proposal.advisors?.expertise && proposal.advisors.expertise.length > 0 && (
-                                  <div className="flex gap-1 mb-2 flex-wrap">
+                                  <div className="flex gap-1 mb-0.5 flex-wrap">
                                     {proposal.advisors.expertise.slice(0, 2).map((exp: string, idx: number) => (
-                                      <Badge key={idx} variant="outline" className="text-xs">
+                                      <Badge key={idx} variant="outline" className="text-xs px-1 py-0">
                                         {exp}
                                       </Badge>
                                     ))}
                                     {proposal.advisors.expertise.length > 2 && (
-                                      <Badge variant="outline" className="text-xs">
+                                      <Badge variant="outline" className="text-xs px-1 py-0">
                                         +{proposal.advisors.expertise.length - 2}
                                       </Badge>
                                     )}
                                   </div>
                                 )}
                                 
-                                {/* Rating - Standardized to 0-5 scale, displayed as /5 */}
-                                {proposal.advisors?.rating && (
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm font-medium">
-                                      {proposal.advisors.rating.toFixed(1)}/5
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                <p className="text-sm text-muted-foreground">
-                                  נשלח ב-{new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
                                 </p>
-                              </div>
-                            </div>
-
-                            {/* RIGHT SIDE: Price & Timeline */}
-                            <div className="text-left mr-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                <p className="text-2xl font-bold text-primary">
-                                  {formatCurrency(proposal.price)}
-                                </p>
-                                {isLowestPrice && (
-                                  <Badge variant="success" className="text-xs">
-                                    המחיר הנמוך ביותר
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
-                                  <Clock className="w-4 h-4" />
-                                  {proposal.timeline_days} ימים
-                                </p>
-                                {isFastest && (
-                                  <Badge variant="accent" className="text-xs">
-                                    הכי מהיר
-                                  </Badge>
-                                )}
                               </div>
                             </div>
                           </div>
                           
                           {proposal.scope_text && (
-                            <div className="border-t pt-3 mt-3">
-                              <p className="text-sm text-muted-foreground line-clamp-2">
+                            <div className="border-t pt-1.5 mt-1.5 mb-1.5">
+                              <p className="text-xs text-muted-foreground line-clamp-2" dir="rtl">
                                 {proposal.scope_text}
                               </p>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center justify-between mt-auto pt-1.5 border-t" dir="rtl">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               {proposal.files && proposal.files.length > 0 && (
                                 <span className="flex items-center gap-1">
                                   <FileText className="w-3 h-3" />
-                                  {proposal.files.length} קבצים
+                                  {proposal.files.length}
                                 </span>
                               )}
                               {proposal.signature_blob && (
@@ -659,9 +649,10 @@ export const ProjectDetail = () => {
                                 e.stopPropagation();
                                 handleViewProposal(proposal);
                               }}
+                              className="h-7 text-xs px-2"
                             >
-                              <Eye className="w-4 h-4 ml-2" />
-                              צפייה מלאה
+                              <Eye className="w-3 h-3 ml-1" />
+                              צפייה
                             </Button>
                           </div>
                         </CardContent>
