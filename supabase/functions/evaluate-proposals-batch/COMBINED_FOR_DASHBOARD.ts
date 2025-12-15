@@ -376,10 +376,9 @@ serve(async (req) => {
 
     console.log(`[Evaluate] Starting batch evaluation for project: ${project_id}`);
 
-    // Get API key - try environment variables first, then fallback to hardcoded for testing
+    // Get API key from environment only (no hardcoded fallback)
     const apiKey = Deno.env.get('OPENAI_API_KEY') 
-      || Deno.env.get('OPENAI_KEY')
-      || 'REDACTED_OPENAI_KEY'; // Fallback for testing
+      || Deno.env.get('OPENAI_KEY');
     
     if (!apiKey) {
       return new Response(
