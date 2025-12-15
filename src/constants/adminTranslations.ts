@@ -24,6 +24,7 @@ export const adminTranslations = {
     rfps: "קריאות להצעות מחיר",
     users: "משתמשים",
     auditLog: "יומן ביקורת",
+    feedback: "משובים",
     adminPanel: "פאנל ניהול",
     management: "ניהול",
     signOut: "התנתק",
@@ -356,6 +357,29 @@ export const adminTranslations = {
     
     // Time format
     dateFormat: "dd/MM/yyyy HH:mm",
+  },
+
+  // Feedback Management
+  feedback: {
+    title: "משובי משתמשים",
+    description: "צפה בכל המשובים שנשלחו ממשתמשי המערכת",
+    searchPlaceholder: "חפש במשובים...",
+    columns: {
+      date: "תאריך",
+      rating: "דירוג",
+      message: "הודעה",
+      email: "אימייל",
+      page: "עמוד",
+    },
+    ratings: {
+      1: "גרוע מאוד",
+      2: "לא טוב",
+      3: "בסדר",
+      4: "טוב",
+      5: "מצוין",
+    },
+    noFeedback: "אין משובים להצגה",
+    exportButton: "ייצא לאקסל",
   },
 
   // Common

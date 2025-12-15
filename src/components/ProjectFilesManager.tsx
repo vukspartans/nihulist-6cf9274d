@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -66,61 +67,81 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);
     
-    try {
-      const uploadedFileIds: string[] = [];
-      
-      for (const file of acceptedFiles) {
+    const uploadedFileIds: string[] = [];
+    const failedFiles: { file: File; error: string }[] = [];
+    
+    for (const file of acceptedFiles) {
+      try {
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${projectId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         
-          const { error: uploadError } = await supabase.storage
-            .from('project-files')
-            .upload(fileName, file, { upsert: false, contentType: file.type });
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(fileName, file, { upsert: false, contentType: file.type });
 
-          if (uploadError) throw uploadError;
+        if (uploadError) {
+          failedFiles.push({ file, error: uploadError.message });
+          continue; // Continue with next file instead of throwing
+        }
 
-          // Save file metadata to database (store the storage path, not a public URL)
-          const { data: insertedFile, error: dbError } = await supabase
-            .from('project_files')
-            .insert({
-              project_id: projectId,
-              file_name: file.name,
-              file_type: file.type || 'application/octet-stream',
-              file_url: fileName,
-              size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
-            })
-            .select('id')
-            .single();
+        // Save file metadata to database (store the storage path, not a public URL)
+        const { data: insertedFile, error: dbError } = await supabase
+          .from('project_files')
+          .insert({
+            project_id: projectId,
+            file_name: file.name,
+            file_type: file.type || 'application/octet-stream',
+            file_url: fileName,
+            size_mb: Number((file.size / (1024 * 1024)).toFixed(2))
+          })
+          .select('id')
+          .single();
 
-          if (dbError) throw dbError;
-          if (insertedFile) {
-            uploadedFileIds.push(insertedFile.id);
-          }
+        if (dbError) {
+          failedFiles.push({ file, error: dbError.message });
+          continue;
+        }
+        
+        if (insertedFile) {
+          uploadedFileIds.push(insertedFile.id);
+        }
+      } catch (error) {
+        failedFiles.push({ 
+          file, 
+          error: error instanceof Error ? error.message : 'שגיאה לא ידועה' 
+        });
       }
+    }
 
+    // Show appropriate toast based on results
+    if (uploadedFileIds.length > 0 && failedFiles.length === 0) {
       toast({
         title: "הקבצים הועלו בהצלחה",
-        description: `${acceptedFiles.length} קבצים הועלו לפרויקט.`,
+        description: `${uploadedFileIds.length} קבצים הועלו לפרויקט.`,
       });
-      
-      onFilesUpdate();
-      
-      // Automatically trigger analysis for uploaded files
-      for (const fileId of uploadedFileIds) {
-        analyzeFile(fileId);
-      }
-      
-    } catch (error) {
-      console.error('Upload error:', error);
+    } else if (uploadedFileIds.length > 0 && failedFiles.length > 0) {
       toast({
-        title: "העלאה נכשלה",
-        description: error instanceof Error ? error.message : "נכשל בהעלאת הקבצים",
+        title: "חלק מהקבצים הועלו",
+        description: `${uploadedFileIds.length} הצליחו, ${failedFiles.length} נכשלו: ${failedFiles.map(f => f.file.name).join(', ')}`,
         variant: "destructive",
       });
-    } finally {
-      setUploading(false);
+    } else if (failedFiles.length > 0) {
+      toast({
+        title: "העלאה נכשלה",
+        description: `כל ${failedFiles.length} הקבצים נכשלו: ${failedFiles[0].error}`,
+        variant: "destructive",
+      });
     }
+
+    onFilesUpdate();
+    
+    // Trigger analysis for successfully uploaded files
+    for (const fileId of uploadedFileIds) {
+      analyzeFile(fileId);
+    }
+    
+    setUploading(false);
   }, [projectId, onFilesUpdate, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -216,38 +237,54 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
     }
   };
 
-  const analyzeFile = async (fileId: string) => {
-    setAnalyzingFiles(prev => new Set(prev).add(fileId));
+  const analyzeFile = async (fileId: string, forceRefresh = false) => {
+    setAnalyzingFiles(prev => new Set([...prev, fileId]));
     
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-project-file', {
-        body: { fileId }
-      });
+      // Fetch file data fresh from database instead of using stale props
+      const { data: file, error: fetchError } = await supabase
+        .from('project_files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
+      
+      if (fetchError || !file) {
+        toast({ title: 'הקובץ לא נמצא', variant: 'destructive' });
+        return;
+      }
 
-      console.log('Analysis response:', data, error);
+      // Check if analysis already exists and not forcing refresh
+      if (file.ai_summary && !forceRefresh) {
+        toast({
+          title: 'ניתוח AI כבר קיים לקובץ זה',
+          description: 'לחץ על "נתח מחדש" כדי לבצע ניתוח חדש',
+          action: (
+            <Button variant="outline" size="sm" onClick={() => analyzeFile(fileId, true)}>
+              נתח מחדש
+            </Button>
+          )
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('analyze-project-file', {
+        body: { fileId, forceRefresh }
+      });
 
       if (error) throw error;
 
-      toast({
-        title: "הקובץ נותח בהצלחה",
-        description: "ניתוח ה-AI הושלם ונשמר.",
-      });
-      
-      // Immediately refresh the files to show the updated analysis
-      onFilesUpdate();
-      
+      if (data?.success || data?.analysis) {
+        onFilesUpdate();
+        toast({ title: forceRefresh ? 'הניתוח עודכן בהצלחה' : 'הניתוח הושלם בהצלחה' });
+      }
     } catch (error) {
-      console.error('Analysis error:', error);
-      toast({
-        title: "ניתוח נכשל",
-        description: error instanceof Error ? error.message : "נכשל בניתוח הקובץ",
-        variant: "destructive",
-      });
+      console.error('Error analyzing file:', error);
+      toast({ title: 'שגיאה בניתוח הקובץ', variant: 'destructive' });
     } finally {
       setAnalyzingFiles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(fileId);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
       });
     }
   };
@@ -420,9 +457,9 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                             <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mt-2">
                               <div className="flex items-start gap-2 mb-2">
                                 <Brain className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-foreground/90 line-clamp-3 leading-relaxed text-right">
-                                  {file.ai_summary}
-                                </p>
+                                <div className="text-xs text-foreground/90 line-clamp-3 leading-relaxed text-right flex-1">
+                                  <AIAnalysisDisplay content={file.ai_summary.split('\n').slice(0, 4).join('\n')} />
+                                </div>
                               </div>
                               <HoverCard>
                                 <HoverCardTrigger asChild>
@@ -430,15 +467,15 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
                                     הצג ניתוח מלא ←
                                   </Button>
                                 </HoverCardTrigger>
-                                <HoverCardContent className="w-96" align="start">
+                                <HoverCardContent className="w-[450px]" align="start">
                                   <div className="space-y-2">
                                     <h5 className="font-semibold text-sm flex items-center gap-2">
                                       <Brain className="h-4 w-4 text-primary" />
                                       ניתוח AI מלא
                                     </h5>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap text-right">
-                                      {file.ai_summary}
-                                    </p>
+                                    <div className="max-h-[400px] overflow-y-auto">
+                                      <AIAnalysisDisplay content={file.ai_summary} className="text-sm" />
+                                    </div>
                                   </div>
                                 </HoverCardContent>
                               </HoverCard>

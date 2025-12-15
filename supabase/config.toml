@@ -18,6 +18,12 @@ verify_jwt = true
 [functions.evaluate-proposals-batch]
 verify_jwt = true
 
+[functions.analyze-proposal]
+verify_jwt = true
+
+[functions.analyze-proposal-file]
+verify_jwt = true
+
 # Cron jobs are configured in Supabase Dashboard, not in config.toml
 # To set up cron jobs, go to: Dashboard → Database → Cron Jobs
 # - expire-old-rfps: "0 * * * *" (Every hour)

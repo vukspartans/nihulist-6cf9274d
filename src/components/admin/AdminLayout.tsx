@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   Bell,
+  MessageSquareHeart,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { UserHeader } from "@/components/UserHeader";
@@ -42,6 +43,7 @@ const navigationItems = [
   { title: adminTranslations.navigation.projects, url: "/heyadmin/projects", icon: FolderKanban },
   { title: adminTranslations.navigation.rfps, url: "/heyadmin/rfps", icon: FileText },
   { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
+  { title: adminTranslations.navigation.feedback, url: "/heyadmin/feedback", icon: MessageSquareHeart },
   { title: adminTranslations.navigation.auditLog, url: "/heyadmin/audit", icon: Shield },
 ];
 

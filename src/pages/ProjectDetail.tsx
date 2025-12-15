@@ -119,24 +119,58 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-    const { data, error } = await supabase
-      .from('proposals')
-      .select(`
-        *,
-        advisors!proposals_advisor_id_fkey (
-          id,
-          company_name,
-          logo_url,
-          expertise,
-          rating,
-          location
-        )
-      `)
-      .eq('project_id', id)
-      .order('submitted_at', { ascending: false });
+      // First fetch proposals with advisor data
+      const { data: proposalsData, error: proposalsError } = await supabase
+        .from('proposals')
+        .select(`
+          *,
+          advisors!proposals_advisor_id_fkey (
+            id,
+            company_name,
+            logo_url,
+            expertise,
+            rating,
+            location,
+            founding_year,
+            office_size,
+            website,
+            linkedin_url
+          )
+        `)
+        .eq('project_id', id)
+        .order('submitted_at', { ascending: false });
 
-      if (error) throw error;
-      setProposals(data || []);
+      if (proposalsError) throw proposalsError;
+
+      // Fetch RFP invite context for each proposal
+      const proposalsWithContext = await Promise.all(
+        (proposalsData || []).map(async (proposal) => {
+          // Get the RFP invite for this advisor
+          const { data: inviteData } = await supabase
+            .from('rfp_invites')
+            .select('advisor_type, request_title, deadline_at')
+            .eq('advisor_id', proposal.advisor_id)
+            .eq('rfp_id', (
+              await supabase
+                .from('rfps')
+                .select('id')
+                .eq('project_id', id)
+                .order('sent_at', { ascending: false })
+                .limit(1)
+                .single()
+            ).data?.id || '')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          return {
+            ...proposal,
+            rfp_invite: inviteData || undefined
+          };
+        })
+      );
+
+      setProposals(proposalsWithContext);
     } catch (error) {
       console.error('Error fetching proposals:', error);
     } finally {
@@ -465,7 +499,7 @@ export const ProjectDetail = () => {
                   <p className="text-muted-foreground">טוען הצעות מחיר...</p>
                 </div>
               ) : proposals.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-8">
                   <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">מחכה להצעות מחיר</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
@@ -474,7 +508,7 @@ export const ProjectDetail = () => {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {[...proposals]
                     .sort((a, b) => {
                       // Sort: accepted first, then submitted, then others
@@ -493,7 +527,7 @@ export const ProjectDetail = () => {
                         className="border-l-4 border-l-primary hover:shadow-lg transition-shadow cursor-pointer"
                         onClick={() => handleViewProposal(proposal)}
                       >
-                        <CardContent className="p-4">
+                        <CardContent className="p-3">
                           <div className="flex justify-between items-start mb-4">
                             {/* LEFT SIDE: Advisor Info with Logo */}
                             <div className="flex items-start gap-4 flex-1">
@@ -604,16 +638,16 @@ export const ProjectDetail = () => {
                           )}
 
                           <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               {proposal.files && proposal.files.length > 0 && (
                                 <span className="flex items-center gap-1">
-                                  <FileText className="w-4 h-4" />
+                                  <FileText className="w-3 h-3" />
                                   {proposal.files.length} קבצים
                                 </span>
                               )}
                               {proposal.signature_blob && (
                                 <span className="flex items-center gap-1 text-green-600">
-                                  <FileSignature className="w-4 h-4" />
+                                  <FileSignature className="w-3 h-3" />
                                   חתום
                                 </span>
                               )}
@@ -689,7 +723,9 @@ export const ProjectDetail = () => {
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
           proposal={selectedProposal}
-          onSuccess={() => {
+          projectId={project.id}
+          projectName={project.name || project.location}
+          onStatusChange={() => {
             fetchProposals();
             setSelectedProposal(null);
           }}

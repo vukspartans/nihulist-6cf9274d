@@ -149,10 +149,13 @@ serve(async (req) => {
       // Send welcome email
       try {
         const isAdmin = userRoles && userRoles.includes('admin');
+        const adminUrl = 'https://billding.ai/heyadmin/login';
+        const userUrl = 'https://billding.ai/auth';
+        
         const emailResponse = await resend.emails.send({
-          from: "BidHive <onboarding@resend.dev>",
+          from: "Billding <onboarding@billding.ai>",
           to: [email],
-          subject: isAdmin ? "החשבון שלך נוצר - מנהל מערכת" : "ברוך הבא ל-BidHive",
+          subject: isAdmin ? "החשבון שלך נוצר - מנהל מערכת" : "ברוך הבא ל-Billding",
           html: `
             <!DOCTYPE html>
             <html dir="rtl" lang="he">
@@ -162,14 +165,14 @@ serve(async (req) => {
             </head>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; direction: rtl;">
               <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h1 style="color: #333; text-align: center;">${isAdmin ? 'חשבון מנהל נוצר בהצלחה' : 'ברוך הבא ל-BidHive!'}</h1>
+                <h1 style="color: #333; text-align: center;">${isAdmin ? 'חשבון מנהל נוצר בהצלחה' : 'ברוך הבא ל-Billding!'}</h1>
                 
                 ${name ? `<p style="color: #666; font-size: 16px;">שלום ${name},</p>` : ''}
                 
                 <p style="color: #666; font-size: 16px;">
                   ${isAdmin 
-                    ? 'חשבון המנהל שלך נוצר בהצלחה במערכת BidHive.'
-                    : 'חשבונך נוצר בהצלחה במערכת BidHive.'
+                    ? 'חשבון המנהל שלך נוצר בהצלחה במערכת Billding.'
+                    : 'חשבונך נוצר בהצלחה במערכת Billding.'
                   }
                 </p>
                 
@@ -184,12 +187,12 @@ serve(async (req) => {
                 </p>
                 
                 ${isAdmin 
-                  ? '<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר לפאנל הניהול בכתובת:</p><p style="text-align: center;"><a href="' + Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') + '/heyadmin/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר לפאנל הניהול</a></p>'
-                  : '<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר למערכת ולהתחיל להשתמש בשירותים שלנו.</p><p style="text-align: center;"><a href="' + Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') + '/auth" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר למערכת</a></p>'
+                  ? `<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר לפאנל הניהול בכתובת:</p><p style="text-align: center;"><a href="${adminUrl}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר לפאנל הניהול</a></p>`
+                  : `<p style="color: #666; font-size: 16px; margin-top: 20px;">כעת תוכל להתחבר למערכת ולהתחיל להשתמש בשירותים שלנו.</p><p style="text-align: center;"><a href="${userUrl}" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">התחבר למערכת</a></p>`
                 }
                 
                 <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                  BidHive - מערכת ניהול פרויקטים והצעות מחיר
+                  Billding - מערכת ניהול פרויקטים והצעות מחיר
                 </p>
               </div>
             </body>
