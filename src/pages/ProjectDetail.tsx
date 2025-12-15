@@ -553,11 +553,13 @@ export const ProjectDetail = () => {
                                   </div>
                                 )}
                                 
-                                {/* Rating */}
+                                {/* Rating - Standardized to 0-5 scale, displayed as /5 */}
                                 {proposal.advisors?.rating && (
                                   <div className="flex items-center gap-1 mb-1">
                                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm font-medium">{proposal.advisors.rating.toFixed(1)}</span>
+                                    <span className="text-sm font-medium">
+                                      {proposal.advisors.rating.toFixed(1)}/5
+                                    </span>
                                   </div>
                                 )}
                                 
@@ -679,6 +681,7 @@ export const ProjectDetail = () => {
         onOpenChange={setComparisonDialogOpen}
         proposalIds={selectedProposalIds}
         advisorType={project.type || 'כללי'}
+        projectId={project.id}
       />
 
       {selectedProposal && (

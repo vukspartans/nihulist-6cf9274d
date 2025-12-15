@@ -1,0 +1,365 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { EvaluationResultSchema, type EvaluationResult } from "./schemas.ts";
+import { SYSTEM_INSTRUCTION } from "./prompts.ts";
+import { buildUserContent } from "./payload-builder.ts";
+import { callVertexAI } from "./vertex-ai-helper.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const EVALUATION_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+
+interface EvaluateRequest {
+  project_id: string;
+  proposal_ids?: string[]; // Optional: if empty, all proposals for project
+  benchmark_data?: {
+    price_benchmark: number;
+    timeline_benchmark_days: number;
+  };
+}
+
+// Helper to calculate years experience
+function calculateYearsExperience(advisor: { founding_year: number | null }): number {
+  if (!advisor.founding_year) return 0;
+  return Math.max(0, new Date().getFullYear() - advisor.founding_year);
+}
+
+// Helper to parse Service Account JSON from environment variable
+function getServiceAccountJson(): any {
+  const serviceAccountJsonStr = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+  
+  if (!serviceAccountJsonStr) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON environment variable is not set. Please configure Vertex AI credentials.');
+  }
+  
+  try {
+    return JSON.parse(serviceAccountJsonStr);
+  } catch (error) {
+    throw new Error(`Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON: ${error.message}`);
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { project_id, proposal_ids, benchmark_data }: EvaluateRequest = await req.json();
+
+    if (!project_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'project_id is required' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log(`[Evaluate] Starting batch evaluation for project: ${project_id}`);
+
+    // Get Vertex AI configuration
+    const projectId = Deno.env.get('GOOGLE_CLOUD_PROJECT_ID');
+    const region = Deno.env.get('GOOGLE_CLOUD_REGION') || 'us-central1';
+    
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'GOOGLE_CLOUD_PROJECT_ID environment variable is not set. Please configure Vertex AI project ID.',
+          error_code: 'CONFIGURATION_ERROR',
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Parse Service Account JSON
+    let serviceAccountJson: any;
+    try {
+      serviceAccountJson = getServiceAccountJson();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load Vertex AI credentials',
+          error_code: 'CONFIGURATION_ERROR',
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Fetch project
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id, name, type, location, budget, advisors_budget, units, description, is_large_scale')
+      .eq('id', project_id)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Project not found' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Fetch proposals
+    // Note: Using explicit relationship name because there are multiple FK constraints
+    let proposalsQuery = supabase
+      .from('proposals')
+      .select(`
+        id,
+        supplier_name,
+        price,
+        currency,
+        timeline_days,
+        scope_text,
+        terms,
+        conditions_json,
+        extracted_text,
+        files,
+        advisor_id,
+        advisors!fk_proposals_advisor(
+          id,
+          company_name,
+          rating,
+          expertise,
+          certifications,
+          founding_year
+        )
+      `)
+      .eq('project_id', project_id)
+      .eq('status', 'submitted'); // Only evaluate submitted proposals
+
+    if (proposal_ids && proposal_ids.length > 0) {
+      proposalsQuery = proposalsQuery.in('id', proposal_ids);
+    }
+
+    const { data: proposals, error: proposalsError } = await proposalsQuery;
+
+    if (proposalsError) {
+      console.error('[Evaluate] Error fetching proposals:', proposalsError);
+      throw new Error(`Failed to fetch proposals: ${proposalsError.message}`);
+    }
+
+    if (!proposals || proposals.length === 0) {
+      console.error('[Evaluate] No proposals found for project:', project_id);
+      return new Response(
+        JSON.stringify({ success: false, error: 'No proposals found for evaluation' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log(`[Evaluate] Found ${proposals.length} proposals to evaluate`);
+    
+    // Validate that all proposals have advisors
+    for (const proposal of proposals) {
+      if (!proposal.advisors || !proposal.advisor_id) {
+        console.error('[Evaluate] Proposal missing advisor:', proposal.id);
+        throw new Error(`Proposal ${proposal.id} is missing advisor information`);
+      }
+    }
+
+    // Ensure extracted text exists for all proposals
+    for (const proposal of proposals) {
+      if (!proposal.extracted_text || proposal.extracted_text.trim().length < 50) {
+        console.log(`[Evaluate] Extracting text for proposal ${proposal.id}`);
+        
+        // Call extract-proposal-text function
+        const extractResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/extract-proposal-text`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ proposal_id: proposal.id }),
+          }
+        );
+
+        if (extractResponse.ok) {
+          const extractResult = await extractResponse.json();
+          proposal.extracted_text = extractResult.extracted_text || proposal.scope_text || '';
+        } else {
+          // Use scope_text as fallback
+          proposal.extracted_text = proposal.scope_text || '';
+        }
+      }
+    }
+
+    // Calculate benchmark if not provided
+    let benchmark: { price_benchmark: number; timeline_benchmark_days: number };
+    if (benchmark_data) {
+      benchmark = benchmark_data;
+    } else {
+      const avgPrice = proposals.reduce((sum, p) => sum + Number(p.price), 0) / proposals.length;
+      const avgTimeline = proposals.reduce((sum, p) => sum + Number(p.timeline_days), 0) / proposals.length;
+      benchmark = {
+        price_benchmark: avgPrice,
+        timeline_benchmark_days: Math.round(avgTimeline),
+      };
+    }
+
+    // Build proposal data for AI
+    const proposalData = proposals.map((p: any) => {
+      const advisor = Array.isArray(p.advisors) ? p.advisors[0] : p.advisors;
+      
+      if (!advisor) {
+        console.error('[Evaluate] Proposal missing advisor data:', p.id);
+        throw new Error(`Proposal ${p.id} is missing advisor data`);
+      }
+      
+      return {
+        proposal_id: p.id,
+        vendor_name: p.supplier_name,
+        extracted_text: p.extracted_text || p.scope_text || '',
+        scope_text: p.scope_text,
+        price_quoted: Number(p.price),
+        currency: p.currency || 'ILS',
+        timeline_days: Number(p.timeline_days),
+        terms: p.terms,
+        conditions_json: p.conditions_json,
+        years_experience: calculateYearsExperience(advisor),
+        db_internal_rating: Number(advisor.rating) || 0,
+        expertise: advisor.expertise || [],
+        certifications: advisor.certifications || [],
+        company_name: advisor.company_name,
+      };
+    });
+    
+    console.log('[Evaluate] Proposal data prepared:', proposalData.length, 'proposals');
+
+    // Build user content
+    const userContent = buildUserContent(
+      proposalData,
+      {
+        project_id: project.id,
+        project_type: project.type,
+        location: project.location,
+        budget: project.budget,
+        advisors_budget: project.advisors_budget,
+        units: project.units,
+        description: project.description,
+      },
+      benchmark
+    );
+
+    console.log('[Evaluate] Calling AI with', proposals.length, 'proposals');
+
+    // Call Vertex AI (Gemini)
+    const startTime = Date.now();
+    const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash';
+    const evaluationResult = await Promise.race([
+      callVertexAI(SYSTEM_INSTRUCTION, userContent, serviceAccountJson, projectId, region),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Evaluation timeout')), EVALUATION_TIMEOUT_MS)
+      ),
+    ]);
+    const evaluationTime = Date.now() - startTime;
+
+    console.log('[Evaluate] AI evaluation completed in', evaluationTime, 'ms');
+
+    // Update proposals with evaluation results
+    for (const rankedProposal of evaluationResult.ranked_proposals) {
+      const proposal = proposals.find((p: any) => p.id === rankedProposal.proposal_id);
+      if (!proposal) continue;
+
+      await supabase
+        .from('proposals')
+        .update({
+          evaluation_result: rankedProposal,
+          evaluation_score: rankedProposal.final_score,
+          evaluation_rank: rankedProposal.rank,
+          evaluation_status: 'completed',
+          evaluation_completed_at: new Date().toISOString(),
+          evaluation_metadata: {
+            model_used: model,
+            provider: 'vertex-ai',
+            temperature: 0.0,
+            evaluation_time_ms: evaluationTime,
+          },
+        })
+        .eq('id', rankedProposal.proposal_id);
+    }
+
+    console.log('[Evaluate] Evaluation results saved to database');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        project_id,
+        batch_summary: evaluationResult.batch_summary,
+        ranked_proposals: evaluationResult.ranked_proposals,
+        evaluation_metadata: {
+          model_used: model,
+          provider: 'vertex-ai',
+          temperature: 0.0,
+          total_evaluation_time_ms: evaluationTime,
+        },
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('[Evaluate] Error:', error);
+    console.error('[Evaluate] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[Evaluate] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // Determine error type
+    let errorCode = 'EVALUATION_FAILED';
+    let errorMessage = error instanceof Error ? error.message : 'Evaluation failed';
+    
+    if (errorMessage.includes('timeout')) {
+      errorCode = 'TIMEOUT';
+    } else if (errorMessage.includes('JSON')) {
+      errorCode = 'INVALID_JSON';
+    } else if (errorMessage.includes('API key') || errorMessage.includes('CONFIGURATION')) {
+      errorCode = 'CONFIGURATION_ERROR';
+    } else if (errorMessage.includes('API error')) {
+      errorCode = 'AI_API_ERROR';
+    } else if (errorMessage.includes('ZodError') || errorMessage.includes('validation')) {
+      errorCode = 'VALIDATION_ERROR';
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: errorMessage,
+        error_code: errorCode,
+        error_details: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 500),
+        } : undefined,
+        retry_after_seconds: errorCode === 'TIMEOUT' ? 60 : undefined,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
+

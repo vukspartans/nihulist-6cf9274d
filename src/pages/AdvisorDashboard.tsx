@@ -718,7 +718,7 @@ const AdvisorDashboard = () => {
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                    <span className="font-medium text-foreground">{(advisorProfile.rating * 2).toFixed(1)}/10</span>
+                    <span className="font-medium text-foreground">{advisorProfile.rating ? advisorProfile.rating.toFixed(1) : '0.0'}/5</span>
                   </div>
                 </div>
               </div>
