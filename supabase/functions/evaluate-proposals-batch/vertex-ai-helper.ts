@@ -1,37 +1,37 @@
 /**
  * Vertex AI Helper Functions
  * 
- * Ova funkcija zamenjuje OpenAI integraciju sa Google Vertex AI (Gemini).
- * Zahteva Service Account JSON key sa Vertex AI permissions.
+ * Replaces OpenAI integration with Google Vertex AI (Gemini).
+ * Requires Service Account JSON key with Vertex AI permissions.
  */
 
 import { EvaluationResultSchema, type EvaluationResult } from "./schemas.ts";
 
-// Cache za access token (važi 1 sat)
+// Cache for access token (valid for 1 hour)
 let cachedAccessToken: string | null = null;
 let tokenExpiry: number = 0;
 
 /**
- * Get cached access token ili generiše novi ako je istekao
+ * Get cached access token or generate new one if expired
  * 
- * @param serviceAccountJson - Service Account JSON objekat
+ * @param serviceAccountJson - Service Account JSON object
  * @returns Access token string
  */
 export async function getCachedAccessToken(serviceAccountJson: any): Promise<string> {
   const now = Date.now();
   
-  // Ako token postoji i nije istekao (sa 5 minuta buffer), vrati ga
+  // If token exists and hasn't expired (with 5 minute buffer), return it
   if (cachedAccessToken && tokenExpiry > now + 5 * 60 * 1000) {
     console.log('[Vertex AI] Using cached access token');
     return cachedAccessToken;
   }
   
-  // Generiši novi token
+  // Generate new token
   console.log('[Vertex AI] Generating new access token...');
   const jwt = await generateJWT(serviceAccountJson);
   const accessToken = await exchangeJWTForAccessToken(jwt);
   
-  // Cache token (važi 55 minuta, da imamo buffer)
+  // Cache token (valid for 55 minutes, to have buffer)
   cachedAccessToken = accessToken;
   tokenExpiry = now + 55 * 60 * 1000;
   
@@ -39,15 +39,15 @@ export async function getCachedAccessToken(serviceAccountJson: any): Promise<str
 }
 
 /**
- * Generiše JWT token za Service Account autentifikaciju
- * Koristi djwt biblioteku za Deno
+ * Generate JWT token for Service Account authentication
+ * Uses djwt library for Deno
  * 
- * @param serviceAccountJson - Service Account JSON objekat
+ * @param serviceAccountJson - Service Account JSON object
  * @returns JWT token string
  */
 async function generateJWT(serviceAccountJson: any): Promise<string> {
   try {
-    // Koristimo djwt biblioteku za Deno
+    // Use djwt library for Deno
     const { create, importPKCS8 } = await import("https://deno.land/x/djwt@v3.0.2/mod.ts");
     
     const now = Math.floor(Date.now() / 1000);
@@ -57,7 +57,7 @@ async function generateJWT(serviceAccountJson: any): Promise<string> {
       iss: serviceAccountJson.client_email,
       sub: serviceAccountJson.client_email,
       aud: "https://oauth2.googleapis.com/token",
-      exp: now + 3600, // Token važi 1 sat
+      exp: now + 3600, // Token valid for 1 hour
       iat: now,
       scope: "https://www.googleapis.com/auth/cloud-platform"
     };
@@ -76,7 +76,7 @@ async function generateJWT(serviceAccountJson: any): Promise<string> {
 }
 
 /**
- * Exchange JWT token za OAuth2 access token
+ * Exchange JWT token for OAuth2 access token
  * 
  * @param jwt - JWT token
  * @returns Access token string
@@ -106,11 +106,11 @@ async function exchangeJWTForAccessToken(jwt: string): Promise<string> {
  * Call Vertex AI (Gemini) API
  * 
  * @param systemInstruction - System prompt
- * @param userContent - User content (JSON string sa proposal podacima)
- * @param serviceAccountJson - Service Account JSON objekat
+ * @param userContent - User content (JSON string with proposal data)
+ * @param serviceAccountJson - Service Account JSON object
  * @param projectId - Google Cloud Project ID
- * @param region - Google Cloud Region (npr. "us-central1")
- * @returns EvaluationResult sa ranked proposals
+ * @param region - Google Cloud Region (e.g. "us-central1")
+ * @returns EvaluationResult with ranked proposals
  */
 export async function callVertexAI(
   systemInstruction: string,
