@@ -16,13 +16,22 @@ export const useNegotiation = () => {
 
   const createNegotiationSession = async (
     data: NegotiationRequestInput
-  ): Promise<NegotiationRequestOutput | null> => {
+  ): Promise<NegotiationRequestOutput | null | { existingSession: true; sessionId: string }> => {
     setLoading(true);
     try {
       const { data: result, error } = await supabase.functions.invoke(
         "send-negotiation-request",
         { body: data }
       );
+
+      // Check for 409 conflict (existing negotiation)
+      if (result?.error === "ACTIVE_NEGOTIATION_EXISTS") {
+        toast({
+          title: "בקשה קיימת",
+          description: "קיימת כבר בקשת עדכון פעילה להצעה זו",
+        });
+        return { existingSession: true, sessionId: result.existing_session_id };
+      }
 
       if (error) throw error;
 

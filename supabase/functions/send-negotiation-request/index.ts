@@ -144,7 +144,18 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingSession) {
-      throw new Error("An active negotiation already exists for this version");
+      console.log("[Negotiation Request] Active session exists:", existingSession.id);
+      return new Response(
+        JSON.stringify({
+          error: "ACTIVE_NEGOTIATION_EXISTS",
+          message: "קיימת בקשת עדכון פעילה עבור הצעה זו",
+          existing_session_id: existingSession.id,
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Get entrepreneur profile
