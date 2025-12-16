@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -85,15 +86,12 @@ export const BulkNegotiationDialog = ({
       setSendingProgress(Math.round(((i + 1) / selectedList.length) * 100));
 
       // Get latest version for proposal
-      const { data: versions } = await import("@/integrations/supabase/client").then(
-        async ({ supabase }) =>
-          supabase
-            .from("proposal_versions")
-            .select("id")
-            .eq("proposal_id", proposal.id)
-            .order("version_number", { ascending: false })
-            .limit(1)
-      );
+      const { data: versions } = await supabase
+        .from("proposal_versions")
+        .select("id")
+        .eq("proposal_id", proposal.id)
+        .order("version_number", { ascending: false })
+        .limit(1);
 
       const versionId = versions?.[0]?.id;
       if (!versionId) continue;
