@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, BarChart3 } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, BarChart3, Trash2, RefreshCw, MessageSquare } from 'lucide-react';
 import { ProposalApprovalDialog } from './ProposalApprovalDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useProposalEvaluation } from '@/hooks/useProposalEvaluation';
 import { ProposalComparisonCharts } from './ProposalComparisonCharts';
 import { exportToExcel, exportToPDF } from '@/utils/exportProposals';
+import { VersionBadge, RejectProposalDialog, NegotiationDialog, BulkNegotiationDialog } from './negotiation';
+import { useNegotiation } from '@/hooks/useNegotiation';
+import { useLineItems } from '@/hooks/useLineItems';
 
 interface Proposal {
   id: string;
@@ -27,6 +32,9 @@ interface Proposal {
   evaluation_rank?: number | null;
   evaluation_result?: any;
   evaluation_status?: string;
+  current_version?: number;
+  has_active_negotiation?: boolean;
+  conditions_json?: any;
 }
 
 interface ProposalComparisonDialogProps {
@@ -49,12 +57,21 @@ export const ProposalComparisonDialog = ({
   const [sortBy, setSortBy] = useState<'price' | 'timeline' | 'score'>('score');
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [selectedProposalIds, setSelectedProposalIds] = useState<Set<string>>(new Set());
   const { rejectProposal, loading: actionLoading } = useProposalApproval();
   const { evaluateProposals, loading: evaluationLoading } = useProposalEvaluation();
   const [evaluationResult, setEvaluationResult] = useState<any>(null);
   const [projectName, setProjectName] = useState<string>('');
   const [showCharts, setShowCharts] = useState(false);
   const [evaluationProgress, setEvaluationProgress] = useState<number>(0);
+  
+  // Negotiation state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [proposalToReject, setProposalToReject] = useState<Proposal | null>(null);
+  const [negotiationDialogOpen, setNegotiationDialogOpen] = useState(false);
+  const [bulkNegotiationDialogOpen, setBulkNegotiationDialogOpen] = useState(false);
+  const [proposalForNegotiation, setProposalForNegotiation] = useState<Proposal | null>(null);
+  const { rejectProposal: rejectWithNotification, loading: rejectLoading } = useNegotiation();
 
   useEffect(() => {
     if (open && proposalIds.length > 0) {
@@ -84,7 +101,7 @@ export const ProposalComparisonDialog = ({
     try {
       const { data, error } = await supabase
         .from('proposals')
-        .select('*, evaluation_score, evaluation_rank, evaluation_result, evaluation_status')
+        .select('*, evaluation_score, evaluation_rank, evaluation_result, evaluation_status, current_version, has_active_negotiation, conditions_json')
         .in('id', proposalIds);
 
       if (error) throw error;
@@ -166,14 +183,52 @@ export const ProposalComparisonDialog = ({
     setApprovalDialogOpen(true);
   };
 
-  const handleReject = async (proposal: Proposal) => {
-    if (!confirm(`האם אתה בטוח שברצונך לדחות את ההצעה של ${proposal.supplier_name}?`)) {
-      return;
-    }
-    
-    await rejectProposal(proposal.id, proposal.project_id);
-    fetchProposals();
+  const handleRejectClick = (proposal: Proposal) => {
+    setProposalToReject(proposal);
+    setRejectDialogOpen(true);
   };
+
+  const handleRejectConfirm = async (reason?: string) => {
+    if (!proposalToReject) return;
+    const success = await rejectWithNotification(proposalToReject.id, reason);
+    if (success) {
+      setRejectDialogOpen(false);
+      setProposalToReject(null);
+      fetchProposals();
+    }
+  };
+
+  const handleNegotiationClick = (proposal: Proposal) => {
+    setProposalForNegotiation(proposal);
+    setNegotiationDialogOpen(true);
+  };
+
+  const handleBulkNegotiationClick = () => {
+    setBulkNegotiationDialogOpen(true);
+  };
+
+  const toggleProposalSelection = (proposalId: string) => {
+    setSelectedProposalIds(prev => {
+      const next = new Set(prev);
+      if (next.has(proposalId)) {
+        next.delete(proposalId);
+      } else {
+        next.add(proposalId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const eligibleProposals = sortedProposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted');
+    if (selectedProposalIds.size === eligibleProposals.length) {
+      setSelectedProposalIds(new Set());
+    } else {
+      setSelectedProposalIds(new Set(eligibleProposals.map(p => p.id)));
+    }
+  };
+
+  const selectedProposals = proposals.filter(p => selectedProposalIds.has(p.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -267,6 +322,33 @@ export const ProposalComparisonDialog = ({
           <ProposalComparisonCharts proposals={proposals} />
         )}
 
+        {/* Bulk Actions Bar */}
+        {selectedProposalIds.size > 0 && (
+          <Alert className="mb-4 flex items-center justify-between">
+            <AlertDescription className="flex items-center gap-2">
+              <span>נבחרו {selectedProposalIds.size} הצעות</span>
+            </AlertDescription>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBulkNegotiationClick}
+                disabled={selectedProposalIds.size < 1}
+              >
+                <RefreshCw className="w-4 h-4 ms-1" />
+                בקש הצעות מחודשות ({selectedProposalIds.size})
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedProposalIds(new Set())}
+              >
+                נקה בחירה
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         {/* Tabs for Table and Charts View */}
         <Tabs defaultValue="table" className="w-full">
           <div className="flex items-center justify-between mb-3 gap-4">
@@ -323,15 +405,21 @@ export const ProposalComparisonDialog = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <TooltipProvider>
             <Table dir="rtl">
               <TableHeader>
                 <TableRow className="h-10">
+                  <TableHead className="text-center text-xs py-2 w-10">
+                    <Checkbox
+                      checked={selectedProposalIds.size > 0 && selectedProposalIds.size === sortedProposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted').length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="text-right text-xs py-2">דירוג</TableHead>
                   <TableHead className="text-right text-xs py-2">ספק</TableHead>
                   <TableHead className="text-right text-xs py-2">ציון AI</TableHead>
                   <TableHead className="text-right text-xs py-2">מחיר</TableHead>
                   <TableHead className="text-right text-xs py-2">זמן ביצוע</TableHead>
-                  <TableHead className="text-right text-xs py-2">תאריך הגשה</TableHead>
                   <TableHead className="text-right text-xs py-2">סטטוס</TableHead>
                   <TableHead className="text-right text-xs py-2">פעולות</TableHead>
                 </TableRow>
@@ -341,14 +429,23 @@ export const ProposalComparisonDialog = ({
                   const evalData = proposal.evaluation_result;
                   const isBest = proposal.evaluation_rank === 1;
                   const recommendationLevel = evalData?.recommendation_level;
+                  const canSelect = proposal.status === 'submitted' || proposal.status === 'resubmitted';
                   
                   return (
                     <TableRow 
                       key={proposal.id}
-                      className={`${isBest ? 'bg-green-50 dark:bg-green-950/20' : ''} h-auto`}
+                      className={`${isBest ? 'bg-green-50 dark:bg-green-950/20' : ''} ${selectedProposalIds.has(proposal.id) ? 'bg-primary/5' : ''} h-auto`}
                     >
+                      <TableCell className="text-center py-2">
+                        {canSelect && (
+                          <Checkbox
+                            checked={selectedProposalIds.has(proposal.id)}
+                            onCheckedChange={() => toggleProposalSelection(proposal.id)}
+                          />
+                        )}
+                      </TableCell>
                       <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end items-center gap-1.5">
                           {proposal.evaluation_rank ? (
                             <div className="flex items-center gap-1.5" dir="rtl">
                               <Badge 
@@ -368,7 +465,15 @@ export const ProposalComparisonDialog = ({
                       </TableCell>
                       <TableCell className="font-medium text-right py-2" dir="rtl">
                         <div className="flex flex-col items-end">
-                          <div className="text-sm text-right">{proposal.supplier_name}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm text-right">{proposal.supplier_name}</span>
+                            {(proposal.current_version && proposal.current_version > 1) && (
+                              <VersionBadge 
+                                currentVersion={proposal.current_version} 
+                                hasActiveNegotiation={proposal.has_active_negotiation}
+                              />
+                            )}
+                          </div>
                           {recommendationLevel && (
                             <div className="text-xs text-muted-foreground mt-0.5 text-right" dir="rtl">
                               {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
@@ -414,66 +519,78 @@ export const ProposalComparisonDialog = ({
                             </Badge>
                           )}
                         </div>
-                        {evalData?.analysis?.price_assessment && (
-                          <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 text-right" dir="rtl">
-                            {evalData.analysis.price_assessment}
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell className="text-right py-2" dir="rtl">
                         <div className="flex items-center gap-1.5 flex-wrap justify-end" dir="rtl">
                           <span className={`text-sm ${proposal.timeline_days === bestTimeline ? 'text-purple-600 font-bold' : ''}`}>
                             {proposal.timeline_days} ימים
                           </span>
-                          {proposal.timeline_days === bestTimeline && !proposal.evaluation_rank && (
-                            <Badge variant="secondary" className="bg-purple-100 text-purple-600 text-xs px-1.5 py-0.5" dir="rtl">
-                              <Clock className="w-2.5 h-2.5 ml-0.5" />
-                              מהיר
-                            </Badge>
-                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs text-right py-2" dir="rtl">
-                        {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
-                      </TableCell>
                       <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end items-center gap-1.5">
                           <Badge 
                             variant={
                               proposal.status === 'accepted' ? 'default' : 
                               proposal.status === 'rejected' ? 'destructive' : 
+                              proposal.status === 'resubmitted' ? 'secondary' :
                               'secondary'
                             }
                             className="text-xs px-1.5 py-0.5"
                           >
                             {proposal.status === 'submitted' && 'ממתין'}
+                            {proposal.status === 'resubmitted' && 'עודכן'}
                             {proposal.status === 'accepted' && 'אושר'}
                             {proposal.status === 'rejected' && 'נדחה'}
+                            {proposal.status === 'negotiation_requested' && 'בהמתנה לעדכון'}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="text-right py-2" dir="rtl">
-                        {proposal.status === 'submitted' && (
-                          <div className="flex gap-1.5 justify-end" dir="rtl">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(proposal)}
-                              disabled={actionLoading}
-                              className="bg-green-600 hover:bg-green-700 text-xs px-2 py-1 h-7"
-                            >
-                              <CheckCircle className="w-3 h-3 ml-0.5" />
-                              אשר
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleReject(proposal)}
-                              disabled={actionLoading}
-                              className="text-xs px-2 py-1 h-7"
-                            >
-                              <XCircle className="w-3 h-3 ml-0.5" />
-                              דחה
-                            </Button>
+                        {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
+                          <div className="flex gap-1 justify-end" dir="rtl">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleApprove(proposal)}
+                                  disabled={actionLoading}
+                                  className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>אשר הצעה</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleNegotiationClick(proposal)}
+                                  disabled={actionLoading || proposal.has_active_negotiation}
+                                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>בקש הצעה מחודשת</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleRejectClick(proposal)}
+                                  disabled={actionLoading || rejectLoading}
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>דחה הצעה</TooltipContent>
+                            </Tooltip>
                           </div>
                         )}
                       </TableCell>
@@ -482,6 +599,7 @@ export const ProposalComparisonDialog = ({
                 })}
               </TableBody>
             </Table>
+            </TooltipProvider>
           </div>
         )}
           </TabsContent>
@@ -506,6 +624,51 @@ export const ProposalComparisonDialog = ({
           onSuccess={fetchProposals}
         />
       )}
+
+      {proposalToReject && (
+        <RejectProposalDialog
+          open={rejectDialogOpen}
+          onOpenChange={setRejectDialogOpen}
+          supplierName={proposalToReject.supplier_name}
+          onConfirm={handleRejectConfirm}
+          loading={rejectLoading}
+        />
+      )}
+
+      {proposalForNegotiation && (
+        <NegotiationDialog
+          open={negotiationDialogOpen}
+          onOpenChange={setNegotiationDialogOpen}
+          proposal={{
+            id: proposalForNegotiation.id,
+            price: proposalForNegotiation.price,
+            supplier_name: proposalForNegotiation.supplier_name,
+            project_id: proposalForNegotiation.project_id,
+            current_version: proposalForNegotiation.current_version,
+          }}
+          onSuccess={() => {
+            setNegotiationDialogOpen(false);
+            setProposalForNegotiation(null);
+            fetchProposals();
+          }}
+        />
+      )}
+
+      <BulkNegotiationDialog
+        open={bulkNegotiationDialogOpen}
+        onOpenChange={setBulkNegotiationDialogOpen}
+        proposals={selectedProposals.map(p => ({
+          id: p.id,
+          price: p.price,
+          supplier_name: p.supplier_name,
+          project_id: p.project_id,
+        }))}
+        onSuccess={() => {
+          setBulkNegotiationDialogOpen(false);
+          setSelectedProposalIds(new Set());
+          fetchProposals();
+        }}
+      />
     </Dialog>
   );
 };
