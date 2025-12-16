@@ -5,30 +5,28 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, DollarSign, CreditCard } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
+import { 
+  AdvisorTypeRequestData, 
+  ServiceDetailsMode, 
+  ServiceScopeItem, 
+  RFPFeeItem, 
+  PaymentTerms,
+  UploadedFileMetadata 
+} from '@/types/rfpRequest';
+import { ServiceDetailsTab } from '@/components/rfp/ServiceDetailsTab';
+import { FeeItemsTable } from '@/components/rfp/FeeItemsTable';
+import { PaymentTermsTab } from '@/components/rfp/PaymentTermsTab';
 
-export interface UploadedFileMetadata {
-  name: string;
-  url: string;
-  size: number;
-  path: string;
-}
-
-export interface AdvisorTypeRequestData {
-  requestTitle: string;
-  requestContent: string;
-  requestAttachments: UploadedFileMetadata[];
-  emailSubject: string;
-  emailBody: string;
-  hasBeenReviewed: boolean;
-  lastEditedAt?: Date;
-}
+// Re-export for backward compatibility
+export type { UploadedFileMetadata, AdvisorTypeRequestData } from '@/types/rfpRequest';
 
 interface RequestEditorDialogProps {
   advisorType: string;
@@ -51,24 +49,25 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
 
 נשמח לשמוע מכם בהקדם.`,
   requestAttachments: [],
-  emailSubject: `בקשה להצעת מחיר - ${projectName}`,
-  emailBody: `שלום {{שם_המשרד}},
-
-קיבלת אפשרות להגיש הצעת מחיר לפרויקט חדש דרך מערכת Billding – הפלטפורמה המחברת בין יזמים ליועצים ומנהלת את כל תהליך העבודה במקום אחד.
-
-במערכת תוכלו:
-✅ להגיש הצעות מחיר בצורה מסודרת.
-✅ לעקוב אחרי סטטוס הפניות וההצעות שלך.
-✅ לקבל התראות בזמן אמת על פניות חדשות מפרויקטים רלוונטיים.
-
-כדי לצפות בפרטי הפרויקט ולהגיש הצעת מחיר –
-היכנס/י עכשיו למערכת Billding ›
-
-)אם זו הפעם הראשונה שלך – ההרשמה קצרה ולוקחת פחות מדקה(.
-
-בהצלחה,
-צוות Billding`,
-  hasBeenReviewed: false
+  hasBeenReviewed: false,
+  
+  // Service details
+  serviceDetailsMode: 'free_text',
+  serviceDetailsFreeText: '',
+  serviceDetailsFile: undefined,
+  serviceScopeItems: [],
+  
+  // Fee items
+  feeItems: [],
+  optionalFeeItems: [],
+  
+  // Payment terms
+  paymentTerms: {
+    advance_percent: 20,
+    milestone_payments: [],
+    payment_due_days: 30,
+    notes: ''
+  }
 });
 
 export const RequestEditorDialog = ({
@@ -87,6 +86,7 @@ export const RequestEditorDialog = ({
   const [canAutoClose, setCanAutoClose] = useState(true);
   const [extracting, setExtracting] = useState(false);
   const [rfpDocumentFile, setRfpDocumentFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState('main');
   
   const defaultData = getDefaultData(projectName, advisorType);
   const [formData, setFormData] = useState<AdvisorTypeRequestData>({
@@ -113,7 +113,7 @@ export const RequestEditorDialog = ({
           if (attachment.path && attachment.url) {
             const { data, error } = await supabase.storage
               .from('rfp-request-files')
-              .createSignedUrl(attachment.path, 3600 * 24 * 7); // 7 days
+              .createSignedUrl(attachment.path, 3600 * 24 * 7);
 
             if (!error && data) {
               return {
@@ -151,7 +151,6 @@ export const RequestEditorDialog = ({
   const handleRfpDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!isValidFileType(file.name)) {
         toast({
           title: "סוג קובץ לא נתמך",
@@ -160,7 +159,6 @@ export const RequestEditorDialog = ({
         });
         return;
       }
-      // Validate file size (20MB limit)
       if (!isValidFileSize(file.size, 20)) {
         toast({
           title: "קובץ גדול מדי",
@@ -187,7 +185,6 @@ export const RequestEditorDialog = ({
     setExtracting(true);
 
     try {
-      // First, upload the file temporarily
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("לא מחובר למערכת");
@@ -199,7 +196,6 @@ export const RequestEditorDialog = ({
       const fileExt = sanitizedName.split('.').pop();
       const tempPath = `${projectId}/temp/${timestamp}_${randomId}.${fileExt}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('rfp-request-files')
         .upload(tempPath, rfpDocumentFile, {
@@ -211,12 +207,10 @@ export const RequestEditorDialog = ({
         throw new Error(`שגיאה בהעלאת הקובץ: ${uploadError.message}`);
       }
 
-      // Call the edge function
       const { data, error } = await supabase.functions.invoke('extract-rfp-content', {
         body: { filePath: tempPath }
       });
 
-      // Clean up temp file
       await supabase.storage.from('rfp-request-files').remove([tempPath]);
 
       if (error) {
@@ -257,18 +251,12 @@ export const RequestEditorDialog = ({
     const errors: string[] = [];
 
     try {
-      // VERIFY SESSION BEFORE UPLOAD
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        const errorMsg = reportableError(
-          'שגיאת אימות',
-          'יש להתחבר מחדש למערכת',
-          { sessionError: sessionError?.message }
-        );
         toast({
           title: "שגיאת אימות",
-          description: errorMsg,
+          description: "יש להתחבר מחדש למערכת",
           variant: "destructive",
         });
         setUploading(false);
@@ -276,7 +264,6 @@ export const RequestEditorDialog = ({
         return;
       }
 
-      // Verify user owns this project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .select('id, owner_id')
@@ -285,14 +272,9 @@ export const RequestEditorDialog = ({
         .single();
 
       if (projectError || !project) {
-        const errorMsg = reportableError(
-          'שגיאה',
-          'לא ניתן לאמת הרשאות לפרויקט זה',
-          { projectError: projectError?.message, projectId }
-        );
         toast({
           title: "שגיאה",
-          description: errorMsg,
+          description: "לא ניתן לאמת הרשאות לפרויקט זה",
           variant: "destructive",
         });
         setUploading(false);
@@ -300,42 +282,24 @@ export const RequestEditorDialog = ({
         return;
       }
 
-      console.log('[RequestEditor] Session verified, user owns project:', {
-        userId: session.user.id,
-        projectId: project.id
-      });
-
       for (const file of files) {
-        // Validate file type
         if (!isValidFileType(file.name)) {
           errors.push(`${file.name}: סוג קובץ לא נתמך`);
           continue;
         }
 
-        // Validate file size (10MB limit)
         if (!isValidFileSize(file.size, 10)) {
           errors.push(`${file.name}: גדול מ-10MB (${formatFileSize(file.size)})`);
           continue;
         }
 
-        // Sanitize file name and generate unique path
         const sanitizedName = sanitizeFileName(file.name);
         const fileExt = sanitizedName.split('.').pop();
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(7);
         const uniqueFileName = `${timestamp}_${randomId}.${fileExt}`;
-        
-        // Project-based path structure (no temp folder, no advisor type)
         const filePath = `${projectId}/${timestamp}/${uniqueFileName}`;
 
-        console.log('[RequestEditor] Uploading file:', {
-          original: file.name,
-          sanitized: sanitizedName,
-          path: filePath,
-          size: formatFileSize(file.size)
-        });
-
-        // Upload to storage with explicit auth header
         const { error: uploadError } = await supabase.storage
           .from('rfp-request-files')
           .upload(filePath, file, {
@@ -347,58 +311,30 @@ export const RequestEditorDialog = ({
           });
 
         if (uploadError) {
-          // Enhanced error logging
-          console.error('[RequestEditor] Upload error details:', {
-            error: uploadError,
-            message: uploadError.message,
-            path: filePath,
-            projectId,
-            userId: session.user.id,
-            bucketId: 'rfp-request-files',
-            folderStructure: filePath.split('/'),
-            authToken: session.access_token ? 'Present' : 'Missing',
-            tokenExpiry: session.expires_at,
-            fileSize: file.size,
-            fileType: file.type
-          });
-          
-          // User-friendly error with actionable steps
           const errorMessage = uploadError.message?.includes('row-level security')
-            ? 'בעיית הרשאות. נסה:\n1. לרענן את הדף\n2. להתחבר מחדש\n3. לנסות שוב'
+            ? 'בעיית הרשאות. נסה לרענן את הדף ולהתחבר מחדש.'
             : formatSupabaseError(uploadError);
-            
           errors.push(`${file.name}: ${errorMessage}`);
           continue;
         }
 
-        // Get signed URL (private bucket)
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('rfp-request-files')
-          .createSignedUrl(filePath, 3600 * 24 * 7); // 7 days expiry
+          .createSignedUrl(filePath, 3600 * 24 * 7);
 
         if (signedUrlError || !signedUrlData) {
-          console.error('[RequestEditor] Signed URL error:', signedUrlError);
           errors.push(`${file.name}: שגיאה ביצירת קישור לקובץ`);
           continue;
         }
 
-        const signedUrl = signedUrlData.signedUrl;
-
         uploadedFiles.push({
-          name: file.name, // Keep original name for display
-          url: signedUrl,
+          name: file.name,
+          url: signedUrlData.signedUrl,
           size: file.size,
           path: filePath
         });
-
-        console.log('[RequestEditor] File uploaded successfully:', {
-          name: file.name,
-          path: filePath,
-          signedUrl: signedUrl.substring(0, 100) + '...'
-        });
       }
 
-      // Update form data with successfully uploaded files
       if (uploadedFiles.length > 0) {
         setFormData(prev => ({
           ...prev,
@@ -409,44 +345,23 @@ export const RequestEditorDialog = ({
           title: "קבצים הועלו בהצלחה",
           description: `${uploadedFiles.length} קבצים הועלו`,
         });
-
-        // Auto-scroll to bottom to show new files
-        setTimeout(() => {
-          const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-          if (scrollArea) {
-            scrollArea.scrollTop = scrollArea.scrollHeight;
-          }
-        }, 100);
       }
 
-      // Show errors if any
       if (errors.length > 0) {
-        const errorMsg = reportableError(
-          'שגיאות בהעלאת קבצים',
-          errors.join('\n'),
-          { fileCount: files.length, projectId }
-        );
         toast({
           title: "שגיאות בהעלאת קבצים",
-          description: errorMsg,
+          description: errors.join('\n'),
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('[RequestEditor] Unexpected error:', error);
-      const errorMsg = reportableError(
-        'שגיאה',
-        'אירעה שגיאה בהעלאת הקבצים',
-        { error: error instanceof Error ? error.message : String(error), projectId }
-      );
       toast({
         title: "שגיאה",
-        description: errorMsg,
+        description: "אירעה שגיאה בהעלאת הקבצים",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
-      // Reset file input
       e.target.value = '';
     }
   };
@@ -455,16 +370,14 @@ export const RequestEditorDialog = ({
     const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
     
     try {
-      // Temporarily disable auto-close before opening new window
       setCanAutoClose(false);
       
-      // Regenerate fresh signed URL for preview
       let previewUrl = file.url;
       
       if (file.path) {
         const { data, error } = await supabase.storage
           .from('rfp-request-files')
-          .createSignedUrl(file.path, 3600); // 1 hour for preview
+          .createSignedUrl(file.path, 3600);
         
         if (!error && data) {
           previewUrl = data.signedUrl;
@@ -474,7 +387,6 @@ export const RequestEditorDialog = ({
       if (isImage) {
         window.open(previewUrl, '_blank');
       } else {
-        // For other files, trigger download
         const link = document.createElement('a');
         link.href = previewUrl;
         link.download = file.name;
@@ -484,13 +396,11 @@ export const RequestEditorDialog = ({
         document.body.removeChild(link);
       }
       
-      // Re-enable auto-close after a short delay
       setTimeout(() => {
         setCanAutoClose(true);
       }, 500);
     } catch (error) {
-      setCanAutoClose(true); // Re-enable even if there's an error
-      console.error('[RequestEditor] Preview error:', error);
+      setCanAutoClose(true);
       toast({
         title: "שגיאה בתצוגה מקדימה",
         description: "לא ניתן להציג את הקובץ כרגע",
@@ -503,15 +413,12 @@ export const RequestEditorDialog = ({
     const file = formData.requestAttachments[index];
     
     try {
-      // Delete from storage
       if (file.path) {
-        console.log('[RequestEditor] Deleting file:', file.path);
         const { error } = await supabase.storage
           .from('rfp-request-files')
           .remove([file.path]);
         
         if (error) {
-          console.error('[RequestEditor] Delete error:', error);
           toast({
             title: "שגיאה במחיקת קובץ",
             description: error.message,
@@ -531,7 +438,6 @@ export const RequestEditorDialog = ({
         description: `${file.name} הוסר מהרשימה`,
       });
     } catch (error) {
-      console.error('[RequestEditor] Error removing attachment:', error);
       toast({
         title: "שגיאה",
         description: "לא ניתן למחוק את הקובץ",
@@ -559,6 +465,7 @@ export const RequestEditorDialog = ({
       ...initialData
     });
     setRfpDocumentFile(null);
+    setActiveTab('main');
     setIsOpen(false);
   };
 
@@ -566,8 +473,6 @@ export const RequestEditorDialog = ({
     <Dialog 
       open={isOpen} 
       onOpenChange={(open) => {
-        // Only allow closing if it's an explicit user action
-        // Prevent auto-close from focus changes
         if (!open && canAutoClose) {
           setIsOpen(false);
         } else if (open) {
@@ -595,7 +500,7 @@ export const RequestEditorDialog = ({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh]" dir="rtl">
+      <DialogContent className="max-w-5xl max-h-[95vh]" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -612,221 +517,267 @@ export const RequestEditorDialog = ({
           </div>
         </DialogHeader>
         
-        <ScrollArea className="h-[calc(90vh-200px)] overflow-y-auto mt-4" dir="rtl">
-          <div className="pr-4 space-y-6">
-            {/* Request Title */}
-            <div className="space-y-2">
-              <Label htmlFor="request-title" className="text-right block">כותרת הבקשה</Label>
-              <Input
-                id="request-title"
-                value={formData.requestTitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, requestTitle: e.target.value }))}
-                className="text-right"
-                dir="rtl"
-                placeholder="כותרת הבקשה שתוצג ליועץ"
-              />
-            </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsTrigger value="main" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              ראשי
+            </TabsTrigger>
+            <TabsTrigger value="services" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              פירוט שירותים
+            </TabsTrigger>
+            <TabsTrigger value="fees" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              שכר טרחה
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              תשלום
+            </TabsTrigger>
+          </TabsList>
 
-            {/* AI Content Extraction Section */}
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <Label className="text-right block font-medium flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                חילוץ אוטומטי מקובץ בקשת הצעת מחיר
-              </Label>
-              <p className="text-sm text-muted-foreground text-right">
-                העלה קובץ בקשת הצעת מחיר (PDF, Word, תמונה) והמערכת תחלץ אוטומטית את תוכן הבקשה
-              </p>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="file"
-                  id="rfp-document"
-                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                  onChange={handleRfpDocumentSelect}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('rfp-document')?.click()}
-                  className="flex-1"
-                  disabled={extracting}
-                >
-                  <Upload className="h-4 w-4 ml-2" />
-                  {rfpDocumentFile ? rfpDocumentFile.name : 'בחר קובץ'}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleExtractContent}
-                  disabled={!rfpDocumentFile || extracting}
-                  className="flex items-center gap-2"
-                >
-                  {extracting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      מחלץ...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      חלץ תוכן
-                    </>
-                  )}
-                </Button>
-              </div>
-              {rfpDocumentFile && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>{rfpDocumentFile.name}</span>
-                  <span className="text-xs">({formatFileSize(rfpDocumentFile.size)})</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRfpDocumentFile(null)}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Request Content */}
-            <div className="space-y-2">
-              <Label htmlFor="request-content" className="text-right block">תיאור הבקשה (טקסט חופשי)</Label>
-              <Textarea
-                id="request-content"
-                value={formData.requestContent}
-                onChange={(e) => setFormData(prev => ({ ...prev, requestContent: e.target.value }))}
-                rows={12}
-                className="text-right font-sans leading-relaxed"
-                dir="rtl"
-                placeholder="תאר את הפרויקט והדרישות שלך"
-              />
-              <p className="text-xs text-muted-foreground text-right">
-                תיאור זה יעזור ליועץ להבין את הצרכים שלך ולהציע הצעת מחיר מדויקת
-              </p>
-            </div>
-
-            {/* File Attachments */}
-            <div className="space-y-2">
-              <Label htmlFor="request-files" className="text-right block">קבצים מצורפים</Label>
-              <div>
-                <input
-                  type="file"
-                  id="request-files"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('request-files')?.click()}
-                  className="w-full"
-                  disabled={uploading}
-                >
-                  <Upload className="h-4 w-4 ml-2" />
-                  {uploading ? 'מעלה...' : 'העלה קבצים'}
-                </Button>
-                <p className="text-xs text-muted-foreground text-right mt-1">
-                  תוכל לצרף תוכניות, מפרטים, או מסמכים רלוונטיים (עד 10MB לקובץ)
-                  <br />
-                  <span className="text-primary">💡 לחץ על קובץ לתצוגה מקדימה</span>
-                </p>
-              </div>
-              
-              {formData.requestAttachments.length > 0 && (
-                <div className="space-y-2 mt-3">
-                  <p className="text-sm font-medium text-muted-foreground text-right">
-                    {formData.requestAttachments.length} קבצים מצורפים
+          <ScrollArea className="h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
+            <div className="pr-4 pb-4">
+              {/* Main Tab */}
+              <TabsContent value="main" className="mt-0 space-y-6">
+                {/* AI Content Extraction Section */}
+                <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                  <Label className="text-right block font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    חילוץ אוטומטי מקובץ בקשת הצעת מחיר
+                  </Label>
+                  <p className="text-sm text-muted-foreground text-right">
+                    העלה קובץ בקשת הצעת מחיר (PDF, Word, תמונה) והמערכת תחלץ אוטומטית את תוכן הבקשה
                   </p>
-                  {formData.requestAttachments.map((file, index) => {
-                    const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
-                    const isPDF = /\.pdf$/i.test(file.name);
-                    
-                    return (
-                      <div 
-                        key={index}
-                        className="group relative flex items-center gap-3 p-4 bg-muted hover:bg-muted/80 rounded-lg border border-border hover:border-primary/50 transition-all"
-                        dir="rtl"
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="file"
+                      id="rfp-document"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                      onChange={handleRfpDocumentSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('rfp-document')?.click()}
+                      className="flex-1"
+                      disabled={extracting}
+                    >
+                      <Upload className="h-4 w-4 ml-2" />
+                      {rfpDocumentFile ? rfpDocumentFile.name : 'בחר קובץ'}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleExtractContent}
+                      disabled={!rfpDocumentFile || extracting}
+                      className="flex items-center gap-2"
+                    >
+                      {extracting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          מחלץ...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          חלץ תוכן
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {rfpDocumentFile && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                      <span>{rfpDocumentFile.name}</span>
+                      <span className="text-xs">({formatFileSize(rfpDocumentFile.size)})</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRfpDocumentFile(null)}
+                        className="h-6 w-6 p-0"
                       >
-                        {/* File Icon or Thumbnail */}
-                        {isImage ? (
-                          <div className="w-12 h-12 rounded overflow-hidden bg-background flex-shrink-0">
-                            <img 
-                              src={file.url} 
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded bg-background flex items-center justify-center flex-shrink-0">
-                            {isPDF ? (
-                              <FileText className="h-6 w-6 text-red-500" />
-                            ) : (
-                              <Paperclip className="h-6 w-6 text-muted-foreground" />
-                            )}
-                          </div>
-                        )}
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Request Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="request-title" className="text-right block">כותרת הבקשה</Label>
+                  <Input
+                    id="request-title"
+                    value={formData.requestTitle}
+                    onChange={(e) => setFormData(prev => ({ ...prev, requestTitle: e.target.value }))}
+                    className="text-right"
+                    dir="rtl"
+                    placeholder="כותרת הבקשה שתוצג ליועץ"
+                  />
+                </div>
+
+                {/* Request Content */}
+                <div className="space-y-2">
+                  <Label htmlFor="request-content" className="text-right block">תיאור הבקשה</Label>
+                  <Textarea
+                    id="request-content"
+                    value={formData.requestContent}
+                    onChange={(e) => setFormData(prev => ({ ...prev, requestContent: e.target.value }))}
+                    rows={10}
+                    className="text-right font-sans leading-relaxed"
+                    dir="rtl"
+                    placeholder="תאר את הפרויקט והדרישות שלך"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    תיאור זה יעזור ליועץ להבין את הצרכים שלך ולהציע הצעת מחיר מדויקת
+                  </p>
+                </div>
+
+                {/* File Attachments */}
+                <div className="space-y-2">
+                  <Label htmlFor="request-files" className="text-right block">קבצים מצורפים</Label>
+                  <div>
+                    <input
+                      type="file"
+                      id="request-files"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('request-files')?.click()}
+                      className="w-full"
+                      disabled={uploading}
+                    >
+                      <Upload className="h-4 w-4 ml-2" />
+                      {uploading ? 'מעלה...' : 'העלה קבצים'}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-right mt-1">
+                      תוכל לצרף תוכניות, מפרטים, או מסמכים רלוונטיים (עד 10MB לקובץ)
+                    </p>
+                  </div>
+                  
+                  {formData.requestAttachments.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <p className="text-sm font-medium text-muted-foreground text-right">
+                        {formData.requestAttachments.length} קבצים מצורפים
+                      </p>
+                      {formData.requestAttachments.map((file, index) => {
+                        const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
+                        const isPDF = /\.pdf$/i.test(file.name);
                         
-                        {/* File Info - Clickable Area */}
-                        <button
-                          type="button"
-                          onClick={() => handleFilePreview(file)}
-                          className="flex-1 text-right hover:text-primary transition-colors"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm font-medium line-clamp-1">{file.name}</span>
-                            <div className="flex items-center gap-2 justify-end">
-                              <Badge variant="outline" className="text-xs">
+                        return (
+                          <div 
+                            key={index}
+                            className="group relative flex items-center gap-3 p-3 bg-muted hover:bg-muted/80 rounded-lg border border-border hover:border-primary/50 transition-all"
+                            dir="rtl"
+                          >
+                            {isImage ? (
+                              <div className="w-10 h-10 rounded overflow-hidden bg-background flex-shrink-0">
+                                <img 
+                                  src={file.url} 
+                                  alt={file.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-background flex items-center justify-center flex-shrink-0">
+                                {isPDF ? (
+                                  <FileText className="h-5 w-5 text-red-500" />
+                                ) : (
+                                  <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
+                            
+                            <button
+                              type="button"
+                              onClick={() => handleFilePreview(file)}
+                              className="flex-1 text-right hover:text-primary transition-colors"
+                            >
+                              <span className="text-sm font-medium line-clamp-1">{file.name}</span>
+                              <Badge variant="outline" className="text-xs ml-2">
                                 {formatFileSize(file.size)}
                               </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {isImage ? 'תמונה' : isPDF ? 'PDF' : 'קובץ'}
-                              </span>
-                            </div>
+                            </button>
+                            
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleFilePreview(file)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeAttachment(index)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </button>
-                        
-                        {/* Preview Button */}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleFilePreview(file)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Delete Button */}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeAttachment(index)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </TabsContent>
+
+              {/* Services Tab */}
+              <TabsContent value="services" className="mt-0">
+                <ServiceDetailsTab
+                  mode={formData.serviceDetailsMode}
+                  onModeChange={(mode) => setFormData(prev => ({ ...prev, serviceDetailsMode: mode }))}
+                  freeText={formData.serviceDetailsFreeText}
+                  onFreeTextChange={(text) => setFormData(prev => ({ ...prev, serviceDetailsFreeText: text }))}
+                  file={formData.serviceDetailsFile}
+                  onFileChange={(file) => setFormData(prev => ({ ...prev, serviceDetailsFile: file }))}
+                  scopeItems={formData.serviceScopeItems || []}
+                  onScopeItemsChange={(items) => setFormData(prev => ({ ...prev, serviceScopeItems: items }))}
+                  feeItems={formData.feeItems || []}
+                  advisorType={advisorType}
+                  projectId={projectId}
+                />
+              </TabsContent>
+
+              {/* Fees Tab */}
+              <TabsContent value="fees" className="mt-0">
+                <FeeItemsTable
+                  items={formData.feeItems || []}
+                  optionalItems={formData.optionalFeeItems || []}
+                  onItemsChange={(items) => setFormData(prev => ({ ...prev, feeItems: items }))}
+                  onOptionalItemsChange={(items) => setFormData(prev => ({ ...prev, optionalFeeItems: items }))}
+                />
+              </TabsContent>
+
+              {/* Payment Tab */}
+              <TabsContent value="payment" className="mt-0">
+                <PaymentTermsTab
+                  paymentTerms={formData.paymentTerms || { advance_percent: 20, payment_due_days: 30 }}
+                  onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
+                />
+              </TabsContent>
             </div>
+          </ScrollArea>
+        </Tabs>
 
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-right">
-                המידע שתזין כאן יהיה זמין ליועץ במערכת Billding לאחר הכניסה שלו
-              </AlertDescription>
-            </Alert>
-          </div>
-        </ScrollArea>
+        <Alert className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-right">
+            המידע שתזין כאן יהיה זמין ליועץ במערכת Billding לאחר הכניסה שלו
+          </AlertDescription>
+        </Alert>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex gap-2 mt-4">
           <Button variant="outline" onClick={handleCancel}>
             ביטול
           </Button>
