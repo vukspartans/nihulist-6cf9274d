@@ -1,9 +1,6 @@
 /**
  * Google AI Studio Helper Functions
  * 
- * Uses Google AI Studio API (generativelanguage.googleapis.com) with API key.
- * Simpler than Vertex AI - no Service Account needed.
- * Same API as analyze-project-file and analyze-proposal-file.
  */
 
 import { EvaluationResultSchema, type EvaluationResult } from "./schemas.ts";
@@ -26,12 +23,27 @@ export async function callGoogleAIStudio(
   console.log('[Evaluate] Using Google AI Studio API');
   console.log('[Evaluate] Model:', model);
   
-  // Google AI Studio endpoint (same as analyze-project-file)
-  const aiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  // Google AI Studio endpoint
+  // Use v1 for gemini-1.5 models, v1beta for gemini-3 models
+  const apiVersion = model.includes('gemini-3') ? 'v1beta' : 'v1';
+  const aiEndpoint = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent`;
   
   console.log('[Evaluate] Endpoint:', aiEndpoint);
   
   // Google AI Studio payload format
+  // responseMimeType is only supported in v1beta, not in v1
+  const generationConfig: any = {
+    temperature: 0.0, // Deterministic output
+    topK: 1,
+    topP: 0.95,
+    maxOutputTokens: 8192,
+  };
+  
+  // Only add responseMimeType for v1beta API
+  if (apiVersion === 'v1beta') {
+    generationConfig.responseMimeType = "application/json";
+  }
+  
   const payload = {
     contents: [
       {
@@ -43,13 +55,7 @@ export async function callGoogleAIStudio(
         ]
       }
     ],
-    generationConfig: {
-      temperature: 0.0, // Deterministic output
-      topK: 1,
-      topP: 0.95,
-      maxOutputTokens: 8192,
-      responseMimeType: "application/json" // Force JSON output
-    }
+    generationConfig: generationConfig
   };
 
   console.log('[Evaluate] Calling Google AI Studio API...');
