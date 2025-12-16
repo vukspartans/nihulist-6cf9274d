@@ -171,13 +171,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
-          <DialogHeader className="p-6 pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
+          <DialogHeader className="p-4 pb-3">
+            <div className="flex items-center justify-between" dir="rtl">
+              <DialogTitle className="text-lg font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
               {getStatusBadge(proposal.status)}
             </div>
             {proposal.status === 'submitted' && (
-              <div className="flex items-center gap-2 pt-3 justify-end">
+              <div className="flex items-center gap-2 pt-2 justify-end" dir="rtl">
                 <Button variant="destructive" size="sm" onClick={handleReject}>
                   <XCircle className="w-4 h-4 me-1" />
                   דחה הצעה
@@ -191,24 +191,23 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-6">
+            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-4">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
               <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-[calc(90vh-180px)]">
-              <TabsContent value="details" className="p-6 space-y-4 m-0">
+            <ScrollArea className="h-[calc(90vh-160px)]">
+              <TabsContent value="details" className="p-4 space-y-3 m-0">
                 {advisorInfo && (
                   <Card className="border-primary/20 bg-primary/5">
-                    <CardContent className="p-4">
-                      <SectionHeader icon={Building2} className="mb-3 text-sm text-primary">פרטי הספק</SectionHeader>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1 space-y-2 text-right">
+                    <CardContent className="p-3">
+                      <SectionHeader icon={Building2} className="mb-2 text-xs text-primary">פרטי הספק</SectionHeader>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 space-y-1.5 text-right">
                           <div className="flex items-center justify-end gap-3">
-                            {advisorInfo.rating > 0 && <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-sm">{advisorInfo.rating.toFixed(1)}<Star className="w-4 h-4 fill-amber-500" /></div>}
-                            <h3 className="font-bold text-lg">{advisorInfo.company_name || proposal.supplier_name}</h3>
+                            <h3 className="font-bold text-base">{advisorInfo.company_name || proposal.supplier_name}</h3>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground justify-end">
                             {advisorInfo.founding_year && <span className="flex items-center gap-1">מאז {advisorInfo.founding_year}<Calendar className="w-3.5 h-3.5" /></span>}
@@ -223,16 +222,16 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                             </div>
                           )}
                         </div>
-                        {advisorInfo.logo_url && <img src={advisorInfo.logo_url} alt="" className="w-16 h-16 rounded-lg object-cover border" />}
+                        {advisorInfo.logo_url && <img src={advisorInfo.logo_url} alt="" className="w-12 h-12 rounded-lg object-cover border flex-shrink-0" />}
                       </div>
                     </CardContent>
                   </Card>
                 )}
                 {rfpContext && (rfpContext.advisor_type || rfpContext.request_title) && (
                   <Card className="border-blue-200 bg-blue-50/50">
-                    <CardContent className="p-4">
-                      <SectionHeader icon={Target} className="mb-2 text-sm text-blue-700">הגשה עבור</SectionHeader>
-                      <div className="space-y-1 text-sm text-right">
+                    <CardContent className="p-3">
+                      <SectionHeader icon={Target} className="mb-1.5 text-xs text-blue-700">הגשה עבור</SectionHeader>
+                      <div className="space-y-1 text-xs text-right">
                         {rfpContext.advisor_type && <p><span className="font-medium">סוג יועץ:</span> {rfpContext.advisor_type}</p>}
                         {rfpContext.request_title && <p><span className="font-medium">כותרת:</span> {rfpContext.request_title}</p>}
                         {rfpContext.deadline_at && <p className="text-muted-foreground"><span className="font-medium">מועד אחרון:</span> {formatDate(rfpContext.deadline_at)}</p>}
@@ -240,52 +239,52 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     </CardContent>
                   </Card>
                 )}
-                <div className="grid grid-cols-3 gap-3">
-                  <Card><CardContent className="p-4 text-center"><Calendar className="w-5 h-5 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-lg">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-4 text-center"><Clock className="w-5 h-5 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-lg">{proposal.timeline_days} ימים</p></CardContent></Card>
-                  <Card><CardContent className="p-4 text-center"><DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר</p><p className="font-bold text-lg">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                <div className="grid grid-cols-3 gap-2">
+                  <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-base">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-base">{proposal.timeline_days} ימים</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר</p><p className="font-bold text-base">{formatCurrency(proposal.price)}</p></CardContent></Card>
                 </div>
                 {proposal.scope_text && (
-                  <div className="space-y-2">
-                    <SectionHeader icon={Briefcase}>היקף העבודה</SectionHeader>
-                    <Card><CardContent className="p-4 text-right"><p className="text-sm whitespace-pre-wrap leading-relaxed">{proposal.scope_text}</p></CardContent></Card>
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={Briefcase} className="text-xs">היקף העבודה</SectionHeader>
+                    <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap leading-relaxed">{proposal.scope_text}</p></CardContent></Card>
                   </div>
                 )}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Button variant="outline" size="sm" onClick={() => generateAiAnalysis(!!aiAnalysis)} disabled={isGeneratingAi}>
-                      {isGeneratingAi ? <>מנתח...<Loader2 className="w-3.5 h-3.5 animate-spin ms-1" /></> : aiAnalysis ? <>רענן<RefreshCw className="w-3.5 h-3.5 ms-1" /></> : <>ייצר ניתוח<Sparkles className="w-3.5 h-3.5 ms-1" /></>}
+                      {isGeneratingAi ? <>מנתח...<Loader2 className="w-3 h-3 animate-spin ms-1" /></> : aiAnalysis ? <>רענן<RefreshCw className="w-3 h-3 ms-1" /></> : <>ייצר ניתוח<Sparkles className="w-3 h-3 ms-1" /></>}
                     </Button>
-                    <SectionHeader icon={Sparkles} className="text-primary">ניתוח AI</SectionHeader>
+                    <SectionHeader icon={Sparkles} className="text-xs text-primary">ניתוח AI</SectionHeader>
                   </div>
-                  {isGeneratingAi && <Card><CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">מייצר ניתוח AI...<Loader2 className="w-4 h-4 animate-spin" /></CardContent></Card>}
-                  {aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-4 text-right"><AIAnalysisDisplay content={aiAnalysis} /></CardContent></Card>}
-                  {!aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לחץ על "ייצר ניתוח" לקבלת ניתוח AI של ההצעה</CardContent></Card>}
+                  {isGeneratingAi && <Card><CardContent className="p-3 flex items-center justify-center gap-2 text-muted-foreground text-xs">מייצר ניתוח AI...<Loader2 className="w-3 h-3 animate-spin" /></CardContent></Card>}
+                  {aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-3 text-right"><AIAnalysisDisplay content={aiAnalysis} /></CardContent></Card>}
+                  {!aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-3 text-center text-muted-foreground text-xs">לחץ על "ייצר ניתוח" לקבלת ניתוח AI של ההצעה</CardContent></Card>}
                 </div>
               </TabsContent>
 
-              <TabsContent value="conditions" className="p-6 space-y-4 m-0">
-                <div className="space-y-2">
-                  <SectionHeader icon={Banknote} className="text-green-600">תנאי תשלום</SectionHeader>
-                  <Card><CardContent className="p-4 text-right"><p className="text-sm">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card>
+              <TabsContent value="conditions" className="p-4 space-y-3 m-0">
+                <div className="space-y-1.5">
+                  <SectionHeader icon={Banknote} className="text-xs text-green-600">תנאי תשלום</SectionHeader>
+                  <Card><CardContent className="p-3 text-right"><p className="text-xs">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card>
                 </div>
-                <div className="space-y-2">
-                  <SectionHeader icon={FileCheck} className="text-blue-600">הנחות יסוד</SectionHeader>
-                  <Card><CardContent className="p-4 text-right"><p className="text-sm whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card>
+                <div className="space-y-1.5">
+                  <SectionHeader icon={FileCheck} className="text-xs text-blue-600">הנחות יסוד</SectionHeader>
+                  <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card>
                 </div>
-                <div className="space-y-2">
-                  <SectionHeader icon={Scale} className="text-purple-600">החרגות</SectionHeader>
-                  <Card><CardContent className="p-4 text-right"><p className="text-sm whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card>
+                <div className="space-y-1.5">
+                  <SectionHeader icon={Scale} className="text-xs text-purple-600">החרגות</SectionHeader>
+                  <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card>
                 </div>
                 {conditions.validity_days && (
-                  <div className="space-y-2">
-                    <SectionHeader icon={Clock}>תוקף ההצעה</SectionHeader>
-                    <Card><CardContent className="p-4 text-right"><p className="text-sm">{conditions.validity_days} ימים</p></CardContent></Card>
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={Clock} className="text-xs">תוקף ההצעה</SectionHeader>
+                    <Card><CardContent className="p-3 text-right"><p className="text-xs">{conditions.validity_days} ימים</p></CardContent></Card>
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="files" className="p-6 space-y-4 m-0">
+              <TabsContent value="files" className="p-4 space-y-3 m-0">
                 {files.length > 1 && (
                   <div className="flex justify-end">
                     <Button variant="outline" size="sm" onClick={handleDownloadAll}>
@@ -294,36 +293,36 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     </Button>
                   </div>
                 )}
-                {loadingUrls ? <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">טוען קבצים...<Loader2 className="w-4 h-4 animate-spin" /></div>
-                : files.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground"><FileText className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>לא צורפו קבצים להצעה זו</p></CardContent></Card>
-                : <div className="space-y-3">{files.map((file, i) => { const Icon = getFileIcon(file.name); const hasSummary = !!fileSummaries[file.name]; const isGen = generatingFileSummary === file.name; return (
-                  <Card key={i}><CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
+                {loadingUrls ? <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground text-sm">טוען קבצים...<Loader2 className="w-3 h-3 animate-spin" /></div>
+                : files.length === 0 ? <Card><CardContent className="p-4 text-center text-muted-foreground"><FileText className="w-6 h-6 mx-auto mb-2 opacity-50" /><p className="text-sm">לא צורפו קבצים להצעה זו</p></CardContent></Card>
+                : <div className="space-y-2">{files.map((file, i) => { const Icon = getFileIcon(file.name); const hasSummary = !!fileSummaries[file.name]; const isGen = generatingFileSummary === file.name; return (
+                  <Card key={i}><CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-1.5" dir="rtl">
                       <div className="flex items-center gap-1">
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>generateFileSummary(file, !!fileSummaries[file.name])} disabled={isGen}>{isGen?<Loader2 className="w-4 h-4 animate-spin"/>:hasSummary?<RefreshCw className="w-4 h-4"/>:<Sparkles className="w-4 h-4"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleDownload(file)}><Download className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>handleViewFile(file)}><Eye className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>generateFileSummary(file, !!fileSummaries[file.name])} disabled={isGen}>{isGen?<Loader2 className="w-3 h-3 animate-spin"/>:hasSummary?<RefreshCw className="w-3 h-3"/>:<Sparkles className="w-3 h-3"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleDownload(file)}><Download className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleViewFile(file)}><Eye className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
                       </div>
                       <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
                         <span className="text-xs text-muted-foreground flex-shrink-0">({(file.size/1024).toFixed(1)} KB)</span>
-                        <span className="text-sm font-medium truncate">{file.name}</span>
-                        <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs font-medium truncate">{file.name}</span>
+                        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     </div>
-                    {hasSummary && <><Separator className="my-2" /><div className="text-right"><AIAnalysisDisplay content={fileSummaries[file.name]} /></div></>}
+                    {hasSummary && <><Separator className="my-1.5" /><div className="text-right"><AIAnalysisDisplay content={fileSummaries[file.name]} /></div></>}
                   </CardContent></Card>
                 );})}</div>}
               </TabsContent>
 
-              <TabsContent value="signature" className="p-6 space-y-4 m-0">
-                <div className="space-y-2">
-                  <SectionHeader icon={FileCheck}>חתימה דיגיטלית</SectionHeader>
+              <TabsContent value="signature" className="p-4 space-y-3 m-0">
+                <div className="space-y-1.5">
+                  <SectionHeader icon={FileCheck} className="text-xs">חתימה דיגיטלית</SectionHeader>
                   {proposal.signature_blob ? (
                     <Card>
-                      <CardContent className="p-4 space-y-4">
-                        <div className="bg-white border rounded-lg p-4"><img src={proposal.signature_blob} alt="חתימה" className="max-h-24 mx-auto" /></div>
+                      <CardContent className="p-3 space-y-3">
+                        <div className="bg-white border rounded-lg p-3"><img src={proposal.signature_blob} alt="חתימה" className="max-h-20 mx-auto" /></div>
                         {proposal.signature_meta_json && (
-                          <div className="text-sm text-muted-foreground space-y-1 text-right">
+                          <div className="text-xs text-muted-foreground space-y-1 text-right">
                             {proposal.signature_meta_json.timestamp && <p>נחתם: {formatDate(proposal.signature_meta_json.timestamp)}</p>}
                             {proposal.signature_meta_json.signer_name && <p>חותם: {proposal.signature_meta_json.signer_name}</p>}
                           </div>
@@ -331,7 +330,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       </CardContent>
                     </Card>
                   ) : (
-                    <Card><CardContent className="p-6 text-center text-muted-foreground"><FileText className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>לא נמצאה חתימה</p></CardContent></Card>
+                    <Card><CardContent className="p-4 text-center text-muted-foreground"><FileText className="w-6 h-6 mx-auto mb-2 opacity-50" /><p className="text-sm">לא נמצאה חתימה</p></CardContent></Card>
                   )}
                 </div>
               </TabsContent>

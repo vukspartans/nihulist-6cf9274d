@@ -12,19 +12,19 @@ verify_jwt = true
 [functions.deadline-reminder]
 verify_jwt = false
 
+[functions.extract-proposal-text]
+verify_jwt = true
+
+[functions.evaluate-proposals-batch]
+verify_jwt = true
+
 [functions.analyze-proposal]
 verify_jwt = true
 
 [functions.analyze-proposal-file]
 verify_jwt = true
 
-# Cron jobs for automated tasks
-[[cron]]
-name = "expire-old-rfps"
-function = "expire-rfps"
-schedule = "0 * * * *"  # Every hour
-
-[[cron]]
-name = "send-deadline-reminders"
-function = "deadline-reminder"
-schedule = "0 9 * * *"  # Daily at 9 AM
+# Cron jobs are configured in Supabase Dashboard, not in config.toml
+# To set up cron jobs, go to: Dashboard → Database → Cron Jobs
+# - expire-old-rfps: "0 * * * *" (Every hour)
+# - send-deadline-reminders: "0 9 * * *" (Daily at 9 AM)
