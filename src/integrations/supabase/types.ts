@@ -319,6 +319,105 @@ export type Database = {
           },
         ]
       }
+      default_service_scope_templates: {
+        Row: {
+          advisor_specialty: string
+          created_at: string | null
+          created_by: string | null
+          default_fee_category: string | null
+          display_order: number
+          id: string
+          is_optional: boolean | null
+          task_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_specialty: string
+          created_at?: string | null
+          created_by?: string | null
+          default_fee_category?: string | null
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          task_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_specialty?: string
+          created_at?: string | null
+          created_by?: string | null
+          default_fee_category?: string | null
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          task_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      line_item_negotiations: {
+        Row: {
+          adjustment_type: string
+          adjustment_value: number
+          consultant_note: string | null
+          consultant_response_price: number | null
+          created_at: string
+          final_price: number | null
+          id: string
+          initiator_note: string | null
+          initiator_target_price: number
+          line_item_id: string
+          original_price: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          adjustment_type: string
+          adjustment_value: number
+          consultant_note?: string | null
+          consultant_response_price?: number | null
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          initiator_note?: string | null
+          initiator_target_price: number
+          line_item_id: string
+          original_price: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          adjustment_type?: string
+          adjustment_value?: number
+          consultant_note?: string | null
+          consultant_response_price?: number | null
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          initiator_note?: string | null
+          initiator_target_price?: number
+          line_item_id?: string
+          original_price?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_item_negotiations_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_item_negotiations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       magic_links: {
         Row: {
           created_at: string
@@ -354,6 +453,140 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      negotiation_comments: {
+        Row: {
+          author_id: string
+          author_type: string
+          comment_type: string
+          content: string
+          created_at: string
+          entity_reference: string | null
+          id: string
+          session_id: string
+        }
+        Insert: {
+          author_id: string
+          author_type: string
+          comment_type: string
+          content: string
+          created_at?: string
+          entity_reference?: string | null
+          id?: string
+          session_id: string
+        }
+        Update: {
+          author_id?: string
+          author_type?: string
+          comment_type?: string
+          content?: string
+          created_at?: string
+          entity_reference?: string | null
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_comments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_sessions: {
+        Row: {
+          consultant_advisor_id: string
+          consultant_response_message: string | null
+          created_at: string
+          global_comment: string | null
+          id: string
+          initiator_id: string
+          initiator_message: string | null
+          negotiated_version_id: string | null
+          project_id: string
+          proposal_id: string
+          resolved_at: string | null
+          responded_at: string | null
+          status: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent: number | null
+          target_total: number | null
+          updated_at: string
+        }
+        Insert: {
+          consultant_advisor_id: string
+          consultant_response_message?: string | null
+          created_at?: string
+          global_comment?: string | null
+          id?: string
+          initiator_id: string
+          initiator_message?: string | null
+          negotiated_version_id?: string | null
+          project_id: string
+          proposal_id: string
+          resolved_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent?: number | null
+          target_total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          consultant_advisor_id?: string
+          consultant_response_message?: string | null
+          created_at?: string
+          global_comment?: string | null
+          id?: string
+          initiator_id?: string
+          initiator_message?: string | null
+          negotiated_version_id?: string | null
+          project_id?: string
+          proposal_id?: string
+          resolved_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent?: number | null
+          target_total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_consultant_advisor_id_fkey"
+            columns: ["consultant_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_negotiated_version_id_fkey"
+            columns: ["negotiated_version_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_queue: {
         Row: {
@@ -687,6 +920,139 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_line_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_optional: boolean | null
+          name: string
+          proposal_id: string
+          proposal_version_id: string | null
+          quantity: number | null
+          total: number
+          unit_price: number
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_optional?: boolean | null
+          name: string
+          proposal_id: string
+          proposal_version_id?: string | null
+          quantity?: number | null
+          total: number
+          unit_price: number
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_optional?: boolean | null
+          name?: string
+          proposal_id?: string
+          proposal_version_id?: string | null
+          quantity?: number | null
+          total?: number
+          unit_price?: number
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_line_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_line_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_line_items_proposal_version_id_fkey"
+            columns: ["proposal_version_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_versions: {
+        Row: {
+          change_reason: string | null
+          conditions_json: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          line_items: Json | null
+          price: number
+          proposal_id: string
+          scope_text: string | null
+          terms: string | null
+          timeline_days: number
+          version_number: number
+        }
+        Insert: {
+          change_reason?: string | null
+          conditions_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_items?: Json | null
+          price: number
+          proposal_id: string
+          scope_text?: string | null
+          terms?: string | null
+          timeline_days: number
+          version_number?: number
+        }
+        Update: {
+          change_reason?: string | null
+          conditions_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_items?: Json | null
+          price?: number
+          proposal_id?: string
+          scope_text?: string | null
+          terms?: string | null
+          timeline_days?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           advisor_id: string
@@ -698,6 +1064,7 @@ export type Database = {
           attachment_url: string | null
           conditions_json: Json | null
           currency: string | null
+          current_version: number | null
           declaration_text: string | null
           entrepreneur_notified_at: string | null
           evaluation_completed_at: string | null
@@ -712,7 +1079,9 @@ export type Database = {
           extracted_text_hash: string | null
           file_summaries: Json | null
           files: Json | null
+          has_active_negotiation: boolean | null
           id: string
+          negotiation_count: number | null
           price: number
           project_id: string
           scope_text: string | null
@@ -739,6 +1108,7 @@ export type Database = {
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
+          current_version?: number | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
           evaluation_completed_at?: string | null
@@ -753,7 +1123,9 @@ export type Database = {
           extracted_text_hash?: string | null
           file_summaries?: Json | null
           files?: Json | null
+          has_active_negotiation?: boolean | null
           id?: string
+          negotiation_count?: number | null
           price: number
           project_id: string
           scope_text?: string | null
@@ -780,6 +1152,7 @@ export type Database = {
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
+          current_version?: number | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
           evaluation_completed_at?: string | null
@@ -794,7 +1167,9 @@ export type Database = {
           extracted_text_hash?: string | null
           file_summaries?: Json | null
           files?: Json | null
+          has_active_negotiation?: boolean | null
           id?: string
+          negotiation_count?: number | null
           price?: number
           project_id?: string
           scope_text?: string | null
@@ -1000,6 +1375,100 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_request_fee_items: {
+        Row: {
+          charge_type: string | null
+          created_at: string | null
+          description: string
+          display_order: number
+          id: string
+          is_optional: boolean | null
+          item_number: number
+          quantity: number | null
+          rfp_invite_id: string | null
+          unit: string
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          charge_type?: string | null
+          created_at?: string | null
+          description: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          item_number: number
+          quantity?: number | null
+          rfp_invite_id?: string | null
+          unit?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          charge_type?: string | null
+          created_at?: string | null
+          description?: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          item_number?: number
+          quantity?: number | null
+          rfp_invite_id?: string | null
+          unit?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_request_fee_items_rfp_invite_id_fkey"
+            columns: ["rfp_invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_service_scope_items: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          fee_category: string | null
+          id: string
+          is_included: boolean | null
+          is_optional: boolean | null
+          rfp_invite_id: string | null
+          task_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          fee_category?: string | null
+          id?: string
+          is_included?: boolean | null
+          is_optional?: boolean | null
+          rfp_invite_id?: string | null
+          task_name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          fee_category?: string | null
+          id?: string
+          is_included?: boolean | null
+          is_optional?: boolean | null
+          rfp_invite_id?: string | null
+          task_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_service_scope_items_rfp_invite_id_fkey"
+            columns: ["rfp_invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_invites"
             referencedColumns: ["id"]
           },
         ]
@@ -1285,6 +1754,16 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_proposal_with_negotiation_cleanup: {
+        Args: {
+          p_content_hash?: string
+          p_entrepreneur_notes?: string
+          p_proposal_id: string
+          p_signature_png?: string
+          p_signature_vector?: Json
+        }
+        Returns: Json
+      }
       can_access_proposal_file: {
         Args: { file_path: string; user_uuid: string }
         Returns: boolean
@@ -1370,6 +1849,10 @@ export type Database = {
       }
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
+      reject_proposal_with_cleanup: {
+        Args: { p_proposal_id: string; p_rejection_reason?: string }
+        Returns: Json
+      }
       send_rfp_invitations:
         | {
             Args: { project_uuid: string; selected_supplier_ids?: string[] }
@@ -1420,6 +1903,14 @@ export type Database = {
               result_rfp_id: string
             }[]
           }
+      submit_negotiation_response: {
+        Args: {
+          p_consultant_message?: string
+          p_session_id: string
+          p_updated_line_items: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
@@ -1429,10 +1920,18 @@ export type Database = {
         | "timeline_conflict"
         | "budget_mismatch"
         | "other"
+      negotiation_status:
+        | "open"
+        | "awaiting_response"
+        | "responded"
+        | "resolved"
+        | "cancelled"
       proposal_status:
         | "draft"
         | "submitted"
         | "under_review"
+        | "negotiation_requested"
+        | "resubmitted"
         | "accepted"
         | "rejected"
         | "withdrawn"
@@ -1579,10 +2078,19 @@ export const Constants = {
         "budget_mismatch",
         "other",
       ],
+      negotiation_status: [
+        "open",
+        "awaiting_response",
+        "responded",
+        "resolved",
+        "cancelled",
+      ],
       proposal_status: [
         "draft",
         "submitted",
         "under_review",
+        "negotiation_requested",
+        "resubmitted",
         "accepted",
         "rejected",
         "withdrawn",

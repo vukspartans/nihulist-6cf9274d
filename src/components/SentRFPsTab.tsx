@@ -227,6 +227,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         onOpenChange={setComparisonDialogOpen}
         proposalIds={selectedProposalIds}
         advisorType={selectedAdvisorType}
+        projectId={projectId}
       />
     </div>
   );

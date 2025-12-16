@@ -35,6 +35,7 @@ import RFPsManagement from "./pages/admin/RFPsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
+import NegotiationResponse from "./pages/NegotiationResponse";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
@@ -184,6 +185,16 @@ const AppContent = () => {
                 <ProtectedRoute>
                   <RoleBasedRoute allowedRoles={['advisor']}>
                     <RFPDetails />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/negotiation/:sessionId" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['advisor']}>
+                    <NegotiationResponse />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               } 
