@@ -347,7 +347,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">בחירת יועצים</h3>
                 <p className="text-muted-foreground">
-                  בחר את היועצים לפי סדר עדיפות - התחל משלב 1 (חובה), המשך לשלב 2 ו-3 לפי הצורך
+                  בחר את היועצים לפי סדר עדיפות - התחל משלב 1, המשך לשלב 2 ו-3 לפי הצורך
                 </p>
               </div>
 
