@@ -468,6 +468,7 @@ export type Database = {
           id: string
           initiator_id: string
           initiator_message: string | null
+          negotiated_version_id: string | null
           project_id: string
           proposal_id: string
           resolved_at: string | null
@@ -485,6 +486,7 @@ export type Database = {
           id?: string
           initiator_id: string
           initiator_message?: string | null
+          negotiated_version_id?: string | null
           project_id: string
           proposal_id: string
           resolved_at?: string | null
@@ -502,6 +504,7 @@ export type Database = {
           id?: string
           initiator_id?: string
           initiator_message?: string | null
+          negotiated_version_id?: string | null
           project_id?: string
           proposal_id?: string
           resolved_at?: string | null
@@ -517,6 +520,13 @@ export type Database = {
             columns: ["consultant_advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_negotiated_version_id_fkey"
+            columns: ["negotiated_version_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_versions"
             referencedColumns: ["id"]
           },
           {
@@ -884,6 +894,7 @@ export type Database = {
           is_optional: boolean | null
           name: string
           proposal_id: string
+          proposal_version_id: string | null
           quantity: number | null
           total: number
           unit_price: number
@@ -899,6 +910,7 @@ export type Database = {
           is_optional?: boolean | null
           name: string
           proposal_id: string
+          proposal_version_id?: string | null
           quantity?: number | null
           total: number
           unit_price: number
@@ -914,6 +926,7 @@ export type Database = {
           is_optional?: boolean | null
           name?: string
           proposal_id?: string
+          proposal_version_id?: string | null
           quantity?: number | null
           total?: number
           unit_price?: number
@@ -933,6 +946,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_line_items_proposal_version_id_fkey"
+            columns: ["proposal_version_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -1604,6 +1624,16 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_proposal_with_negotiation_cleanup: {
+        Args: {
+          p_content_hash?: string
+          p_entrepreneur_notes?: string
+          p_proposal_id: string
+          p_signature_png?: string
+          p_signature_vector?: Json
+        }
+        Returns: Json
+      }
       can_access_proposal_file: {
         Args: { file_path: string; user_uuid: string }
         Returns: boolean
@@ -1689,6 +1719,10 @@ export type Database = {
       }
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
+      reject_proposal_with_cleanup: {
+        Args: { p_proposal_id: string; p_rejection_reason?: string }
+        Returns: Json
+      }
       send_rfp_invitations:
         | {
             Args: { project_uuid: string; selected_supplier_ids?: string[] }
@@ -1739,6 +1773,14 @@ export type Database = {
               result_rfp_id: string
             }[]
           }
+      submit_negotiation_response: {
+        Args: {
+          p_consultant_message?: string
+          p_session_id: string
+          p_updated_line_items: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
