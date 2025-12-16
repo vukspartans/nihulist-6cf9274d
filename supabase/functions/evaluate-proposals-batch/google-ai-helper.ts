@@ -18,7 +18,8 @@ export async function callGoogleAIStudio(
   userContent: string,
   apiKey: string
 ): Promise<EvaluationResult> {
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash';
+  // Default to a GA-supported public model; flash-002 is available on v1
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002';
   
   console.log('[Evaluate] Using Google AI Studio API');
   console.log('[Evaluate] Model:', model);
