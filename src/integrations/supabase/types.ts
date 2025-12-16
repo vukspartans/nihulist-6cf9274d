@@ -319,6 +319,42 @@ export type Database = {
           },
         ]
       }
+      default_service_scope_templates: {
+        Row: {
+          advisor_specialty: string
+          created_at: string | null
+          created_by: string | null
+          default_fee_category: string | null
+          display_order: number
+          id: string
+          is_optional: boolean | null
+          task_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_specialty: string
+          created_at?: string | null
+          created_by?: string | null
+          default_fee_category?: string | null
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          task_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_specialty?: string
+          created_at?: string | null
+          created_by?: string | null
+          default_fee_category?: string | null
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          task_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       line_item_negotiations: {
         Row: {
           adjustment_type: string
@@ -1339,6 +1375,100 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_request_fee_items: {
+        Row: {
+          charge_type: string | null
+          created_at: string | null
+          description: string
+          display_order: number
+          id: string
+          is_optional: boolean | null
+          item_number: number
+          quantity: number | null
+          rfp_invite_id: string | null
+          unit: string
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          charge_type?: string | null
+          created_at?: string | null
+          description: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          item_number: number
+          quantity?: number | null
+          rfp_invite_id?: string | null
+          unit?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          charge_type?: string | null
+          created_at?: string | null
+          description?: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          item_number?: number
+          quantity?: number | null
+          rfp_invite_id?: string | null
+          unit?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_request_fee_items_rfp_invite_id_fkey"
+            columns: ["rfp_invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_service_scope_items: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          fee_category: string | null
+          id: string
+          is_included: boolean | null
+          is_optional: boolean | null
+          rfp_invite_id: string | null
+          task_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          fee_category?: string | null
+          id?: string
+          is_included?: boolean | null
+          is_optional?: boolean | null
+          rfp_invite_id?: string | null
+          task_name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          fee_category?: string | null
+          id?: string
+          is_included?: boolean | null
+          is_optional?: boolean | null
+          rfp_invite_id?: string | null
+          task_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_service_scope_items_rfp_invite_id_fkey"
+            columns: ["rfp_invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_invites"
             referencedColumns: ["id"]
           },
         ]
