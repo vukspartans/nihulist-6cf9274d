@@ -82,19 +82,19 @@ export const FeeItemsTable = ({
   };
 
   const renderTable = (tableItems: RFPFeeItem[], isOptional: boolean, title: string) => (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-base font-semibold">{title}</Label>
+    <div className="space-y-3" dir="rtl">
+      <div className="flex items-center justify-between flex-row-reverse">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => addItem(isOptional)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 flex-row-reverse"
         >
           <Plus className="h-4 w-4" />
           הוסף שורה
         </Button>
+        <Label className="text-base font-semibold text-right">{title}</Label>
       </div>
       
       <div className="border rounded-lg overflow-hidden">
@@ -102,11 +102,11 @@ export const FeeItemsTable = ({
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="w-12 text-center">סעיף</TableHead>
-              <TableHead className="min-w-[200px]">תיאור</TableHead>
-              <TableHead className="w-24">יחידה</TableHead>
-              <TableHead className="w-20">כמות</TableHead>
-              <TableHead className="w-28">מחיר יחידה</TableHead>
-              <TableHead className="w-28">סוג החיוב</TableHead>
+              <TableHead className="min-w-[200px] text-right">תיאור</TableHead>
+              <TableHead className="w-24 text-right">יחידה</TableHead>
+              <TableHead className="w-20 text-center">כמות</TableHead>
+              <TableHead className="w-28 text-right">מחיר יחידה</TableHead>
+              <TableHead className="w-28 text-right">סוג החיוב</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -219,7 +219,7 @@ export const FeeItemsTable = ({
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" dir="rtl">
       {renderTable(items, false, 'שכר טרחה')}
       
       <div className="border-t pt-6">
@@ -228,11 +228,11 @@ export const FeeItemsTable = ({
       
       {(items.length > 0 || optionalItems.length > 0) && (
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">סה"כ שכ"ט (ללא אופציונלי):</span>
+          <div className="flex items-center justify-between flex-row-reverse">
             <span className="text-xl font-bold text-primary">
               {formatCurrency(calculateTotal(items))}
             </span>
+            <span className="font-semibold text-right">סה"כ שכ"ט (ללא אופציונלי):</span>
           </div>
         </div>
       )}

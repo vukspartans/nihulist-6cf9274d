@@ -45,10 +45,13 @@ export interface MilestonePayment {
   trigger?: string; // e.g., "עם קבלת היתר", "עם סיום התכנון"
 }
 
+export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
+
 export interface PaymentTerms {
   advance_percent?: number;
   milestone_payments?: MilestonePayment[];
-  payment_due_days?: number;
+  payment_term_type?: PaymentTermType;
+  payment_due_days?: number; // Kept for backward compatibility
   notes?: string;
 }
 
