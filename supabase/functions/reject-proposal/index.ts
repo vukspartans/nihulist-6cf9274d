@@ -59,29 +59,63 @@ serve(async (req) => {
     // Service role client for database operations
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get proposal with project and advisor details
+    // Get proposal with project details (first query)
+    // Use explicit foreign key name to avoid PostgREST resolution issues
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
       .select(`
         id, price, status, advisor_id, project_id,
         project:project_id (id, name, owner_id),
-        advisors:advisor_id (
-          id, company_name, user_id,
-          profiles:user_id (email, name)
-        )
+        advisors!fk_proposals_advisor (id, company_name, user_id)
       `)
       .eq("id", proposal_id)
       .single();
 
-    if (proposalError || !proposal) {
+    if (proposalError) {
+      console.error("[Reject Proposal] Proposal query error:", JSON.stringify(proposalError, null, 2));
+      console.error("[Reject Proposal] Proposal ID:", proposal_id);
+      throw new Error(`Proposal query failed: ${proposalError.message || JSON.stringify(proposalError)}`);
+    }
+    
+    if (!proposal) {
+      console.error("[Reject Proposal] Proposal not found for ID:", proposal_id);
       throw new Error("Proposal not found");
     }
+    
+    console.log("[Reject Proposal] Proposal found:", {
+      id: proposal.id,
+      status: proposal.status,
+      advisor_id: proposal.advisor_id,
+      project_id: proposal.project_id,
+      has_project: !!proposal.project,
+      has_advisor: !!proposal.advisors
+    });
 
     const projectData = proposal.project as any;
+    const advisorData = proposal.advisors as any;
     
     // Validate initiator is project owner
-    if (projectData.owner_id !== user.id) {
+    if (!projectData || projectData.owner_id !== user.id) {
       throw new Error("Not authorized - must be project owner");
+    }
+
+    // Get advisor profile separately (second query)
+    let advisorEmail: string | null = null;
+    let advisorName: string | null = null;
+    
+    if (advisorData?.user_id) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("email, name")
+        .eq("user_id", advisorData.user_id)
+        .single();
+      
+      if (!profileError && profile) {
+        advisorEmail = profile.email;
+        advisorName = profile.name;
+      } else {
+        console.warn("[Reject Proposal] Profile not found for advisor user_id:", advisorData.user_id);
+      }
     }
 
     // Check proposal status
@@ -90,11 +124,13 @@ serve(async (req) => {
     }
 
     // Call database function to reject with cleanup
+    // Pass owner_id explicitly since we're using service role key
     const { data: result, error: rpcError } = await supabase.rpc(
       "reject_proposal_with_cleanup",
       {
         p_proposal_id: proposal_id,
         p_rejection_reason: rejection_reason,
+        p_owner_id: user.id,  // Pass owner_id explicitly for service role context
       }
     );
 
@@ -105,9 +141,7 @@ serve(async (req) => {
 
     console.log("[Reject Proposal] Result:", result);
 
-    // Send rejection email to advisor
-    const advisorData = proposal.advisors as any;
-    const advisorEmail = advisorData?.profiles?.email;
+    // Send rejection email to advisor (email already fetched above)
 
     if (advisorEmail) {
       const resend = new Resend(RESEND_API_KEY);
@@ -166,8 +200,22 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("[Reject Proposal] Error:", error);
+    console.error("[Reject Proposal] Error details:", {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack?.substring(0, 500)
+    });
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: errorMessage,
+        error_details: error instanceof Error ? {
+          name: error.name,
+          message: error.message
+        } : undefined
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,

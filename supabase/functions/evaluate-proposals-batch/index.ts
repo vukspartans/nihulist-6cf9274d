@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { EvaluationResultSchema, type EvaluationResult } from "./schemas.ts";
 import { SYSTEM_INSTRUCTION } from "./prompts.ts";
 import { buildUserContent } from "./payload-builder.ts";
-import { callVertexAI } from "./vertex-ai-helper.ts";
+import { callGoogleAIStudio } from "./google-ai-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,19 +28,16 @@ function calculateYearsExperience(advisor: { founding_year: number | null }): nu
   return Math.max(0, new Date().getFullYear() - advisor.founding_year);
 }
 
-// Helper to parse Service Account JSON from environment variable
-function getServiceAccountJson(): any {
-  const serviceAccountJsonStr = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+// Helper to get Google AI Studio API key
+function getGoogleAPIKey(): string {
+  // Try GOOGLE_API_KEY first (standard name)
+  const apiKey = Deno.env.get('GOOGLE_API_KEY') || Deno.env.get('GEMENI_API_KEY');
   
-  if (!serviceAccountJsonStr) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON environment variable is not set. Please configure Vertex AI credentials.');
+  if (!apiKey) {
+    throw new Error('GOOGLE_API_KEY or GEMENI_API_KEY environment variable is not set. Please configure Google AI Studio API key.');
   }
   
-  try {
-    return JSON.parse(serviceAccountJsonStr);
-  } catch (error) {
-    throw new Error(`Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON: ${error.message}`);
-  }
+  return apiKey;
 }
 
 serve(async (req) => {
@@ -68,33 +65,15 @@ serve(async (req) => {
 
     console.log(`[Evaluate] Starting batch evaluation for project: ${project_id}`);
 
-    // Get Vertex AI configuration
-    const projectId = Deno.env.get('GOOGLE_CLOUD_PROJECT_ID');
-    const region = Deno.env.get('GOOGLE_CLOUD_REGION') || 'us-central1';
-    
-    if (!projectId) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'GOOGLE_CLOUD_PROJECT_ID environment variable is not set. Please configure Vertex AI project ID.',
-          error_code: 'CONFIGURATION_ERROR',
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-    
-    // Parse Service Account JSON
-    let serviceAccountJson: any;
+    // Get Google AI Studio API key
+    let apiKey: string;
     try {
-      serviceAccountJson = getServiceAccountJson();
+      apiKey = getGoogleAPIKey();
     } catch (error) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to load Vertex AI credentials',
+          error: error instanceof Error ? error.message : 'Failed to load Google AI Studio API key',
           error_code: 'CONFIGURATION_ERROR',
         }),
         {
@@ -366,11 +345,11 @@ serve(async (req) => {
 
     console.log('[Evaluate] Calling AI with', proposals.length, 'proposals');
 
-    // Call Vertex AI (Gemini)
+    // Call Google AI Studio (Gemini)
     const startTime = Date.now();
     const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash';
     const evaluationResult = await Promise.race([
-      callVertexAI(SYSTEM_INSTRUCTION, userContent, serviceAccountJson, projectId, region),
+      callGoogleAIStudio(SYSTEM_INSTRUCTION, userContent, apiKey),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Evaluation timeout')), EVALUATION_TIMEOUT_MS)
       ),
@@ -394,7 +373,7 @@ serve(async (req) => {
           evaluation_completed_at: new Date().toISOString(),
           evaluation_metadata: {
             model_used: model,
-            provider: 'vertex-ai',
+            provider: 'google-ai-studio',
             temperature: 0.0,
             evaluation_time_ms: evaluationTime,
           },
@@ -412,7 +391,7 @@ serve(async (req) => {
         ranked_proposals: evaluationResult.ranked_proposals,
         evaluation_metadata: {
           model_used: model,
-          provider: 'vertex-ai',
+          provider: 'google-ai-studio',
           temperature: 0.0,
           total_evaluation_time_ms: evaluationTime,
         },

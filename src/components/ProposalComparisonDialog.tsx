@@ -167,8 +167,9 @@ export const ProposalComparisonDialog = ({
     return 0;
   });
 
-  const bestPrice = Math.min(...proposals.map(p => p.price));
-  const bestTimeline = Math.min(...proposals.map(p => p.timeline_days));
+  const bestPrice = proposals.length > 0 ? Math.min(...proposals.map(p => p.price)) : 0;
+  const bestTimeline = proposals.length > 0 ? Math.min(...proposals.map(p => p.timeline_days)) : 0;
+  const avgPrice = proposals.length > 0 ? proposals.reduce((sum, p) => sum + p.price, 0) / proposals.length : 0;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
@@ -232,57 +233,53 @@ export const ProposalComparisonDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <DialogTitle className="flex items-center gap-2">
+          <div className="flex items-center justify-between flex-wrap gap-4 flex-row-reverse">
+            <DialogTitle className="flex items-center gap-2 text-right">
               <Award className="w-5 h-5" />
               השוואת הצעות מחיר - {advisorType}
             </DialogTitle>
-            <div className="flex items-center gap-2 flex-wrap ml-auto">
-              <Button
-                onClick={handleEvaluate}
-                disabled={evaluationLoading || proposals.length < 2}
-                className="flex items-center gap-2"
-                dir="rtl"
-              >
-                <Sparkles className="w-4 h-4" />
-                {evaluationLoading ? 'מעריך...' : 'הערך עם AI'}
-              </Button>
+            <div className="flex items-center gap-2 flex-wrap flex-row-reverse justify-end">
               {proposals.some(p => p.evaluation_rank) && (
                 <>
                   <Button
-                    onClick={() => setShowCharts(!showCharts)}
+                    onClick={handleExportExcel}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-2"
-                    dir="rtl"
                   >
-                    <BarChart3 className="w-4 h-4" />
-                    {showCharts ? 'הסתר גרפים' : 'הצג גרפים'}
+                    <Download className="w-4 h-4" />
+                    Excel
                   </Button>
                   <Button
                     onClick={handleExportPDF}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-2"
-                    dir="rtl"
                   >
                     <FileText className="w-4 h-4" />
                     PDF
                   </Button>
                   <Button
-                    onClick={handleExportExcel}
+                    onClick={() => setShowCharts(!showCharts)}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-2"
-                    dir="rtl"
                   >
-                    <Download className="w-4 h-4" />
-                    Excel
+                    <BarChart3 className="w-4 h-4" />
+                    {showCharts ? 'הסתר גרפים' : 'הצג גרפים'}
                   </Button>
                 </>
               )}
+              <Button
+                onClick={handleEvaluate}
+                disabled={evaluationLoading || proposals.length < 2}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                {evaluationLoading ? 'מעריך...' : 'הערך עם AI'}
+              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -307,12 +304,29 @@ export const ProposalComparisonDialog = ({
           <Alert className="mb-4">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
-              {evaluationResult.batch_summary.project_type_detected === 'LARGE_SCALE' && (
-                <span className="block mt-1 text-sm font-semibold">
-                  פרויקט בקנה מידה גדול - משקל ניסיון מוגבר
-                </span>
-              )}
+              <div className="space-y-1">
+                <div>
+                  ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
+                </div>
+                {evaluationResult.batch_summary.project_type_detected === 'LARGE_SCALE' && (
+                  <div className="text-sm font-semibold">
+                    פרויקט בקנה מידה גדול - משקל ניסיון מוגבר
+                  </div>
+                )}
+                {evaluationResult.evaluation_metadata && (
+                  <div className="text-xs text-muted-foreground mt-2 flex items-center gap-2 flex-wrap" dir="rtl">
+                    <span>מודל AI: {evaluationResult.evaluation_metadata.model_used}</span>
+                    <span>•</span>
+                    <span>ספק: {evaluationResult.evaluation_metadata.provider === 'openai' ? 'OpenAI' : 'Google AI Studio'}</span>
+                    {evaluationResult.evaluation_metadata.total_evaluation_time_ms && (
+                      <>
+                        <span>•</span>
+                        <span>זמן: {(evaluationResult.evaluation_metadata.total_evaluation_time_ms / 1000).toFixed(1)}ש'</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </AlertDescription>
           </Alert>
         )}
@@ -351,22 +365,21 @@ export const ProposalComparisonDialog = ({
 
         {/* Tabs for Table and Charts View */}
         <Tabs defaultValue="table" className="w-full">
-          <div className="flex items-center justify-between mb-3 gap-4">
-            <TabsList>
-              <TabsTrigger value="table">טבלה</TabsTrigger>
-              {proposals.some(p => p.evaluation_rank) && (
-                <TabsTrigger value="charts">גרפים</TabsTrigger>
-              )}
-            </TabsList>
-            <div className="flex items-center gap-2" dir="rtl">
-              <span className="text-xs text-muted-foreground">מיין לפי:</span>
+          <TabsList className="mb-4 flex justify-end">
+            <TabsTrigger value="table">טבלה</TabsTrigger>
+            {proposals.some(p => p.evaluation_rank) && (
+              <TabsTrigger value="charts">גרפים</TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="table" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap justify-end">
+              <span className="text-sm text-muted-foreground">מיין לפי:</span>
               <Button
                 variant={sortBy === 'score' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('score')}
                 disabled={!proposals.some(p => p.evaluation_rank)}
-                dir="rtl"
-                className="text-xs h-7 px-2"
               >
                 <Award className="w-3 h-3 ml-1" />
                 דירוג AI
@@ -375,8 +388,6 @@ export const ProposalComparisonDialog = ({
                 variant={sortBy === 'price' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('price')}
-                dir="rtl"
-                className="text-xs h-7 px-2"
               >
                 מחיר
               </Button>
@@ -384,15 +395,10 @@ export const ProposalComparisonDialog = ({
                 variant={sortBy === 'timeline' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('timeline')}
-                dir="rtl"
-                className="text-xs h-7 px-2"
               >
                 זמן ביצוע
               </Button>
             </div>
-          </div>
-
-          <TabsContent value="table" className="space-y-2" dir="rtl">
 
         {loading ? (
           <div className="text-center py-12">
@@ -424,7 +430,7 @@ export const ProposalComparisonDialog = ({
                   <TableHead className="text-right text-xs py-2">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody dir="rtl">
+              <TableBody>
                 {sortedProposals.map((proposal) => {
                   const evalData = proposal.evaluation_result;
                   const isBest = proposal.evaluation_rank === 1;
@@ -484,46 +490,66 @@ export const ProposalComparisonDialog = ({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        {proposal.evaluation_score !== null && proposal.evaluation_score !== undefined && (
-                          <div className="flex items-center gap-0.5 justify-end" dir="rtl">
-                            <span className="text-xs text-muted-foreground">100</span>
-                            <span className="text-xs text-muted-foreground">/</span>
-                            <span className={`font-bold text-base ${
+                      <TableCell>
+                        {proposal.evaluation_score != null && (
+                          <div className="flex items-center gap-2" dir="rtl">
+                            <span className={`font-bold text-lg ${
                               proposal.evaluation_score >= 80 ? 'text-green-600' :
-                              proposal.evaluation_score >= 60 ? 'text-orange-600' :
+                              proposal.evaluation_score >= 60 ? 'text-yellow-600' :
                               'text-red-600'
                             }`}>
                               {proposal.evaluation_score}
                             </span>
+                            <span className="text-xs text-muted-foreground">/100</span>
                           </div>
                         )}
                         {evalData?.flags?.knockout_triggered && (
-                          <div className="mt-0.5 flex justify-end" dir="rtl">
-                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                              <AlertCircle className="w-2.5 h-2.5 ml-0.5" />
-                              נפסל
-                            </Badge>
+                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                            <div className="flex items-start gap-2" dir="rtl">
+                              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <div className="font-semibold text-red-900 dark:text-red-100 text-sm mb-1">
+                                  נפסל מהערכה
+                                </div>
+                                <div className="text-xs text-red-700 dark:text-red-300">
+                                  {evalData.flags.knockout_reason ? (
+                                    <span>{evalData.flags.knockout_reason}</span>
+                                  ) : (
+                                    <span>ההצעה לא עומדת בדרישות המינימום</span>
+                                  )}
+                                </div>
+                                {evalData.flags.red_flags && evalData.flags.red_flags.length > 0 && (
+                                  <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+                                    <div className="font-medium mb-0.5">דגלים אדומים:</div>
+                                    <ul className="list-disc list-inside space-y-0.5">
+                                      {evalData.flags.red_flags.slice(0, 3).map((flag: string, idx: number) => (
+                                        <li key={idx}>{flag}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex items-center gap-1.5 flex-wrap justify-end" dir="rtl">
-                          <span className={`text-sm ${proposal.price === bestPrice ? 'text-green-600 font-bold' : 'font-medium'}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2" dir="rtl">
+                          <span className={proposal.price === bestPrice ? 'text-green-600 font-bold' : ''}>
                             {formatCurrency(proposal.price)}
                           </span>
                           {proposal.price === bestPrice && !proposal.evaluation_rank && (
-                            <Badge variant="default" className="bg-green-600 text-xs px-1.5 py-0.5" dir="rtl">
-                              <TrendingUp className="w-2.5 h-2.5 ml-0.5" />
-                              הכי טוב
+                            <Badge variant="default" className="bg-green-600">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              מחיר הכי טוב
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex items-center gap-1.5 flex-wrap justify-end" dir="rtl">
-                          <span className={`text-sm ${proposal.timeline_days === bestTimeline ? 'text-purple-600 font-bold' : ''}`}>
-                            {proposal.timeline_days} ימים
+                      <TableCell>
+                        <div className="flex items-center gap-2" dir="rtl">
+                          <span className={proposal.timeline_days === bestTimeline ? 'text-blue-600 font-bold' : ''}>
+                            {proposal.timeline_days}{' '}ימים
                           </span>
                         </div>
                       </TableCell>
