@@ -319,6 +319,69 @@ export type Database = {
           },
         ]
       }
+      line_item_negotiations: {
+        Row: {
+          adjustment_type: string
+          adjustment_value: number
+          consultant_note: string | null
+          consultant_response_price: number | null
+          created_at: string
+          final_price: number | null
+          id: string
+          initiator_note: string | null
+          initiator_target_price: number
+          line_item_id: string
+          original_price: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          adjustment_type: string
+          adjustment_value: number
+          consultant_note?: string | null
+          consultant_response_price?: number | null
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          initiator_note?: string | null
+          initiator_target_price: number
+          line_item_id: string
+          original_price: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          adjustment_type?: string
+          adjustment_value?: number
+          consultant_note?: string | null
+          consultant_response_price?: number | null
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          initiator_note?: string | null
+          initiator_target_price?: number
+          line_item_id?: string
+          original_price?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_item_negotiations_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_item_negotiations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       magic_links: {
         Row: {
           created_at: string
@@ -354,6 +417,130 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      negotiation_comments: {
+        Row: {
+          author_id: string
+          author_type: string
+          comment_type: string
+          content: string
+          created_at: string
+          entity_reference: string | null
+          id: string
+          session_id: string
+        }
+        Insert: {
+          author_id: string
+          author_type: string
+          comment_type: string
+          content: string
+          created_at?: string
+          entity_reference?: string | null
+          id?: string
+          session_id: string
+        }
+        Update: {
+          author_id?: string
+          author_type?: string
+          comment_type?: string
+          content?: string
+          created_at?: string
+          entity_reference?: string | null
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_comments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_sessions: {
+        Row: {
+          consultant_advisor_id: string
+          consultant_response_message: string | null
+          created_at: string
+          global_comment: string | null
+          id: string
+          initiator_id: string
+          initiator_message: string | null
+          project_id: string
+          proposal_id: string
+          resolved_at: string | null
+          responded_at: string | null
+          status: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent: number | null
+          target_total: number | null
+          updated_at: string
+        }
+        Insert: {
+          consultant_advisor_id: string
+          consultant_response_message?: string | null
+          created_at?: string
+          global_comment?: string | null
+          id?: string
+          initiator_id: string
+          initiator_message?: string | null
+          project_id: string
+          proposal_id: string
+          resolved_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent?: number | null
+          target_total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          consultant_advisor_id?: string
+          consultant_response_message?: string | null
+          created_at?: string
+          global_comment?: string | null
+          id?: string
+          initiator_id?: string
+          initiator_message?: string | null
+          project_id?: string
+          proposal_id?: string
+          resolved_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          target_reduction_percent?: number | null
+          target_total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_consultant_advisor_id_fkey"
+            columns: ["consultant_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_queue: {
         Row: {
@@ -687,6 +874,129 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_line_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_optional: boolean | null
+          name: string
+          proposal_id: string
+          quantity: number | null
+          total: number
+          unit_price: number
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_optional?: boolean | null
+          name: string
+          proposal_id: string
+          quantity?: number | null
+          total: number
+          unit_price: number
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_optional?: boolean | null
+          name?: string
+          proposal_id?: string
+          quantity?: number | null
+          total?: number
+          unit_price?: number
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_line_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_line_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_versions: {
+        Row: {
+          change_reason: string | null
+          conditions_json: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          line_items: Json | null
+          price: number
+          proposal_id: string
+          scope_text: string | null
+          terms: string | null
+          timeline_days: number
+          version_number: number
+        }
+        Insert: {
+          change_reason?: string | null
+          conditions_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_items?: Json | null
+          price: number
+          proposal_id: string
+          scope_text?: string | null
+          terms?: string | null
+          timeline_days: number
+          version_number?: number
+        }
+        Update: {
+          change_reason?: string | null
+          conditions_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_items?: Json | null
+          price?: number
+          proposal_id?: string
+          scope_text?: string | null
+          terms?: string | null
+          timeline_days?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           advisor_id: string
@@ -698,6 +1008,7 @@ export type Database = {
           attachment_url: string | null
           conditions_json: Json | null
           currency: string | null
+          current_version: number | null
           declaration_text: string | null
           entrepreneur_notified_at: string | null
           evaluation_completed_at: string | null
@@ -712,7 +1023,9 @@ export type Database = {
           extracted_text_hash: string | null
           file_summaries: Json | null
           files: Json | null
+          has_active_negotiation: boolean | null
           id: string
+          negotiation_count: number | null
           price: number
           project_id: string
           scope_text: string | null
@@ -739,6 +1052,7 @@ export type Database = {
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
+          current_version?: number | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
           evaluation_completed_at?: string | null
@@ -753,7 +1067,9 @@ export type Database = {
           extracted_text_hash?: string | null
           file_summaries?: Json | null
           files?: Json | null
+          has_active_negotiation?: boolean | null
           id?: string
+          negotiation_count?: number | null
           price: number
           project_id: string
           scope_text?: string | null
@@ -780,6 +1096,7 @@ export type Database = {
           attachment_url?: string | null
           conditions_json?: Json | null
           currency?: string | null
+          current_version?: number | null
           declaration_text?: string | null
           entrepreneur_notified_at?: string | null
           evaluation_completed_at?: string | null
@@ -794,7 +1111,9 @@ export type Database = {
           extracted_text_hash?: string | null
           file_summaries?: Json | null
           files?: Json | null
+          has_active_negotiation?: boolean | null
           id?: string
+          negotiation_count?: number | null
           price?: number
           project_id?: string
           scope_text?: string | null
@@ -1429,10 +1748,18 @@ export type Database = {
         | "timeline_conflict"
         | "budget_mismatch"
         | "other"
+      negotiation_status:
+        | "open"
+        | "awaiting_response"
+        | "responded"
+        | "resolved"
+        | "cancelled"
       proposal_status:
         | "draft"
         | "submitted"
         | "under_review"
+        | "negotiation_requested"
+        | "resubmitted"
         | "accepted"
         | "rejected"
         | "withdrawn"
@@ -1579,10 +1906,19 @@ export const Constants = {
         "budget_mismatch",
         "other",
       ],
+      negotiation_status: [
+        "open",
+        "awaiting_response",
+        "responded",
+        "resolved",
+        "cancelled",
+      ],
       proposal_status: [
         "draft",
         "submitted",
         "under_review",
+        "negotiation_requested",
+        "resubmitted",
         "accepted",
         "rejected",
         "withdrawn",
