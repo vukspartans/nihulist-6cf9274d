@@ -203,28 +203,28 @@ export const ServiceDetailsTab = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <div className="space-y-2">
-        <Label className="text-base font-semibold">בחר אופן פירוט השירותים</Label>
-        <Tabs value={mode} onValueChange={(v) => onModeChange(v as ServiceDetailsMode)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="free_text" className="flex items-center gap-2">
+        <Label className="text-base font-semibold text-right block">בחר אופן פירוט השירותים</Label>
+        <Tabs value={mode} onValueChange={(v) => onModeChange(v as ServiceDetailsMode)} className="w-full" dir="rtl">
+          <TabsList className="grid w-full grid-cols-3 flex-row-reverse">
+            <TabsTrigger value="free_text" className="flex items-center gap-2 flex-row-reverse">
               <FileText className="h-4 w-4" />
               מלל חופשי
             </TabsTrigger>
-            <TabsTrigger value="file" className="flex items-center gap-2">
+            <TabsTrigger value="file" className="flex items-center gap-2 flex-row-reverse">
               <Upload className="h-4 w-4" />
               העלאת קובץ
             </TabsTrigger>
-            <TabsTrigger value="checklist" className="flex items-center gap-2">
+            <TabsTrigger value="checklist" className="flex items-center gap-2 flex-row-reverse">
               <List className="h-4 w-4" />
               רשימת שירותים
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="free_text" className="mt-4">
+          <TabsContent value="free_text" className="mt-4" dir="rtl">
             <div className="space-y-2">
-              <Label>פירוט השירותים הנדרשים</Label>
+              <Label className="text-right block">פירוט השירותים הנדרשים</Label>
               <Textarea
                 value={freeText || ''}
                 onChange={(e) => onFreeTextChange(e.target.value)}
@@ -233,17 +233,17 @@ export const ServiceDetailsTab = ({
                 dir="rtl"
                 placeholder="פרט את השירותים הנדרשים מהיועץ..."
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground text-right">
                 מתאים לתחומים שבהם הפירוט פשוט יחסית
               </p>
             </div>
           </TabsContent>
 
-          <TabsContent value="file" className="mt-4">
+          <TabsContent value="file" className="mt-4" dir="rtl">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>העלאת קובץ פירוט שירותים</Label>
-                <p className="text-sm text-muted-foreground">
+                <Label className="text-right block">העלאת קובץ פירוט שירותים</Label>
+                <p className="text-sm text-muted-foreground text-right">
                   מתאים כאשר פירוט השירותים ארוך ומפורט - ניתן להעלות מסמך קיים
                 </p>
               </div>
@@ -298,11 +298,11 @@ export const ServiceDetailsTab = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="checklist" className="mt-4">
+          <TabsContent value="checklist" className="mt-4" dir="rtl">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>רשימת שירותים</Label>
-                <p className="text-sm text-muted-foreground">
+                <Label className="text-right block">רשימת שירותים</Label>
+                <p className="text-sm text-muted-foreground text-right">
                   סמן את השירותים הנדרשים ושייך אותם לסעיפי שכ"ט
                 </p>
               </div>
