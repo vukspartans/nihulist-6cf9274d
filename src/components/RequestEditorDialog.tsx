@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, DollarSign, CreditCard } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -517,21 +517,21 @@ export const RequestEditorDialog = ({
           </div>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="main" className="flex items-center gap-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+          <TabsList className="grid w-full grid-cols-4 mb-4 flex-row-reverse">
+            <TabsTrigger value="main" className="flex items-center gap-2 flex-row-reverse">
               <Home className="h-4 w-4" />
               ראשי
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center gap-2">
+            <TabsTrigger value="services" className="flex items-center gap-2 flex-row-reverse">
               <List className="h-4 w-4" />
               פירוט שירותים
             </TabsTrigger>
-            <TabsTrigger value="fees" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+            <TabsTrigger value="fees" className="flex items-center gap-2 flex-row-reverse">
+              <Coins className="h-4 w-4" />
               שכר טרחה
             </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center gap-2">
+            <TabsTrigger value="payment" className="flex items-center gap-2 flex-row-reverse">
               <CreditCard className="h-4 w-4" />
               תשלום
             </TabsTrigger>
@@ -540,73 +540,51 @@ export const RequestEditorDialog = ({
           <ScrollArea className="h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
-              <TabsContent value="main" className="mt-0 space-y-6">
-                {/* AI Content Extraction Section */}
-                <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-                  <Label className="text-right block font-medium flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    חילוץ אוטומטי מקובץ בקשת הצעת מחיר
-                  </Label>
-                  <p className="text-sm text-muted-foreground text-right">
-                    העלה קובץ בקשת הצעת מחיר (PDF, Word, תמונה) והמערכת תחלץ אוטומטית את תוכן הבקשה
-                  </p>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="file"
-                      id="rfp-document"
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                      onChange={handleRfpDocumentSelect}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('rfp-document')?.click()}
-                      className="flex-1"
-                      disabled={extracting}
-                    >
-                      <Upload className="h-4 w-4 ml-2" />
-                      {rfpDocumentFile ? rfpDocumentFile.name : 'בחר קובץ'}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleExtractContent}
-                      disabled={!rfpDocumentFile || extracting}
-                      className="flex items-center gap-2"
-                    >
-                      {extracting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          מחלץ...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          חלץ תוכן
-                        </>
-                      )}
-                    </Button>
-                  </div>
+              <TabsContent value="main" className="mt-0 space-y-4" dir="rtl">
+                {/* AI Content Extraction Section - Compact */}
+                <div className="flex gap-2 items-center p-3 border rounded-lg bg-muted/30">
+                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+                  <input
+                    type="file"
+                    id="rfp-document"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    onChange={handleRfpDocumentSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('rfp-document')?.click()}
+                    className="flex-1 justify-start"
+                    disabled={extracting}
+                  >
+                    <Upload className="h-4 w-4 ml-2" />
+                    {rfpDocumentFile ? rfpDocumentFile.name : 'חילוץ אוטומטי מקובץ'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleExtractContent}
+                    disabled={!rfpDocumentFile || extracting}
+                  >
+                    {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'חלץ'}
+                  </Button>
                   {rfpDocumentFile && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FileText className="h-4 w-4" />
-                      <span>{rfpDocumentFile.name}</span>
-                      <span className="text-xs">({formatFileSize(rfpDocumentFile.size)})</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRfpDocumentFile(null)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRfpDocumentFile(null)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
                   )}
                 </div>
 
                 {/* Request Title */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="request-title" className="text-right block">כותרת הבקשה</Label>
                   <Input
                     id="request-title"
@@ -619,24 +597,21 @@ export const RequestEditorDialog = ({
                 </div>
 
                 {/* Request Content */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="request-content" className="text-right block">תיאור הבקשה</Label>
                   <Textarea
                     id="request-content"
                     value={formData.requestContent}
                     onChange={(e) => setFormData(prev => ({ ...prev, requestContent: e.target.value }))}
-                    rows={10}
+                    rows={6}
                     className="text-right font-sans leading-relaxed"
                     dir="rtl"
                     placeholder="תאר את הפרויקט והדרישות שלך"
                   />
-                  <p className="text-xs text-muted-foreground text-right">
-                    תיאור זה יעזור ליועץ להבין את הצרכים שלך ולהציע הצעת מחיר מדויקת
-                  </p>
                 </div>
 
                 {/* File Attachments */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="request-files" className="text-right block">קבצים מצורפים</Label>
                   <div>
                     <input
@@ -733,7 +708,7 @@ export const RequestEditorDialog = ({
               </TabsContent>
 
               {/* Services Tab */}
-              <TabsContent value="services" className="mt-0">
+              <TabsContent value="services" className="mt-0" dir="rtl">
                 <ServiceDetailsTab
                   mode={formData.serviceDetailsMode}
                   onModeChange={(mode) => setFormData(prev => ({ ...prev, serviceDetailsMode: mode }))}
@@ -750,7 +725,7 @@ export const RequestEditorDialog = ({
               </TabsContent>
 
               {/* Fees Tab */}
-              <TabsContent value="fees" className="mt-0">
+              <TabsContent value="fees" className="mt-0" dir="rtl">
                 <FeeItemsTable
                   items={formData.feeItems || []}
                   optionalItems={formData.optionalFeeItems || []}
@@ -760,7 +735,7 @@ export const RequestEditorDialog = ({
               </TabsContent>
 
               {/* Payment Tab */}
-              <TabsContent value="payment" className="mt-0">
+              <TabsContent value="payment" className="mt-0" dir="rtl">
                 <PaymentTermsTab
                   paymentTerms={formData.paymentTerms || { advance_percent: 20, payment_due_days: 30 }}
                   onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
