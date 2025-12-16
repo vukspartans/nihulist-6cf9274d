@@ -104,22 +104,36 @@ serve(async (req) => {
       throw new Error("Not authorized - must be project owner");
     }
 
-    // Get proposal and advisor details
+    // Get proposal details (separate queries to avoid nested FK issue)
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select(`
-        id, price, advisor_id, status,
-        advisors:advisor_id (
-          id, company_name, user_id,
-          profiles:user_id (email, name)
-        )
-      `)
+      .select("id, price, advisor_id, status, negotiation_count")
       .eq("id", proposal_id)
       .single();
 
     if (proposalError || !proposal) {
+      console.error("[Negotiation Request] Proposal query error:", proposalError);
       throw new Error("Proposal not found");
     }
+
+    // Get advisor details
+    const { data: advisor, error: advisorError } = await supabase
+      .from("advisors")
+      .select("id, company_name, user_id")
+      .eq("id", proposal.advisor_id)
+      .single();
+
+    if (advisorError || !advisor) {
+      console.error("[Negotiation Request] Advisor query error:", advisorError);
+      throw new Error("Advisor not found for proposal");
+    }
+
+    // Get advisor profile for email
+    const { data: advisorProfile } = await supabase
+      .from("profiles")
+      .select("email, name")
+      .eq("user_id", advisor.user_id)
+      .maybeSingle();
 
     // Check for existing active negotiation on this version
     const { data: existingSession } = await supabase
@@ -247,14 +261,13 @@ serve(async (req) => {
       .update({
         status: "negotiation_requested",
         has_active_negotiation: true,
-        negotiation_count: (proposal as any).negotiation_count + 1 || 1,
+        negotiation_count: (proposal.negotiation_count || 0) + 1,
       })
       .eq("id", proposal_id);
 
     // Send email to consultant
-    const advisorData = (proposal as any).advisors;
-    const advisorEmail = advisorData?.profiles?.email;
-    const advisorCompany = advisorData?.company_name || "יועץ";
+    const advisorEmail = advisorProfile?.email;
+    const advisorCompany = advisor.company_name || "יועץ";
 
     if (advisorEmail) {
       const resend = new Resend(RESEND_API_KEY);
