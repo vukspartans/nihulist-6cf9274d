@@ -24,15 +24,6 @@ export const useNegotiation = () => {
         { body: data }
       );
 
-      // Check for 409 conflict (existing negotiation)
-      if (result?.error === "ACTIVE_NEGOTIATION_EXISTS") {
-        toast({
-          title: "בקשה קיימת",
-          description: "קיימת כבר בקשת עדכון פעילה להצעה זו",
-        });
-        return { existingSession: true, sessionId: result.existing_session_id };
-      }
-
       if (error) throw error;
 
       toast({
@@ -43,6 +34,24 @@ export const useNegotiation = () => {
       return result as NegotiationRequestOutput;
     } catch (error: any) {
       console.error("[useNegotiation] createNegotiationSession error:", error);
+      
+      // Handle 409 Conflict - existing negotiation
+      // The error.context contains the response body for FunctionsHttpError
+      if (error?.context) {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody?.error === "ACTIVE_NEGOTIATION_EXISTS") {
+            toast({
+              title: "בקשה קיימת",
+              description: "קיימת כבר בקשת עדכון פעילה להצעה זו",
+            });
+            return { existingSession: true, sessionId: errorBody.existing_session_id };
+          }
+        } catch (parseError) {
+          console.error("[useNegotiation] Error parsing context:", parseError);
+        }
+      }
+      
       toast({
         title: "שגיאה",
         description: error.message || "לא ניתן לשלוח את הבקשה",
