@@ -14,7 +14,7 @@ export const ADVISOR_PHASES: Record<number, AdvisorPhase> = {
   1: {
     id: 1,
     name: 'בחינת הפרויקט - שלב 1',
-    description: 'יועצים קריטיים להתחלת הפרויקט - חובה',
+    description: 'יועצים קריטיים להתחלת הפרויקט',
     color: 'blue',
     priority: 'must-have',
     badgeVariant: 'destructive',
