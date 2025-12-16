@@ -16,7 +16,8 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useLineItems } from "@/hooks/useLineItems";
 import { useProposalVersions } from "@/hooks/useProposalVersions";
 import type { LineItemAdjustment, NegotiationCommentInput, CommentType } from "@/types/negotiation";
-import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare } from "lucide-react";
+import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface NegotiationDialogProps {
   open: boolean;
@@ -47,6 +48,7 @@ export const NegotiationDialog = ({
   const [activeTab, setActiveTab] = useState("items");
   const [adjustments, setAdjustments] = useState<LineItemAdjustment[]>([]);
   const [globalComment, setGlobalComment] = useState("");
+  const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<CommentType, string>>({
     document: "",
     scope: "",
@@ -55,7 +57,7 @@ export const NegotiationDialog = ({
     general: "",
   });
 
-  const { createNegotiationSession, loading } = useNegotiation();
+  const { createNegotiationSession, cancelNegotiation, loading } = useNegotiation();
   const { lineItems, loading: lineItemsLoading } = useLineItems(proposal.id);
   const { getLatestVersion } = useProposalVersions(proposal.id);
 
@@ -112,15 +114,33 @@ export const NegotiationDialog = ({
       comments: negotiationComments.length > 0 ? negotiationComments : undefined,
     });
 
+    // Handle existing session response
+    if (result && 'existingSession' in result) {
+      setExistingSessionId(result.sessionId);
+      return;
+    }
+
     if (result) {
       onOpenChange(false);
       onSuccess?.();
     }
   };
 
+  const handleCancelAndRetry = async () => {
+    if (!existingSessionId) return;
+    
+    const cancelled = await cancelNegotiation(existingSessionId);
+    if (cancelled) {
+      setExistingSessionId(null);
+      // Retry submission after cancellation
+      await handleSubmit();
+    }
+  };
+
   const handleClose = () => {
     setAdjustments([]);
     setGlobalComment("");
+    setExistingSessionId(null);
     setComments({
       document: "",
       scope: "",
@@ -153,12 +173,48 @@ export const NegotiationDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="items">פריטים</TabsTrigger>
-            <TabsTrigger value="comments">הערות</TabsTrigger>
-            <TabsTrigger value="summary">סיכום</TabsTrigger>
-          </TabsList>
+        {existingSessionId ? (
+          <Alert variant="default" className="border-amber-500 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle>בקשת עדכון קיימת</AlertTitle>
+            <AlertDescription className="mt-2">
+              <p className="mb-3">קיימת כבר בקשת עדכון פעילה להצעה זו. ניתן לבטל אותה ולשלוח בקשה חדשה.</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClose}
+                  disabled={loading}
+                >
+                  סגור
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleCancelAndRetry}
+                  disabled={loading}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                      מבטל...
+                    </>
+                  ) : (
+                    "בטל ושלח בקשה חדשה"
+                  )}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="items">פריטים</TabsTrigger>
+                <TabsTrigger value="comments">הערות</TabsTrigger>
+                <TabsTrigger value="summary">סיכום</TabsTrigger>
+              </TabsList>
 
           <TabsContent value="items" className="mt-4">
             {lineItemsLoading ? (
@@ -237,23 +293,25 @@ export const NegotiationDialog = ({
               />
             </div>
           </TabsContent>
-        </Tabs>
+            </Tabs>
 
-        <DialogFooter className="flex-row-reverse gap-2 mt-4">
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
-            ביטול
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                שולח...
-              </>
-            ) : (
-              "שלח בקשה לעדכון"
-            )}
-          </Button>
-        </DialogFooter>
+            <DialogFooter className="flex-row-reverse gap-2 mt-4">
+              <Button variant="outline" onClick={handleClose} disabled={loading}>
+                ביטול
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                    שולח...
+                  </>
+                ) : (
+                  "שלח בקשה לעדכון"
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
