@@ -144,16 +144,17 @@ serve(async (req) => {
         );
       }
 
-      parts = [
+      // Return raw Mammoth text directly for DOCX (skip Gemini API)
+      console.log("[extract-rfp-content] Returning raw Mammoth text for DOCX, length:", extractedText.length);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          content: extractedText.trim(),
+        }),
         {
-          text: `${EXTRACTION_PROMPT}
-
-## תוכן המסמך:
-${extractedText}`,
-        },
-      ];
-
-      console.log("[extract-rfp-content] DOCX text extracted, length:", extractedText.length);
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     } else {
       // For other text files
       const textDecoder = new TextDecoder("utf-8");
