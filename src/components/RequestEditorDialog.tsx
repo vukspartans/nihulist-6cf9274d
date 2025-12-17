@@ -601,14 +601,15 @@ export const RequestEditorDialog = ({
 
                 {/* Request Content */}
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="flex items-center gap-2 flex-row-reverse">
+                    <Label htmlFor="request-content" className="text-right">תיאור הבקשה</Label>
                     {isContentAIGenerated && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1 text-primary cursor-help">
-                              <span className="text-xs">תוכן AI</span>
+                            <div className="flex items-center gap-1 text-primary cursor-help flex-row-reverse">
                               <Wand2 className="h-4 w-4" />
+                              <span className="text-xs">תוכן AI</span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="top" dir="rtl" className="max-w-xs">
@@ -617,7 +618,6 @@ export const RequestEditorDialog = ({
                         </Tooltip>
                       </TooltipProvider>
                     )}
-                    <Label htmlFor="request-content" className="text-right">תיאור הבקשה</Label>
                   </div>
                   <Textarea
                     id="request-content"
