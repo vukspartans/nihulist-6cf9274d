@@ -171,19 +171,22 @@ ${extractedText}`,
       console.log("[extract-rfp-content] Using text extraction, length:", extractedText.length);
     }
 
-    // Call Gemini API
+    // Call Gemini 3 Pro Preview API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-goog-api-key": GOOGLE_API_KEY,
+        },
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
-            maxOutputTokens: 1024,
+            maxOutputTokens: 8192,
             temperature: 0.2,
+            mediaResolution: "MEDIA_RESOLUTION_MEDIUM",
           },
-          ...(isPDF || isImage ? { mediaResolution: "MEDIA_RESOLUTION_MEDIUM" } : {}),
         }),
       }
     );
