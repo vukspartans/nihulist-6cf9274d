@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import mammoth from "https://esm.sh/mammoth@1.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,18 +118,18 @@ serve(async (req) => {
 
       console.log("[extract-rfp-content] Using Gemini vision for:", isPDF ? "PDF" : "Image");
     } else if (isDocx) {
-      // For DOCX, we need to extract text first
-      // Simple extraction - look for XML text content
-      const textDecoder = new TextDecoder("utf-8");
-      const rawContent = textDecoder.decode(new Uint8Array(fileData));
+      // For DOCX, use mammoth to properly extract text
+      console.log("[extract-rfp-content] Using mammoth for DOCX extraction");
       
-      // Try to extract text from DOCX (it's a ZIP with XML inside)
-      // This is a simplified approach - for production, use a proper library
-      const textMatches = rawContent.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
-      if (textMatches) {
-        extractedText = textMatches
-          .map((match) => match.replace(/<[^>]+>/g, ""))
-          .join(" ");
+      try {
+        const result = await mammoth.extractRawText({ 
+          buffer: new Uint8Array(fileData) 
+        });
+        extractedText = result.value;
+        console.log("[extract-rfp-content] Mammoth extracted text length:", extractedText.length);
+      } catch (mammothError) {
+        console.error("[extract-rfp-content] Mammoth extraction error:", mammothError);
+        extractedText = "";
       }
 
       if (!extractedText.trim()) {
@@ -154,7 +155,7 @@ ${extractedText}
         },
       ];
 
-      console.log("[extract-rfp-content] Extracted DOCX text length:", extractedText.length);
+      console.log("[extract-rfp-content] DOCX text extracted, length:", extractedText.length);
     } else {
       // For other text files
       const textDecoder = new TextDecoder("utf-8");
