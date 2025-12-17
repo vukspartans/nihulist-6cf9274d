@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2 } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -89,6 +89,62 @@ export const RequestEditorDialog = ({
   const [rfpDocumentFile, setRfpDocumentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('main');
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // Auto-enable preview when AI content is generated
+  useEffect(() => {
+    if (isContentAIGenerated) {
+      setIsPreviewMode(true);
+    }
+  }, [isContentAIGenerated]);
+
+  // Parse markdown-like content for formatted preview
+  const renderFormattedContent = (content: string) => {
+    const lines = content.split('\n');
+    return lines.map((line, index) => {
+      // Bold headers (e.g., **Subject line**)
+      if (line.match(/^\*\*(.+)\*\*$/)) {
+        const text = line.replace(/^\*\*(.+)\*\*$/, '$1');
+        return <h4 key={index} className="font-bold text-base mt-3 mb-1">{text}</h4>;
+      }
+      
+      // Inline bold
+      const processedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      
+      // Bullet points
+      if (line.match(/^[-•]\s/)) {
+        const text = line.replace(/^[-•]\s/, '');
+        return (
+          <div key={index} className="flex gap-2 mr-2 my-0.5" dir="rtl">
+            <span className="text-primary">•</span>
+            <span dangerouslySetInnerHTML={{ __html: text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+          </div>
+        );
+      }
+      
+      // Numbered list
+      if (line.match(/^\d+\.\s/)) {
+        const num = line.match(/^(\d+)\./)?.[1];
+        const text = line.replace(/^\d+\.\s/, '');
+        return (
+          <div key={index} className="flex gap-2 mr-2 my-0.5" dir="rtl">
+            <span className="text-primary font-medium">{num}.</span>
+            <span dangerouslySetInnerHTML={{ __html: text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+          </div>
+        );
+      }
+      
+      // Empty line
+      if (line.trim() === '') {
+        return <div key={index} className="h-2" />;
+      }
+      
+      // Regular text
+      return (
+        <p key={index} className="my-0.5" dangerouslySetInnerHTML={{ __html: processedLine }} />
+      );
+    });
+  };
   
   const defaultData = getDefaultData(projectName, advisorType);
   const [formData, setFormData] = useState<AdvisorTypeRequestData>({
@@ -543,52 +599,10 @@ export const RequestEditorDialog = ({
           <ScrollArea className="h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
-              <TabsContent value="main" className="mt-0 space-y-4" dir="rtl">
-                {/* AI Content Extraction Section - Compact */}
-                <div className="flex gap-2 items-center p-3 border rounded-lg bg-muted/30">
-                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-                  <input
-                    type="file"
-                    id="rfp-document"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                    onChange={handleRfpDocumentSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('rfp-document')?.click()}
-                    className="flex-1 justify-start"
-                    disabled={extracting}
-                  >
-                    <Upload className="h-4 w-4 ml-2" />
-                    {rfpDocumentFile ? rfpDocumentFile.name : 'חילוץ אוטומטי מקובץ'}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleExtractContent}
-                    disabled={!rfpDocumentFile || extracting}
-                  >
-                    {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'חלץ'}
-                  </Button>
-                  {rfpDocumentFile && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRfpDocumentFile(null)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-
+              <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
                 {/* Request Title */}
                 <div className="space-y-1">
-                  <Label htmlFor="request-title" className="text-right block">כותרת הבקשה</Label>
+                  <Label htmlFor="request-title" className="block text-right">כותרת הבקשה</Label>
                   <Input
                     id="request-title"
                     value={formData.requestTitle}
@@ -601,39 +615,126 @@ export const RequestEditorDialog = ({
 
                 {/* Request Content */}
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <Label htmlFor="request-content" className="text-right">תיאור הבקשה</Label>
-                    {isContentAIGenerated && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1 text-primary cursor-help flex-row-reverse">
-                              <Wand2 className="h-4 w-4" />
-                              <span className="text-xs">תוכן AI</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" dir="rtl" className="max-w-xs">
-                            <p>התוכן נוצר באמצעות בינה מלאכותית ועשוי להכיל טעויות. מומלץ לבדוק ולערוך את התוכן לפני השליחה.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                  <div className="flex items-center justify-between" dir="rtl">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="request-content">תיאור הבקשה</Label>
+                      {isContentAIGenerated && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 text-primary cursor-help">
+                                <Wand2 className="h-3.5 w-3.5" />
+                                <span className="text-xs">AI</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" dir="rtl" className="max-w-xs">
+                              <p>התוכן נוצר באמצעות בינה מלאכותית. מומלץ לבדוק לפני השליחה.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    {formData.requestContent && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsPreviewMode(!isPreviewMode)}
+                        className="h-7 px-2 text-xs gap-1"
+                      >
+                        {isPreviewMode ? (
+                          <>
+                            <Edit2 className="h-3.5 w-3.5" />
+                            ערוך
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5" />
+                            תצוגה
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
-                  <Textarea
-                    id="request-content"
-                    value={formData.requestContent}
-                    onChange={(e) => setFormData(prev => ({ ...prev, requestContent: e.target.value }))}
-                    rows={6}
-                    className="text-right font-sans leading-relaxed"
-                    dir="rtl"
-                    placeholder="תאר את הפרויקט והדרישות שלך"
-                  />
+                  
+                  {isPreviewMode && formData.requestContent ? (
+                    <div 
+                      className="border rounded-lg p-3 bg-muted/30 text-right text-sm leading-relaxed min-h-[100px] max-h-[200px] overflow-y-auto"
+                      dir="rtl"
+                    >
+                      {renderFormattedContent(formData.requestContent)}
+                    </div>
+                  ) : (
+                    <Textarea
+                      id="request-content"
+                      value={formData.requestContent}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, requestContent: e.target.value }));
+                        if (isContentAIGenerated) setIsContentAIGenerated(false);
+                      }}
+                      rows={4}
+                      className="text-right font-sans leading-relaxed min-h-[100px] resize-y"
+                      dir="rtl"
+                      placeholder="תאר את הפרויקט והדרישות שלך"
+                    />
+                  )}
                 </div>
 
-                {/* File Attachments */}
-                <div className="space-y-1">
-                  <Label htmlFor="request-files" className="text-right block">קבצים מצורפים</Label>
-                  <div>
+                {/* Combined: AI Extraction + File Attachments */}
+                <div className="space-y-2">
+                  <Label className="block text-right">קבצים וחילוץ אוטומטי</Label>
+                  
+                  {/* Action buttons row */}
+                  <div className="flex gap-2" dir="rtl">
+                    {/* AI Extraction */}
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        type="file"
+                        id="rfp-document"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        onChange={handleRfpDocumentSelect}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('rfp-document')?.click()}
+                        disabled={extracting}
+                        className="gap-1.5"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {rfpDocumentFile ? (
+                          <span className="max-w-[120px] truncate">{rfpDocumentFile.name}</span>
+                        ) : (
+                          'חילוץ מקובץ'
+                        )}
+                      </Button>
+                      {rfpDocumentFile && (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleExtractContent}
+                            disabled={extracting}
+                            className="h-8"
+                          >
+                            {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'חלץ'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRfpDocumentFile(null)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* File Upload */}
                     <input
                       type="file"
                       id="request-files"
@@ -644,23 +745,24 @@ export const RequestEditorDialog = ({
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => document.getElementById('request-files')?.click()}
-                      className="w-full"
                       disabled={uploading}
+                      className="gap-1.5"
                     >
-                      <Upload className="h-4 w-4 ml-2" />
-                      {uploading ? 'מעלה...' : 'העלה קבצים'}
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {uploading ? 'מעלה...' : 'צרף קבצים'}
+                      {formData.requestAttachments.length > 0 && (
+                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                          {formData.requestAttachments.length}
+                        </Badge>
+                      )}
                     </Button>
-                    <p className="text-xs text-muted-foreground text-right mt-1">
-                      תוכל לצרף תוכניות, מפרטים, או מסמכים רלוונטיים (עד 10MB לקובץ)
-                    </p>
                   </div>
                   
+                  {/* Attached files list - compact */}
                   {formData.requestAttachments.length > 0 && (
-                    <div className="space-y-2 mt-3">
-                      <p className="text-sm font-medium text-muted-foreground text-right">
-                        {formData.requestAttachments.length} קבצים מצורפים
-                      </p>
+                    <div className="space-y-1.5 mt-2">
                       {formData.requestAttachments.map((file, index) => {
                         const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
                         const isPDF = /\.pdf$/i.test(file.name);
@@ -668,11 +770,11 @@ export const RequestEditorDialog = ({
                         return (
                           <div 
                             key={index}
-                            className="group relative flex items-center gap-3 p-3 bg-muted hover:bg-muted/80 rounded-lg border border-border hover:border-primary/50 transition-all"
+                            className="group flex items-center gap-2 p-2 bg-muted/50 hover:bg-muted rounded-md border border-border/50 hover:border-primary/30 transition-all"
                             dir="rtl"
                           >
                             {isImage ? (
-                              <div className="w-10 h-10 rounded overflow-hidden bg-background flex-shrink-0">
+                              <div className="w-8 h-8 rounded overflow-hidden bg-background flex-shrink-0">
                                 <img 
                                   src={file.url} 
                                   alt={file.name}
@@ -680,11 +782,11 @@ export const RequestEditorDialog = ({
                                 />
                               </div>
                             ) : (
-                              <div className="w-10 h-10 rounded bg-background flex items-center justify-center flex-shrink-0">
+                              <div className="w-8 h-8 rounded bg-background flex items-center justify-center flex-shrink-0">
                                 {isPDF ? (
-                                  <FileText className="h-5 w-5 text-red-500" />
+                                  <FileText className="h-4 w-4 text-red-500" />
                                 ) : (
-                                  <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                  <Paperclip className="h-4 w-4 text-muted-foreground" />
                                 )}
                               </div>
                             )}
@@ -692,33 +794,36 @@ export const RequestEditorDialog = ({
                             <button
                               type="button"
                               onClick={() => handleFilePreview(file)}
-                              className="flex-1 text-right hover:text-primary transition-colors"
+                              className="flex-1 text-right hover:text-primary transition-colors min-w-0"
                             >
-                              <span className="text-sm font-medium line-clamp-1">{file.name}</span>
-                              <Badge variant="outline" className="text-xs ml-2">
-                                {formatFileSize(file.size)}
-                              </Badge>
+                              <span className="text-sm font-medium truncate block">{file.name}</span>
                             </button>
                             
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleFilePreview(file)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                              {formatFileSize(file.size)}
+                            </Badge>
                             
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeAttachment(index)}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFilePreview(file)}
+                                className="h-7 w-7 p-0"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeAttachment(index)}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
