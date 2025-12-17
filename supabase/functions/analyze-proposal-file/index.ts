@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import mammoth from "npm:mammoth@1.6.0";
-import * as XLSX from "npm:xlsx@0.18.5";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
