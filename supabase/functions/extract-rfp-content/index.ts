@@ -7,6 +7,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Concise prompt for short, focused extraction
+const EXTRACTION_PROMPT = `אתה מנתח מסמכי RFP בתחום הבנייה והנדסה.
+
+## משימה
+חלץ "תיאור הבקשה" בצורה **קצרה וממוקדת** (עד 150 מילים).
+
+## מה לחלץ
+- תיאור קצר של הפרויקט (2-3 משפטים)
+- מה נדרש מהיועץ (רשימה קצרה)
+- היקף עיקרי אם צוין
+
+## חשוב
+- תמציתי וקצר
+- נקודות לרשימות
+- אל תוסיף מידע שלא במסמך
+- אם אין מידע רלוונטי: "לא נמצא תיאור בקשה במסמך"`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -75,8 +92,6 @@ serve(async (req) => {
     const isPDF = mimeType.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
     const isImage = mimeType.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp)$/i.test(fileName);
     const isDocx = mimeType.includes("word") || fileName.toLowerCase().endsWith(".docx");
-    const isExcel = mimeType.includes("excel") || mimeType.includes("spreadsheet") || 
-                   fileName.toLowerCase().endsWith(".xlsx") || fileName.toLowerCase().endsWith(".xls");
 
     let extractedText = "";
     let parts: any[] = [];
@@ -96,24 +111,7 @@ serve(async (req) => {
             data: base64Data,
           },
         },
-        {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
-
-מהמסמך המצורף, חלץ את "תוכן הבקשה" או "תיאור הבקשה" - כלומר את המידע העיקרי שהיזם מבקש מהיועץ.
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-- מפרטים טכניים
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.
-אם יש פריטים רבים, סדר אותם ברשימה מנוקדת.
-אל תוסיף מידע שלא מופיע במסמך.
-אם לא מצאת תוכן רלוונטי, ציין זאת.`,
-        },
+        { text: EXTRACTION_PROMPT },
       ];
 
       console.log("[extract-rfp-content] Using Gemini vision for:", isPDF ? "PDF" : "Image");
@@ -123,35 +121,35 @@ serve(async (req) => {
       
       try {
         const result = await mammoth.extractRawText({ 
-          buffer: new Uint8Array(fileData) 
+          arrayBuffer: fileData 
         });
         extractedText = result.value;
         console.log("[extract-rfp-content] Mammoth extracted text length:", extractedText.length);
+        console.log("[extract-rfp-content] Mammoth text preview:", extractedText.substring(0, 500));
       } catch (mammothError) {
         console.error("[extract-rfp-content] Mammoth extraction error:", mammothError);
         extractedText = "";
       }
 
       if (!extractedText.trim()) {
-        extractedText = "לא ניתן לחלץ טקסט מקובץ DOCX זה. אנא העלה קובץ PDF או תמונה.";
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "לא ניתן לחלץ טקסט מקובץ DOCX זה. אנא העלה קובץ PDF או תמונה.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       parts = [
         {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
+          text: `${EXTRACTION_PROMPT}
 
-מהטקסט הבא שחולץ מהמסמך, חלץ את "תוכן הבקשה" או "תיאור הבקשה":
-
-${extractedText}
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.`,
+## תוכן המסמך:
+${extractedText}`,
         },
       ];
 
@@ -163,20 +161,10 @@ ${extractedText}
 
       parts = [
         {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
+          text: `${EXTRACTION_PROMPT}
 
-מהטקסט הבא, חלץ את "תוכן הבקשה" או "תיאור הבקשה":
-
-${extractedText}
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.`,
+## תוכן המסמך:
+${extractedText}`,
         },
       ];
 
@@ -185,14 +173,14 @@ ${extractedText}
 
     // Call Gemini API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
-            maxOutputTokens: 4096,
+            maxOutputTokens: 1024,
             temperature: 0.2,
           },
           ...(isPDF || isImage ? { mediaResolution: "MEDIA_RESOLUTION_MEDIUM" } : {}),
