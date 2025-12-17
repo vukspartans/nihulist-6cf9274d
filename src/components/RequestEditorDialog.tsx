@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
@@ -87,6 +88,7 @@ export const RequestEditorDialog = ({
   const [extracting, setExtracting] = useState(false);
   const [rfpDocumentFile, setRfpDocumentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('main');
+  const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   
   const defaultData = getDefaultData(projectName, advisorType);
   const [formData, setFormData] = useState<AdvisorTypeRequestData>({
@@ -222,6 +224,7 @@ export const RequestEditorDialog = ({
           ...prev,
           requestContent: data.content
         }));
+        setIsContentAIGenerated(true);
         setRfpDocumentFile(null);
         toast({
           title: "תוכן חולץ בהצלחה",
@@ -598,7 +601,24 @@ export const RequestEditorDialog = ({
 
                 {/* Request Content */}
                 <div className="space-y-1">
-                  <Label htmlFor="request-content" className="text-right block">תיאור הבקשה</Label>
+                  <div className="flex items-center gap-2 justify-end">
+                    {isContentAIGenerated && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-primary cursor-help">
+                              <span className="text-xs">תוכן AI</span>
+                              <Wand2 className="h-4 w-4" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" dir="rtl" className="max-w-xs">
+                            <p>התוכן נוצר באמצעות בינה מלאכותית ועשוי להכיל טעויות. מומלץ לבדוק ולערוך את התוכן לפני השליחה.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <Label htmlFor="request-content" className="text-right">תיאור הבקשה</Label>
+                  </div>
                   <Textarea
                     id="request-content"
                     value={formData.requestContent}
