@@ -1850,7 +1850,11 @@ export type Database = {
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
       reject_proposal_with_cleanup: {
-        Args: { p_proposal_id: string; p_rejection_reason?: string }
+        Args: {
+          p_owner_id?: string
+          p_proposal_id: string
+          p_rejection_reason?: string
+        }
         Returns: Json
       }
       send_rfp_invitations:
