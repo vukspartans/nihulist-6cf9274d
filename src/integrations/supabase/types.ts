@@ -1294,11 +1294,15 @@ export type Database = {
           id: string
           last_notification_at: string | null
           opened_at: string | null
+          payment_terms: Json | null
           personalized_body_html: string | null
           request_content: string | null
           request_files: Json | null
           request_title: string | null
           rfp_id: string
+          service_details_file: Json | null
+          service_details_mode: string | null
+          service_details_text: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
@@ -1319,11 +1323,15 @@ export type Database = {
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
+          payment_terms?: Json | null
           personalized_body_html?: string | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
           rfp_id: string
+          service_details_file?: Json | null
+          service_details_mode?: string | null
+          service_details_text?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
@@ -1344,11 +1352,15 @@ export type Database = {
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
+          payment_terms?: Json | null
           personalized_body_html?: string | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
           rfp_id?: string
+          service_details_file?: Json | null
+          service_details_mode?: string | null
+          service_details_text?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token?: string
