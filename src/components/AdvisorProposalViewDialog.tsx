@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,10 +13,22 @@ import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import {
-  Home, List, Coins, CreditCard, FileText, Clock, Calendar, Download,
+  Home, List, FileText, Clock, Calendar, Download,
   CheckCircle, XCircle, AlertCircle, Eye, Loader2, MapPin, Building2,
-  FileImage, FileSpreadsheet, File, FolderDown, Banknote
+  FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins
 } from 'lucide-react';
+
+// Reusable section header component
+const SectionHeader = ({ icon: Icon, children, className = "" }: { 
+  icon: React.ElementType; 
+  children: React.ReactNode; 
+  className?: string 
+}) => (
+  <h4 className={`flex items-center gap-2 font-semibold justify-end text-right text-xs ${className}`}>
+    {children}
+    <Icon className="w-4 h-4" />
+  </h4>
+);
 
 interface UploadedFile {
   name: string;
@@ -91,7 +104,6 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
 
       if (error) throw error;
       
-      // Cast the data properly
       const proposalData: ProposalData = {
         ...data,
         files: (data.files as unknown as UploadedFile[]) || [],
@@ -100,7 +112,6 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
       };
       setProposal(proposalData);
 
-      // Load file URLs if files exist
       if (proposalData.files && proposalData.files.length > 0) {
         await loadSignedUrls(proposalData.files);
       }
@@ -218,31 +229,33 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     return File;
   };
 
-  const getStatusBadge = (status: string) => {
-    const cfg: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
-      submitted: { label: "הוגש", variant: "default", icon: CheckCircle },
-      accepted: { label: "אושר", variant: "default", icon: CheckCircle },
-      rejected: { label: "נדחה", variant: "destructive", icon: XCircle },
-      under_review: { label: "בבדיקה", variant: "secondary", icon: AlertCircle },
-      draft: { label: "טיוטה", variant: "outline", icon: FileText },
-      withdrawn: { label: "בוטל", variant: "outline", icon: XCircle },
-      negotiation_requested: { label: "משא ומתן", variant: "secondary", icon: AlertCircle },
-      resubmitted: { label: "הוגש מחדש", variant: "default", icon: CheckCircle },
+  const getStatusConfig = (status: string) => {
+    const cfg: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any; bannerClass: string; bannerText: string }> = {
+      submitted: { label: "הוגש", variant: "default", icon: CheckCircle, bannerClass: "bg-blue-50 border-blue-200 text-blue-700", bannerText: "הצעתך הוגשה בהצלחה ומחכה לבדיקת היזם" },
+      accepted: { label: "אושר", variant: "default", icon: CheckCircle, bannerClass: "bg-green-50 border-green-200 text-green-700", bannerText: "🎉 הצעתך אושרה!" },
+      rejected: { label: "נדחה", variant: "destructive", icon: XCircle, bannerClass: "bg-red-50 border-red-200 text-red-700", bannerText: "הצעתך נדחתה" },
+      under_review: { label: "בבדיקה", variant: "secondary", icon: AlertCircle, bannerClass: "bg-yellow-50 border-yellow-200 text-yellow-700", bannerText: "הצעתך נמצאת בבדיקה" },
+      draft: { label: "טיוטה", variant: "outline", icon: FileText, bannerClass: "bg-gray-50 border-gray-200 text-gray-700", bannerText: "טיוטה" },
+      withdrawn: { label: "בוטל", variant: "outline", icon: XCircle, bannerClass: "bg-gray-50 border-gray-200 text-gray-700", bannerText: "ההצעה בוטלה" },
+      negotiation_requested: { label: "משא ומתן", variant: "secondary", icon: AlertCircle, bannerClass: "bg-orange-50 border-orange-200 text-orange-700", bannerText: "היזם ביקש משא ומתן על ההצעה" },
+      resubmitted: { label: "הוגש מחדש", variant: "default", icon: CheckCircle, bannerClass: "bg-blue-50 border-blue-200 text-blue-700", bannerText: "ההצעה הוגשה מחדש ומחכה לבדיקה" },
     };
-    const c = cfg[status] || cfg.draft;
-    const Icon = c.icon;
-    return <Badge variant={c.variant} className="gap-1"><Icon className="w-3 h-3" />{c.label}</Badge>;
+    return cfg[status] || cfg.draft;
   };
 
   const conditions = proposal?.conditions_json || {};
   const files = proposal?.files || [];
+  const hasConditions = conditions.payment_terms || conditions.payment_term_type || 
+    (conditions.milestones && conditions.milestones.length > 0) || 
+    conditions.assumptions || conditions.exclusions || 
+    conditions.validity_days || conditions.notes;
 
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl" dir="rtl">
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <DialogContent className="max-w-2xl" dir="rtl">
+          <div className="flex items-center justify-center p-6">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         </DialogContent>
       </Dialog>
@@ -252,8 +265,8 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   if (!proposal) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl" dir="rtl">
-          <div className="text-center p-8 text-muted-foreground">
+        <DialogContent className="max-w-2xl" dir="rtl">
+          <div className="text-center p-6 text-muted-foreground text-sm">
             לא נמצאה הצעה
           </div>
         </DialogContent>
@@ -261,19 +274,26 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     );
   }
 
+  const statusConfig = getStatusConfig(proposal.status);
+  const StatusIcon = statusConfig.icon;
+
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
-          <DialogHeader className="p-4 pb-3 border-b">
-            <div className="flex items-center justify-between gap-3">
-              <DialogTitle className="text-lg font-bold text-right">
-                ההצעה שהגשתי - {proposal.projects?.name || 'פרויקט'}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
+          {/* Header */}
+          <DialogHeader className="p-3 pb-2 border-b">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="text-sm font-bold text-right truncate">
+                {proposal.projects?.name || 'פרויקט'}
               </DialogTitle>
-              {getStatusBadge(proposal.status)}
+              <Badge variant={statusConfig.variant} className="gap-1 text-xs shrink-0">
+                <StatusIcon className="w-3 h-3" />
+                {statusConfig.label}
+              </Badge>
             </div>
             {proposal.projects && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span>{proposal.projects.type}</span>
                 <span>•</span>
                 <MapPin className="h-3 w-3" />
@@ -282,265 +302,239 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
             )}
           </DialogHeader>
 
+          {/* Status Banner */}
+          <div className={`px-3 py-1.5 text-xs text-right border-b ${statusConfig.bannerClass}`}>
+            {statusConfig.bannerText}
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-4">
-              <TabsTrigger value="main" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1.5">
-                <Home className="h-4 w-4" />
+            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-3 h-9">
+              <TabsTrigger value="main" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
+                <Home className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">ראשי</span>
               </TabsTrigger>
-              <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1.5">
-                <List className="h-4 w-4" />
+              <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
+                <List className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">תנאים</span>
               </TabsTrigger>
-              <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1.5">
-                <FileText className="h-4 w-4" />
+              <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
+                <FileText className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">קבצים</span>
-                {files.length > 0 && <Badge variant="secondary" className="text-xs">{files.length}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">חתימה</span>
+                {files.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 h-4">{files.length}</Badge>}
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-[calc(90vh-180px)]">
-              {/* Tab 1: Main Details */}
-              <TabsContent value="main" className="p-4 space-y-4 m-0">
-                {/* Key Metrics */}
-                <div className="grid grid-cols-3 gap-3">
-                  <Card>
-                    <CardContent className="p-3 text-center">
-                      <Calendar className="w-5 h-5 mx-auto mb-1.5 text-purple-600" />
-                      <p className="text-xs text-muted-foreground">תאריך הגשה</p>
-                      <p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p>
+            <ScrollArea className="h-[calc(90vh-160px)]">
+              {/* Tab 1: Main Details + Signature */}
+              <TabsContent value="main" className="p-3 space-y-3 m-0">
+                {/* Compact Key Metrics Row */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-2 text-center">
+                      <Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" />
+                      <p className="text-[10px] text-muted-foreground">הוגש</p>
+                      <p className="font-bold text-xs">{formatDate(proposal.submitted_at)}</p>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="p-3 text-center">
-                      <Clock className="w-5 h-5 mx-auto mb-1.5 text-blue-600" />
-                      <p className="text-xs text-muted-foreground">לו״ז ביצוע</p>
-                      <p className="font-bold text-sm">{proposal.timeline_days} ימים</p>
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-2 text-center">
+                      <Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" />
+                      <p className="text-[10px] text-muted-foreground">לו״ז</p>
+                      <p className="font-bold text-xs">{proposal.timeline_days} ימים</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-green-50 border-green-200">
-                    <CardContent className="p-3 text-center">
-                      <Banknote className="w-5 h-5 mx-auto mb-1.5 text-green-600" />
-                      <p className="text-xs text-muted-foreground">מחיר שהוצע</p>
-                      <p className="font-bold text-sm text-green-700">{formatCurrency(proposal.price)}</p>
+                    <CardContent className="p-2 text-center">
+                      <Banknote className="w-4 h-4 mx-auto mb-1 text-green-600" />
+                      <p className="text-[10px] text-muted-foreground">מחיר</p>
+                      <p className="font-bold text-xs text-green-700">{formatCurrency(proposal.price)}</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Scope of Work */}
                 <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                      היקף העבודה
-                      <Building2 className="h-4 w-4" />
-                    </h4>
+                  <CardContent className="p-3">
+                    <SectionHeader icon={Building2}>היקף העבודה</SectionHeader>
                     {proposal.scope_text ? (
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed text-right">{proposal.scope_text}</p>
+                      <p className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">{proposal.scope_text}</p>
                     ) : (
-                      <p className="text-sm text-muted-foreground text-right">לא צוין היקף עבודה</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Tab 2: Conditions */}
-              <TabsContent value="conditions" className="p-4 space-y-4 m-0">
-                {/* Payment Terms */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                      תנאי תשלום
-                      <CreditCard className="h-4 w-4" />
-                    </h4>
-                    {conditions.payment_terms ? (
-                      <p className="text-sm whitespace-pre-wrap text-right">{conditions.payment_terms}</p>
-                    ) : conditions.payment_term_type ? (
-                      <p className="text-sm text-right">{conditions.payment_term_type}</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-right">לא צוינו תנאי תשלום</p>
+                      <p className="text-xs text-muted-foreground text-right mt-2">לא צוין</p>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Milestones */}
-                {conditions.milestones && conditions.milestones.length > 0 && (
+                {/* Signature (merged into main tab) */}
+                {proposal.signature_blob && (
                   <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                        אבני דרך לתשלום
-                        <Coins className="h-4 w-4" />
-                      </h4>
-                      <div className="space-y-2">
-                        {conditions.milestones.map((milestone, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                            <Badge variant="outline">{milestone.percentage}%</Badge>
-                            <span>{milestone.description}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Assumptions */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                      הנחות יסוד
-                      <List className="h-4 w-4" />
-                    </h4>
-                    {conditions.assumptions ? (
-                      <p className="text-sm whitespace-pre-wrap text-right">{conditions.assumptions}</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-right">לא צוינו הנחות יסוד</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Exclusions */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                      לא כלול בהצעה
-                      <XCircle className="h-4 w-4" />
-                    </h4>
-                    {conditions.exclusions ? (
-                      <p className="text-sm whitespace-pre-wrap text-right">{conditions.exclusions}</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-right">לא צוינו אי-הכללות</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Validity */}
-                {conditions.validity_days && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                        תוקף ההצעה
-                        <Calendar className="h-4 w-4" />
-                      </h4>
-                      <p className="text-sm text-right">{conditions.validity_days} ימים מתאריך ההגשה</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Notes */}
-                {conditions.notes && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold mb-2 flex items-center gap-2 justify-end text-right">
-                        הערות נוספות
-                        <FileText className="h-4 w-4" />
-                      </h4>
-                      <p className="text-sm whitespace-pre-wrap text-right">{conditions.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              {/* Tab 3: Files */}
-              <TabsContent value="files" className="p-4 space-y-4 m-0">
-                {files.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>לא צורפו קבצים להצעה זו</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {files.length > 1 && (
-                      <Button variant="outline" size="sm" onClick={handleDownloadAll} className="w-full sm:w-auto">
-                        <FolderDown className="h-4 w-4 me-2" />
-                        הורד את כל הקבצים
-                      </Button>
-                    )}
-                    <div className="space-y-2">
-                      {files.map((file, idx) => {
-                        const FileIcon = getFileIcon(file.name);
-                        return (
-                          <Card key={idx}>
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="icon" onClick={() => handleViewFile(file)} disabled={loadingUrls}>
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>צפייה</TooltipContent>
-                                  </Tooltip>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} disabled={loadingUrls}>
-                                        <Download className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>הורדה</TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                <div className="flex items-center gap-2 flex-1 justify-end">
-                                  <div className="text-right">
-                                    <p className="text-sm font-medium truncate max-w-[200px]">{file.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                  <FileIcon className="h-8 w-8 text-muted-foreground flex-shrink-0" />
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-
-              {/* Tab 4: Signature */}
-              <TabsContent value="signature" className="p-4 space-y-4 m-0">
-                {proposal.signature_blob ? (
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold mb-3 flex items-center gap-2 justify-end text-right">
-                        חתימה דיגיטלית
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </h4>
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="border rounded-lg p-4 bg-white">
+                    <CardContent className="p-3">
+                      <SectionHeader icon={CheckCircle} className="text-green-600">חתימה דיגיטלית</SectionHeader>
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="border rounded p-2 bg-white shrink-0">
                           <img
                             src={proposal.signature_blob}
                             alt="חתימה"
-                            className="max-h-24 object-contain"
+                            className="h-12 object-contain"
                           />
                         </div>
                         {proposal.signature_meta_json && (
-                          <div className="text-sm text-muted-foreground space-y-1 text-center">
+                          <div className="text-xs text-muted-foreground text-right">
                             {proposal.signature_meta_json.signer_name && (
-                              <p>חתום ע״י: {proposal.signature_meta_json.signer_name}</p>
+                              <p>חתום: {proposal.signature_meta_json.signer_name}</p>
                             )}
                             {proposal.signature_meta_json.timestamp && (
-                              <p>בתאריך: {formatDate(proposal.signature_meta_json.timestamp)}</p>
+                              <p>{formatDate(proposal.signature_meta_json.timestamp)}</p>
                             )}
                           </div>
                         )}
                       </div>
                     </CardContent>
                   </Card>
-                ) : (
+                )}
+              </TabsContent>
+
+              {/* Tab 2: Consolidated Conditions */}
+              <TabsContent value="conditions" className="p-3 m-0">
+                {!hasConditions ? (
                   <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                      <XCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>לא נמצאה חתימה להצעה זו</p>
+                    <CardContent className="p-4 text-center text-muted-foreground text-xs">
+                      <List className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      לא צוינו תנאים להצעה זו
                     </CardContent>
                   </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-3 space-y-3">
+                      {/* Payment Terms */}
+                      {(conditions.payment_terms || conditions.payment_term_type) && (
+                        <div>
+                          <SectionHeader icon={CreditCard}>תנאי תשלום</SectionHeader>
+                          <p className="text-xs text-right mt-1">
+                            {conditions.payment_terms || conditions.payment_term_type}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Milestones */}
+                      {conditions.milestones && conditions.milestones.length > 0 && (
+                        <>
+                          {(conditions.payment_terms || conditions.payment_term_type) && <Separator />}
+                          <div>
+                            <SectionHeader icon={Coins}>אבני דרך</SectionHeader>
+                            <div className="space-y-1 mt-1">
+                              {conditions.milestones.map((m, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs p-1.5 bg-muted/50 rounded">
+                                  <Badge variant="outline" className="text-[10px] px-1.5">{m.percentage}%</Badge>
+                                  <span className="text-right flex-1 mr-2">{m.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Assumptions */}
+                      {conditions.assumptions && (
+                        <>
+                          <Separator />
+                          <div>
+                            <SectionHeader icon={List}>הנחות יסוד</SectionHeader>
+                            <p className="text-xs whitespace-pre-wrap text-right mt-1">{conditions.assumptions}</p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Exclusions */}
+                      {conditions.exclusions && (
+                        <>
+                          <Separator />
+                          <div>
+                            <SectionHeader icon={XCircle}>לא כלול</SectionHeader>
+                            <p className="text-xs whitespace-pre-wrap text-right mt-1">{conditions.exclusions}</p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Validity */}
+                      {conditions.validity_days && (
+                        <>
+                          <Separator />
+                          <div>
+                            <SectionHeader icon={Calendar}>תוקף ההצעה</SectionHeader>
+                            <p className="text-xs text-right mt-1">{conditions.validity_days} ימים</p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Notes */}
+                      {conditions.notes && (
+                        <>
+                          <Separator />
+                          <div>
+                            <SectionHeader icon={FileText}>הערות</SectionHeader>
+                            <p className="text-xs whitespace-pre-wrap text-right mt-1">{conditions.notes}</p>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Tab 3: Files */}
+              <TabsContent value="files" className="p-3 space-y-2 m-0">
+                {files.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-4 text-center text-muted-foreground text-xs">
+                      <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      לא צורפו קבצים
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {files.length > 1 && (
+                      <Button variant="outline" size="sm" onClick={handleDownloadAll} className="w-full text-xs h-8">
+                        <FolderDown className="h-3.5 w-3.5 me-1.5" />
+                        הורד הכל ({files.length})
+                      </Button>
+                    )}
+                    <div className="space-y-1.5">
+                      {files.map((file, idx) => {
+                        const FileIcon = getFileIcon(file.name);
+                        return (
+                          <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded-md">
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewFile(file)} disabled={loadingUrls}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>צפייה</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(file)} disabled={loadingUrls}>
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>הורדה</TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                              <div className="text-right min-w-0">
+                                <p className="text-xs font-medium truncate">{file.name}</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                              <FileIcon className="h-6 w-6 text-muted-foreground shrink-0" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </TabsContent>
             </ScrollArea>
