@@ -434,7 +434,7 @@ const AdvisorProfile = () => {
                       <Button 
                         type="button" 
                         variant="outline" 
-                        onClick={() => navigate('/advisor-dashboard')}
+                        onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
                       >
                         ביטול
                       </Button>

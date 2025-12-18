@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard, Home, List, Building2, User } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard, Home, List, Building2, User, Sparkles, RefreshCw } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -19,6 +19,7 @@ import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import JSZip from 'jszip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 interface RFPDetails {
   id: string;
   subject: string;
@@ -133,6 +134,8 @@ const RFPDetails = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [scopeItems, setScopeItems] = useState<ServiceScopeItem[]>([]);
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
@@ -205,6 +208,44 @@ const RFPDetails = () => {
       });
     } finally {
       setFileLoading(null);
+    }
+  };
+
+  const fetchAiSummary = async () => {
+    if (!rfpDetails || aiSummaryLoading) return;
+    
+    setAiSummaryLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('summarize-rfp', {
+        body: {
+          project_name: rfpDetails.projects.name,
+          project_type: rfpDetails.projects.type,
+          project_location: rfpDetails.projects.location,
+          project_description: rfpDetails.projects.description,
+          project_phase: rfpDetails.projects.phase,
+          request_title: inviteDetails?.request_title,
+          request_content: inviteDetails?.request_content,
+          advisor_type: inviteDetails?.advisor_type,
+        },
+      });
+
+      if (error) {
+        console.error('[RFPDetails] AI summary error:', error);
+        toast({
+          title: "שגיאה ביצירת סיכום",
+          description: error.message || "לא ניתן ליצור סיכום כרגע",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.summary) {
+        setAiSummary(data.summary);
+      }
+    } catch (error) {
+      console.error('[RFPDetails] AI summary unexpected error:', error);
+    } finally {
+      setAiSummaryLoading(false);
     }
   };
 
@@ -700,6 +741,53 @@ const RFPDetails = () => {
                     {rfpDetails.projects.description}
                   </p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* AI Quick Summary Card */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Label className="font-medium text-sm">סיכום מהיר</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="outline" className="text-xs bg-primary/10 border-primary/20">AI</Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">סיכום נוצר על ידי בינה מלאכותית</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchAiSummary}
+                  disabled={aiSummaryLoading}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${aiSummaryLoading ? 'animate-spin' : ''}`} />
+                  {aiSummary ? 'רענן' : 'צור סיכום'}
+                </Button>
+              </div>
+              
+              {aiSummaryLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>יוצר סיכום...</span>
+                </div>
+              ) : aiSummary ? (
+                <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                  {aiSummary}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  לחץ על "צור סיכום" לקבלת סיכום מהיר של הבקשה
+                </p>
               )}
             </CardContent>
           </Card>
