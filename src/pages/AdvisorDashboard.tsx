@@ -135,13 +135,7 @@ const AdvisorDashboard = () => {
   }, [user]);
 
   const fetchAdvisorData = async () => {
-    if (!user) {
-      console.debug('[AdvisorDashboard] No user, skipping fetch');
-      return;
-    }
-
-    console.debug('[AdvisorDashboard] ========================================');
-    console.debug('[AdvisorDashboard] Starting fetch for user:', user.id, user.email);
+    if (!user) return;
 
     try {
       // Fetch user profile
@@ -152,7 +146,7 @@ const AdvisorDashboard = () => {
         .single();
 
       if (profileError) {
-        console.error('[AdvisorDashboard] ❌ Profile error:', profileError);
+        console.error('[AdvisorDashboard] Profile error:', profileError);
       }
 
       setUserProfile(profile);
@@ -165,34 +159,18 @@ const AdvisorDashboard = () => {
         .single();
 
       if (advisorError) {
-        console.error('[AdvisorDashboard] ❌ Advisor profile error:', advisorError);
+        console.error('[AdvisorDashboard] Advisor profile error:', advisorError);
       }
 
       setAdvisorProfile(advisor);
 
-      console.debug('[AdvisorDashboard] ✅ Advisor profile:', {
-        id: advisor?.id,
-        company_name: advisor?.company_name,
-        admin_approved: advisor?.admin_approved,
-        is_active: advisor?.is_active,
-      });
-
       if (advisor) {
-        // Step 1: Fetch RFP invites with EXPLICIT error handling
-        console.debug('[AdvisorDashboard] Querying rfp_invites for advisor_id:', advisor.id);
-        
-        const { data: invites, error: invitesError, status, statusText } = await supabase
+        // Fetch RFP invites
+        const { data: invites, error: invitesError } = await supabase
           .from('rfp_invites')
           .select('id, rfp_id, advisor_type, status, created_at, deadline_at, opened_at, decline_reason, decline_note')
           .eq('advisor_id', advisor.id)
           .order('created_at', { ascending: false });
-
-        console.debug('[AdvisorDashboard] RFP Invites query result:', {
-          invitesCount: invites?.length || 0,
-          error: invitesError,
-          status,
-          statusText,
-        });
 
         if (invitesError) {
           console.error('[AdvisorDashboard] ❌ INVITES ERROR:', {
@@ -224,22 +202,10 @@ const AdvisorDashboard = () => {
         }
 
         if (invites.length === 0) {
-          console.debug('[AdvisorDashboard] ℹ️ No invites found (empty result set)');
           setRfpInvites([]);
         } else {
-          console.debug('[AdvisorDashboard] ✅ Found', invites.length, 'invites');
-          invites.forEach((inv, idx) => {
-            console.debug(`[AdvisorDashboard]   Invite ${idx + 1}:`, {
-              id: inv.id,
-              rfp_id: inv.rfp_id,
-              status: inv.status,
-              advisor_type: inv.advisor_type,
-            });
-          });
-
-          // Step 2: Fetch RFPs for the rfp_ids
+          // Fetch RFPs for the rfp_ids
           const rfpIds = invites.map(inv => inv.rfp_id);
-          console.debug('[AdvisorDashboard] Fetching RFPs for', rfpIds.length, 'IDs');
           
           const { data: rfps, error: rfpsError } = await supabase
             .from('rfps')
@@ -247,15 +213,13 @@ const AdvisorDashboard = () => {
             .in('id', rfpIds);
 
           if (rfpsError) {
-            console.error('[AdvisorDashboard] ❌ RFPs error:', rfpsError);
+            console.error('[AdvisorDashboard] RFPs error:', rfpsError);
           }
-          console.debug('[AdvisorDashboard] ✅ Fetched RFPs:', rfps?.length || 0);
 
-          // Step 3: Fetch projects (even if rfps is empty, still try)
+          // Fetch projects
           let projects: any[] = [];
           if (rfps && rfps.length > 0) {
             const projectIds = rfps.map(rfp => rfp.project_id);
-            console.debug('[AdvisorDashboard] Fetching projects for', projectIds.length, 'IDs');
             
             const { data: projectsData, error: projectsError } = await supabase
               .from('projects')
@@ -263,9 +227,8 @@ const AdvisorDashboard = () => {
               .in('id', projectIds);
 
             if (projectsError) {
-              console.error('[AdvisorDashboard] ❌ Projects error:', projectsError);
+              console.error('[AdvisorDashboard] Projects error:', projectsError);
             }
-            console.debug('[AdvisorDashboard] ✅ Fetched projects:', projectsData?.length || 0);
             
             // Fetch entrepreneur names
             let entrepreneurNames: Record<string, string> = {};
@@ -289,17 +252,10 @@ const AdvisorDashboard = () => {
             })) || [];
           }
 
-          // Step 4: Client-side merge - always keep invites, attach data when available
+          // Client-side merge
           const mergedInvites = invites.map(invite => {
             const rfp = rfps?.find(r => r.id === invite.rfp_id);
             const project = rfp ? projects?.find(p => p.id === rfp.project_id) : null;
-            
-            console.debug('[AdvisorDashboard]   Patch invite', invite.id, {
-              rfp_found: !!rfp,
-              rfp_id: invite.rfp_id,
-              project_found: !!project,
-              project_id: rfp?.project_id,
-            });
             
             return {
               ...invite,
@@ -310,8 +266,6 @@ const AdvisorDashboard = () => {
             };
           });
 
-          console.debug('[AdvisorDashboard] ========================================');
-          console.debug('[AdvisorDashboard] ✅ FINAL: Merged', mergedInvites.length, 'invites');
           setRfpInvites(mergedInvites as any);
         }
 
