@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard, Home, List, Building2, User } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -18,7 +18,7 @@ import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import JSZip from 'jszip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface RFPDetails {
   id: string;
   subject: string;
@@ -555,225 +555,7 @@ const RFPDetails = () => {
     }
   };
 
-  const renderServiceDetails = () => {
-    if (!inviteDetails) return null;
-
-    const { service_details_mode, service_details_text, service_details_file } = inviteDetails;
-
-    // Check if there's any service details content
-    const hasServiceDetails = 
-      service_details_text || 
-      service_details_file || 
-      (service_details_mode === 'checklist' && scopeItems.length > 0);
-
-    if (!hasServiceDetails) return null;
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            פירוט שירותים
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Free text mode */}
-            {service_details_mode === 'free_text' && service_details_text && (
-              <div>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {service_details_text}
-                </p>
-              </div>
-            )}
-
-            {/* File mode */}
-            {service_details_mode === 'file' && service_details_file && (
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <FileText className="h-4 w-4 text-primary" />
-                <span className="flex-1">{service_details_file.name}</span>
-                <Badge variant="outline" className="text-xs">
-                  {(service_details_file.size / 1024 / 1024).toFixed(2)} MB
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadFile(service_details_file)}
-                  disabled={fileLoading === service_details_file.name}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  {fileLoading === service_details_file.name ? 'מוריד...' : 'הורד'}
-                </Button>
-              </div>
-            )}
-
-            {/* Checklist mode */}
-            {service_details_mode === 'checklist' && scopeItems.length > 0 && (
-              <div className="space-y-2">
-                {scopeItems.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className={`flex items-center gap-3 p-2 rounded-lg ${
-                      item.is_included ? 'bg-green-50' : 'bg-muted'
-                    }`}
-                  >
-                    {item.is_included ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className={item.is_included ? '' : 'text-muted-foreground line-through'}>
-                      {item.task_name}
-                    </span>
-                    {item.is_optional && (
-                      <Badge variant="outline" className="text-xs">אופציונלי</Badge>
-                    )}
-                    {item.fee_category && item.fee_category !== 'כללי' && (
-                      <Badge variant="secondary" className="text-xs">{item.fee_category}</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderFeeItems = () => {
-    if (feeItems.length === 0) return null;
-
-    const requiredItems = feeItems.filter(item => !item.is_optional);
-    const optionalItems = feeItems.filter(item => item.is_optional);
-
-    const renderTable = (items: FeeItem[], title: string, isOptional: boolean) => {
-      if (items.length === 0) return null;
-
-      return (
-        <div className="space-y-2">
-          <Label className="font-medium">{title}</Label>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">סעיף</TableHead>
-                <TableHead className="text-right">תיאור</TableHead>
-                <TableHead className="text-right">יחידה</TableHead>
-                <TableHead className="text-right">כמות</TableHead>
-                <TableHead className="text-right">מחיר יחידה</TableHead>
-                <TableHead className="text-right">סוג חיוב</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.item_number}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>
-                    {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
-                  </TableCell>
-                  <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      );
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
-            שכר טרחה
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {renderTable(requiredItems, 'סעיפים חובה', false)}
-            {renderTable(optionalItems, 'סעיפים אופציונליים', true)}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderPaymentTerms = () => {
-    const paymentTerms = inviteDetails?.payment_terms;
-    if (!paymentTerms) return null;
-
-    const hasMilestones = paymentTerms.milestone_payments && paymentTerms.milestone_payments.length > 0;
-    const hasPaymentType = paymentTerms.payment_term_type;
-    const hasNotes = paymentTerms.notes;
-
-    if (!hasMilestones && !hasPaymentType && !hasNotes) return null;
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            תנאי תשלום
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Milestone payments */}
-            {hasMilestones && (
-              <div className="space-y-2">
-                <Label className="font-medium">אבני דרך לתשלום</Label>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">תיאור</TableHead>
-                      <TableHead className="text-right">אחוז</TableHead>
-                      <TableHead className="text-right">טריגר</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paymentTerms.milestone_payments!.map((milestone, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{milestone.description}</TableCell>
-                        <TableCell>{milestone.percentage}%</TableCell>
-                        <TableCell>{milestone.trigger || '—'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="text-sm text-muted-foreground text-left">
-                  סה"כ: {paymentTerms.milestone_payments!.reduce((sum, m) => sum + m.percentage, 0)}%
-                </div>
-              </div>
-            )}
-
-            {/* Payment term type */}
-            {hasPaymentType && (
-              <div>
-                <Label className="font-medium">תנאי תשלום</Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {PAYMENT_TERM_LABELS[paymentTerms.payment_term_type!] || paymentTerms.payment_term_type}
-                </p>
-              </div>
-            )}
-
-            {/* Notes */}
-            {hasNotes && (
-              <div>
-                <Label className="font-medium">הערות נוספות</Label>
-                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                  {paymentTerms.notes}
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // Helper functions for rendering have been moved inline to the Tabs component
 
   if (loading) {
     return (
@@ -839,18 +621,76 @@ const RFPDetails = () => {
             <DeadlineCountdown deadline={inviteDetails.deadline_at} />
           )}
 
-          {/* Request Content from Entrepreneur */}
-          {(inviteDetails?.request_title || inviteDetails?.request_content || inviteDetails?.request_files) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  תוכן הבקשה
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {inviteDetails.request_title && (
+          {/* Project Summary Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                פרטי הפרויקט
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">שם היזם</Label>
+                  <p className="text-sm font-medium flex items-center gap-1 mt-1">
+                    <User className="h-3.5 w-3.5" />
+                    {rfpDetails.projects.entrepreneur_name || '—'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">מיקום</Label>
+                  <p className="text-sm font-medium flex items-center gap-1 mt-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {rfpDetails.projects.location || '—'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">סוג הפרויקט</Label>
+                  <p className="text-sm font-medium mt-1">{rfpDetails.projects.type || '—'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">שלב</Label>
+                  <p className="text-sm font-medium mt-1">{rfpDetails.projects.phase || '—'}</p>
+                </div>
+              </div>
+              {rfpDetails.projects.description && (
+                <div className="mt-4 pt-4 border-t">
+                  <Label className="text-xs text-muted-foreground">תיאור הפרויקט</Label>
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                    {rfpDetails.projects.description}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Main Tabbed Content - Mirroring RequestEditorDialog */}
+          <Card>
+            <CardContent className="pt-6">
+              <Tabs defaultValue="main" dir="rtl">
+                <TabsList className="w-full flex flex-row-reverse justify-start mb-4 bg-muted/50">
+                  <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-background">
+                    <Home className="h-4 w-4" />
+                    ראשי
+                  </TabsTrigger>
+                  <TabsTrigger value="services" className="flex items-center gap-2 data-[state=active]:bg-background">
+                    <List className="h-4 w-4" />
+                    פירוט שירותים
+                  </TabsTrigger>
+                  <TabsTrigger value="fees" className="flex items-center gap-2 data-[state=active]:bg-background">
+                    <Coins className="h-4 w-4" />
+                    שכר טרחה
+                  </TabsTrigger>
+                  <TabsTrigger value="payment" className="flex items-center gap-2 data-[state=active]:bg-background">
+                    <CreditCard className="h-4 w-4" />
+                    תשלום
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Tab 1: ראשי (Main) */}
+                <TabsContent value="main" className="space-y-4 mt-0">
+                  {inviteDetails?.request_title && (
                     <div>
                       <Label className="font-medium">כותרת הבקשה</Label>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -858,15 +698,19 @@ const RFPDetails = () => {
                       </p>
                     </div>
                   )}
-                  {inviteDetails.request_content && (
+                  
+                  {inviteDetails?.request_content && (
                     <div>
                       <Label className="font-medium">תיאור הבקשה</Label>
-                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                        {inviteDetails.request_content}
-                      </p>
+                      <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm whitespace-pre-wrap">
+                          {inviteDetails.request_content}
+                        </p>
+                      </div>
                     </div>
                   )}
-                  {inviteDetails.request_files && Array.isArray(inviteDetails.request_files) && inviteDetails.request_files.length > 0 && (
+                  
+                  {inviteDetails?.request_files && Array.isArray(inviteDetails.request_files) && inviteDetails.request_files.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <Label className="font-medium">קבצים מצורפים</Label>
@@ -909,98 +753,295 @@ const RFPDetails = () => {
                       </div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Service Details */}
-          {renderServiceDetails()}
+                  {/* Empty state for Main tab */}
+                  {!inviteDetails?.request_title && !inviteDetails?.request_content && 
+                   (!inviteDetails?.request_files || inviteDetails.request_files.length === 0) && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>לא צורפו פרטים נוספים בלשונית זו</p>
+                    </div>
+                  )}
+                </TabsContent>
 
-          {/* Fee Items */}
-          {renderFeeItems()}
-
-          {/* Payment Terms */}
-          {renderPaymentTerms()}
-
-          {/* Project Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>תיאור הפרויקט</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="font-medium">שם היזם</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {rfpDetails.projects.entrepreneur_name || '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="font-medium">מיקום</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {rfpDetails.projects.location || '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="font-medium">סוג הפרויקט</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{rfpDetails.projects.type}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium">שלב הפרויקט</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{rfpDetails.projects.phase}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium">תיאור מפורט</Label>
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                      {rfpDetails.projects.description}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>פרטי ההזמנה</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {inviteDetails?.advisor_type && (
+                {/* Tab 2: פירוט שירותים (Service Details) */}
+                <TabsContent value="services" className="space-y-4 mt-0">
+                  {/* Free text mode */}
+                  {inviteDetails?.service_details_mode === 'free_text' && inviteDetails?.service_details_text && (
                     <div>
-                      <Label className="font-medium">סוג היועץ המבוקש</Label>
-                      <div className="mt-1">
-                        <Badge variant="outline">{inviteDetails.advisor_type}</Badge>
+                      <Label className="font-medium">תיאור השירותים</Label>
+                      <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm whitespace-pre-wrap">
+                          {inviteDetails.service_details_text}
+                        </p>
                       </div>
                     </div>
                   )}
+
+                  {/* File mode */}
+                  {inviteDetails?.service_details_mode === 'file' && inviteDetails?.service_details_file && (
+                    <div>
+                      <Label className="font-medium">קובץ פירוט שירותים</Label>
+                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg mt-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="flex-1">{inviteDetails.service_details_file.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {(inviteDetails.service_details_file.size / 1024 / 1024).toFixed(2)} MB
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadFile(inviteDetails.service_details_file!)}
+                          disabled={fileLoading === inviteDetails.service_details_file.name}
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          {fileLoading === inviteDetails.service_details_file.name ? 'מוריד...' : 'הורד'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Checklist mode */}
+                  {inviteDetails?.service_details_mode === 'checklist' && scopeItems.length > 0 && (
+                    <div>
+                      <Label className="font-medium">רשימת שירותים</Label>
+                      <div className="space-y-2 mt-2">
+                        {scopeItems.map((item) => (
+                          <div 
+                            key={item.id} 
+                            className={`flex items-center gap-3 p-3 rounded-lg ${
+                              item.is_included ? 'bg-green-50 dark:bg-green-950/20' : 'bg-muted'
+                            }`}
+                          >
+                            {item.is_included ? (
+                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <span className={`flex-1 ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
+                              {item.task_name}
+                            </span>
+                            <div className="flex gap-2">
+                              {item.is_optional && (
+                                <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                              )}
+                              {item.fee_category && item.fee_category !== 'כללי' && (
+                                <Badge variant="secondary" className="text-xs">{item.fee_category}</Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty state for Services tab */}
+                  {(!inviteDetails?.service_details_mode || 
+                    (inviteDetails?.service_details_mode === 'free_text' && !inviteDetails?.service_details_text) ||
+                    (inviteDetails?.service_details_mode === 'file' && !inviteDetails?.service_details_file) ||
+                    (inviteDetails?.service_details_mode === 'checklist' && scopeItems.length === 0)) && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <List className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>לא הוגדרו פרטי שירותים</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Tab 3: שכר טרחה (Fees) */}
+                <TabsContent value="fees" className="space-y-4 mt-0">
+                  {feeItems.length > 0 ? (
+                    <>
+                      {/* Required items */}
+                      {feeItems.filter(item => !item.is_optional).length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="font-medium">סעיפים חובה</Label>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                  <TableHead className="text-right">סעיף</TableHead>
+                                  <TableHead className="text-right">תיאור</TableHead>
+                                  <TableHead className="text-right">יחידה</TableHead>
+                                  <TableHead className="text-right">כמות</TableHead>
+                                  <TableHead className="text-right">מחיר יחידה</TableHead>
+                                  <TableHead className="text-right">סוג חיוב</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {feeItems.filter(item => !item.is_optional).map((item) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell className="font-medium">{item.item_number}</TableCell>
+                                    <TableCell>{item.description}</TableCell>
+                                    <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>
+                                      {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
+                                    </TableCell>
+                                    <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Optional items */}
+                      {feeItems.filter(item => item.is_optional).length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="font-medium">סעיפים אופציונליים</Label>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                  <TableHead className="text-right">סעיף</TableHead>
+                                  <TableHead className="text-right">תיאור</TableHead>
+                                  <TableHead className="text-right">יחידה</TableHead>
+                                  <TableHead className="text-right">כמות</TableHead>
+                                  <TableHead className="text-right">מחיר יחידה</TableHead>
+                                  <TableHead className="text-right">סוג חיוב</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {feeItems.filter(item => item.is_optional).map((item) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell className="font-medium">{item.item_number}</TableCell>
+                                    <TableCell>{item.description}</TableCell>
+                                    <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>
+                                      {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
+                                    </TableCell>
+                                    <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Coins className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>לא הוגדרו סעיפי שכר טרחה</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Tab 4: תשלום (Payment) */}
+                <TabsContent value="payment" className="space-y-4 mt-0">
+                  {inviteDetails?.payment_terms && (
+                    inviteDetails.payment_terms.milestone_payments?.length || 
+                    inviteDetails.payment_terms.payment_term_type ||
+                    inviteDetails.payment_terms.notes
+                  ) ? (
+                    <>
+                      {/* Milestone payments */}
+                      {inviteDetails.payment_terms.milestone_payments && inviteDetails.payment_terms.milestone_payments.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="font-medium">אבני דרך לתשלום</Label>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                  <TableHead className="text-right">תיאור</TableHead>
+                                  <TableHead className="text-right">אחוז</TableHead>
+                                  <TableHead className="text-right">טריגר</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {inviteDetails.payment_terms.milestone_payments.map((milestone, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{milestone.description}</TableCell>
+                                    <TableCell>{milestone.percentage}%</TableCell>
+                                    <TableCell>{milestone.trigger || '—'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          <div className="text-sm text-muted-foreground text-left">
+                            סה"כ: {inviteDetails.payment_terms.milestone_payments.reduce((sum, m) => sum + m.percentage, 0)}%
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payment term type */}
+                      {inviteDetails.payment_terms.payment_term_type && (
+                        <div>
+                          <Label className="font-medium">תנאי תשלום</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {PAYMENT_TERM_LABELS[inviteDetails.payment_terms.payment_term_type] || inviteDetails.payment_terms.payment_term_type}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Notes */}
+                      {inviteDetails.payment_terms.notes && (
+                        <div>
+                          <Label className="font-medium">הערות נוספות</Label>
+                          <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm whitespace-pre-wrap">
+                              {inviteDetails.payment_terms.notes}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>לא הוגדרו תנאי תשלום</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Invite Details Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                פרטי ההזמנה
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {inviteDetails?.advisor_type && (
                   <div>
-                    <Label className="font-medium">תאריך קבלת ההזמנה</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {new Date(inviteDetails?.created_at || '').toLocaleDateString('he-IL')} ב-
-                      {new Date(inviteDetails?.created_at || '').toLocaleTimeString('he-IL')}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="font-medium">סטטוס</Label>
+                    <Label className="text-xs text-muted-foreground">סוג היועץ</Label>
                     <div className="mt-1">
-                      <Badge className={getStatusColor(inviteDetails?.status || '')}>
-                        {getStatusText(inviteDetails?.status || '')}
-                      </Badge>
+                      <Badge variant="outline">{inviteDetails.advisor_type}</Badge>
                     </div>
                   </div>
-                  <div>
-                    <Label className="font-medium">תאריך שליחת ההזמנה</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')} ב-
-                      {new Date(rfpDetails.sent_at).toLocaleTimeString('he-IL')}
-                    </p>
+                )}
+                <div>
+                  <Label className="text-xs text-muted-foreground">תאריך קבלה</Label>
+                  <p className="text-sm font-medium mt-1">
+                    {new Date(inviteDetails?.created_at || '').toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">סטטוס</Label>
+                  <div className="mt-1">
+                    <Badge className={getStatusColor(inviteDetails?.status || '')}>
+                      {getStatusText(inviteDetails?.status || '')}
+                    </Badge>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">תאריך שליחה</Label>
+                  <p className="text-sm font-medium mt-1">
+                    {new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
