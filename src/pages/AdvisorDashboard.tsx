@@ -19,6 +19,7 @@ import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import BackToTop from '@/components/BackToTop';
 import { ProposalStatusBadge } from '@/components/ProposalStatusBadge';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
+import { AdvisorProposalViewDialog } from '@/components/AdvisorProposalViewDialog';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -123,6 +124,8 @@ const AdvisorDashboard = () => {
   const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals'>('rfp-invites');
   const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
   const [proposalFilter, setProposalFilter] = useState<'all' | 'accepted' | 'submitted' | 'under_review' | 'rejected'>('all');
+  const [proposalViewDialogOpen, setProposalViewDialogOpen] = useState(false);
+  const [selectedProposalToView, setSelectedProposalToView] = useState<string | null>(null);
   const { declineRFP, loading: declining } = useDeclineRFP();
 
   useEffect(() => {
@@ -1011,10 +1014,8 @@ const AdvisorDashboard = () => {
                             onClick={() => {
                               const proposal = proposalMap.get(invite.rfps?.projects?.id);
                               if (proposal) {
-                                toast({
-                                  title: "הצעה הוגשה",
-                                  description: `הוגשה ב-${new Date(proposal.submitted_at).toLocaleDateString('he-IL')} • סטטוס: ${proposal.status}`,
-                                });
+                                setSelectedProposalToView(proposal.id);
+                                setProposalViewDialogOpen(true);
                               }
                             }}
                           >
@@ -1141,6 +1142,20 @@ const AdvisorDashboard = () => {
                       </div>
                     </div>
 
+                    {/* View Proposal Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setSelectedProposalToView(proposal.id);
+                        setProposalViewDialogOpen(true);
+                      }}
+                    >
+                      <FileText className="h-4 w-4 me-2" />
+                      צפייה בהצעה שהגשתי
+                    </Button>
+
                     {/* Approval Information */}
                     {proposal.status === 'accepted' && proposal.project_advisors?.[0] && (
                       <div className="mt-4 p-4 bg-white border border-amber-200 rounded-lg">
@@ -1223,6 +1238,14 @@ const AdvisorDashboard = () => {
         onDecline={handleDeclineConfirm}
         loading={declining}
       />
+
+      {selectedProposalToView && (
+        <AdvisorProposalViewDialog
+          open={proposalViewDialogOpen}
+          onOpenChange={setProposalViewDialogOpen}
+          proposalId={selectedProposalToView}
+        />
+      )}
       
       <BackToTop threshold={20} />
     </div>
