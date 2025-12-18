@@ -313,7 +313,7 @@ export const useProposalSubmit = () => {
         .invoke('notify-proposal-submitted', {
           body: {
             proposal_id: proposal.id,
-            test_mode: false, // Production mode - emails sent to real addresses
+            test_mode: true, // Set to false in production
           },
         })
         .then(({ data: emailData, error: emailError }) => {
