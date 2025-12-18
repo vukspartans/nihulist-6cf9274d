@@ -40,6 +40,28 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading } = useAuth();
 
+  // Check for pending recovery flag on mount (set by AuthEventRouter)
+  useEffect(() => {
+    const recoveryPending = localStorage.getItem('passwordRecoveryPending');
+    const adminRecovery = localStorage.getItem('adminPasswordRecovery');
+    
+    console.log('[AdminLogin] Mount check - recoveryPending:', recoveryPending, 'adminRecovery:', adminRecovery);
+    
+    if (recoveryPending || adminRecovery) {
+      // Recovery is pending - check for session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log('[AdminLogin] Recovery pending, session:', session ? 'found' : 'not found');
+        if (session?.user) {
+          setSession(session);
+          setUser(session.user);
+          setIsPasswordReset(true);
+          // Clear the pending flag (keep adminRecovery until password is actually reset)
+          localStorage.removeItem('passwordRecoveryPending');
+        }
+      });
+    }
+  }, []);
+
   // Redirect if already admin and handle password recovery
   useEffect(() => {
     // Parse recovery type from both query string and hash
@@ -47,34 +69,48 @@ const AdminLogin = () => {
     const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
     const type = urlParams.get('type') || hashParams.get('type');
     
-    // If this is a recovery URL, prioritize showing password reset
-    if (type === 'recovery') {
-      console.log('Recovery URL detected, setting up password reset');
+    // Check for recovery flags
+    const recoveryPending = localStorage.getItem('passwordRecoveryPending');
+    const adminRecovery = localStorage.getItem('adminPasswordRecovery');
+    const isRecoveryMode = type === 'recovery' || recoveryPending || adminRecovery;
+    
+    // If this is a recovery URL or recovery is pending, prioritize showing password reset
+    if (isRecoveryMode) {
+      console.log('[AdminLogin] Recovery mode detected');
       localStorage.setItem('adminPasswordRecovery', 'true');
       
       // Set up auth state listener for password recovery
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (event, session) => {
-          console.log('Auth state change during recovery:', event);
+          console.log('[AdminLogin] Auth state change during recovery:', event);
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Handle password recovery events (check localStorage for auto-login case)
-          const isRecoveryFlow = localStorage.getItem('adminPasswordRecovery') === 'true';
-          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) {
+          // Handle password recovery events
+          if (event === 'PASSWORD_RECOVERY') {
+            console.log('[AdminLogin] PASSWORD_RECOVERY event received');
             setIsPasswordReset(true);
             return;
+          }
+          
+          // Handle SIGNED_IN during recovery flow
+          if (event === 'SIGNED_IN' && session?.user) {
+            const isRecoveryFlow = localStorage.getItem('adminPasswordRecovery') === 'true';
+            if (isRecoveryFlow) {
+              console.log('[AdminLogin] SIGNED_IN during recovery flow - showing reset form');
+              setIsPasswordReset(true);
+            }
           }
         }
       );
 
       // Check for existing session
       supabase.auth.getSession().then(({ data: { session } }) => {
-        console.log('Checking session for recovery:', session ? 'found' : 'not found');
+        console.log('[AdminLogin] Checking session for recovery:', session ? 'found' : 'not found');
         setSession(session);
         setUser(session?.user ?? null);
         
-        // If we have a session, show reset form
+        // If we have a session in recovery mode, show reset form
         if (session?.user) {
           setIsPasswordReset(true);
         }
@@ -104,7 +140,7 @@ const AdminLogin = () => {
     });
 
     // Redirect if already admin (only when not in recovery mode)
-    if (!authLoading && isAdmin && type !== 'recovery') {
+    if (!authLoading && isAdmin && !isRecoveryMode) {
       navigate("/heyadmin", { replace: true });
     }
 
@@ -165,6 +201,9 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      // Store email for recovery context
+      localStorage.setItem('lastAdminEmail', email);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/heyadmin/login?type=recovery`,
       });
@@ -203,13 +242,40 @@ const AdminLogin = () => {
 
       toast.success("הסיסמה עודכנה בהצלחה");
       
-      // Clear recovery flag and reset states
+      // Clear ALL recovery flags and reset states
       localStorage.removeItem('adminPasswordRecovery');
+      localStorage.removeItem('passwordRecoveryPending');
+      localStorage.removeItem('lastAdminEmail');
       setIsPasswordReset(false);
       setNewPassword("");
       navigate("/heyadmin/login");
     } catch (error: any) {
       toast.error(error.message || "לא ניתן לעדכן את הסיסמה");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manual trigger for password reset (for logged-in users who need to reset)
+  const handleManualResetRequest = async () => {
+    if (!session?.user?.email) {
+      toast.error("לא נמצא אימייל משתמש");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      localStorage.setItem('lastAdminEmail', session.user.email);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(session.user.email, {
+        redirectTo: `${window.location.origin}/heyadmin/login?type=recovery`,
+      });
+
+      if (error) throw error;
+      
+      toast.success("קישור לאיפוס סיסמה נשלח לאימייל שלך");
+    } catch (error: any) {
+      toast.error(error.message || "לא ניתן לשלוח קישור לאיפוס סיסמה");
     } finally {
       setLoading(false);
     }

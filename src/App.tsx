@@ -244,10 +244,20 @@ const AuthEventRouter = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthEventRouter] Auth event:', event, 'Session:', !!session);
+      
       if (event === 'PASSWORD_RECOVERY') {
-        if (pathname.startsWith('/heyadmin')) {
-          console.log('[AuthEvent] Admin password recovery');
+        // Set flag BEFORE navigating to ensure login page sees it
+        localStorage.setItem('passwordRecoveryPending', 'true');
+        
+        // Check if this is an admin recovery (check localStorage for last admin email or current path)
+        const lastAdminEmail = localStorage.getItem('lastAdminEmail');
+        const isAdminRecovery = pathname.startsWith('/heyadmin') || lastAdminEmail;
+        
+        if (isAdminRecovery) {
+          console.log('[AuthEvent] Admin password recovery - setting flag and navigating');
+          localStorage.setItem('adminPasswordRecovery', 'true');
           navigate('/heyadmin/login?type=recovery', { replace: true });
         } else {
           console.log('[AuthEvent] Non-admin password recovery');
