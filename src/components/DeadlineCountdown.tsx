@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,6 +7,7 @@ import { he } from 'date-fns/locale';
 interface DeadlineCountdownProps {
   deadline: string;
   className?: string;
+  compact?: boolean;
 }
 
 interface TimeLeft {
@@ -34,7 +34,7 @@ function calculateTimeLeft(deadline: string): TimeLeft {
   };
 }
 
-export function DeadlineCountdown({ deadline, className = '' }: DeadlineCountdownProps) {
+export function DeadlineCountdown({ deadline, className = '', compact = false }: DeadlineCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft(deadline));
 
   useEffect(() => {
@@ -45,64 +45,79 @@ export function DeadlineCountdown({ deadline, className = '' }: DeadlineCountdow
     return () => clearInterval(timer);
   }, [deadline]);
 
-  if (timeLeft.total <= 0) {
+  const isExpired = timeLeft.total <= 0;
+  const isCritical = timeLeft.total < 24 * 60 * 60 * 1000;
+  const isUrgent = timeLeft.total < 48 * 60 * 60 * 1000;
+
+  if (isExpired) {
     return (
-      <Alert variant="destructive" className={className}>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>פג תוקף</AlertTitle>
-        <AlertDescription>
-          המועד להגשת הצעה עבר
-        </AlertDescription>
-      </Alert>
+      <div className={`flex items-center gap-2 p-2 rounded-lg bg-destructive/10 text-destructive ${className}`}>
+        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+        <span className="text-sm font-medium">פג תוקף - המועד להגשה עבר</span>
+      </div>
     );
   }
 
-  const urgency = 
-    timeLeft.total < 24 * 60 * 60 * 1000 ? 'destructive' : 
-    timeLeft.total < 48 * 60 * 60 * 1000 ? 'default' : 
-    'default';
+  // Compact version - inline display
+  if (compact) {
+    const timeString = timeLeft.days > 0 
+      ? `${timeLeft.days} ימים, ${timeLeft.hours} שעות`
+      : timeLeft.hours > 0
+        ? `${timeLeft.hours} שעות, ${timeLeft.minutes} דקות`
+        : `${timeLeft.minutes} דקות`;
 
-  const isUrgent = timeLeft.total < 48 * 60 * 60 * 1000;
-  const isCritical = timeLeft.total < 24 * 60 * 60 * 1000;
-
-  return (
-    <Alert variant={urgency} className={className}>
-      <Clock className="h-4 w-4" />
-      <AlertTitle className="flex items-center gap-2">
-        {isUrgent && '⚠️'} זמן להגשה
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Clock className={`h-4 w-4 flex-shrink-0 ${isCritical ? 'text-destructive' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'}`} />
+        <span className={`text-sm ${isCritical ? 'text-destructive font-medium' : isUrgent ? 'text-amber-600' : 'text-muted-foreground'}`}>
+          {timeString}
+        </span>
         {isCritical && (
-          <Badge variant="destructive" className="mr-2 animate-pulse">
-            דחוף
-          </Badge>
+          <Badge variant="destructive" className="text-xs animate-pulse">דחוף</Badge>
         )}
-      </AlertTitle>
-      <AlertDescription className="mt-2" dir="rtl">
-        <div className="flex gap-4 text-lg font-semibold">
-          {timeLeft.total < 60 * 60 * 1000 && (
-            <div className="text-center">
-              <div className="text-2xl">{timeLeft.seconds}</div>
-              <div className="text-xs text-muted-foreground">שניות</div>
-            </div>
-          )}
-          <div className="text-center">
-            <div className="text-2xl">{timeLeft.minutes}</div>
-            <div className="text-xs text-muted-foreground">דקות</div>
+      </div>
+    );
+  }
+
+  // Full version with countdown boxes
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg border ${
+      isCritical ? 'border-destructive/50 bg-destructive/5' : 
+      isUrgent ? 'border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20' : 
+      'border-border bg-muted/30'
+    } ${className}`} dir="rtl">
+      <div className="flex items-center gap-2">
+        <Clock className={`h-5 w-5 ${isCritical ? 'text-destructive' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'}`} />
+        <span className={`text-sm font-medium ${isCritical ? 'text-destructive' : ''}`}>
+          זמן להגשה
+        </span>
+        {isCritical && (
+          <Badge variant="destructive" className="text-xs animate-pulse">דחוף</Badge>
+        )}
+      </div>
+      
+      <div className="flex items-center gap-3 text-sm font-medium">
+        {timeLeft.days > 0 && (
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-bold">{timeLeft.days}</span>
+            <span className="text-xs text-muted-foreground">ימים</span>
           </div>
-          <div className="text-center">
-            <div className="text-2xl">{timeLeft.hours}</div>
-            <div className="text-xs text-muted-foreground">שעות</div>
-          </div>
-          {timeLeft.days > 0 && (
-            <div className="text-center">
-              <div className="text-2xl">{timeLeft.days}</div>
-              <div className="text-xs text-muted-foreground">ימים</div>
-            </div>
-          )}
+        )}
+        <div className="flex items-center gap-1">
+          <span className="text-lg font-bold">{timeLeft.hours}</span>
+          <span className="text-xs text-muted-foreground">שעות</span>
         </div>
-        <p className="text-sm mt-2 text-muted-foreground">
-          ({formatDistanceToNow(new Date(deadline), { locale: he, addSuffix: true })})
-        </p>
-      </AlertDescription>
-    </Alert>
+        <div className="flex items-center gap-1">
+          <span className="text-lg font-bold">{timeLeft.minutes}</span>
+          <span className="text-xs text-muted-foreground">דקות</span>
+        </div>
+        {timeLeft.total < 60 * 60 * 1000 && (
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-bold">{timeLeft.seconds}</span>
+            <span className="text-xs text-muted-foreground">שניות</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

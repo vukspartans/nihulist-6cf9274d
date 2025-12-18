@@ -586,15 +586,22 @@ const RFPDetails = () => {
     );
   }
 
+  // Check if actions should be shown
+  const showActions = ['sent', 'opened', 'pending', 'in_progress'].includes(inviteDetails?.status || '') && 
+    (inviteDetails?.status !== 'expired') &&
+    (!inviteDetails?.deadline_at || new Date(inviteDetails.deadline_at) > new Date());
+
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
+    <div className="min-h-screen bg-background pb-24" dir="rtl">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 flex justify-between items-center px-4 py-3 md:px-6 md:py-4 border-b bg-background/95 backdrop-blur-sm">
         <NavigationLogo size="md" />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <Button 
-            variant="outline" 
+            variant="ghost" 
+            size="sm"
             onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-            className="flex items-center gap-2"
+            className="hidden md:flex items-center gap-2"
           >
             <ArrowRight className="h-4 w-4" />
             חזרה לדשבורד
@@ -603,61 +610,93 @@ const RFPDetails = () => {
         </div>
       </div>
       
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">{rfpDetails.projects.name}</h1>
-              <p className="text-muted-foreground mt-1">{rfpDetails.subject}</p>
+      <div className="px-4 py-4 md:px-6 md:py-6">
+        <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+          {/* Header with status */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-2xl font-bold truncate">{rfpDetails.projects.name}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5 truncate">{rfpDetails.subject}</p>
             </div>
-            <Badge className={getStatusColor(inviteDetails?.status || '')}>
+            <Badge className={`${getStatusColor(inviteDetails?.status || '')} self-start md:self-auto flex-shrink-0`}>
               {getStatusText(inviteDetails?.status || '')}
             </Badge>
           </div>
 
-          {/* Deadline Countdown */}
-          {inviteDetails?.deadline_at && ['sent', 'opened', 'in_progress'].includes(inviteDetails.status) && (
-            <DeadlineCountdown deadline={inviteDetails.deadline_at} />
-          )}
-
-          {/* Project Summary Card */}
+          {/* Invite Details Card - Moved to top */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
+            <CardContent className="py-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                {inviteDetails?.advisor_type && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">סוג היועץ</Label>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="text-xs">{inviteDetails.advisor_type}</Badge>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs text-muted-foreground">תאריך קבלה</Label>
+                  <p className="text-sm font-medium mt-1">
+                    {new Date(inviteDetails?.created_at || '').toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">תאריך שליחה</Label>
+                  <p className="text-sm font-medium mt-1">
+                    {new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+                {/* Deadline - Compact inline */}
+                {inviteDetails?.deadline_at && ['sent', 'opened', 'in_progress'].includes(inviteDetails.status) && (
+                  <div className="col-span-2 md:col-span-1">
+                    <Label className="text-xs text-muted-foreground">זמן להגשה</Label>
+                    <div className="mt-1">
+                      <DeadlineCountdown deadline={inviteDetails.deadline_at} compact />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Summary Card - Compact */}
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Building2 className="h-4 w-4" />
                 פרטי הפרויקט
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <Label className="text-xs text-muted-foreground">שם היזם</Label>
-                  <p className="text-sm font-medium flex items-center gap-1 mt-1">
-                    <User className="h-3.5 w-3.5" />
-                    {rfpDetails.projects.entrepreneur_name || '—'}
+                  <p className="text-sm font-medium flex items-center gap-1 mt-0.5">
+                    <User className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{rfpDetails.projects.entrepreneur_name || 'לא צוין'}</span>
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">מיקום</Label>
-                  <p className="text-sm font-medium flex items-center gap-1 mt-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {rfpDetails.projects.location || '—'}
+                  <p className="text-sm font-medium flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{rfpDetails.projects.location || 'לא צוין'}</span>
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">סוג הפרויקט</Label>
-                  <p className="text-sm font-medium mt-1">{rfpDetails.projects.type || '—'}</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{rfpDetails.projects.type || 'לא צוין'}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">שלב</Label>
-                  <p className="text-sm font-medium mt-1">{rfpDetails.projects.phase || '—'}</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{rfpDetails.projects.phase || 'לא צוין'}</p>
                 </div>
               </div>
               {rfpDetails.projects.description && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="mt-3 pt-3 border-t">
                   <Label className="text-xs text-muted-foreground">תיאור הפרויקט</Label>
-                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-3">
                     {rfpDetails.projects.description}
                   </p>
                 </div>
@@ -665,64 +704,71 @@ const RFPDetails = () => {
             </CardContent>
           </Card>
 
-          {/* Main Tabbed Content - Mirroring RequestEditorDialog */}
+          {/* Main Tabbed Content */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <Tabs defaultValue="main" dir="rtl">
-                <TabsList className="w-full flex flex-row-reverse justify-start mb-4 bg-muted/50">
-                  <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-background">
-                    <Home className="h-4 w-4" />
-                    ראשי
+                <TabsList className="w-full grid grid-cols-4 h-auto p-1 bg-muted/50">
+                  <TabsTrigger value="main" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
+                    <Home className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">ראשי</span>
                   </TabsTrigger>
-                  <TabsTrigger value="services" className="flex items-center gap-2 data-[state=active]:bg-background">
-                    <List className="h-4 w-4" />
-                    פירוט שירותים
+                  <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
+                    <List className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">שירותים</span>
                   </TabsTrigger>
-                  <TabsTrigger value="fees" className="flex items-center gap-2 data-[state=active]:bg-background">
-                    <Coins className="h-4 w-4" />
-                    שכר טרחה
+                  <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
+                    <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">שכ"ט</span>
                   </TabsTrigger>
-                  <TabsTrigger value="payment" className="flex items-center gap-2 data-[state=active]:bg-background">
-                    <CreditCard className="h-4 w-4" />
-                    תשלום
+                  <TabsTrigger value="payment" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
+                    <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">תשלום</span>
                   </TabsTrigger>
                 </TabsList>
 
                 {/* Tab 1: ראשי (Main) */}
-                <TabsContent value="main" className="space-y-4 mt-0">
+                <TabsContent value="main" className="space-y-4 mt-4">
                   {inviteDetails?.request_title && (
                     <div>
-                      <Label className="font-medium">כותרת הבקשה</Label>
+                      <Label className="font-medium text-sm">כותרת הבקשה</Label>
                       <p className="text-sm text-muted-foreground mt-1">
                         {inviteDetails.request_title}
                       </p>
                     </div>
                   )}
                   
-                  {inviteDetails?.request_content && (
+                  {inviteDetails?.request_content ? (
                     <div>
-                      <Label className="font-medium">תיאור הבקשה</Label>
-                      <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                      <Label className="font-medium text-sm">תיאור הבקשה</Label>
+                      <div className="mt-2 p-3 bg-muted/50 rounded-lg">
                         <p className="text-sm whitespace-pre-wrap">
                           {inviteDetails.request_content}
                         </p>
                       </div>
                     </div>
+                  ) : (
+                    !inviteDetails?.request_title && (!inviteDetails?.request_files || inviteDetails.request_files.length === 0) && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">לא צורף תיאור לבקשה</p>
+                      </div>
+                    )
                   )}
                   
                   {inviteDetails?.request_files && Array.isArray(inviteDetails.request_files) && inviteDetails.request_files.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <Label className="font-medium">קבצים מצורפים</Label>
+                        <Label className="font-medium text-sm">קבצים מצורפים ({inviteDetails.request_files.length})</Label>
                         {inviteDetails.request_files.length > 1 && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => downloadAllFiles(inviteDetails.request_files!)}
                             disabled={fileLoading === 'all'}
-                            className="gap-2"
+                            className="gap-1.5 text-xs h-8"
                           >
-                            <Download className="h-4 w-4" />
+                            <Download className="h-3.5 w-3.5" />
                             {fileLoading === 'all' ? 'מוריד...' : 'הורד הכל'}
                           </Button>
                         )}
@@ -731,11 +777,11 @@ const RFPDetails = () => {
                         {inviteDetails.request_files.map((file, idx) => (
                           <div 
                             key={idx}
-                            className="flex items-center gap-2 p-3 bg-muted rounded-lg"
+                            className="flex items-center gap-2 p-2.5 bg-muted rounded-lg"
                           >
-                            <FileText className="h-4 w-4 text-primary" />
-                            <span className="flex-1">{file.name}</span>
-                            <Badge variant="outline" className="text-xs">
+                            <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span className="flex-1 text-sm truncate">{file.name}</span>
+                            <Badge variant="outline" className="text-xs hidden sm:flex">
                               {(file.size / 1024 / 1024).toFixed(2)} MB
                             </Badge>
                             <Button
@@ -743,49 +789,37 @@ const RFPDetails = () => {
                               size="sm"
                               onClick={() => downloadFile(file)}
                               disabled={fileLoading === file.name || fileLoading === 'all'}
-                              className="gap-2"
+                              className="gap-1.5 h-8 text-xs"
                             >
-                              <Download className="h-4 w-4" />
-                              {fileLoading === file.name ? 'מוריד...' : 'הורד'}
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">{fileLoading === file.name ? 'מוריד...' : 'הורד'}</span>
                             </Button>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Empty state for Main tab */}
-                  {!inviteDetails?.request_title && !inviteDetails?.request_content && 
-                   (!inviteDetails?.request_files || inviteDetails.request_files.length === 0) && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>לא צורפו פרטים נוספים בלשונית זו</p>
-                    </div>
-                  )}
                 </TabsContent>
 
                 {/* Tab 2: פירוט שירותים (Service Details) */}
-                <TabsContent value="services" className="space-y-4 mt-0">
+                <TabsContent value="services" className="space-y-4 mt-4">
                   {/* Free text mode */}
-                  {inviteDetails?.service_details_mode === 'free_text' && inviteDetails?.service_details_text && (
+                  {inviteDetails?.service_details_mode === 'free_text' && inviteDetails?.service_details_text ? (
                     <div>
-                      <Label className="font-medium">תיאור השירותים</Label>
-                      <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                      <Label className="font-medium text-sm">תיאור השירותים</Label>
+                      <div className="mt-2 p-3 bg-muted/50 rounded-lg">
                         <p className="text-sm whitespace-pre-wrap">
                           {inviteDetails.service_details_text}
                         </p>
                       </div>
                     </div>
-                  )}
-
-                  {/* File mode */}
-                  {inviteDetails?.service_details_mode === 'file' && inviteDetails?.service_details_file && (
+                  ) : inviteDetails?.service_details_mode === 'file' && inviteDetails?.service_details_file ? (
                     <div>
-                      <Label className="font-medium">קובץ פירוט שירותים</Label>
-                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg mt-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="flex-1">{inviteDetails.service_details_file.name}</span>
-                        <Badge variant="outline" className="text-xs">
+                      <Label className="font-medium text-sm">קובץ פירוט שירותים</Label>
+                      <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg mt-2">
+                        <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="flex-1 text-sm truncate">{inviteDetails.service_details_file.name}</span>
+                        <Badge variant="outline" className="text-xs hidden sm:flex">
                           {(inviteDetails.service_details_file.size / 1024 / 1024).toFixed(2)} MB
                         </Badge>
                         <Button
@@ -793,24 +827,21 @@ const RFPDetails = () => {
                           size="sm"
                           onClick={() => downloadFile(inviteDetails.service_details_file!)}
                           disabled={fileLoading === inviteDetails.service_details_file.name}
-                          className="gap-2"
+                          className="gap-1.5 h-8 text-xs"
                         >
-                          <Download className="h-4 w-4" />
-                          {fileLoading === inviteDetails.service_details_file.name ? 'מוריד...' : 'הורד'}
+                          <Download className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{fileLoading === inviteDetails.service_details_file.name ? 'מוריד...' : 'הורד'}</span>
                         </Button>
                       </div>
                     </div>
-                  )}
-
-                  {/* Checklist mode */}
-                  {inviteDetails?.service_details_mode === 'checklist' && scopeItems.length > 0 && (
+                  ) : inviteDetails?.service_details_mode === 'checklist' && scopeItems.length > 0 ? (
                     <div>
-                      <Label className="font-medium">רשימת שירותים</Label>
-                      <div className="space-y-2 mt-2">
+                      <Label className="font-medium text-sm">רשימת שירותים</Label>
+                      <div className="space-y-1.5 mt-2">
                         {scopeItems.map((item) => (
                           <div 
                             key={item.id} 
-                            className={`flex items-center gap-3 p-3 rounded-lg ${
+                            className={`flex items-center gap-2 p-2.5 rounded-lg ${
                               item.is_included ? 'bg-green-50 dark:bg-green-950/20' : 'bg-muted'
                             }`}
                           >
@@ -819,66 +850,60 @@ const RFPDetails = () => {
                             ) : (
                               <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             )}
-                            <span className={`flex-1 ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
+                            <span className={`flex-1 text-sm ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
                               {item.task_name}
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5 flex-shrink-0">
                               {item.is_optional && (
                                 <Badge variant="outline" className="text-xs">אופציונלי</Badge>
                               )}
                               {item.fee_category && item.fee_category !== 'כללי' && (
-                                <Badge variant="secondary" className="text-xs">{item.fee_category}</Badge>
+                                <Badge variant="secondary" className="text-xs hidden sm:flex">{item.fee_category}</Badge>
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
-
-                  {/* Empty state for Services tab */}
-                  {(!inviteDetails?.service_details_mode || 
-                    (inviteDetails?.service_details_mode === 'free_text' && !inviteDetails?.service_details_text) ||
-                    (inviteDetails?.service_details_mode === 'file' && !inviteDetails?.service_details_file) ||
-                    (inviteDetails?.service_details_mode === 'checklist' && scopeItems.length === 0)) && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <List className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>לא הוגדרו פרטי שירותים</p>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <List className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">לא הוגדרו פרטי שירותים</p>
                     </div>
                   )}
                 </TabsContent>
 
                 {/* Tab 3: שכר טרחה (Fees) */}
-                <TabsContent value="fees" className="space-y-4 mt-0">
+                <TabsContent value="fees" className="space-y-4 mt-4">
                   {feeItems.length > 0 ? (
                     <>
                       {/* Required items */}
                       {feeItems.filter(item => !item.is_optional).length > 0 && (
                         <div className="space-y-2">
-                          <Label className="font-medium">סעיפים חובה</Label>
-                          <div className="border rounded-lg overflow-hidden">
+                          <Label className="font-medium text-sm">סעיפים חובה</Label>
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                  <TableHead className="text-right">סעיף</TableHead>
-                                  <TableHead className="text-right">תיאור</TableHead>
-                                  <TableHead className="text-right">יחידה</TableHead>
-                                  <TableHead className="text-right">כמות</TableHead>
-                                  <TableHead className="text-right">מחיר יחידה</TableHead>
-                                  <TableHead className="text-right">סוג חיוב</TableHead>
+                                  <TableHead className="text-right text-xs">#</TableHead>
+                                  <TableHead className="text-right text-xs">תיאור</TableHead>
+                                  <TableHead className="text-right text-xs hidden sm:table-cell">יחידה</TableHead>
+                                  <TableHead className="text-right text-xs">כמות</TableHead>
+                                  <TableHead className="text-right text-xs hidden md:table-cell">מחיר</TableHead>
+                                  <TableHead className="text-right text-xs hidden lg:table-cell">סוג</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {feeItems.filter(item => !item.is_optional).map((item) => (
                                   <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.item_number}</TableCell>
-                                    <TableCell>{item.description}</TableCell>
-                                    <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="font-medium text-sm">{item.item_number}</TableCell>
+                                    <TableCell className="text-sm">{item.description || 'לא צוין'}</TableCell>
+                                    <TableCell className="text-sm hidden sm:table-cell">{UNIT_LABELS[item.unit] || item.unit || 'לא צוין'}</TableCell>
+                                    <TableCell className="text-sm">{item.quantity || '—'}</TableCell>
+                                    <TableCell className="text-sm hidden md:table-cell">
                                       {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
                                     </TableCell>
-                                    <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
+                                    <TableCell className="text-sm hidden lg:table-cell">{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type || '—'}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -890,30 +915,30 @@ const RFPDetails = () => {
                       {/* Optional items */}
                       {feeItems.filter(item => item.is_optional).length > 0 && (
                         <div className="space-y-2">
-                          <Label className="font-medium">סעיפים אופציונליים</Label>
-                          <div className="border rounded-lg overflow-hidden">
+                          <Label className="font-medium text-sm">סעיפים אופציונליים</Label>
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                  <TableHead className="text-right">סעיף</TableHead>
-                                  <TableHead className="text-right">תיאור</TableHead>
-                                  <TableHead className="text-right">יחידה</TableHead>
-                                  <TableHead className="text-right">כמות</TableHead>
-                                  <TableHead className="text-right">מחיר יחידה</TableHead>
-                                  <TableHead className="text-right">סוג חיוב</TableHead>
+                                  <TableHead className="text-right text-xs">#</TableHead>
+                                  <TableHead className="text-right text-xs">תיאור</TableHead>
+                                  <TableHead className="text-right text-xs hidden sm:table-cell">יחידה</TableHead>
+                                  <TableHead className="text-right text-xs">כמות</TableHead>
+                                  <TableHead className="text-right text-xs hidden md:table-cell">מחיר</TableHead>
+                                  <TableHead className="text-right text-xs hidden lg:table-cell">סוג</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {feeItems.filter(item => item.is_optional).map((item) => (
                                   <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.item_number}</TableCell>
-                                    <TableCell>{item.description}</TableCell>
-                                    <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="font-medium text-sm">{item.item_number}</TableCell>
+                                    <TableCell className="text-sm">{item.description || 'לא צוין'}</TableCell>
+                                    <TableCell className="text-sm hidden sm:table-cell">{UNIT_LABELS[item.unit] || item.unit || 'לא צוין'}</TableCell>
+                                    <TableCell className="text-sm">{item.quantity || '—'}</TableCell>
+                                    <TableCell className="text-sm hidden md:table-cell">
                                       {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
                                     </TableCell>
-                                    <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
+                                    <TableCell className="text-sm hidden lg:table-cell">{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type || '—'}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -923,15 +948,15 @@ const RFPDetails = () => {
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Coins className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>לא הוגדרו סעיפי שכר טרחה</p>
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Coins className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">לא הוגדרו סעיפי שכר טרחה</p>
                     </div>
                   )}
                 </TabsContent>
 
                 {/* Tab 4: תשלום (Payment) */}
-                <TabsContent value="payment" className="space-y-4 mt-0">
+                <TabsContent value="payment" className="space-y-4 mt-4">
                   {inviteDetails?.payment_terms && (
                     inviteDetails.payment_terms.milestone_payments?.length || 
                     inviteDetails.payment_terms.payment_term_type ||
@@ -941,28 +966,28 @@ const RFPDetails = () => {
                       {/* Milestone payments */}
                       {inviteDetails.payment_terms.milestone_payments && inviteDetails.payment_terms.milestone_payments.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="font-medium">אבני דרך לתשלום</Label>
-                          <div className="border rounded-lg overflow-hidden">
+                          <Label className="font-medium text-sm">אבני דרך לתשלום</Label>
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                  <TableHead className="text-right">תיאור</TableHead>
-                                  <TableHead className="text-right">אחוז</TableHead>
-                                  <TableHead className="text-right">טריגר</TableHead>
+                                  <TableHead className="text-right text-xs">תיאור</TableHead>
+                                  <TableHead className="text-right text-xs">אחוז</TableHead>
+                                  <TableHead className="text-right text-xs hidden sm:table-cell">טריגר</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {inviteDetails.payment_terms.milestone_payments.map((milestone, index) => (
                                   <TableRow key={index}>
-                                    <TableCell>{milestone.description}</TableCell>
-                                    <TableCell>{milestone.percentage}%</TableCell>
-                                    <TableCell>{milestone.trigger || '—'}</TableCell>
+                                    <TableCell className="text-sm">{milestone.description || 'לא צוין'}</TableCell>
+                                    <TableCell className="text-sm">{milestone.percentage}%</TableCell>
+                                    <TableCell className="text-sm hidden sm:table-cell">{milestone.trigger || '—'}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
                             </Table>
                           </div>
-                          <div className="text-sm text-muted-foreground text-left">
+                          <div className="text-xs text-muted-foreground">
                             סה"כ: {inviteDetails.payment_terms.milestone_payments.reduce((sum, m) => sum + m.percentage, 0)}%
                           </div>
                         </div>
@@ -971,7 +996,7 @@ const RFPDetails = () => {
                       {/* Payment term type */}
                       {inviteDetails.payment_terms.payment_term_type && (
                         <div>
-                          <Label className="font-medium">תנאי תשלום</Label>
+                          <Label className="font-medium text-sm">תנאי תשלום</Label>
                           <p className="text-sm text-muted-foreground mt-1">
                             {PAYMENT_TERM_LABELS[inviteDetails.payment_terms.payment_term_type] || inviteDetails.payment_terms.payment_term_type}
                           </p>
@@ -981,8 +1006,8 @@ const RFPDetails = () => {
                       {/* Notes */}
                       {inviteDetails.payment_terms.notes && (
                         <div>
-                          <Label className="font-medium">הערות נוספות</Label>
-                          <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                          <Label className="font-medium text-sm">הערות נוספות</Label>
+                          <div className="mt-2 p-3 bg-muted/50 rounded-lg">
                             <p className="text-sm whitespace-pre-wrap">
                               {inviteDetails.payment_terms.notes}
                             </p>
@@ -991,105 +1016,72 @@ const RFPDetails = () => {
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>לא הוגדרו תנאי תשלום</p>
+                    <div className="text-center py-6 text-muted-foreground">
+                      <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">לא הוגדרו תנאי תשלום</p>
                     </div>
                   )}
                 </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
-
-          {/* Invite Details Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                פרטי ההזמנה
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {inviteDetails?.advisor_type && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">סוג היועץ</Label>
-                    <div className="mt-1">
-                      <Badge variant="outline">{inviteDetails.advisor_type}</Badge>
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <Label className="text-xs text-muted-foreground">תאריך קבלה</Label>
-                  <p className="text-sm font-medium mt-1">
-                    {new Date(inviteDetails?.created_at || '').toLocaleDateString('he-IL')}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">סטטוס</Label>
-                  <div className="mt-1">
-                    <Badge className={getStatusColor(inviteDetails?.status || '')}>
-                      {getStatusText(inviteDetails?.status || '')}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">תאריך שליחה</Label>
-                  <p className="text-sm font-medium mt-1">
-                    {new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
-            {['sent', 'opened', 'pending', 'in_progress'].includes(inviteDetails?.status || '') && 
-             (inviteDetails?.status !== 'expired') &&
-             (!inviteDetails?.deadline_at || new Date(inviteDetails.deadline_at) > new Date()) && (
-              <>
-                <Button 
-                  onClick={() => {
-                    if (invite_id) {
-                      navigate(`/invite/${invite_id}/submit`);
-                    } else if (rfp_id) {
-                      navigate(`/submit-proposal/${rfp_id}`);
-                    }
-                  }}
-                  size="lg"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  הגש הצעת מחיר
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setDeclineDialogOpen(true)}
-                  size="lg"
-                >
-                  <X className="w-4 h-4 ml-2" />
-                  דחה בקשה
-                </Button>
-              </>
-            )}
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-              size="lg"
-            >
-              חזרה ללוח הבקרה
-            </Button>
-          </div>
-
-          <DeclineRFPDialog
-            open={declineDialogOpen}
-            onOpenChange={setDeclineDialogOpen}
-            onDecline={handleDecline}
-            loading={declining}
-          />
         </div>
       </div>
-      <BackToTop />
+
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t p-3 md:p-4">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+          {showActions ? (
+            <>
+              <Button 
+                onClick={() => {
+                  if (invite_id) {
+                    navigate(`/invite/${invite_id}/submit`);
+                  } else if (rfp_id) {
+                    navigate(`/submit-proposal/${rfp_id}`);
+                  }
+                }}
+                size="lg"
+                className="flex-1 sm:flex-none sm:min-w-[180px]"
+              >
+                <Send className="w-4 h-4 ml-2" />
+                הגש הצעת מחיר
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setDeclineDialogOpen(true)}
+                size="lg"
+                className="flex-1 sm:flex-none"
+              >
+                <X className="w-4 h-4 ml-2" />
+                דחה בקשה
+              </Button>
+            </>
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-1">
+              {inviteDetails?.status === 'submitted' && 'ההצעה הוגשה בהצלחה'}
+              {inviteDetails?.status === 'declined' && 'הבקשה נדחתה'}
+              {inviteDetails?.status === 'expired' && 'פג תוקף ההגשה'}
+            </div>
+          )}
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+            size="lg"
+            className="sm:hidden"
+          >
+            <ArrowRight className="w-4 h-4 ml-2" />
+            חזרה לדשבורד
+          </Button>
+        </div>
+      </div>
+
+      <DeclineRFPDialog
+        open={declineDialogOpen}
+        onOpenChange={setDeclineDialogOpen}
+        onDecline={handleDecline}
+        loading={declining}
+      />
     </div>
   );
 };
