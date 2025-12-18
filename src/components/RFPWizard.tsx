@@ -180,8 +180,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       requestDataByType
     });
 
-    
-    
     // Build advisor-type pairs from recommended advisors
     const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
     
@@ -208,6 +206,25 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const requestTitle = typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined;
     const requestContent = typeData?.requestContent ? sanitizeText(typeData.requestContent, 5000) : undefined;
     const requestFiles = typeData?.requestAttachments;
+    
+    // Build advisor type data map for service details, fees, payment terms
+    const advisorTypeDataMap: Record<string, any> = {};
+    for (const [advisorType, data] of Object.entries(requestDataByType)) {
+      advisorTypeDataMap[advisorType] = {
+        requestTitle: data.requestTitle,
+        requestContent: data.requestContent,
+        requestFiles: data.requestAttachments,
+        serviceDetails: {
+          mode: data.serviceDetailsMode,
+          freeText: data.serviceDetailsFreeText,
+          file: data.serviceDetailsFile,
+          scopeItems: data.serviceScopeItems
+        },
+        feeItems: data.feeItems,
+        optionalFeeItems: data.optionalFeeItems,
+        paymentTerms: data.paymentTerms
+      };
+    }
     
     // SECURITY: Sanitize email content before sending
     const sanitizedEmailBody = emailBodyText
@@ -243,7 +260,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       emailBodyHtml,
       requestTitle,
       requestContent,
-      requestFiles
+      requestFiles,
+      advisorTypeDataMap
     );
     
     console.log('[RFPWizard] RFP Result:', result);

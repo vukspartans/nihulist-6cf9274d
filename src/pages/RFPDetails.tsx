@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
@@ -17,6 +17,7 @@ import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import JSZip from 'jszip';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface RFPDetails {
   id: string;
@@ -52,7 +53,72 @@ interface RFPInvite {
     size: number;
     path: string;
   }>;
+  // New fields for service details
+  service_details_mode?: 'free_text' | 'file' | 'checklist';
+  service_details_text?: string;
+  service_details_file?: {
+    name: string;
+    url: string;
+    size: number;
+    path: string;
+  };
+  payment_terms?: {
+    advance_percent?: number;
+    milestone_payments?: Array<{
+      description: string;
+      percentage: number;
+      trigger?: string;
+    }>;
+    payment_term_type?: 'current' | 'net_30' | 'net_60' | 'net_90';
+    notes?: string;
+  };
 }
+
+interface ServiceScopeItem {
+  id: string;
+  task_name: string;
+  is_included: boolean;
+  is_optional: boolean;
+  fee_category: string;
+  display_order: number;
+}
+
+interface FeeItem {
+  id: string;
+  item_number: number;
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_price: number | null;
+  charge_type: string;
+  is_optional: boolean;
+  display_order: number;
+}
+
+const UNIT_LABELS: Record<string, string> = {
+  'lump_sum': 'קומפ\'',
+  'sqm': 'מ"ר',
+  'unit': 'יח"ד',
+  'hourly': 'ש"ע',
+  'per_consultant': 'לי"ע',
+  'per_floor': 'לקומה',
+  'percentage': '%'
+};
+
+const CHARGE_TYPE_LABELS: Record<string, string> = {
+  'one_time': 'חד פעמי',
+  'monthly': 'חודשי',
+  'hourly': 'לש"ע',
+  'per_visit': 'לביקור',
+  'per_unit': 'ליח"ד'
+};
+
+const PAYMENT_TERM_LABELS: Record<string, string> = {
+  'current': 'שוטף',
+  'net_30': 'שוטף + 30',
+  'net_60': 'שוטף + 60',
+  'net_90': 'שוטף + 90'
+};
 
 const RFPDetails = () => {
   const { rfp_id, invite_id } = useParams();
@@ -65,6 +131,8 @@ const RFPDetails = () => {
   const [inviteDetails, setInviteDetails] = useState<RFPInvite | null>(null);
   const [advisorId, setAdvisorId] = useState<string | null>(null);
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
+  const [scopeItems, setScopeItems] = useState<ServiceScopeItem[]>([]);
+  const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
@@ -382,7 +450,7 @@ const RFPDetails = () => {
       // Parse request_files (handles double-encoded JSON from database)
       const parsedFiles = parseRequestFiles(invite.request_files);
       
-      const inviteData = {
+      const inviteData: RFPInvite = {
         id: invite.id,
         status: invite.status,
         created_at: invite.created_at,
@@ -390,16 +458,57 @@ const RFPDetails = () => {
         advisor_type: invite.advisor_type,
         request_title: invite.request_title,
         request_content: invite.request_content,
-        request_files: parsedFiles
+        request_files: parsedFiles,
+        service_details_mode: invite.service_details_mode,
+        service_details_text: invite.service_details_text,
+        service_details_file: invite.service_details_file,
+        payment_terms: invite.payment_terms
       };
 
       // Refresh file URLs if files exist
-      if (inviteData.request_files.length > 0) {
+      if (inviteData.request_files && inviteData.request_files.length > 0) {
         const refreshedFiles = await refreshFileUrls(inviteData.request_files);
         inviteData.request_files = refreshedFiles;
       }
 
+      // Refresh service details file URL if exists
+      if (inviteData.service_details_file?.path) {
+        const { data: signedData } = await supabase.storage
+          .from('rfp-request-files')
+          .createSignedUrl(inviteData.service_details_file.path, 86400);
+        
+        if (signedData) {
+          inviteData.service_details_file = {
+            ...inviteData.service_details_file,
+            url: signedData.signedUrl
+          };
+        }
+      }
+
       setInviteDetails(inviteData);
+
+      // Fetch service scope items
+      const { data: scopeData } = await supabase
+        .from('rfp_service_scope_items')
+        .select('*')
+        .eq('rfp_invite_id', invite.id)
+        .order('display_order', { ascending: true });
+
+      if (scopeData) {
+        setScopeItems(scopeData);
+      }
+
+      // Fetch fee items
+      const { data: feeData } = await supabase
+        .from('rfp_request_fee_items')
+        .select('*')
+        .eq('rfp_invite_id', invite.id)
+        .order('display_order', { ascending: true });
+
+      if (feeData) {
+        setFeeItems(feeData);
+      }
+
     } catch (error) {
       console.error('[RFPDetails] Unexpected error:', error);
       toast({
@@ -444,6 +553,226 @@ const RFPDetails = () => {
     if (result.success) {
       navigate(getDashboardRouteForRole(primaryRole));
     }
+  };
+
+  const renderServiceDetails = () => {
+    if (!inviteDetails) return null;
+
+    const { service_details_mode, service_details_text, service_details_file } = inviteDetails;
+
+    // Check if there's any service details content
+    const hasServiceDetails = 
+      service_details_text || 
+      service_details_file || 
+      (service_details_mode === 'checklist' && scopeItems.length > 0);
+
+    if (!hasServiceDetails) return null;
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            פירוט שירותים
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Free text mode */}
+            {service_details_mode === 'free_text' && service_details_text && (
+              <div>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {service_details_text}
+                </p>
+              </div>
+            )}
+
+            {/* File mode */}
+            {service_details_mode === 'file' && service_details_file && (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="flex-1">{service_details_file.name}</span>
+                <Badge variant="outline" className="text-xs">
+                  {(service_details_file.size / 1024 / 1024).toFixed(2)} MB
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadFile(service_details_file)}
+                  disabled={fileLoading === service_details_file.name}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {fileLoading === service_details_file.name ? 'מוריד...' : 'הורד'}
+                </Button>
+              </div>
+            )}
+
+            {/* Checklist mode */}
+            {service_details_mode === 'checklist' && scopeItems.length > 0 && (
+              <div className="space-y-2">
+                {scopeItems.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className={`flex items-center gap-3 p-2 rounded-lg ${
+                      item.is_included ? 'bg-green-50' : 'bg-muted'
+                    }`}
+                  >
+                    {item.is_included ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className={item.is_included ? '' : 'text-muted-foreground line-through'}>
+                      {item.task_name}
+                    </span>
+                    {item.is_optional && (
+                      <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                    )}
+                    {item.fee_category && item.fee_category !== 'כללי' && (
+                      <Badge variant="secondary" className="text-xs">{item.fee_category}</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderFeeItems = () => {
+    if (feeItems.length === 0) return null;
+
+    const requiredItems = feeItems.filter(item => !item.is_optional);
+    const optionalItems = feeItems.filter(item => item.is_optional);
+
+    const renderTable = (items: FeeItem[], title: string, isOptional: boolean) => {
+      if (items.length === 0) return null;
+
+      return (
+        <div className="space-y-2">
+          <Label className="font-medium">{title}</Label>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">סעיף</TableHead>
+                <TableHead className="text-right">תיאור</TableHead>
+                <TableHead className="text-right">יחידה</TableHead>
+                <TableHead className="text-right">כמות</TableHead>
+                <TableHead className="text-right">מחיר יחידה</TableHead>
+                <TableHead className="text-right">סוג חיוב</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.item_number}</TableCell>
+                  <TableCell>{item.description}</TableCell>
+                  <TableCell>{UNIT_LABELS[item.unit] || item.unit}</TableCell>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell>
+                    {item.unit_price ? `₪${item.unit_price.toLocaleString()}` : '—'}
+                  </TableCell>
+                  <TableCell>{CHARGE_TYPE_LABELS[item.charge_type] || item.charge_type}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            שכר טרחה
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {renderTable(requiredItems, 'סעיפים חובה', false)}
+            {renderTable(optionalItems, 'סעיפים אופציונליים', true)}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderPaymentTerms = () => {
+    const paymentTerms = inviteDetails?.payment_terms;
+    if (!paymentTerms) return null;
+
+    const hasMilestones = paymentTerms.milestone_payments && paymentTerms.milestone_payments.length > 0;
+    const hasPaymentType = paymentTerms.payment_term_type;
+    const hasNotes = paymentTerms.notes;
+
+    if (!hasMilestones && !hasPaymentType && !hasNotes) return null;
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            תנאי תשלום
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Milestone payments */}
+            {hasMilestones && (
+              <div className="space-y-2">
+                <Label className="font-medium">אבני דרך לתשלום</Label>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">תיאור</TableHead>
+                      <TableHead className="text-right">אחוז</TableHead>
+                      <TableHead className="text-right">טריגר</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentTerms.milestone_payments!.map((milestone, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{milestone.description}</TableCell>
+                        <TableCell>{milestone.percentage}%</TableCell>
+                        <TableCell>{milestone.trigger || '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="text-sm text-muted-foreground text-left">
+                  סה"כ: {paymentTerms.milestone_payments!.reduce((sum, m) => sum + m.percentage, 0)}%
+                </div>
+              </div>
+            )}
+
+            {/* Payment term type */}
+            {hasPaymentType && (
+              <div>
+                <Label className="font-medium">תנאי תשלום</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {PAYMENT_TERM_LABELS[paymentTerms.payment_term_type!] || paymentTerms.payment_term_type}
+                </p>
+              </div>
+            )}
+
+            {/* Notes */}
+            {hasNotes && (
+              <div>
+                <Label className="font-medium">הערות נוספות</Label>
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                  {paymentTerms.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -531,7 +860,7 @@ const RFPDetails = () => {
                   )}
                   {inviteDetails.request_content && (
                     <div>
-                      <Label className="font-medium">תיאור הבקשה (טקסט חופשי)</Label>
+                      <Label className="font-medium">תיאור הבקשה</Label>
                       <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                         {inviteDetails.request_content}
                       </p>
@@ -584,6 +913,15 @@ const RFPDetails = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Service Details */}
+          {renderServiceDetails()}
+
+          {/* Fee Items */}
+          {renderFeeItems()}
+
+          {/* Payment Terms */}
+          {renderPaymentTerms()}
 
           {/* Project Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
