@@ -36,6 +36,7 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
+import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
@@ -91,6 +92,16 @@ const AppContent = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verified" element={<EmailVerified />} />
             <Route path="/submit" element={<SupplierSubmit />} />
+            <Route 
+              path="/organization/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <OrganizationOnboarding />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
               element={

@@ -244,37 +244,73 @@ export type Database = {
       }
       companies: {
         Row: {
+          activity_categories: Json | null
+          activity_regions: string[] | null
+          activity_scope: string | null
+          activity_scope_tier: string | null
+          country: string | null
           created_at: string
           description: string | null
           email: string | null
+          employee_count: string | null
+          founding_year: number | null
           id: string
+          linkedin_url: string | null
           location: string | null
           name: string
+          onboarding_completed_at: string | null
+          onboarding_skipped_at: string | null
           phone: string | null
+          primary_activity_category: string | null
+          registration_number: string | null
           type: string
           updated_at: string
           website: string | null
         }
         Insert: {
+          activity_categories?: Json | null
+          activity_regions?: string[] | null
+          activity_scope?: string | null
+          activity_scope_tier?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
+          employee_count?: string | null
+          founding_year?: number | null
           id?: string
+          linkedin_url?: string | null
           location?: string | null
           name: string
+          onboarding_completed_at?: string | null
+          onboarding_skipped_at?: string | null
           phone?: string | null
+          primary_activity_category?: string | null
+          registration_number?: string | null
           type: string
           updated_at?: string
           website?: string | null
         }
         Update: {
+          activity_categories?: Json | null
+          activity_regions?: string[] | null
+          activity_scope?: string | null
+          activity_scope_tier?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
+          employee_count?: string | null
+          founding_year?: number | null
           id?: string
+          linkedin_url?: string | null
           location?: string | null
           name?: string
+          onboarding_completed_at?: string | null
+          onboarding_skipped_at?: string | null
           phone?: string | null
+          primary_activity_category?: string | null
+          registration_number?: string | null
           type?: string
           updated_at?: string
           website?: string | null
@@ -664,6 +700,7 @@ export type Database = {
           email: string | null
           id: string
           name: string | null
+          organization_id: string | null
           phone: string | null
           requires_password_change: boolean | null
           role: string | null
@@ -681,6 +718,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          organization_id?: string | null
           phone?: string | null
           requires_password_change?: boolean | null
           role?: string | null
@@ -698,6 +736,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          organization_id?: string | null
           phone?: string | null
           requires_password_change?: boolean | null
           role?: string | null
@@ -706,7 +745,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_advisors: {
         Row: {
