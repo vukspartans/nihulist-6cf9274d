@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -25,6 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { TeamMemberManager } from '@/components/TeamMemberManager';
+import OrganizationProfileTab from '@/components/OrganizationProfileTab';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
@@ -768,7 +769,7 @@ const Profile = () => {
 
         {/* Tabs for Organization */}
         <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
-          <TabsList className={`grid w-full ${isAdvisor ? 'grid-cols-5' : 'grid-cols-2'} h-auto p-1`}>
+          <TabsList className={`grid w-full ${isAdvisor ? 'grid-cols-5' : 'grid-cols-3'} h-auto p-1`}>
             <TabsTrigger value="personal" className="gap-2 py-3 relative">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">פרטים אישיים</span>
@@ -777,7 +778,7 @@ const Profile = () => {
                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
               )}
             </TabsTrigger>
-            {isAdvisor && (
+            {isAdvisor ? (
               <>
                 <TabsTrigger value="company" className="gap-2 py-3 relative">
                   <Building className="h-4 w-4" />
@@ -804,6 +805,12 @@ const Profile = () => {
                   <span className="sm:hidden">צוות</span>
                 </TabsTrigger>
               </>
+            ) : (
+              <TabsTrigger value="organization" className="gap-2 py-3">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">ארגון</span>
+                <span className="sm:hidden">ארגון</span>
+              </TabsTrigger>
             )}
             <TabsTrigger value="settings" className="gap-2 py-3">
               <KeyRound className="h-4 w-4" />
@@ -1554,6 +1561,13 @@ const Profile = () => {
                   {advisorId && <TeamMemberManager advisorId={advisorId} />}
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* Organization Tab - Only for entrepreneurs */}
+          {!isAdvisor && (
+            <TabsContent value="organization" className="space-y-4 mt-6 animate-fade-in">
+              <OrganizationProfileTab />
             </TabsContent>
           )}
 
