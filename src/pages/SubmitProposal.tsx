@@ -118,6 +118,10 @@ const SubmitProposal = () => {
   // Payment terms / milestones state
   const [consultantMilestones, setConsultantMilestones] = useState<ConsultantMilestone[]>([]);
 
+  // Phase 3.5: Consultant response to request
+  const [consultantRequestNotes, setConsultantRequestNotes] = useState('');
+  const [consultantRequestFiles, setConsultantRequestFiles] = useState<any[]>([]);
+
   // Format price with thousand separators
   const formatPrice = (value: string): string => {
     const num = parseFloat(value.replace(/[^\d]/g, ''));
@@ -563,7 +567,50 @@ const SubmitProposal = () => {
       conditions,
       uploadedFiles: files,
       signature,
-      declarationText: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה"
+      declarationText: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה",
+      
+      // Phase 3.6: Structured fee data
+      feeLineItems: hasFeeItems ? [
+        // Map entrepreneur items with consultant prices
+        ...(entrepreneurData?.fee_items || []).map(item => ({
+          item_id: item.id,
+          description: item.description,
+          unit: item.unit,
+          quantity: item.quantity || 1,
+          unit_price: consultantPrices[item.id || ''] ?? null,
+          comment: rowComments[item.id || ''],
+          is_entrepreneur_defined: true,
+          is_optional: item.is_optional,
+        })),
+        // Add consultant's additional items
+        ...additionalFeeItems.map(item => ({
+          description: item.description,
+          unit: item.unit,
+          quantity: item.quantity || 1,
+          unit_price: item.consultant_unit_price,
+          comment: item.consultant_comment,
+          is_entrepreneur_defined: false,
+          is_optional: item.is_optional,
+        })),
+      ] : undefined,
+      
+      // Phase 3.6: Selected services
+      selectedServices: hasServiceScope ? selectedServices : undefined,
+      servicesNotes: servicesNotes || undefined,
+      
+      // Phase 3.6: Milestone adjustments
+      milestoneAdjustments: hasPaymentTerms ? consultantMilestones.map(m => ({
+        id: m.id,
+        description: m.description,
+        entrepreneur_percentage: m.entrepreneur_percentage,
+        consultant_percentage: m.consultant_percentage,
+        trigger: m.trigger,
+        is_entrepreneur_defined: m.is_entrepreneur_defined,
+      })) : undefined,
+      
+      // Phase 3.5: Request response
+      consultantRequestNotes: consultantRequestNotes || undefined,
+      consultantRequestFiles: consultantRequestFiles.length > 0 ? consultantRequestFiles : undefined,
     });
     
     console.log('[SubmitProposal] Submission result:', result);
@@ -733,7 +780,7 @@ const SubmitProposal = () => {
 
                   {entrepreneurData?.request_files && entrepreneurData.request_files.length > 0 && (
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">קבצים מצורפים</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">קבצים מצורפים מהיזם</Label>
                       <div className="mt-2 space-y-2">
                         {entrepreneurData.request_files.map((file, index) => (
                           <a
@@ -760,11 +807,60 @@ const SubmitProposal = () => {
                     </div>
                   )}
 
-                  {!hasRequestContent && !entrepreneurData?.service_details_text && (
+                  {entrepreneurData?.service_details_mode === 'file' && entrepreneurData.service_details_file && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">קובץ פירוט שירותים</Label>
+                      <a
+                        href={entrepreneurData.service_details_file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <FileDown className="h-5 w-5 text-primary" />
+                        <span>{entrepreneurData.service_details_file.name}</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {!hasRequestContent && !entrepreneurData?.service_details_text && !entrepreneurData?.service_details_file && (
                     <p className="text-muted-foreground text-center py-8">
                       לא הוזנו פרטים נוספים ע"י היזם
                     </p>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Phase 3.5: Consultant Response Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Edit3 className="h-5 w-5" />
+                    תגובה לבקשה (אופציונלי)
+                  </CardTitle>
+                  <CardDescription>
+                    הוסיפו הערות או קבצים נוספים בתגובה לבקשת היזם
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="consultant-notes">הערות / שאלות / הבהרות</Label>
+                    <Textarea
+                      id="consultant-notes"
+                      value={consultantRequestNotes}
+                      onChange={(e) => setConsultantRequestNotes(e.target.value)}
+                      placeholder="הוסיפו הערות, שאלות הבהרה, או מידע נוסף שברצונכם לשתף עם היזם..."
+                      rows={4}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>קבצים נלווים (תיק עבודות, הסמכות, וכד׳)</Label>
+                    <FileUpload 
+                      onUpload={setConsultantRequestFiles} 
+                      advisorId={advisorProfile?.id}
+                      maxFiles={5}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

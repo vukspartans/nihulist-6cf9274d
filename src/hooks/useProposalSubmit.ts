@@ -12,11 +12,32 @@ import { sanitizeText } from '@/utils/inputSanitization';
 import { validateSubmissionToken, validatePrice, validateTimeline, validateSignature, validateFileUploads, checkRateLimit } from '@/utils/securityValidation';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
-type SignatureInsert = Database['public']['Tables']['signatures']['Insert'];
 type ActivityLogInsert = Database['public']['Tables']['activity_log']['Insert'];
 
-interface SubmitProposalData {
-  inviteId?: string; // Specific invite ID for precise status update
+// Fee line item structure for structured submission
+export interface FeeLineItem {
+  item_id?: string;           // Original entrepreneur item ID
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_price: number | null;  // Consultant's price
+  comment?: string;           // Explanation
+  is_entrepreneur_defined: boolean;
+  is_optional?: boolean;
+}
+
+// Milestone adjustment structure
+export interface MilestoneAdjustment {
+  id?: string;
+  description: string;
+  entrepreneur_percentage: number | null;
+  consultant_percentage: number;
+  trigger?: string;
+  is_entrepreneur_defined: boolean;
+}
+
+export interface SubmitProposalData {
+  inviteId?: string;
   rfpId: string;
   projectId: string;
   advisorId: string;
@@ -29,11 +50,25 @@ interface SubmitProposalData {
   signature: SignatureData;
   declarationText: string;
   submitToken?: string;
+  
+  // Phase 3.6: Structured fee data
+  feeLineItems?: FeeLineItem[];
+  
+  // Phase 3.6: Selected services
+  selectedServices?: string[];
+  servicesNotes?: string;
+  
+  // Phase 3.6: Milestone adjustments
+  milestoneAdjustments?: MilestoneAdjustment[];
+  
+  // Phase 3.6: Consultant request response
+  consultantRequestNotes?: string;
+  consultantRequestFiles?: UploadedFile[];
 }
 
 /**
  * Hook for handling proposal submissions by advisors
- * Phase 1 Security: Enhanced validation, sanitization, and token verification
+ * Phase 3.6: Enhanced with structured data support
  */
 export const useProposalSubmit = () => {
   const [loading, setLoading] = useState(false);
@@ -99,6 +134,34 @@ export const useProposalSubmit = () => {
         const fileValidation = validateFileUploads(filesWithType);
         if (!fileValidation.valid) throw new Error(fileValidation.error);
       }
+
+      // Validate fee line items total matches price (if provided)
+      if (data.feeLineItems && data.feeLineItems.length > 0) {
+        const feeTotal = data.feeLineItems.reduce((sum, item) => {
+          const itemPrice = item.unit_price ?? 0;
+          const qty = item.quantity || 1;
+          return sum + (itemPrice * qty);
+        }, 0);
+        
+        // Allow 1% tolerance for rounding
+        const tolerance = data.price * 0.01;
+        if (Math.abs(feeTotal - data.price) > tolerance) {
+          console.warn('[Proposal Submit] Fee total mismatch:', { feeTotal, price: data.price });
+          // Don't throw, just log - price field takes precedence
+        }
+      }
+
+      // Validate milestones sum to 100% (if provided)
+      if (data.milestoneAdjustments && data.milestoneAdjustments.length > 0) {
+        const totalPercentage = data.milestoneAdjustments.reduce(
+          (sum, m) => sum + (m.consultant_percentage || 0), 
+          0
+        );
+        if (Math.abs(totalPercentage - 100) > 1) {
+          throw new Error(`סכום אחוזי התשלום חייב להיות 100% (נוכחי: ${totalPercentage}%)`);
+        }
+      }
+
       // Get user info for signature metadata
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -109,6 +172,9 @@ export const useProposalSubmit = () => {
         timelineDays: data.timelineDays,
         scopeText: data.scopeText,
         conditions: data.conditions,
+        feeLineItems: data.feeLineItems,
+        selectedServices: data.selectedServices,
+        milestoneAdjustments: data.milestoneAdjustments,
         timestamp: data.signature.timestamp
       });
       
@@ -120,7 +186,7 @@ export const useProposalSubmit = () => {
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      // Get user agent and IP (IP will be captured server-side)
+      // Get user agent
       const userAgent = navigator.userAgent;
 
       const signatureMetadata = {
@@ -130,7 +196,7 @@ export const useProposalSubmit = () => {
         vector_points: data.signature.vector.reduce((sum, stroke) => sum + stroke.length, 0)
       };
 
-      // Insert proposal with proper types
+      // Insert proposal with structured data
       const proposalInsert: ProposalInsert = {
         project_id: data.projectId,
         advisor_id: data.advisorId,
@@ -144,7 +210,14 @@ export const useProposalSubmit = () => {
         signature_meta_json: signatureMetadata as any,
         supplier_name: '',
         status: 'submitted',
-        currency: 'ILS'
+        currency: 'ILS',
+        // Phase 3.6: New structured fields
+        fee_line_items: (data.feeLineItems || []) as any,
+        selected_services: (data.selectedServices || []) as any,
+        milestone_adjustments: (data.milestoneAdjustments || []) as any,
+        consultant_request_notes: data.consultantRequestNotes || null,
+        consultant_request_files: (data.consultantRequestFiles || []) as any,
+        services_notes: data.servicesNotes || null,
       };
 
       const { data: proposal, error: proposalError } = await supabase
@@ -160,49 +233,86 @@ export const useProposalSubmit = () => {
       const migratedFiles: UploadedFile[] = [];
       
       for (const file of data.uploadedFiles) {
-        // Check if file is in temp folder
         if (file.url.startsWith(`temp-${data.advisorId}/`)) {
           const fileName = file.url.split('/').pop();
           const newFilePath = `${proposal.id}/${fileName}`;
           
-          // Copy file to new location
           const { error: copyError } = await supabase.storage
             .from('proposal-files')
             .copy(file.url, newFilePath);
           
           if (copyError) {
             console.error('[Proposal Submit] Error copying file:', copyError);
-            // Keep original path if copy fails
             migratedFiles.push(file);
           } else {
-            // Delete old temp file
             await supabase.storage
               .from('proposal-files')
               .remove([file.url]);
             
-            // Update file URL
             migratedFiles.push({
               ...file,
               url: newFilePath
             });
           }
         } else {
-          // File already in correct location
           migratedFiles.push(file);
+        }
+      }
+
+      // Also migrate consultant request files if any
+      const migratedRequestFiles: UploadedFile[] = [];
+      if (data.consultantRequestFiles && data.consultantRequestFiles.length > 0) {
+        for (const file of data.consultantRequestFiles) {
+          if (file.url.startsWith(`temp-${data.advisorId}/`)) {
+            const fileName = file.url.split('/').pop();
+            const newFilePath = `${proposal.id}/request-response/${fileName}`;
+            
+            const { error: copyError } = await supabase.storage
+              .from('proposal-files')
+              .copy(file.url, newFilePath);
+            
+            if (copyError) {
+              console.error('[Proposal Submit] Error copying request file:', copyError);
+              migratedRequestFiles.push(file);
+            } else {
+              await supabase.storage
+                .from('proposal-files')
+                .remove([file.url]);
+              
+              migratedRequestFiles.push({
+                ...file,
+                url: newFilePath
+              });
+            }
+          } else {
+            migratedRequestFiles.push(file);
+          }
         }
       }
       
       // Update proposal with migrated file paths
-      if (migratedFiles.length > 0 && migratedFiles.some(f => f.url !== data.uploadedFiles.find(df => df.name === f.name)?.url)) {
+      const needsUpdate = 
+        migratedFiles.some(f => f.url !== data.uploadedFiles.find(df => df.name === f.name)?.url) ||
+        migratedRequestFiles.some(f => f.url !== data.consultantRequestFiles?.find(df => df.name === f.name)?.url);
+      
+      if (needsUpdate) {
+        const updateData: any = {};
+        if (migratedFiles.length > 0) {
+          updateData.files = migratedFiles;
+        }
+        if (migratedRequestFiles.length > 0) {
+          updateData.consultant_request_files = migratedRequestFiles;
+        }
+        
         const { error: updateError } = await supabase
           .from('proposals')
-          .update({ files: migratedFiles as any })
+          .update(updateData)
           .eq('id', proposal.id);
         
         if (updateError) {
           console.error('[Proposal Submit] Error updating file paths:', updateError);
         } else {
-          console.log('[Proposal Submit] Successfully migrated', migratedFiles.length, 'files');
+          console.log('[Proposal Submit] Successfully migrated files');
         }
       }
 
@@ -232,7 +342,6 @@ export const useProposalSubmit = () => {
       if (signatureError) {
         console.error('Signature creation error:', signatureError);
         
-        // Log the failure but don't block proposal
         await supabase.from('activity_log').insert({
           actor_id: user.id,
           actor_type: 'system',
@@ -249,7 +358,7 @@ export const useProposalSubmit = () => {
         });
       }
 
-      // Log activity
+      // Log activity with structured data summary
       await supabase.from('activity_log').insert({
         actor_id: user.id,
         actor_type: 'advisor',
@@ -260,13 +369,16 @@ export const useProposalSubmit = () => {
           project_id: data.projectId,
           rfp_id: data.rfpId,
           price: data.price,
-          timeline_days: data.timelineDays
+          timeline_days: data.timelineDays,
+          has_fee_breakdown: (data.feeLineItems?.length || 0) > 0,
+          has_services_selection: (data.selectedServices?.length || 0) > 0,
+          has_milestone_adjustments: (data.milestoneAdjustments?.length || 0) > 0,
+          has_request_response: !!(data.consultantRequestNotes || data.consultantRequestFiles?.length)
         }
       });
 
-      // Update RFP invite status to 'submitted' - use inviteId for precise update
+      // Update RFP invite status
       if (data.inviteId) {
-        // Precise update using specific invite ID (prevents updating other invites)
         const { error: inviteUpdateError } = await supabase
           .from('rfp_invites')
           .update({ 
@@ -278,11 +390,10 @@ export const useProposalSubmit = () => {
         if (inviteUpdateError) {
           console.error('[Proposal Submit] Failed to update RFP invite status:', inviteUpdateError);
         } else {
-          console.log('[Proposal Submit] Updated RFP invite status to submitted (invite:', data.inviteId, ')');
+          console.log('[Proposal Submit] Updated RFP invite status to submitted');
         }
       } else if (data.rfpId) {
-        // Fallback for legacy calls - not recommended as it may affect multiple invites
-        console.warn('[Proposal Submit] Using rfpId+advisorId fallback - may affect multiple invites');
+        console.warn('[Proposal Submit] Using rfpId+advisorId fallback');
         const { error: inviteUpdateError } = await supabase
           .from('rfp_invites')
           .update({ 
@@ -302,18 +413,18 @@ export const useProposalSubmit = () => {
         description: 'היזם יקבל התראה ויבחן את הצעתך',
       });
 
-      // Invalidate relevant caches
+      // Invalidate caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
       queryClient.invalidateQueries({ queryKey: ['rfp-invites', data.advisorId] });
       queryClient.invalidateQueries({ queryKey: ['activity-log', data.projectId] });
 
-      // Send email notification to entrepreneur (non-blocking)
+      // Send email notification (non-blocking)
       console.log('[Proposal Submit] Sending email notification for proposal:', proposal.id);
       supabase.functions
         .invoke('notify-proposal-submitted', {
           body: {
             proposal_id: proposal.id,
-            test_mode: true, // Set to false in production
+            test_mode: true,
           },
         })
         .then(({ data: emailData, error: emailError }) => {
@@ -331,7 +442,6 @@ export const useProposalSubmit = () => {
     } catch (error: any) {
       console.error('Error submitting proposal:', error);
       
-      // Use standardized error handling
       handleError(error, {
         action: 'submit_proposal',
         metadata: {
