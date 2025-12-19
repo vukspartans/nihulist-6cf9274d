@@ -278,17 +278,19 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 bg-background p-4 md:p-6 border-b">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <NavigationLogo size={isMobile ? "sm" : "md"} />
-          <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto justify-between sm:justify-end">
+      <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
+        <div className="flex items-center justify-between gap-2">
+          <NavigationLogo size="sm" className="flex-shrink-0" />
+          <div className="flex items-center gap-2">
             <Button
               onClick={() => navigate("/projects/new")}
               variant="tech"
-              size={isMobile ? "sm" : "lg"}
+              size="sm"
+              className="whitespace-nowrap flex-shrink-0"
             >
-              <Plus className="w-4 h-4 md:w-5 md:h-5 ml-1 md:ml-2" />
-              פרויקט חדש
+              <Plus className="w-4 h-4 ml-1" />
+              <span className="hidden sm:inline">פרויקט חדש</span>
+              <span className="sm:hidden">חדש</span>
             </Button>
             <UserHeader />
           </div>
