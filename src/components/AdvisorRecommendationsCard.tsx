@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { Users, RefreshCw, AlertCircle, X, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdvisorsByExpertise } from '@/hooks/useAdvisorsByExpertise';
@@ -20,6 +20,7 @@ interface AdvisorRecommendationsCardProps {
   requestDataByType?: Record<string, AdvisorTypeRequestData>;
   onRequestDataChange?: (advisorType: string, data: AdvisorTypeRequestData) => void;
   onRemoveAdvisorType?: (advisorType: string) => void;
+  savedDraftTypes?: string[];
 }
 
 export const AdvisorRecommendationsCard = ({
@@ -32,7 +33,8 @@ export const AdvisorRecommendationsCard = ({
   onSelectAdvisors,
   requestDataByType = {},
   onRequestDataChange,
-  onRemoveAdvisorType
+  onRemoveAdvisorType,
+  savedDraftTypes = []
 }: AdvisorRecommendationsCardProps) => {
   const [reviewedTypes, setReviewedTypes] = useState<Record<string, boolean>>({});
   
@@ -134,6 +136,7 @@ export const AdvisorRecommendationsCard = ({
   const renderAdvisorTypeCard = (typeData: typeof sortedAdvisorTypes[0]) => {
     const typeSelections = selectedAdvisors[typeData.type] || [];
     const selectedInType = typeSelections.length;
+    const hasSavedDraft = savedDraftTypes.includes(typeData.type);
 
     return (
       <Card key={typeData.type} className="border-2">
@@ -160,6 +163,12 @@ export const AdvisorRecommendationsCard = ({
                 </TooltipProvider>
               )}
               <h3 className="font-semibold text-lg">{typeData.type}</h3>
+              {hasSavedDraft && (
+                <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-700">
+                  <FileText className="h-3 w-3" />
+                  טיוטה שמורה
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center gap-2 flex-wrap">
