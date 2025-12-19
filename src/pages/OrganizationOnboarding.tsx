@@ -208,7 +208,7 @@ const OrganizationOnboarding = () => {
       }
       // Always navigate to dashboard
       localStorage.setItem('onboarding_skipped', 'true');
-      navigate('/dashboard', { replace: true });
+      navigate('/profile', { replace: true });
     } catch (err) {
       console.error('[Onboarding] Skip error:', err);
       // Fallback: set localStorage and navigate to dashboard anyway
@@ -217,7 +217,7 @@ const OrganizationOnboarding = () => {
         title: 'המשך ללא שמירה',
         description: 'תוכל להשלים את פרטי הארגון מאוחר יותר בהגדרות',
       });
-      navigate('/dashboard', { replace: true });
+      navigate('/profile', { replace: true });
     } finally {
       setIsSubmitting(false);
     }
@@ -262,7 +262,7 @@ const OrganizationOnboarding = () => {
           title: 'הארגון נוצר בהצלחה!',
           description: 'ברוכים הבאים לניהוליסט'
         });
-        navigate('/dashboard', { replace: true });
+        navigate('/profile', { replace: true });
       } else {
         toast({
           title: 'שגיאה',
