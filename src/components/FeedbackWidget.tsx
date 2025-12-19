@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -25,13 +26,37 @@ const RATING_OPTIONS = [
   { value: 5, emoji: "🤩", label: "מצוין" },
 ];
 
+// Dashboard routes where the feedback widget should be visible
+const DASHBOARD_PATHS = [
+  '/dashboard',
+  '/projects',
+  '/profile',
+  '/advisor-dashboard',
+  '/advisor-profile',
+  '/submit-proposal',
+  '/rfp-details',
+  '/invite',
+  '/negotiation',
+  '/heyadmin'
+];
+
 export function FeedbackWidget() {
   const { user } = useAuth();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Only show on dashboard pages when user is logged in
+  const isOnDashboard = DASHBOARD_PATHS.some(path => 
+    location.pathname.startsWith(path)
+  );
+
+  if (!user || !isOnDashboard) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!rating) {
