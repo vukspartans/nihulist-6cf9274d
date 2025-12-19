@@ -42,6 +42,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   infrastructure: 'תשתיות',
 };
 
+// Hebrew labels for activity scope tiers
+const TIER_LABELS: Record<string, string> = {
+  small: 'קטן',
+  medium: 'בינוני',
+  large: 'גדול',
+  enterprise: 'ארגוני',
+};
+
 const OrganizationProfileTab = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -599,7 +607,14 @@ const OrganizationProfileTab = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">היקף פעילות</label>
-                  <p className="text-foreground">{organization?.activity_scope || 'לא מוגדר'}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-foreground">{organization?.activity_scope || 'לא מוגדר'}</p>
+                    {organization?.activity_scope_tier && (
+                      <Badge variant="secondary" className="text-xs">
+                        {TIER_LABELS[organization.activity_scope_tier] || organization.activity_scope_tier}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
