@@ -111,50 +111,36 @@ export function useOrganization() {
     }
 
     try {
-      // Create the company
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: input.name,
-          type: input.type || 'entrepreneur',
-          registration_number: input.registration_number,
-          country: input.country || 'Israel',
-          location: input.location,
-          founding_year: input.founding_year,
-          phone: input.phone,
-          email: input.email,
-          website: input.website,
-          description: input.description,
-          employee_count: input.employee_count,
-          activity_categories: input.activity_categories || [],
-          primary_activity_category: input.primary_activity_category,
-          activity_scope: input.activity_scope,
-          activity_scope_tier: input.activity_scope_tier,
-          activity_regions: input.activity_regions || [],
-          linkedin_url: input.linkedin_url,
-          onboarding_completed_at: input.onboarding_completed_at,
-          onboarding_skipped_at: input.onboarding_skipped_at
-        })
-        .select()
-        .single();
+      // Use SECURITY DEFINER function to atomically create company and link to profile
+      const { data, error } = await supabase.rpc('create_organization_for_user', {
+        p_name: input.name,
+        p_type: input.type || 'entrepreneur',
+        p_registration_number: input.registration_number || null,
+        p_country: input.country || 'Israel',
+        p_location: input.location || null,
+        p_founding_year: input.founding_year || null,
+        p_phone: input.phone || null,
+        p_email: input.email || null,
+        p_website: input.website || null,
+        p_description: input.description || null,
+        p_employee_count: input.employee_count || null,
+        p_activity_categories: input.activity_categories || [],
+        p_primary_activity_category: input.primary_activity_category || null,
+        p_activity_scope: input.activity_scope || null,
+        p_activity_scope_tier: input.activity_scope_tier || null,
+        p_activity_regions: input.activity_regions || [],
+        p_linkedin_url: input.linkedin_url || null,
+        p_onboarding_completed_at: input.onboarding_completed_at || null,
+        p_onboarding_skipped_at: input.onboarding_skipped_at || null
+      });
 
-      if (companyError) {
-        throw companyError;
+      if (error) {
+        throw error;
       }
 
-      // Link the organization to the user's profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ organization_id: companyData.id })
-        .eq('user_id', user.id);
-
-      if (profileError) {
-        console.error('[useOrganization] Error linking organization to profile:', profileError);
-        // Don't throw - organization was created, just linking failed
-      }
-
-      setOrganization(companyData as Organization);
-      return companyData as Organization;
+      const orgData = data as unknown as Organization;
+      setOrganization(orgData);
+      return orgData;
     } catch (err) {
       console.error('[useOrganization] Error creating organization:', err);
       toast({

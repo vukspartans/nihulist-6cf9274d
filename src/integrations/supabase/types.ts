@@ -1828,6 +1828,30 @@ export type Database = {
         Returns: boolean
       }
       canonicalize_advisor_name: { Args: { name: string }; Returns: string }
+      create_organization_for_user: {
+        Args: {
+          p_activity_categories?: Json
+          p_activity_regions?: string[]
+          p_activity_scope?: string
+          p_activity_scope_tier?: string
+          p_country?: string
+          p_description?: string
+          p_email?: string
+          p_employee_count?: string
+          p_founding_year?: number
+          p_linkedin_url?: string
+          p_location?: string
+          p_name: string
+          p_onboarding_completed_at?: string
+          p_onboarding_skipped_at?: string
+          p_phone?: string
+          p_primary_activity_category?: string
+          p_registration_number?: string
+          p_type?: string
+          p_website?: string
+        }
+        Returns: Json
+      }
       enqueue_notification: {
         Args: {
           p_body_html: string
