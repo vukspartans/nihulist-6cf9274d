@@ -79,9 +79,9 @@ const AppContent = () => {
         <ErrorBoundary>
           <Toaster />
           <Sonner />
-          <FeedbackWidget />
           <BrowserRouter>
             <ScrollToTop />
+            <FeedbackWidget />
             <RecoveryDeepLinkHandler />
             <AuthEventRouter />
             <Routes>
