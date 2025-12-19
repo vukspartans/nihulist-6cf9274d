@@ -559,7 +559,7 @@ export const RequestEditorDialog = ({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[95vh]" dir="rtl">
+      <DialogContent className="w-full max-w-5xl max-h-[95vh] sm:max-h-[95vh]" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -577,26 +577,26 @@ export const RequestEditorDialog = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-4 mb-4 flex-row-reverse">
-            <TabsTrigger value="main" className="flex items-center gap-2 flex-row-reverse">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 flex-row-reverse h-auto">
+            <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <Home className="h-4 w-4" />
-              ראשי
+              <span className="hidden sm:inline">ראשי</span>
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center gap-2 flex-row-reverse">
+            <TabsTrigger value="services" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <List className="h-4 w-4" />
-              פירוט שירותים
+              <span className="hidden sm:inline">פירוט שירותים</span>
             </TabsTrigger>
-            <TabsTrigger value="fees" className="flex items-center gap-2 flex-row-reverse">
+            <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <Coins className="h-4 w-4" />
-              שכר טרחה
+              <span className="hidden sm:inline">שכר טרחה</span>
             </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center gap-2 flex-row-reverse">
+            <TabsTrigger value="payment" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <CreditCard className="h-4 w-4" />
-              תשלום
+              <span className="hidden sm:inline">תשלום</span>
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
+          <ScrollArea className="h-[calc(70vh-180px)] sm:h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
               <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
@@ -685,7 +685,7 @@ export const RequestEditorDialog = ({
                   <Label className="block text-right">קבצים וחילוץ אוטומטי</Label>
                   
                   {/* Action buttons row */}
-                  <div className="flex gap-2" dir="rtl">
+                  <div className="flex flex-wrap gap-2" dir="rtl">
                     {/* AI Extraction */}
                     <div className="flex gap-1.5 items-center">
                       <input
@@ -877,11 +877,11 @@ export const RequestEditorDialog = ({
           </AlertDescription>
         </Alert>
 
-        <DialogFooter className="flex gap-2 mt-4">
-          <Button variant="outline" onClick={handleCancel}>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+          <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
             ביטול
           </Button>
-          <Button onClick={handleSave} className="flex items-center gap-2">
+          <Button onClick={handleSave} className="flex items-center justify-center gap-2 w-full sm:w-auto">
             <Save className="h-4 w-4" />
             שמור שינויים
           </Button>
