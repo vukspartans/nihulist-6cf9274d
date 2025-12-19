@@ -1110,6 +1110,8 @@ export type Database = {
           amended_from_id: string | null
           attachment_url: string | null
           conditions_json: Json | null
+          consultant_request_files: Json | null
+          consultant_request_notes: string | null
           currency: string | null
           current_version: number | null
           declaration_text: string | null
@@ -1124,15 +1126,19 @@ export type Database = {
           extracted_at: string | null
           extracted_text: string | null
           extracted_text_hash: string | null
+          fee_line_items: Json | null
           file_summaries: Json | null
           files: Json | null
           has_active_negotiation: boolean | null
           id: string
+          milestone_adjustments: Json | null
           negotiation_count: number | null
           price: number
           project_id: string
           scope_text: string | null
           seen_by_entrepreneur_at: string | null
+          selected_services: Json | null
+          services_notes: string | null
           signature_blob: string | null
           signature_meta_json: Json | null
           status: Database["public"]["Enums"]["proposal_status"]
@@ -1154,6 +1160,8 @@ export type Database = {
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
+          consultant_request_files?: Json | null
+          consultant_request_notes?: string | null
           currency?: string | null
           current_version?: number | null
           declaration_text?: string | null
@@ -1168,15 +1176,19 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          fee_line_items?: Json | null
           file_summaries?: Json | null
           files?: Json | null
           has_active_negotiation?: boolean | null
           id?: string
+          milestone_adjustments?: Json | null
           negotiation_count?: number | null
           price: number
           project_id: string
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
+          selected_services?: Json | null
+          services_notes?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -1198,6 +1210,8 @@ export type Database = {
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
+          consultant_request_files?: Json | null
+          consultant_request_notes?: string | null
           currency?: string | null
           current_version?: number | null
           declaration_text?: string | null
@@ -1212,15 +1226,19 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          fee_line_items?: Json | null
           file_summaries?: Json | null
           files?: Json | null
           has_active_negotiation?: boolean | null
           id?: string
+          milestone_adjustments?: Json | null
           negotiation_count?: number | null
           price?: number
           project_id?: string
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
+          selected_services?: Json | null
+          services_notes?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
