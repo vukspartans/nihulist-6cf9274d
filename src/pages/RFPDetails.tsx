@@ -133,6 +133,7 @@ const RFPDetails = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [scopeItems, setScopeItems] = useState<ServiceScopeItem[]>([]);
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
+  const [existingProposal, setExistingProposal] = useState<{ id: string; status: string } | null>(null);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
@@ -509,6 +510,20 @@ const RFPDetails = () => {
         setFeeItems(feeData);
       }
 
+      // Check for existing proposal for this project + advisor
+      const { data: proposalData } = await supabase
+        .from('proposals')
+        .select('id, status')
+        .eq('project_id', invite.rfps.projects.id)
+        .eq('advisor_id', advisor.id)
+        .not('status', 'eq', 'withdrawn')
+        .maybeSingle();
+
+      if (proposalData) {
+        console.log('[RFPDetails] Existing proposal found:', proposalData);
+        setExistingProposal(proposalData);
+      }
+
     } catch (error) {
       console.error('[RFPDetails] Unexpected error:', error);
       toast({
@@ -586,10 +601,11 @@ const RFPDetails = () => {
     );
   }
 
-  // Check if actions should be shown
+  // Check if actions should be shown - block if proposal already exists
   const showActions = ['sent', 'opened', 'pending', 'in_progress'].includes(inviteDetails?.status || '') && 
     (inviteDetails?.status !== 'expired') &&
-    (!inviteDetails?.deadline_at || new Date(inviteDetails.deadline_at) > new Date());
+    (!inviteDetails?.deadline_at || new Date(inviteDetails.deadline_at) > new Date()) &&
+    !existingProposal;
 
   return (
     <div className="min-h-screen bg-background pb-24" dir="rtl">
@@ -616,7 +632,7 @@ const RFPDetails = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-xl md:text-2xl font-bold truncate">{rfpDetails.projects.name}</h1>
-              <p className="text-sm text-muted-foreground mt-0.5 truncate">{rfpDetails.subject}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">אם בקשה זו רלוונטית עבורך, אנו מזמינים אותך להגיש הצעת מחיר דרך המערכת.</p>
             </div>
             <Badge className={`${getStatusColor(inviteDetails?.status || '')} self-start md:self-auto flex-shrink-0`}>
               {getStatusText(inviteDetails?.status || '')}
@@ -1059,9 +1075,52 @@ const RFPDetails = () => {
             </>
           ) : (
             <div className="text-center text-sm text-muted-foreground py-1">
-              {inviteDetails?.status === 'submitted' && 'ההצעה הוגשה בהצלחה'}
-              {inviteDetails?.status === 'declined' && 'הבקשה נדחתה'}
-              {inviteDetails?.status === 'expired' && 'פג תוקף ההגשה'}
+              {existingProposal ? (
+                <span className="flex items-center justify-center gap-2">
+                  {existingProposal.status === 'accepted' && (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-green-700 font-medium">הצעתך אושרה</span>
+                    </>
+                  )}
+                  {existingProposal.status === 'rejected' && (
+                    <>
+                      <XCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-red-700 font-medium">הצעתך נדחתה</span>
+                    </>
+                  )}
+                  {existingProposal.status === 'submitted' && (
+                    <>
+                      <Send className="h-4 w-4 text-blue-600" />
+                      <span className="text-blue-700 font-medium">הצעתך הוגשה בהצלחה</span>
+                    </>
+                  )}
+                  {existingProposal.status === 'negotiation_requested' && (
+                    <>
+                      <MessageSquare className="h-4 w-4 text-orange-600" />
+                      <span className="text-orange-700 font-medium">הצעתך במשא ומתן</span>
+                    </>
+                  )}
+                  {existingProposal.status === 'under_review' && (
+                    <>
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-blue-700 font-medium">הצעתך בבדיקה</span>
+                    </>
+                  )}
+                  {existingProposal.status === 'resubmitted' && (
+                    <>
+                      <Send className="h-4 w-4 text-blue-600" />
+                      <span className="text-blue-700 font-medium">הצעתך הוגשה מחדש</span>
+                    </>
+                  )}
+                </span>
+              ) : (
+                <>
+                  {inviteDetails?.status === 'submitted' && 'ההצעה הוגשה בהצלחה'}
+                  {inviteDetails?.status === 'declined' && 'הבקשה נדחתה'}
+                  {inviteDetails?.status === 'expired' && 'פג תוקף ההגשה'}
+                </>
+              )}
             </div>
           )}
           <Button 
