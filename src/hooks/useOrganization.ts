@@ -218,6 +218,11 @@ export function useOrganization() {
       return false;
     }
     
+    // Check localStorage fallback - user explicitly skipped
+    if (typeof window !== 'undefined' && localStorage.getItem('onboarding_skipped') === 'true') {
+      return false;
+    }
+    
     if (!organization) {
       return true;
     }
