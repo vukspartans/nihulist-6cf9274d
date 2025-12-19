@@ -256,11 +256,13 @@ const OrganizationOnboarding = () => {
       }
 
       if (success) {
+        // Clear skip flag on successful completion
+        localStorage.removeItem('onboarding_skipped');
         toast({
           title: 'הארגון נוצר בהצלחה!',
           description: 'ברוכים הבאים לניהוליסט'
         });
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         toast({
           title: 'שגיאה',

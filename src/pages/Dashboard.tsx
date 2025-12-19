@@ -60,7 +60,10 @@ const Dashboard = () => {
   // Redirect to onboarding if entrepreneur hasn't completed it
   useEffect(() => {
     if (!authLoading && !orgLoading && user && profile) {
-      if ((profile as any).role === 'entrepreneur' && needsOnboarding()) {
+      // Check if user explicitly skipped onboarding via localStorage
+      const onboardingSkipped = localStorage.getItem('onboarding_skipped') === 'true';
+      
+      if ((profile as any).role === 'entrepreneur' && needsOnboarding() && !onboardingSkipped) {
         console.info('[Dashboard] Redirecting to organization onboarding');
         navigate('/organization/onboarding', { replace: true });
       }
