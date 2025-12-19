@@ -559,7 +559,7 @@ export const RequestEditorDialog = ({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full max-w-5xl max-h-[95vh] sm:max-h-[95vh]" dir="rtl">
+      <DialogContent className="w-full max-w-5xl max-h-[90vh] sm:max-h-[95vh] flex flex-col" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -576,7 +576,7 @@ export const RequestEditorDialog = ({
           </div>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 min-h-0 flex flex-col" dir="rtl">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 flex-row-reverse h-auto">
             <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <Home className="h-4 w-4" />
@@ -596,7 +596,7 @@ export const RequestEditorDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[calc(70vh-180px)] sm:h-[calc(90vh-280px)] overflow-y-auto" dir="rtl">
+          <ScrollArea className="flex-1 min-h-0 overflow-y-auto" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
               <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
@@ -870,14 +870,14 @@ export const RequestEditorDialog = ({
           </ScrollArea>
         </Tabs>
 
-        <Alert className="mt-2">
+        <Alert className="mt-2 flex-shrink-0">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-right">
             המידע שתזין כאן יהיה זמין ליועץ במערכת Billding לאחר הכניסה שלו
           </AlertDescription>
         </Alert>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4 flex-shrink-0">
           <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
             ביטול
           </Button>
