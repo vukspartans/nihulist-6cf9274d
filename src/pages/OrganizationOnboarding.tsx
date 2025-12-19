@@ -199,22 +199,25 @@ const OrganizationOnboarding = () => {
           description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
         });
       } else {
-        // Even if save fails, allow user to continue - they can complete onboarding later
+        // Even if save fails, set localStorage flag and allow user to continue
+        localStorage.setItem('onboarding_skipped', 'true');
         toast({
           title: 'המשך ללא שמירה',
           description: 'תוכל להשלים את פרטי הארגון מאוחר יותר בהגדרות',
         });
       }
       // Always navigate to dashboard
-      navigate('/dashboard');
+      localStorage.setItem('onboarding_skipped', 'true');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('[Onboarding] Skip error:', err);
-      // Fallback: navigate to dashboard anyway with a warning
+      // Fallback: set localStorage and navigate to dashboard anyway
+      localStorage.setItem('onboarding_skipped', 'true');
       toast({
         title: 'המשך ללא שמירה',
         description: 'תוכל להשלים את פרטי הארגון מאוחר יותר בהגדרות',
       });
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } finally {
       setIsSubmitting(false);
     }
