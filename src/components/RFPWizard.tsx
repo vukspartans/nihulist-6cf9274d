@@ -26,6 +26,7 @@ import { AdvisorTypeRequestData } from './RequestEditorDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
+import { useRFPDraft } from '@/hooks/useRFPDraft';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sanitizeText, sanitizeHtml } from '@/utils/inputSanitization';
 
@@ -72,12 +73,15 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     attachments: []
   });
   const [proposalSent, setProposalSent] = useState(false);
+  const [savedDraftTypes, setSavedDraftTypes] = useState<string[]>([]);
   const { sendRFPInvitations, loading } = useRFP();
+  const { loadAllDrafts, deleteAllDrafts, loading: draftsLoading } = useRFPDraft(projectId);
   const { toast } = useToast();
 
-  // Load existing RFP from database
+  // Load existing RFP and drafts from database
   useEffect(() => {
-    const loadExistingRfp = async () => {
+    const loadExistingData = async () => {
+      // Load existing RFP
       const { data, error } = await supabase
         .from('rfps')
         .select('subject, body_html')
@@ -87,7 +91,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         .maybeSingle();
 
       if (!error && data) {
-        // Convert HTML to plain text
         const htmlToPlainText = (html: string): string => {
           return html
             .replace(/<br\s*\/?>/gi, '\n')
@@ -103,9 +106,21 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
           content: data.body_html ? htmlToPlainText(data.body_html) : prev.content
         }));
       }
+
+      // Load saved drafts
+      const drafts = await loadAllDrafts();
+      const draftTypes = Object.keys(drafts);
+      if (draftTypes.length > 0) {
+        setRequestDataByType(drafts);
+        setSavedDraftTypes(draftTypes);
+        toast({
+          title: "טיוטות נטענו",
+          description: `נמצאו ${draftTypes.length} טיוטות שמורות`,
+        });
+      }
     };
 
-    loadExistingRfp();
+    loadExistingData();
   }, [projectId]);
 
   const totalSteps = 2;
@@ -267,6 +282,9 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     console.log('[RFPWizard] RFP Result:', result);
     
     if (result) {
+      // Clean up drafts after successful send
+      await deleteAllDrafts();
+      setSavedDraftTypes([]);
       setProposalSent(true);
       onRfpSent?.();
     }
@@ -400,6 +418,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
                 requestDataByType={requestDataByType}
                 onRequestDataChange={handleRequestDataChange}
                 onRemoveAdvisorType={handleRemoveAdvisorType}
+                savedDraftTypes={savedDraftTypes}
               />
             </div>
           )}
