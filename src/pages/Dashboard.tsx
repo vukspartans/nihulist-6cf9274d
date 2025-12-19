@@ -15,6 +15,7 @@ import { UserHeader } from "@/components/UserHeader";
 import { ProjectSummary } from "@/types/project";
 import NavigationLogo from "@/components/NavigationLogo";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import BackToTop from '@/components/BackToTop';
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -52,10 +53,19 @@ const Dashboard = () => {
   const [unseenProposalCounts, setUnseenProposalCounts] = useState<Record<string, number>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  const { needsOnboarding, loading: orgLoading } = useOrganization();
   const isMobile = useIsMobile();
 
-  console.info('[Dashboard] Component mounted/rendered', { authLoading, hasUser: !!user, userId: user?.id });
+  // Redirect to onboarding if entrepreneur hasn't completed it
+  useEffect(() => {
+    if (!authLoading && !orgLoading && user && profile) {
+      if ((profile as any).role === 'entrepreneur' && needsOnboarding()) {
+        console.info('[Dashboard] Redirecting to organization onboarding');
+        navigate('/organization/onboarding', { replace: true });
+      }
+    }
+  }, [authLoading, orgLoading, user, profile, needsOnboarding, navigate]);
 
   // SECURITY: Client-side role check removed - handled by RoleBasedRoute guard in App.tsx
 
