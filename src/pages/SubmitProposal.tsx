@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, ArrowRight, FileText, Receipt, Wallet, PenTool, FileDown } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, ArrowRight, FileText, Receipt, Wallet, PenTool, FileDown, Milestone, ListChecks } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -24,6 +24,8 @@ import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import { ProposalProgressStepper } from '@/components/ProposalProgressStepper';
 import { ConfirmProposalDialog } from '@/components/ConfirmProposalDialog';
 import { ConsultantFeeTable, ConsultantFeeRow } from '@/components/proposal/ConsultantFeeTable';
+import { ConsultantPaymentTerms, ConsultantMilestone } from '@/components/proposal/ConsultantPaymentTerms';
+import { ConsultantServicesSelection } from '@/components/proposal/ConsultantServicesSelection';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -108,6 +110,13 @@ const SubmitProposal = () => {
   const [additionalFeeItems, setAdditionalFeeItems] = useState<ConsultantFeeRow[]>([]);
   const [rowComments, setRowComments] = useState<Record<string, string>>({});
   const [feeErrors, setFeeErrors] = useState<Record<string, string>>({});
+
+  // Services selection state
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [servicesNotes, setServicesNotes] = useState('');
+
+  // Payment terms / milestones state
+  const [consultantMilestones, setConsultantMilestones] = useState<ConsultantMilestone[]>([]);
 
   // Format price with thousand separators
   const formatPrice = (value: string): string => {
@@ -195,6 +204,31 @@ const SubmitProposal = () => {
     }
   }, [entrepreneurData, consultantPrices, additionalFeeItems, calculateTotalFromFees]);
 
+  // Initialize milestones from entrepreneur data
+  useEffect(() => {
+    if (entrepreneurData?.payment_terms?.milestone_payments && consultantMilestones.length === 0) {
+      const milestones: ConsultantMilestone[] = entrepreneurData.payment_terms.milestone_payments.map((m, i) => ({
+        id: `ent-milestone-${i}`,
+        description: m.description,
+        entrepreneur_percentage: m.percentage,
+        consultant_percentage: m.percentage,
+        trigger: m.trigger,
+        is_entrepreneur_defined: true,
+      }));
+      setConsultantMilestones(milestones);
+    }
+  }, [entrepreneurData]);
+
+  // Initialize selected services from entrepreneur data
+  useEffect(() => {
+    if (entrepreneurData?.service_scope_items && selectedServices.length === 0) {
+      const initialSelected = entrepreneurData.service_scope_items
+        .filter(item => item.is_included && item.id)
+        .map(item => item.id!);
+      setSelectedServices(initialSelected);
+    }
+  }, [entrepreneurData]);
+
   // Validate fee items
   const validateFeeItems = useCallback(() => {
     const errors: Record<string, string> = {};
@@ -220,6 +254,9 @@ const SubmitProposal = () => {
   const hasPaymentTerms = entrepreneurData?.payment_terms && 
     (entrepreneurData.payment_terms.advance_percent || 
      (entrepreneurData.payment_terms.milestone_payments?.length || 0) > 0);
+  const hasServiceScope = (entrepreneurData?.service_scope_items?.length || 0) > 0 ||
+    entrepreneurData?.service_details_mode !== 'free_text' ||
+    entrepreneurData?.service_details_text;
   const hasRequestContent = entrepreneurData?.request_content || (entrepreneurData?.request_files?.length || 0) > 0;
 
   const steps = [
@@ -635,7 +672,7 @@ const SubmitProposal = () => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-5 mb-6">
+            <TabsList className="w-full flex flex-wrap justify-start gap-1 h-auto p-1 mb-6">
               <TabsTrigger value="request" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">פרטי הבקשה</span>
@@ -644,6 +681,18 @@ const SubmitProposal = () => {
                 <Receipt className="h-4 w-4" />
                 <span className="hidden sm:inline">שכר טרחה</span>
               </TabsTrigger>
+              {hasServiceScope && (
+                <TabsTrigger value="services" className="flex items-center gap-2">
+                  <ListChecks className="h-4 w-4" />
+                  <span className="hidden sm:inline">שירותים</span>
+                </TabsTrigger>
+              )}
+              {hasPaymentTerms && (
+                <TabsTrigger value="milestones" className="flex items-center gap-2">
+                  <Milestone className="h-4 w-4" />
+                  <span className="hidden sm:inline">אבני דרך</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="scope" className="flex items-center gap-2">
                 <FileDown className="h-4 w-4" />
                 <span className="hidden sm:inline">היקף עבודה</span>
@@ -875,14 +924,89 @@ const SubmitProposal = () => {
                   <ArrowRight className="h-4 w-4 ml-2" />
                   חזרה
                 </Button>
-                <Button type="button" onClick={() => setActiveTab('scope')}>
-                  המשך להיקף עבודה
+                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'scope')}>
+                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
                   <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
                 </Button>
               </div>
             </TabsContent>
 
-            {/* Tab 3: Scope */}
+            {/* Tab: Services Selection */}
+            {hasServiceScope && (
+              <TabsContent value="services" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ListChecks className="h-5 w-5" />
+                      בחירת שירותים
+                    </CardTitle>
+                    <CardDescription>
+                      סמנו את השירותים שתספקו במסגרת ההצעה
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ConsultantServicesSelection
+                      mode={entrepreneurData?.service_details_mode || 'free_text'}
+                      serviceItems={entrepreneurData?.service_scope_items || []}
+                      serviceText={entrepreneurData?.service_details_text || null}
+                      serviceFile={entrepreneurData?.service_details_file || null}
+                      selectedServices={selectedServices}
+                      onSelectionChange={setSelectedServices}
+                      consultantNotes={servicesNotes}
+                      onNotesChange={setServicesNotes}
+                    />
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-between">
+                  <Button type="button" variant="outline" onClick={() => setActiveTab('fees')}>
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                    חזרה
+                  </Button>
+                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'scope')}>
+                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
+                    <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Tab: Payment Terms / Milestones */}
+            {hasPaymentTerms && (
+              <TabsContent value="milestones" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Milestone className="h-5 w-5" />
+                      אבני דרך ותנאי תשלום
+                    </CardTitle>
+                    <CardDescription>
+                      התאימו את אחוזי התשלום לכל אבן דרך
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ConsultantPaymentTerms
+                      entrepreneurTerms={entrepreneurData?.payment_terms || null}
+                      consultantMilestones={consultantMilestones}
+                      onMilestonesChange={setConsultantMilestones}
+                    />
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-between">
+                  <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')}>
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                    חזרה
+                  </Button>
+                  <Button type="button" onClick={() => setActiveTab('scope')}>
+                    המשך להיקף עבודה
+                    <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Tab: Scope */}
             <TabsContent value="scope" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -913,7 +1037,7 @@ const SubmitProposal = () => {
               <ConditionsBuilder value={conditions} onChange={setConditions} />
 
               <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('fees')}>
+                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')}>
                   <ArrowRight className="h-4 w-4 ml-2" />
                   חזרה
                 </Button>
