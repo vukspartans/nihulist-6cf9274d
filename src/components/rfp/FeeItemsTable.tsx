@@ -83,13 +83,13 @@ export const FeeItemsTable = ({
 
   const renderTable = (tableItems: RFPFeeItem[], isOptional: boolean, title: string) => (
     <div className="space-y-3" dir="rtl">
-      <div className="flex items-center justify-between flex-row-reverse">
+      <div className="flex items-center justify-between flex-col-reverse sm:flex-row-reverse gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => addItem(isOptional)}
-          className="flex items-center gap-2 flex-row-reverse"
+          className="flex items-center gap-2 flex-row-reverse w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           הוסף שורה
@@ -97,7 +97,115 @@ export const FeeItemsTable = ({
         <Label className="text-base font-semibold text-right">{title}</Label>
       </div>
       
-      <div className="border rounded-lg overflow-hidden">
+      {/* Mobile Card Layout */}
+      <div className="md:hidden space-y-3">
+        {tableItems.map((item, index) => (
+          <div key={index} className="border rounded-lg p-3 space-y-3 bg-card">
+            {/* Row 1: Item number & Delete */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">
+                סעיף {item.item_number}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeItem(index, isOptional)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Row 2: Description (full width) */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">תיאור</Label>
+              <Input
+                value={item.description}
+                onChange={(e) => updateItem(index, 'description', e.target.value, isOptional)}
+                placeholder="תיאור השירות"
+                className="text-right"
+                dir="rtl"
+              />
+            </div>
+            
+            {/* Row 3: Unit & Quantity (side by side) */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">יחידה</Label>
+                <Select
+                  value={item.unit}
+                  onValueChange={(value) => updateItem(index, 'unit', value as FeeUnit, isOptional)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FEE_UNITS.map((unit) => (
+                      <SelectItem key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">כמות</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(e) => updateItem(index, 'quantity', Number(e.target.value) || 1, isOptional)}
+                  className="text-center"
+                />
+              </div>
+            </div>
+            
+            {/* Row 4: Price & Charge Type (side by side) */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">מחיר יחידה</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={item.unit_price || ''}
+                  onChange={(e) => updateItem(index, 'unit_price', e.target.value ? Number(e.target.value) : undefined, isOptional)}
+                  placeholder="₪"
+                  className="text-left"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">סוג החיוב</Label>
+                <Select
+                  value={item.charge_type}
+                  onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHARGE_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {tableItems.length === 0 && (
+          <div className="border rounded-lg p-6 text-center text-muted-foreground">
+            לחץ על "הוסף שורה" להוספת פריט שכ"ט
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -205,7 +313,7 @@ export const FeeItemsTable = ({
       
       {tableItems.length > 0 && (
         <div className="flex justify-end">
-          <div className="bg-muted px-4 py-2 rounded-lg">
+          <div className="bg-muted px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto text-center sm:text-right">
             <span className="text-sm text-muted-foreground ml-2">
               {isOptional ? 'סה"כ אופציונלי:' : 'שכ"ט כולל:'}
             </span>
