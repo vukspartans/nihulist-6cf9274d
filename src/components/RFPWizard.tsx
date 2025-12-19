@@ -84,7 +84,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         .eq('project_id', projectId)
         .order('sent_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
         // Convert HTML to plain text
