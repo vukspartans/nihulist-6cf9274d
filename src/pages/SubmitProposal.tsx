@@ -68,6 +68,7 @@ const SubmitProposal = () => {
   const [rfpDetails, setRfpDetails] = useState<RFPDetails | null>(null);
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfile | null>(null);
   const [currentInviteId, setCurrentInviteId] = useState<string | null>(null);
+  const [existingProposal, setExistingProposal] = useState<{ id: string; status: string } | null>(null);
   
   const [price, setPrice] = useState('');
   const [priceDisplay, setPriceDisplay] = useState('');
@@ -221,6 +222,27 @@ const SubmitProposal = () => {
         return;
       }
 
+      // Check for existing proposal for this project + advisor (prevents duplicate submissions)
+      const { data: proposalData } = await supabase
+        .from('proposals')
+        .select('id, status')
+        .eq('project_id', inviteDetails.rfps.projects.id)
+        .eq('advisor_id', advisor.id)
+        .not('status', 'eq', 'withdrawn')
+        .maybeSingle();
+
+      if (proposalData) {
+        console.log('[SubmitProposal] Existing proposal found, blocking submission:', proposalData);
+        setExistingProposal(proposalData);
+        toast({
+          title: "כבר הגשת הצעה",
+          description: "כבר הגשת הצעה לפרויקט זה. לא ניתן להגיש הצעה נוספת.",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+
       // Mark invite as opened if not already opened
       if (!inviteDetails.opened_at) {
         await supabase
@@ -273,6 +295,28 @@ const SubmitProposal = () => {
 
   const handleFinalSubmit = async () => {
     setShowConfirmDialog(false);
+    
+    // Double-check: verify no existing proposal before submitting
+    if (rfpDetails?.projects.id && advisorProfile?.id) {
+      const { data: existingCheck } = await supabase
+        .from('proposals')
+        .select('id, status')
+        .eq('project_id', rfpDetails.projects.id)
+        .eq('advisor_id', advisorProfile.id)
+        .not('status', 'eq', 'withdrawn')
+        .maybeSingle();
+
+      if (existingCheck) {
+        toast({
+          title: "כבר הגשת הצעה",
+          description: "כבר הגשת הצעה לפרויקט זה. לא ניתן להגיש הצעה נוספת.",
+          variant: "destructive",
+        });
+        navigate(getDashboardRouteForRole(primaryRole));
+        return;
+      }
+    }
+    
     const result = await submitProposal({
       inviteId: currentInviteId || invite_id || '', // Pass specific invite ID
       rfpId: (rfp_id || rfpDetails?.id || ''),
