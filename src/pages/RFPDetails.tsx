@@ -9,13 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard, Home, List, Building2, User } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, FileText, Send, X, MessageSquare, ArrowRight, Download, CheckCircle, XCircle, Coins, CreditCard, Home, List, Building2, User, Eye } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { DeadlineCountdown } from '@/components/DeadlineCountdown';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
+import { AdvisorProposalViewDialog } from '@/components/AdvisorProposalViewDialog';
 import JSZip from 'jszip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -134,6 +135,7 @@ const RFPDetails = () => {
   const [scopeItems, setScopeItems] = useState<ServiceScopeItem[]>([]);
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
   const [existingProposal, setExistingProposal] = useState<{ id: string; status: string } | null>(null);
+  const [viewProposalDialogOpen, setViewProposalDialogOpen] = useState(false);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
@@ -1073,54 +1075,61 @@ const RFPDetails = () => {
                 דחה בקשה
               </Button>
             </>
+          ) : existingProposal ? (
+            <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
+              <div className="flex items-center gap-2">
+                {existingProposal.status === 'accepted' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-green-700 font-medium">הצעתך אושרה</span>
+                  </>
+                )}
+                {existingProposal.status === 'rejected' && (
+                  <>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-red-700 font-medium">הצעתך נדחתה</span>
+                  </>
+                )}
+                {existingProposal.status === 'submitted' && (
+                  <>
+                    <Send className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium">הצעתך הוגשה בהצלחה</span>
+                  </>
+                )}
+                {existingProposal.status === 'negotiation_requested' && (
+                  <>
+                    <MessageSquare className="h-4 w-4 text-orange-600" />
+                    <span className="text-orange-700 font-medium">הצעתך במשא ומתן</span>
+                  </>
+                )}
+                {existingProposal.status === 'under_review' && (
+                  <>
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium">הצעתך בבדיקה</span>
+                  </>
+                )}
+                {existingProposal.status === 'resubmitted' && (
+                  <>
+                    <Send className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium">הצעתך הוגשה מחדש</span>
+                  </>
+                )}
+              </div>
+              <Button 
+                variant="outline"
+                size="lg"
+                onClick={() => setViewProposalDialogOpen(true)}
+                className="sm:mr-auto"
+              >
+                <Eye className="w-4 h-4 ml-2" />
+                צפה בהצעה שלי
+              </Button>
+            </div>
           ) : (
             <div className="text-center text-sm text-muted-foreground py-1">
-              {existingProposal ? (
-                <span className="flex items-center justify-center gap-2">
-                  {existingProposal.status === 'accepted' && (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-green-700 font-medium">הצעתך אושרה</span>
-                    </>
-                  )}
-                  {existingProposal.status === 'rejected' && (
-                    <>
-                      <XCircle className="h-4 w-4 text-red-600" />
-                      <span className="text-red-700 font-medium">הצעתך נדחתה</span>
-                    </>
-                  )}
-                  {existingProposal.status === 'submitted' && (
-                    <>
-                      <Send className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-700 font-medium">הצעתך הוגשה בהצלחה</span>
-                    </>
-                  )}
-                  {existingProposal.status === 'negotiation_requested' && (
-                    <>
-                      <MessageSquare className="h-4 w-4 text-orange-600" />
-                      <span className="text-orange-700 font-medium">הצעתך במשא ומתן</span>
-                    </>
-                  )}
-                  {existingProposal.status === 'under_review' && (
-                    <>
-                      <Clock className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-700 font-medium">הצעתך בבדיקה</span>
-                    </>
-                  )}
-                  {existingProposal.status === 'resubmitted' && (
-                    <>
-                      <Send className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-700 font-medium">הצעתך הוגשה מחדש</span>
-                    </>
-                  )}
-                </span>
-              ) : (
-                <>
-                  {inviteDetails?.status === 'submitted' && 'ההצעה הוגשה בהצלחה'}
-                  {inviteDetails?.status === 'declined' && 'הבקשה נדחתה'}
-                  {inviteDetails?.status === 'expired' && 'פג תוקף ההגשה'}
-                </>
-              )}
+              {inviteDetails?.status === 'submitted' && 'ההצעה הוגשה בהצלחה'}
+              {inviteDetails?.status === 'declined' && 'הבקשה נדחתה'}
+              {inviteDetails?.status === 'expired' && 'פג תוקף ההגשה'}
             </div>
           )}
           <Button 
@@ -1141,6 +1150,14 @@ const RFPDetails = () => {
         onDecline={handleDecline}
         loading={declining}
       />
+
+      {existingProposal && (
+        <AdvisorProposalViewDialog
+          open={viewProposalDialogOpen}
+          onOpenChange={setViewProposalDialogOpen}
+          proposalId={existingProposal.id}
+        />
+      )}
     </div>
   );
 };
