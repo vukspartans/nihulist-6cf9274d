@@ -1,5 +1,3 @@
-import logoImage from "@/assets/billding-logo.png";
-
 interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
@@ -7,21 +5,24 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  xs: 'h-6',
-  sm: 'h-8',
-  md: 'h-10',
-  lg: 'h-12',
-  xl: 'h-16'
+  xs: 'text-lg',
+  sm: 'text-xl',
+  md: 'text-2xl',
+  lg: 'text-3xl',
+  xl: 'text-4xl'
 };
 
 const Logo = ({ size = 'md', className = '', variant = 'default' }: LogoProps) => {
   return (
-    <img
-      src={logoImage}
-      alt="Billding"
-      className={`${sizeClasses[size]} w-auto ${variant === 'white' ? 'brightness-0 invert' : ''} ${className}`}
-      loading="eager"
-    />
+    <span 
+      className={`font-bold tracking-tight ${sizeClasses[size]} ${
+        variant === 'white' 
+          ? 'text-white' 
+          : 'bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent'
+      } ${className}`}
+    >
+      Billding
+    </span>
   );
 };
 
