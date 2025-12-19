@@ -41,24 +41,24 @@ const OptimizedTestimonials = memo(({ testimonials }: OptimizedTestimonialsProps
   const currentTestimonialData = testimonials[currentTestimonial];
 
   return (
-    <div className="bg-white/5 rounded-3xl p-8 lg:p-12 max-w-4xl mx-auto relative">
-      <div className="flex justify-center mb-6">
+    <div className="bg-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-12 max-w-4xl mx-auto relative">
+      <div className="flex justify-center mb-4 sm:mb-6">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Star key={i} className="w-6 h-6 text-yellow-400 fill-current" />
+          <Star key={i} className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
         ))}
       </div>
       
-      <blockquote className="text-xl lg:text-2xl text-white/90 text-center leading-relaxed mb-8 min-h-[120px] flex items-center justify-center">
+      <blockquote className="text-base sm:text-lg lg:text-xl xl:text-2xl text-white/90 text-center leading-relaxed mb-4 sm:mb-6 lg:mb-8 min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] flex items-center justify-center">
         "{currentTestimonialData.quote}"
       </blockquote>
       
-      <div className="flex items-center justify-center gap-4 mb-6">
-        <div className="text-4xl">{currentTestimonialData.image}</div>
+      <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="text-3xl sm:text-4xl">{currentTestimonialData.image}</div>
         <div className="text-center">
-          <div className="font-bold text-white text-lg">
+          <div className="font-bold text-white text-base sm:text-lg">
             {currentTestimonialData.name}
           </div>
-          <div className="text-white/70">
+          <div className="text-white/70 text-sm sm:text-base">
             {currentTestimonialData.role} • {currentTestimonialData.company}
           </div>
         </div>
