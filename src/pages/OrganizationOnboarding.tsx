@@ -81,7 +81,7 @@ const OrganizationOnboarding = () => {
         return;
       }
       if (organization?.onboarding_completed_at || organization?.onboarding_skipped_at) {
-        navigate('/dashboard');
+        navigate('/profile', { replace: true });
         return;
       }
     }
