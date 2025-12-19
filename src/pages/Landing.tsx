@@ -43,7 +43,15 @@ const Landing = memo(() => {
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const navigate = useNavigate();
-  const { user, primaryRole } = useAuth();
+  const { user, primaryRole, loading } = useAuth();
+
+  // Auto-redirect logged-in users to their respective dashboards
+  useEffect(() => {
+    if (!loading && user && primaryRole) {
+      const dashboardRoute = primaryRole === 'entrepreneur' ? '/dashboard' : '/advisor-dashboard';
+      navigate(dashboardRoute, { replace: true });
+    }
+  }, [user, primaryRole, loading, navigate]);
 
   // Hero images array - optimized for performance
   const heroImages = [
