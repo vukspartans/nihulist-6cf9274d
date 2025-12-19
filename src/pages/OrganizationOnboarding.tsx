@@ -198,21 +198,23 @@ const OrganizationOnboarding = () => {
           title: 'נשמר',
           description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
         });
-        navigate('/dashboard');
       } else {
+        // Even if save fails, allow user to continue - they can complete onboarding later
         toast({
-          title: 'שגיאה',
-          description: 'לא ניתן לשמור את הנתונים. נסה שוב.',
-          variant: 'destructive'
+          title: 'המשך ללא שמירה',
+          description: 'תוכל להשלים את פרטי הארגון מאוחר יותר בהגדרות',
         });
       }
+      // Always navigate to dashboard
+      navigate('/dashboard');
     } catch (err) {
       console.error('[Onboarding] Skip error:', err);
+      // Fallback: navigate to dashboard anyway with a warning
       toast({
-        title: 'שגיאה',
-        description: 'אירעה שגיאה בשמירת הנתונים',
-        variant: 'destructive'
+        title: 'המשך ללא שמירה',
+        description: 'תוכל להשלים את פרטי הארגון מאוחר יותר בהגדרות',
       });
+      navigate('/dashboard');
     } finally {
       setIsSubmitting(false);
     }
