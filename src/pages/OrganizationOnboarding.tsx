@@ -145,7 +145,8 @@ const OrganizationOnboarding = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return organizationName.trim().length > 0 && registrationNumber.trim().length > 0;
+        // Only org name is required
+        return organizationName.trim().length > 0;
       case 2:
       case 3:
       case 4:
@@ -168,31 +169,43 @@ const OrganizationOnboarding = () => {
   };
 
   const handleSkip = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
+    
     try {
       // Create minimal organization and mark as skipped
       const orgData: OrganizationInput = {
-        name: organizationName || (profile as any)?.company_name || 'My Organization',
+        name: organizationName.trim() || (profile as any)?.company_name || 'הארגון שלי',
         type: 'entrepreneur',
         registration_number: registrationNumber || undefined,
         country,
         onboarding_skipped_at: new Date().toISOString()
       };
 
+      let success = false;
       if (organization) {
-        await updateOrganization({
+        success = await updateOrganization({
           ...orgData,
           onboarding_skipped_at: new Date().toISOString()
         });
       } else {
-        await createOrganization(orgData);
+        const newOrg = await createOrganization(orgData);
+        success = !!newOrg;
       }
 
-      toast({
-        title: 'נשמר',
-        description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
-      });
-      navigate('/dashboard');
+      if (success) {
+        toast({
+          title: 'נשמר',
+          description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'שגיאה',
+          description: 'לא ניתן לשמור את הנתונים. נסה שוב.',
+          variant: 'destructive'
+        });
+      }
     } catch (err) {
       console.error('[Onboarding] Skip error:', err);
       toast({
@@ -206,10 +219,12 @@ const OrganizationOnboarding = () => {
   };
 
   const handleComplete = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
+    
     try {
       const orgData: OrganizationInput = {
-        name: organizationName,
+        name: organizationName.trim(),
         type: 'entrepreneur',
         registration_number: registrationNumber || undefined,
         country,
@@ -227,17 +242,27 @@ const OrganizationOnboarding = () => {
         onboarding_completed_at: new Date().toISOString()
       };
 
+      let success = false;
       if (organization) {
-        await updateOrganization(orgData);
+        success = await updateOrganization(orgData);
       } else {
-        await createOrganization(orgData);
+        const newOrg = await createOrganization(orgData);
+        success = !!newOrg;
       }
 
-      toast({
-        title: 'הארגון נוצר בהצלחה!',
-        description: 'ברוכים הבאים לניהוליסט'
-      });
-      navigate('/dashboard');
+      if (success) {
+        toast({
+          title: 'הארגון נוצר בהצלחה!',
+          description: 'ברוכים הבאים לניהוליסט'
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'שגיאה',
+          description: 'לא ניתן לשמור את הנתונים. נסה שוב.',
+          variant: 'destructive'
+        });
+      }
     } catch (err) {
       console.error('[Onboarding] Complete error:', err);
       toast({
@@ -319,40 +344,46 @@ const OrganizationOnboarding = () => {
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="orgName">שם הארגון *</Label>
+                  <Label htmlFor="orgName" className="text-right block">שם הארגון *</Label>
                   <Input
                     id="orgName"
                     placeholder="שם החברה / הארגון"
                     value={organizationName}
                     onChange={(e) => setOrganizationName(e.target.value)}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="regNumber">מספר ח.פ. *</Label>
+                  <Label htmlFor="regNumber" className="text-right block">מספר ח.פ.</Label>
                   <Input
                     id="regNumber"
                     placeholder="מספר רישום החברה"
                     value={registrationNumber}
                     onChange={(e) => setRegistrationNumber(e.target.value)}
+                    className="text-right"
+                    dir="rtl"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    מספר החברה ברשם החברות
+                  <p className="text-xs text-muted-foreground text-right">
+                    מספר החברה ברשם החברות (אופציונלי)
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="location">עיר</Label>
+                    <Label htmlFor="location" className="text-right block">עיר</Label>
                     <Input
                       id="location"
                       placeholder="עיר הרישום"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
+                      className="text-right"
+                      dir="rtl"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="foundingYear">שנת הקמה</Label>
+                    <Label htmlFor="foundingYear" className="text-right block">שנת הקמה</Label>
                     <Input
                       id="foundingYear"
                       type="number"
@@ -361,6 +392,8 @@ const OrganizationOnboarding = () => {
                       onChange={(e) => setFoundingYear(e.target.value ? parseInt(e.target.value) : undefined)}
                       min={1900}
                       max={new Date().getFullYear()}
+                      className="text-right"
+                      dir="rtl"
                     />
                   </div>
                 </div>
@@ -370,29 +403,31 @@ const OrganizationOnboarding = () => {
             {/* Step 2: Activity Categories */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
-                    {CATEGORY_KEYS.map((categoryKey) => {
-                      const hasSelections = (selectedCategories[categoryKey]?.length || 0) > 0;
-                      return (
-                        <TabsTrigger 
-                          key={categoryKey} 
-                          value={categoryKey}
-                          className="text-xs sm:text-sm relative data-[state=active]:bg-background"
-                        >
-                          {ORGANIZATION_ACTIVITY_CATEGORIES[categoryKey].label}
-                          {hasSelections && (
-                            <Badge 
-                              variant="default" 
-                              className="absolute -top-1 -right-1 h-4 min-w-4 p-0 text-[10px] flex items-center justify-center"
-                            >
-                              {selectedCategories[categoryKey].length}
-                            </Badge>
-                          )}
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
+                <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <TabsList className="flex flex-nowrap sm:flex-wrap h-auto gap-1 bg-muted/50 p-1 min-w-max sm:min-w-0">
+                      {CATEGORY_KEYS.map((categoryKey) => {
+                        const hasSelections = (selectedCategories[categoryKey]?.length || 0) > 0;
+                        return (
+                          <TabsTrigger 
+                            key={categoryKey} 
+                            value={categoryKey}
+                            className="text-xs sm:text-sm relative data-[state=active]:bg-background whitespace-nowrap px-2 sm:px-3"
+                          >
+                            {ORGANIZATION_ACTIVITY_CATEGORIES[categoryKey].label}
+                            {hasSelections && (
+                              <Badge 
+                                variant="default" 
+                                className="absolute -top-1 -right-1 h-4 min-w-4 p-0 text-[10px] flex items-center justify-center"
+                              >
+                                {selectedCategories[categoryKey].length}
+                              </Badge>
+                            )}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </div>
 
                   {CATEGORY_KEYS.map((categoryKey) => {
                     const category = ORGANIZATION_ACTIVITY_CATEGORIES[categoryKey];
@@ -402,12 +437,13 @@ const OrganizationOnboarding = () => {
                     return (
                       <TabsContent key={categoryKey} value={categoryKey} className="mt-4">
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{category.label}</span>
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-sm font-medium text-right">{category.label}</span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => allSelected ? clearCategory(categoryKey) : selectAllInCategory(categoryKey)}
+                              className="text-xs sm:text-sm"
                             >
                               {allSelected ? 'נקה הכל' : 'בחר הכל'}
                             </Button>
@@ -421,7 +457,7 @@ const OrganizationOnboarding = () => {
                                 onClick={() => toggleSubcategory(categoryKey, sub)}
                               >
                                 <Checkbox checked={selected.includes(sub)} />
-                                <span className="text-sm">{sub}</span>
+                                <span className="text-sm flex-1 text-right">{sub}</span>
                               </div>
                             ))}
                           </div>
@@ -453,14 +489,14 @@ const OrganizationOnboarding = () => {
               <div className="space-y-6">
                 {/* Primary Category Selection */}
                 <div className="space-y-3">
-                  <Label>תחום פעילות עיקרי</Label>
-                  <Select value={primaryCategory} onValueChange={setPrimaryCategory}>
-                    <SelectTrigger>
+                  <Label className="text-right block">תחום פעילות עיקרי</Label>
+                  <Select value={primaryCategory} onValueChange={setPrimaryCategory} dir="rtl">
+                    <SelectTrigger className="text-right">
                       <SelectValue placeholder="בחר תחום עיקרי" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir="rtl" className="bg-background">
                       {CATEGORY_KEYS.map((key) => (
-                        <SelectItem key={key} value={key}>
+                        <SelectItem key={key} value={key} className="text-right">
                           {ORGANIZATION_ACTIVITY_CATEGORIES[key].label}
                         </SelectItem>
                       ))}
@@ -471,8 +507,8 @@ const OrganizationOnboarding = () => {
                 {/* Dynamic Activity Question */}
                 {primaryCategory && (
                   <div className="space-y-3">
-                    <Label>{ORGANIZATION_ACTIVITY_CATEGORIES[primaryCategory].activityQuestion}</Label>
-                    <RadioGroup value={activityScope} className="space-y-2">
+                    <Label className="text-right block">{ORGANIZATION_ACTIVITY_CATEGORIES[primaryCategory].activityQuestion}</Label>
+                    <RadioGroup value={activityScope} className="space-y-2" dir="rtl">
                       {ORGANIZATION_ACTIVITY_CATEGORIES[primaryCategory].activityOptions.map((option) => (
                         <div
                           key={option.label}
@@ -481,7 +517,7 @@ const OrganizationOnboarding = () => {
                           onClick={() => handleActivityScopeSelect(option)}
                         >
                           <RadioGroupItem value={option.label} id={option.label} />
-                          <Label htmlFor={option.label} className="cursor-pointer flex-1">
+                          <Label htmlFor={option.label} className="cursor-pointer flex-1 text-right">
                             {option.label}
                           </Label>
                         </div>
@@ -492,20 +528,20 @@ const OrganizationOnboarding = () => {
 
                 {/* Activity Regions */}
                 <div className="space-y-3">
-                  <Label className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2 justify-end">
+                    <span>אזורי פעילות</span>
                     <MapPin className="w-4 h-4" />
-                    אזורי פעילות
                   </Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ACTIVITY_REGIONS.map((region) => (
                       <div
                         key={region}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors text-sm
+                        className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors text-sm
                           ${activityRegions.includes(region) ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'}`}
                         onClick={() => toggleRegion(region)}
                       >
                         <Checkbox checked={activityRegions.includes(region)} />
-                        <span>{region}</span>
+                        <span className="flex-1 text-right text-xs sm:text-sm">{region}</span>
                       </div>
                     ))}
                   </div>
@@ -517,9 +553,9 @@ const OrganizationOnboarding = () => {
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2 justify-end">
+                    <span>טלפון המשרד</span>
                     <Phone className="w-4 h-4" />
-                    טלפון המשרד
                   </Label>
                   <Input
                     id="phone"
@@ -527,21 +563,23 @@ const OrganizationOnboarding = () => {
                     placeholder="03-1234567"
                     value={officePhone}
                     onChange={(e) => setOfficePhone(e.target.value)}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="employees" className="flex items-center gap-2">
+                  <Label htmlFor="employees" className="flex items-center gap-2 justify-end">
+                    <span>גודל החברה</span>
                     <Users className="w-4 h-4" />
-                    גודל החברה
                   </Label>
-                  <Select value={employeeCount} onValueChange={setEmployeeCount}>
-                    <SelectTrigger>
+                  <Select value={employeeCount} onValueChange={setEmployeeCount} dir="rtl">
+                    <SelectTrigger className="text-right">
                       <SelectValue placeholder="מספר עובדים" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir="rtl" className="bg-background">
                       {EMPLOYEE_COUNT_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
+                        <SelectItem key={opt.value} value={opt.value} className="text-right">
                           {opt.label}
                         </SelectItem>
                       ))}
@@ -550,9 +588,9 @@ const OrganizationOnboarding = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="website" className="flex items-center gap-2">
+                  <Label htmlFor="website" className="flex items-center gap-2 justify-end">
+                    <span>אתר אינטרנט</span>
                     <Globe className="w-4 h-4" />
-                    אתר אינטרנט
                   </Label>
                   <Input
                     id="website"
@@ -560,13 +598,14 @@ const OrganizationOnboarding = () => {
                     placeholder="https://www.example.com"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
+                    dir="ltr"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="linkedin" className="flex items-center gap-2">
+                  <Label htmlFor="linkedin" className="flex items-center gap-2 justify-end">
+                    <span>LinkedIn</span>
                     <Linkedin className="w-4 h-4" />
-                    LinkedIn
                   </Label>
                   <Input
                     id="linkedin"
@@ -574,6 +613,7 @@ const OrganizationOnboarding = () => {
                     placeholder="https://linkedin.com/company/..."
                     value={linkedinUrl}
                     onChange={(e) => setLinkedinUrl(e.target.value)}
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -582,31 +622,32 @@ const OrganizationOnboarding = () => {
         </Card>
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between mt-6 gap-3">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between mt-6 gap-3">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentStep === 1 || isSubmitting}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <ChevronRight className="w-4 h-4" />
             הקודם
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             {currentStep < TOTAL_STEPS ? (
               <>
                 <Button
                   variant="ghost"
                   onClick={handleNext}
                   disabled={isSubmitting}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   דלג
                 </Button>
                 <Button
                   onClick={handleNext}
                   disabled={!canProceed() || isSubmitting}
-                  className="flex items-center gap-2"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto order-1 sm:order-2"
                 >
                   הבא
                   <ChevronLeft className="w-4 h-4" />
@@ -616,7 +657,7 @@ const OrganizationOnboarding = () => {
               <Button
                 onClick={handleComplete}
                 disabled={isSubmitting}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 {isSubmitting ? 'שומר...' : 'סיום והמשך'}
