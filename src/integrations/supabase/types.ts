@@ -1438,6 +1438,74 @@ export type Database = {
           },
         ]
       }
+      rfp_request_drafts: {
+        Row: {
+          advisor_type: string
+          created_at: string | null
+          fee_items: Json | null
+          has_been_reviewed: boolean | null
+          id: string
+          optional_fee_items: Json | null
+          payment_terms: Json | null
+          project_id: string
+          request_attachments: Json | null
+          request_content: string | null
+          request_title: string | null
+          service_details_file: Json | null
+          service_details_free_text: string | null
+          service_details_mode: string | null
+          service_scope_items: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          advisor_type: string
+          created_at?: string | null
+          fee_items?: Json | null
+          has_been_reviewed?: boolean | null
+          id?: string
+          optional_fee_items?: Json | null
+          payment_terms?: Json | null
+          project_id: string
+          request_attachments?: Json | null
+          request_content?: string | null
+          request_title?: string | null
+          service_details_file?: Json | null
+          service_details_free_text?: string | null
+          service_details_mode?: string | null
+          service_scope_items?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          advisor_type?: string
+          created_at?: string | null
+          fee_items?: Json | null
+          has_been_reviewed?: boolean | null
+          id?: string
+          optional_fee_items?: Json | null
+          payment_terms?: Json | null
+          project_id?: string
+          request_attachments?: Json | null
+          request_content?: string | null
+          request_title?: string | null
+          service_details_file?: Json | null
+          service_details_free_text?: string | null
+          service_details_mode?: string | null
+          service_scope_items?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_request_drafts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_request_fee_items: {
         Row: {
           charge_type: string | null

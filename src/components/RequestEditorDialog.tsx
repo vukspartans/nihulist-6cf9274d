@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, AlertCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2 } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useRFPDraft } from '@/hooks/useRFPDraft';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,6 +83,7 @@ export const RequestEditorDialog = ({
   hasBeenReviewed = false
 }: RequestEditorDialogProps) => {
   const { toast } = useToast();
+  const { saveDraft, loadDraft, saving } = useRFPDraft(projectId);
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [canAutoClose, setCanAutoClose] = useState(true);
@@ -90,6 +92,7 @@ export const RequestEditorDialog = ({
   const [activeTab, setActiveTab] = useState('main');
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   // Auto-enable preview when AI content is generated
   useEffect(() => {
@@ -152,11 +155,43 @@ export const RequestEditorDialog = ({
     ...initialData
   });
 
+  // Initialize form data and load draft when dialog opens
   useEffect(() => {
-    setFormData({
-      ...defaultData,
-      ...initialData
-    });
+    const loadExistingDraft = async () => {
+      if (isOpen && !draftLoaded) {
+        const draft = await loadDraft(advisorType);
+        if (draft) {
+          setFormData(prev => ({
+            ...defaultData,
+            ...draft,
+            // Preserve initialData overrides if they exist
+            ...initialData
+          }));
+          setDraftLoaded(true);
+        } else {
+          setFormData({
+            ...defaultData,
+            ...initialData
+          });
+          setDraftLoaded(true);
+        }
+      }
+    };
+
+    if (isOpen) {
+      loadExistingDraft();
+    } else {
+      setDraftLoaded(false);
+    }
+  }, [isOpen, advisorType, loadDraft, draftLoaded]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        ...defaultData,
+        ...initialData
+      });
+    }
   }, [initialData, projectName, advisorType]);
 
   // Refresh signed URLs for existing attachments
@@ -505,17 +540,25 @@ export const RequestEditorDialog = ({
     }
   };
 
-  const handleSave = () => {
-    onSave({
+  const handleSave = async () => {
+    const dataToSave = {
       ...formData,
       hasBeenReviewed: true,
       lastEditedAt: new Date()
-    });
-    setIsOpen(false);
-    toast({
-      title: "נשמר בהצלחה",
-      description: `הבקשה עבור "${advisorType}" עודכנה`,
-    });
+    };
+
+    // Save to database first
+    const saved = await saveDraft(advisorType, dataToSave);
+    
+    if (saved) {
+      // Then update parent state
+      onSave(dataToSave);
+      setIsOpen(false);
+      toast({
+        title: "נשמר בהצלחה",
+        description: `הבקשה עבור "${advisorType}" נשמרה במאגר הנתונים`,
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -871,19 +914,23 @@ export const RequestEditorDialog = ({
         </Tabs>
 
         <Alert className="mt-2 flex-shrink-0">
-          <AlertCircle className="h-4 w-4" />
+          <Database className="h-4 w-4" />
           <AlertDescription className="text-right">
-            המידע שתזין כאן יהיה זמין ליועץ במערכת Billding לאחר הכניסה שלו
+            השינויים נשמרים במאגר הנתונים ויישמרו גם לאחר רענון הדף
           </AlertDescription>
         </Alert>
 
         <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4 flex-shrink-0">
-          <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto" disabled={saving}>
             ביטול
           </Button>
-          <Button onClick={handleSave} className="flex items-center justify-center gap-2 w-full sm:w-auto">
-            <Save className="h-4 w-4" />
-            שמור שינויים
+          <Button onClick={handleSave} disabled={saving} className="flex items-center justify-center gap-2 w-full sm:w-auto">
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {saving ? 'שומר...' : 'שמור שינויים'}
           </Button>
         </DialogFooter>
       </DialogContent>
