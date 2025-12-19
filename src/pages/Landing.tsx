@@ -236,11 +236,11 @@ const Landing = memo(() => {
         </div>
         
         <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-20 animate-fade-in">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+          <div className="text-center mb-10 sm:mb-14 lg:mb-20 animate-fade-in">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black mb-4 sm:mb-6">
               <span className="text-foreground">מומחי בנייה ויזמי נדל"ן מאומתים</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-12 sm:mb-16 lg:mb-20">
@@ -280,12 +280,12 @@ const Landing = memo(() => {
         </div>
         
         <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-24 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black mb-8">
+          <div className="text-center mb-10 sm:mb-16 lg:mb-24 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black mb-4 sm:mb-6 lg:mb-8">
               <span className="text-foreground">איך</span>
               <span className="gradient-text"> זה עובד</span>
             </h2>
-            <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
               שלושה צעדים פשוטים למציאת המומחה המושלם לכל פרויקט בנייה ונדל"ן
             </p>
           </div>
@@ -300,7 +300,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
                   <FileText className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">צור פרויקט בנייה</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">צור פרויקט בנייה</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -310,7 +310,7 @@ const Landing = memo(() => {
             </Card>
 
             {/* Step 2 */}
-            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <Card className="text-center p-6 sm:p-8 lg:p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.4s"}}>
               <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 2
               </div>
@@ -318,7 +318,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "1s"}}>
                   <Search className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">התאמה עם מומחים</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">התאמה עם מומחים</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -328,7 +328,7 @@ const Landing = memo(() => {
             </Card>
 
             {/* Step 3 */}
-            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.6s"}}>
+            <Card className="text-center p-6 sm:p-8 lg:p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.6s"}}>
               <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 3
               </div>
@@ -336,7 +336,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "2s"}}>
                   <MessageSquare className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">השווה ובחר</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">השווה ובחר</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -349,27 +349,27 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* Audience Section */}
-      <section className="py-32 lg:py-40 bg-muted/30 relative overflow-hidden">
+      <section className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-muted/30 relative overflow-hidden">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-24 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black mb-8">
+          <div className="text-center mb-10 sm:mb-16 lg:mb-24 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black mb-4 sm:mb-6 lg:mb-8">
               <span className="text-foreground">למי</span>
               <span className="gradient-text"> אנחנו מתאימים?</span>
             </h2>
           </div>
           
-          <div className="grid lg:grid-cols-2 gap-16 max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-16 max-w-7xl mx-auto">
             {/* For Entrepreneurs */}
-            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.2s"}}>
+            <Card className="p-6 sm:p-8 lg:p-12 xl:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.2s"}}>
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent"></div>
               <CardHeader className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float">
-                  <Briefcase className="w-10 h-10 text-white" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-primary to-tech-purple rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-4 sm:mb-6 lg:mb-8 animate-float">
+                  <Briefcase className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">ליזמי נדל"ן</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">ליזמי נדל"ן</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 relative">
-                <p className="text-xl text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-6 sm:space-y-8 relative">
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   מצא את מומחי הבנייה והנדל"ן הנכונים לפרויקט שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
                 <ul className="space-y-4 text-right">
@@ -397,16 +397,16 @@ const Landing = memo(() => {
             </Card>
 
             {/* For Consultants */}
-            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.4s"}}>
+            <Card className="p-6 sm:p-8 lg:p-12 xl:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.4s"}}>
               <div className="absolute inset-0 bg-gradient-to-br from-tech-purple/5 to-transparent"></div>
               <CardHeader className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float" style={{animationDelay: "1s"}}>
-                  <UserCheck className="w-10 h-10 text-white" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-tech-purple to-primary rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-4 sm:mb-6 lg:mb-8 animate-float" style={{animationDelay: "1s"}}>
+                  <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">למומחי בנייה</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">למומחי בנייה</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 relative">
-                <p className="text-xl text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-6 sm:space-y-8 relative">
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   הגע ליזמי נדל"ן והצמח את עסק הבנייה שלך. קבל התאמות עם פרויקטי בנייה איכותיים.
                 </p>
                 <ul className="space-y-4 text-right">
@@ -438,7 +438,7 @@ const Landing = memo(() => {
       </section>
 
       {/* Testimonials Section - Lazy Loaded with Optimized Component */}
-      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-primary via-tech-purple to-primary relative overflow-hidden">
+      <LazySection className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary via-tech-purple to-primary relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-float"></div>
@@ -446,11 +446,11 @@ const Landing = memo(() => {
         </div>
         
         <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-20 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black text-white mb-8">
+          <div className="text-center mb-10 sm:mb-14 lg:mb-20 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-4 sm:mb-6 lg:mb-8">
               מה אומרים <span className="text-tech-purple-light">הלקוחות שלנו?</span>
             </h2>
-            <p className="text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed">
               שמע את הסיפורים של מומחי בנייה ויזמי נדל"ן שהצליחו להגשים את החלומות שלהם
             </p>
           </div>
@@ -466,15 +466,15 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* Final CTA Section */}
-      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
+      <LazySection className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
         <div className="container mx-auto px-4 lg:px-6 text-center">
-          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black leading-tight">
+          <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight">
               <span className="text-foreground">מוכן לשדרג</span>
               <br />
               <span className="text-tech-purple-light">את העסק שלך?</span>
             </h2>
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
               הצטרף לאלפי יזמים ויועצים שכבר חווים את העתיד של שיתוף פעולה מקצועי
             </p>
             
@@ -483,9 +483,9 @@ const Landing = memo(() => {
                 variant="hero" 
                 size="xl" 
                 onClick={() => setShowUserTypeDialog(true)}
-                className="text-xl px-12 py-6 bg-primary text-white hover:bg-primary/90 transition-transform duration-200 hover:scale-115"
+                className="text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 bg-primary text-white hover:bg-primary/90 transition-transform duration-200 hover:scale-115 w-full sm:w-auto"
               >
-                <Zap className="w-6 h-6 ml-2" />
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
                 התחל את הפרויקט הראשון היום
               </Button>
               
@@ -493,9 +493,9 @@ const Landing = memo(() => {
                 variant="outline" 
                 size="xl" 
                 onClick={() => setShowDemoVideo(true)}
-                className="text-xl px-12 py-6 border-2 hover-scale"
+                className="text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 border-2 hover-scale w-full sm:w-auto"
               >
-                <Play className="w-6 h-6 ml-2" />
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
                 צפה בהדגמה
               </Button>
             </div>
@@ -520,10 +520,10 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* FAQ Preview Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-20 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black mb-4 sm:mb-6">
               <span className="text-foreground">שאלות</span>
               <span className="gradient-text"> נפוצות</span>
             </h2>
