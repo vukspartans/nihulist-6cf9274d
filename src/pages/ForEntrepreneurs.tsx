@@ -132,22 +132,22 @@ const ForEntrepreneurs = () => {
               חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-row gap-2 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale"
+                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-10 py-4 sm:py-6 hover-scale"
               >
-                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
-                התחל חינם עכשיו
+                <Zap className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2" />
+                התחל חינם
               </Button>
               
               <Button 
                 variant="outline" 
                 size="lg"
-                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale hidden sm:flex"
+                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-10 py-4 sm:py-6 hover-scale"
               >
-                <BarChart className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
+                <BarChart className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2" />
                 צפה בדמו
               </Button>
             </div>
@@ -313,15 +313,15 @@ const ForEntrepreneurs = () => {
               הצטרף לאלפי יזמים שכבר מצאו את היועצים המושלמים לעסק שלהם
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
+            <div className="flex flex-row gap-2 sm:gap-6 justify-center">
               <Button 
                 variant="hero" 
                 size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="w-full sm:w-auto text-base sm:text-xl px-8 sm:px-12 py-5 sm:py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
+                className="flex-1 sm:flex-none text-sm sm:text-xl px-4 sm:px-12 py-4 sm:py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
               >
-                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2 text-white/80 group-hover:text-white transition-colors" />
-                <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו - חינם</span>
+                <Zap className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2 text-white/80 group-hover:text-white transition-colors" />
+                <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו</span>
               </Button>
             </div>
             
