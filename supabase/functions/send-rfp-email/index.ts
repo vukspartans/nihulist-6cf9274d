@@ -147,24 +147,26 @@ serve(async (req) => {
         // Get advisor details
         const { data: advisor, error: advisorError } = await supabase
           .from('advisors')
-          .select(`
-            company_name,
-            user_id,
-            profiles (
-              name
-            )
-          `)
+          .select('company_name, user_id')
           .eq('id', invite.advisor_id)
           .single()
 
         if (advisorError || !advisor) {
-          console.error('[send-rfp-email] Advisor not found:', invite.advisor_id)
+          console.error('[send-rfp-email] Advisor not found:', invite.advisor_id, advisorError)
           continue
         }
 
-        const advisorData = advisor as unknown as Advisor & { profiles: Profile }
-        const advisorName = advisorData.profiles?.name || ''
-        const companyName = advisorData.company_name || 'היועץ'
+        // Get profile separately using user_id (correct join)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('user_id', advisor.user_id)
+          .single()
+
+        const advisorName = profile?.name || ''
+        const companyName = advisor.company_name || 'היועץ'
+        
+        console.log(`[send-rfp-email] Processing advisor: ${companyName}, name: ${advisorName}, email: ${invite.email}`)
 
         // Format deadline
         const deadlineDate = new Date(invite.deadline_at).toLocaleDateString('he-IL', {
