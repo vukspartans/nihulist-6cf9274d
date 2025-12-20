@@ -183,22 +183,22 @@ const ForConsultants = () => {
               הצטרף לרשת מומחי הבנייה המובילה והתחבר עם יזמי נדל"ן איכותיים שמחפשים את המומחיות שלך.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-row gap-2 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth?type=advisor')}
-                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 hover-scale"
+                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-8 py-4 sm:py-6 hover-scale"
               >
-                <UserCheck className="w-5 h-5 ml-2" />
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2" />
                 הצטרף עכשיו
               </Button>
               
               <Button 
                 variant="outline" 
                 size="lg"
-                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 hover-scale hidden sm:flex"
+                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-8 py-4 sm:py-6 hover-scale"
               >
-                <BarChart className="w-5 h-5 ml-2" />
+                <BarChart className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2" />
                 צפה איך זה עובד
               </Button>
             </div>
