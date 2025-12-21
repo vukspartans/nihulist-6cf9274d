@@ -147,7 +147,7 @@ Ultra-modern design tokens for unicorn-level brand presence
   
   /* Hebrew font fallbacks */
   .font-hebrew {
-    font-family: 'Inter', 'Segoe UI', 'Noto Sans Hebrew', 'Arial Hebrew', system-ui, sans-serif;
+    font-family: 'Inter', 'Open Sans', 'Noto Sans Hebrew', 'Arial Hebrew', system-ui, sans-serif;
   }
 
   /* Premium animation system */
