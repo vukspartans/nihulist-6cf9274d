@@ -217,7 +217,55 @@ serve(async (req) => {
         throw new Error('Cannot delete your own account');
       }
 
-      // Delete the user (this will cascade to profiles and user_roles)
+      // First, get the advisor_id if user is an advisor
+      const { data: advisorData } = await supabaseAdmin
+        .from('advisors')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Delete related data in order (to respect foreign key constraints)
+      // 1. Delete advisor team members if advisor exists
+      if (advisorData?.id) {
+        console.log('Deleting advisor team members for advisor:', advisorData.id);
+        await supabaseAdmin
+          .from('advisor_team_members')
+          .delete()
+          .eq('advisor_id', advisorData.id);
+      }
+
+      // 2. Delete company members
+      console.log('Deleting company members for user:', userId);
+      await supabaseAdmin
+        .from('company_members')
+        .delete()
+        .eq('user_id', userId);
+
+      // 3. Delete user roles
+      console.log('Deleting user roles for user:', userId);
+      await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      // 4. Delete advisor record if exists
+      if (advisorData?.id) {
+        console.log('Deleting advisor record:', advisorData.id);
+        await supabaseAdmin
+          .from('advisors')
+          .delete()
+          .eq('id', advisorData.id);
+      }
+
+      // 5. Delete profile
+      console.log('Deleting profile for user:', userId);
+      await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      // 6. Finally delete the auth user
+      console.log('Deleting auth user:', userId);
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (deleteError) {
