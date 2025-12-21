@@ -178,7 +178,7 @@ serve(async (req) => {
         })
 
         // Build login URL with context
-        const loginUrl = `https://billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
+        const loginUrl = `https://www.billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
 
         // Parse request files if they exist
         let requestFiles = null
