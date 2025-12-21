@@ -25,13 +25,7 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Img
-            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/advisor-assets/billding-logo.png"
-            width="120"
-            height="40"
-            alt="Billding"
-            style={logo}
-          />
+          <Text style={logoText}>Billding</Text>
         </Section>
         
         {children}
@@ -63,6 +57,7 @@ const main = {
   backgroundColor: '#f6f9fc',
   fontFamily:
     '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+  direction: 'rtl' as const,
 }
 
 const container = {
@@ -71,6 +66,8 @@ const container = {
   padding: '20px 0 48px',
   marginBottom: '64px',
   maxWidth: '600px',
+  direction: 'rtl' as const,
+  textAlign: 'right' as const,
 }
 
 const header = {
@@ -80,8 +77,13 @@ const header = {
   marginBottom: '24px',
 }
 
-const logo = {
+const logoText = {
+  fontSize: '28px',
+  fontWeight: 'bold' as const,
+  color: '#2563eb',
+  textAlign: 'center' as const,
   margin: '0 auto 16px',
+  letterSpacing: '-0.5px',
 }
 
 const footerSection = {

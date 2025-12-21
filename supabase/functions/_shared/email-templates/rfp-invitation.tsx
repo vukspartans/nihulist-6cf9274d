@@ -43,7 +43,7 @@ export const RFPInvitationEmail = ({
       </Text>
       
       <Text style={text}>
-        נשמח לקבל ממך הצעת מחיר עבור הפרויקט הבא:
+        נשמח לקבל ממכם הצעת מחיר עבור הפרויקט הבא:
       </Text>
       
       <Section style={projectCard}>
@@ -57,16 +57,14 @@ export const RFPInvitationEmail = ({
           <strong>מיקום:</strong> {projectLocation}
         </Text>
         <Text style={projectDetail}>
-          <strong>תאריך אחרון להגשה:</strong> {deadlineDate}
+          <strong>מועד אחרון להגשה:</strong> {deadlineDate}
         </Text>
       </Section>
       
       {requestTitle && (
-        <>
-          <Heading as="h3" style={h3}>
-            {requestTitle}
-          </Heading>
-        </>
+        <Heading as="h3" style={h3}>
+          {requestTitle}
+        </Heading>
       )}
       
       {requestContent && (
@@ -82,7 +80,7 @@ export const RFPInvitationEmail = ({
           <Text style={filesHeader}>קבצים מצורפים:</Text>
           {requestFiles.map((file, index) => (
             <Text key={index} style={fileItem}>
-              📎 <Link href={file.url} style={fileLink}>{file.name}</Link>
+              <Link href={file.url} style={fileLink}>{file.name}</Link>
             </Text>
           ))}
         </Section>
@@ -92,7 +90,7 @@ export const RFPInvitationEmail = ({
       
       <Section style={ctaSection}>
         <Text style={ctaText}>
-          להגשת הצעת מחיר, יש להיכנס למערכת:
+          להגשת ההצעה, נא להיכנס למערכת:
         </Text>
         <Button
           href={loginUrl}
@@ -103,16 +101,16 @@ export const RFPInvitationEmail = ({
       </Section>
       
       <Text style={helpText}>
-        לא מעוניין/ת להגיש הצעה?{' '}
+        לא מעוניינים להגיש הצעה?{' '}
         <Link href={loginUrl} style={link}>
-          לחץ כאן לסירוב מנומק
+          לסירוב מנומק
         </Link>
       </Text>
       
       <Hr style={hr} />
       
       <Text style={footerNote}>
-        <strong>שים לב:</strong> הצעה שתוגש לאחר המועד האחרון לא תובא בחשבון.
+        <strong>לתשומת לבכם:</strong> הצעה שתוגש לאחר המועד האחרון לא תובא בחשבון.
       </Text>
     </Section>
   </EmailLayout>
@@ -120,6 +118,8 @@ export const RFPInvitationEmail = ({
 
 const content = {
   padding: '0 24px',
+  direction: 'rtl' as const,
+  textAlign: 'right' as const,
 }
 
 const h1 = {
@@ -128,6 +128,7 @@ const h1 = {
   fontWeight: 'bold',
   margin: '24px 0',
   textAlign: 'center' as const,
+  direction: 'rtl' as const,
 }
 
 const h2 = {
@@ -135,6 +136,8 @@ const h2 = {
   fontSize: '22px',
   fontWeight: 'bold',
   margin: '8px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const h3 = {
@@ -142,6 +145,8 @@ const h3 = {
   fontSize: '18px',
   fontWeight: 'bold',
   margin: '20px 0 12px',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const text = {
@@ -149,6 +154,8 @@ const text = {
   fontSize: '16px',
   lineHeight: '26px',
   margin: '12px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const projectCard = {
@@ -157,6 +164,8 @@ const projectCard = {
   borderRadius: '8px',
   padding: '20px',
   margin: '24px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const projectDetail = {
@@ -164,6 +173,8 @@ const projectDetail = {
   fontSize: '15px',
   lineHeight: '24px',
   margin: '8px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const requestSection = {
@@ -172,6 +183,8 @@ const requestSection = {
   borderRadius: '8px',
   padding: '16px',
   margin: '20px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const requestText = {
@@ -180,10 +193,14 @@ const requestText = {
   lineHeight: '24px',
   margin: '0',
   whiteSpace: 'pre-wrap' as const,
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const filesSection = {
   margin: '20px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const filesHeader = {
@@ -191,12 +208,16 @@ const filesHeader = {
   fontSize: '15px',
   fontWeight: 'bold',
   margin: '0 0 8px',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const fileItem = {
   color: '#525252',
   fontSize: '14px',
   margin: '4px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 const fileLink = {
@@ -212,6 +233,7 @@ const hr = {
 const ctaSection = {
   textAlign: 'center' as const,
   margin: '32px 0',
+  direction: 'rtl' as const,
 }
 
 const ctaText = {
@@ -219,6 +241,8 @@ const ctaText = {
   fontSize: '16px',
   fontWeight: '600',
   margin: '0 0 16px',
+  textAlign: 'center' as const,
+  direction: 'rtl' as const,
 }
 
 const button = {
@@ -229,8 +253,10 @@ const button = {
   fontWeight: 'bold',
   textDecoration: 'none',
   textAlign: 'center' as const,
-  display: 'inline-block',
+  display: 'block',
+  width: '100%',
   padding: '14px 28px',
+  direction: 'rtl' as const,
 }
 
 const helpText = {
@@ -238,6 +264,7 @@ const helpText = {
   fontSize: '14px',
   textAlign: 'center' as const,
   margin: '16px 0',
+  direction: 'rtl' as const,
 }
 
 const link = {
@@ -250,6 +277,8 @@ const footerNote = {
   fontSize: '13px',
   lineHeight: '20px',
   margin: '16px 0',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
 }
 
 export default RFPInvitationEmail
