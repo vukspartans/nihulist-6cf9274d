@@ -2,7 +2,6 @@ import {
   Section,
   Text,
   Button,
-  Hr,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 import { EmailLayout } from './layout.tsx'
@@ -44,56 +43,32 @@ export const RFPDeclinedEmail = ({
   };
 
   return (
-    <EmailLayout preview={`יועץ דחה הזמנה לפרויקט ${projectName}`}>
+    <EmailLayout preview={`עדכון לפרויקט ${projectName}`}>
       <Section style={content}>
-        <Text style={heading}>עדכון לגבי הזמנת RFP</Text>
+        <Text style={heading}>עדכון הזמנה</Text>
         
         <Text style={paragraph}>
           שלום {entrepreneurName},
         </Text>
         
         <Text style={paragraph}>
-          {advisorCompany} ({advisorType}) דחה את ההזמנה להציע הצעת מחיר עבור פרויקט <strong>"{projectName}"</strong>.
+          {advisorCompany} ({advisorType}) דחה את ההזמנה לפרויקט "{projectName}".
         </Text>
 
-        <Section style={detailsBox}>
-          <Text style={detailsTitle}>פרטי הדחייה:</Text>
-          <Text style={detailItem}>
-            <strong>יועץ:</strong> {advisorCompany}
-          </Text>
-          <Text style={detailItem}>
-            <strong>סוג היועץ:</strong> {advisorType}
-          </Text>
-          <Text style={detailItem}>
-            <strong>סיבה:</strong> {getReasonText(declineReason)}
-          </Text>
-        </Section>
+        <Text style={detailText}>
+          סיבה: {getReasonText(declineReason)}
+          {declineNote && declineNote.trim() && <><br />הערה: {declineNote}</>}
+        </Text>
 
-        {declineNote && declineNote.trim() && (
-          <Section style={noteBox}>
-            <Text style={noteTitle}>הערת היועץ:</Text>
-            <Text style={noteText}>{declineNote}</Text>
-          </Section>
-        )}
-
-        <Section style={messageBox}>
-          <Text style={messageText}>
-            אל דאגה - ישנם יועצים נוספים זמינים לפרויקט שלך.
-            מומלץ לשלוח הזמנות נוספות ליועצים אחרים כדי לקבל הצעות מחיר.
-          </Text>
-        </Section>
+        <Text style={encourageText}>
+          ישנם יועצים נוספים זמינים לפרויקט.
+        </Text>
 
         <Section style={buttonContainer}>
           <Button href={projectUrl} style={button}>
-            שלח הזמנות נוספות
+            שלח הזמנות
           </Button>
         </Section>
-
-        <Hr style={divider} />
-
-        <Text style={footer}>
-          צוות ניהוליסט כאן לעזור במציאת היועצים המתאימים לפרויקט שלך.
-        </Text>
       </Section>
     </EmailLayout>
   );
@@ -106,7 +81,7 @@ const content = {
 };
 
 const heading = {
-  fontSize: '24px',
+  fontSize: '20px',
   fontWeight: 'bold',
   color: '#1a1a1a',
   marginBottom: '16px',
@@ -114,69 +89,24 @@ const heading = {
 };
 
 const paragraph = {
-  fontSize: '16px',
+  fontSize: '15px',
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
 };
 
-const detailsBox = {
-  backgroundColor: '#fef2f2',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '20px 0',
-  border: '1px solid #fecaca',
-};
-
-const detailsTitle = {
-  fontSize: '18px',
-  fontWeight: 'bold',
-  color: '#1a1a1a',
-  marginBottom: '12px',
-};
-
-const detailItem = {
-  fontSize: '15px',
+const detailText = {
+  fontSize: '14px',
   lineHeight: '22px',
-  color: '#333',
-  margin: '8px 0',
+  color: '#64748b',
+  margin: '16px 0',
 };
 
-const noteBox = {
-  backgroundColor: '#fffbeb',
-  borderRadius: '8px',
-  padding: '16px',
-  margin: '20px 0',
-  border: '1px solid #fcd34d',
-};
-
-const noteTitle = {
-  fontSize: '16px',
-  fontWeight: 'bold',
-  color: '#92400e',
-  marginBottom: '8px',
-};
-
-const noteText = {
-  fontSize: '15px',
+const encourageText = {
+  fontSize: '14px',
   lineHeight: '22px',
-  color: '#78350f',
-  whiteSpace: 'pre-wrap' as const,
-};
-
-const messageBox = {
-  backgroundColor: '#f0f9ff',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '20px 0',
-  border: '1px solid #bae6fd',
-};
-
-const messageText = {
-  fontSize: '15px',
-  lineHeight: '22px',
-  color: '#0c4a6e',
-  textAlign: 'center' as const,
+  color: '#525252',
+  margin: '12px 0',
 };
 
 const buttonContainer = {
@@ -185,7 +115,7 @@ const buttonContainer = {
 };
 
 const button = {
-  backgroundColor: '#6772e5',
+  backgroundColor: '#2563eb',
   borderRadius: '6px',
   color: '#fff',
   fontSize: '16px',
@@ -194,16 +124,4 @@ const button = {
   textAlign: 'center' as const,
   display: 'inline-block',
   padding: '12px 32px',
-};
-
-const divider = {
-  borderColor: '#e6ebf1',
-  margin: '24px 0',
-};
-
-const footer = {
-  fontSize: '14px',
-  color: '#666',
-  lineHeight: '20px',
-  textAlign: 'center' as const,
 };
