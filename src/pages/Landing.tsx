@@ -192,16 +192,12 @@ const Landing = memo(() => {
               <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
                 <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm font-medium text-muted-foreground">
                   <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
-                    <CheckCircle className="w-4 h-4 text-primary" />
-                    +500 פרויקטים
-                  </span>
-                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
-                    <UserCheck className="w-4 h-4 text-primary" />
-                    +1,000 יועצים
-                  </span>
-                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
                     <Shield className="w-4 h-4 text-primary" />
                     אבטחה ארגונית
+                  </span>
+                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    יועצים מאומתים
                   </span>
                 </div>
               </div>
@@ -243,24 +239,7 @@ const Landing = memo(() => {
             <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-12 sm:mb-16 lg:mb-20">
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.1s"}}>
-                <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
-                <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטי בנייה הושלמו</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.2s"}}>
-                <div className="text-4xl lg:text-6xl font-black gradient-text">+1,000</div>
-                <div className="text-sm lg:text-base font-medium text-muted-foreground">מומחי בנייה מאומתים</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.3s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">95%</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">שביעות רצון</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.4s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">24/7</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">תמיכה</div>
-            </div>
-          </div>
+          {/* Stats grid hidden for launch */}
 
           {/* Security Banner */}
           <div className="text-center animate-fade-in" style={{animationDelay: "0.5s"}}>
@@ -437,33 +416,7 @@ const Landing = memo(() => {
         </div>
       </section>
 
-      {/* Testimonials Section - Lazy Loaded with Optimized Component */}
-      <LazySection className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary via-tech-purple to-primary relative overflow-hidden">
-        {/* Background effects */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-tech-purple-light/20 rounded-full blur-3xl animate-float" style={{animationDelay: "2s"}}></div>
-        </div>
-        
-        <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-10 sm:mb-14 lg:mb-20 animate-fade-in">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-4 sm:mb-6 lg:mb-8">
-              מה אומרים <span className="text-tech-purple-light">הלקוחות שלנו?</span>
-            </h2>
-            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed">
-              שמע את הסיפורים של מומחי בנייה ויזמי נדל"ן שהצליחו להגשים את החלומות שלהם
-            </p>
-          </div>
-          
-          <Suspense fallback={
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-pulse text-white text-xl">טוען עדויות...</div>
-            </div>
-          }>
-            <OptimizedTestimonials testimonials={testimonials} />
-          </Suspense>
-        </div>
-      </LazySection>
+      {/* Testimonials Section - Hidden for launch */}
 
       {/* Final CTA Section */}
       <LazySection className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
@@ -475,7 +428,7 @@ const Landing = memo(() => {
               <span className="text-tech-purple-light">את העסק שלך?</span>
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
-              הצטרף לאלפי יזמים ויועצים שכבר חווים את העתיד של שיתוף פעולה מקצועי
+              הצטרף ליזמים ויועצים שחווים את העתיד של שיתוף פעולה מקצועי
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">

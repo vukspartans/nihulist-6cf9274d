@@ -152,19 +152,15 @@ const ForEntrepreneurs = () => {
               </Button>
             </div>
 
-            {/* Trust Indicators */}
+            {/* Trust Indicators - Simplified for launch */}
             <div className="flex flex-wrap justify-center items-center gap-8 text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
               <span className="flex items-center gap-2">
-                <Coins className="w-4 h-4 text-green-500" />
-                ממוצע חיסכון: ₪250K
+                <Shield className="w-4 h-4 text-primary" />
+                יועצים מאומתים
               </span>
               <span className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
-                מהירות: 24 שעות
-              </span>
-              <span className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-500" />
-                דירוג: 4.9/5
+                תגובה מהירה
               </span>
             </div>
           </div>
@@ -219,15 +215,13 @@ const ForEntrepreneurs = () => {
                 <div className="text-8xl animate-pulse">🎯</div>
               </div>
               
-              {/* Floating Stats */}
+              {/* Floating decorations */}
               <div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-lg animate-float">
-                <div className="text-2xl font-bold text-green-500">+300%</div>
-                <div className="text-sm text-muted-foreground">ROI ממוצע</div>
+                <Target className="w-6 h-6 text-primary" />
               </div>
               
               <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-lg animate-float" style={{animationDelay: "1s"}}>
-                <div className="text-2xl font-bold text-primary">72h</div>
-                <div className="text-sm text-muted-foreground">זמן מהיר</div>
+                <Shield className="w-6 h-6 text-tech-purple" />
               </div>
             </div>
           </div>
@@ -258,45 +252,7 @@ const ForEntrepreneurs = () => {
         </div>
       </section>
 
-      {/* Success Stories */}
-      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">סיפורי</span>
-              <span className="gradient-text"> הצלחה</span>
-            </h2>
-            <p className="text-xl text-muted-foreground">יזמים שהצליחו להאיץ את העסק עם היועצים הנכונים</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6 sm:p-8 lg:p-12 relative overflow-hidden hover-scale animate-scale-in" style={{animationDelay: `${index * 0.2}s`}}>
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-green-100 text-green-800">
-                    חסך {testimonial.savings}
-                  </Badge>
-                </div>
-                
-                <div className="mt-8 space-y-6">
-                  <div className="flex text-yellow-500 text-2xl">
-                    {"★".repeat(5)}
-                  </div>
-                  
-                  <blockquote className="text-xl italic text-muted-foreground leading-relaxed">
-                    "{testimonial.quote}"
-                  </blockquote>
-                  
-                  <div>
-                    <div className="font-bold text-xl">{testimonial.name}</div>
-                    <div className="text-muted-foreground">{testimonial.title}</div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Success Stories - Hidden for launch */}
 
       {/* CTA Section */}
       <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-gradient-to-r from-primary via-tech-purple to-primary relative overflow-hidden">
@@ -310,7 +266,7 @@ const ForEntrepreneurs = () => {
             </h2>
             
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              הצטרף לאלפי יזמים שכבר מצאו את היועצים המושלמים לעסק שלהם
+              הצטרף ליזמים שמצאו את היועצים המושלמים לעסק שלהם
             </p>
             
             <div className="flex flex-row gap-2 sm:gap-6 justify-center">
