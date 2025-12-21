@@ -442,15 +442,6 @@ const Landing = memo(() => {
                 התחל את הפרויקט הראשון היום
               </Button>
               
-              <Button 
-                variant="outline" 
-                size="xl" 
-                onClick={() => setShowDemoVideo(true)}
-                className="text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 border-2 hover-scale w-full sm:w-auto"
-              >
-                <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
-                צפה בהדגמה
-              </Button>
             </div>
             
             {/* Trust indicators */}

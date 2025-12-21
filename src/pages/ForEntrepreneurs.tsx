@@ -142,14 +142,6 @@ const ForEntrepreneurs = () => {
                 התחל חינם
               </Button>
               
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-10 py-4 sm:py-6 hover-scale"
-              >
-                <BarChart className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2" />
-                צפה בדמו
-              </Button>
             </div>
 
             {/* Trust Indicators - Simplified for launch */}
