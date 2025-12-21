@@ -126,7 +126,7 @@ serve(async (req) => {
         const allRecipients = [advisorProfile.email, ...teamEmails];
 
         // Submit URL - use advisor dashboard
-        const submitUrl = `https://www.billding.ai/advisor-dashboard`;
+        const submitUrl = `https://billding.ai/advisor-dashboard`;
 
         // Render email
         const html = await renderAsync(
