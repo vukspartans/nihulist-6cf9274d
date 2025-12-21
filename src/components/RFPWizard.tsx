@@ -29,6 +29,7 @@ import { useRFP } from '@/hooks/useRFP';
 import { useRFPDraft } from '@/hooks/useRFPDraft';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sanitizeText, sanitizeHtml } from '@/utils/inputSanitization';
+import { PRODUCTION_URL } from '@/utils/urls';
 
 interface RFPWizardProps {
   projectId: string;
@@ -215,7 +216,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const typeData = requestDataByType[firstType];
     const emailSubject = typeData?.emailSubject || `בקשה להצעת מחיר - ${projectName}`;
     const emailBodyText = typeData?.emailBody || rfpContent.content;
-    const loginUrl = `${window.location.origin}/auth?type=advisor&mode=login`;
+    const loginUrl = `${PRODUCTION_URL}/auth?type=advisor&mode=login`;
     
     // Extract request data - sanitize before sending
     const requestTitle = typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined;
