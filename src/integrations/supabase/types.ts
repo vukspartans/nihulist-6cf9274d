@@ -1765,7 +1765,9 @@ export type Database = {
           id: string
           message: string | null
           page_url: string | null
+          phone: string | null
           rating: number
+          status: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -1775,7 +1777,9 @@ export type Database = {
           id?: string
           message?: string | null
           page_url?: string | null
+          phone?: string | null
           rating: number
+          status?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1785,7 +1789,9 @@ export type Database = {
           id?: string
           message?: string | null
           page_url?: string | null
+          phone?: string | null
           rating?: number
+          status?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
