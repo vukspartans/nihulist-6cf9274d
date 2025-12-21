@@ -285,4 +285,20 @@ Ultra-modern design tokens for unicorn-level brand presence
   [dir="rtl"] .flip-rtl-180 {
     transform: rotate(180deg);
   }
+
+  /* Feedback widget attention animation */
+  @keyframes attention-pulse {
+    0%, 100% { 
+      transform: translateX(0) translateY(-50%);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    50% { 
+      transform: translateX(4px) translateY(-50%);
+      box-shadow: 0 0 25px hsl(var(--primary) / 0.5);
+    }
+  }
+
+  .animate-attention-pulse {
+    animation: attention-pulse 1.5s ease-in-out infinite;
+  }
 }
