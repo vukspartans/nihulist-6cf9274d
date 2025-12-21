@@ -51,23 +51,19 @@ const ForConsultants = () => {
   const benefits = [
     { 
       title: "פרויקטים איכותיים", 
-      description: "רק לקוחות רציניים עם תקציבים אמיתיים ודרישות ברורות",
-      stat: "₪50K+ ממוצע פרויקט"
+      description: "רק לקוחות רציניים עם תקציבים אמיתיים ודרישות ברורות"
     },
     { 
       title: "תשלומים מובטחים", 
-      description: "מערכת תשלומים מאובטחת עם ערבויות תשלום",
-      stat: "100% ביטחון תשלום"
+      description: "מערכת תשלומים מאובטחת עם ערבויות תשלום"
     },
     { 
       title: "גמישות מלאה", 
-      description: "עבוד בקצב שלך, בחר פרויקטים ולקוחות שמתאימים לך",
-      stat: "לוחות זמנים גמישים"
+      description: "עבוד בקצב שלך, בחר פרויקטים ולקוחות שמתאימים לך"
     },
     { 
       title: "צמיחה מקצועית", 
-      description: "חשיפה לפרויקטים מגוונים ולקוחות מובילים בתעשייה",
-      stat: "+40% גידול הכנסות"
+      description: "חשיפה לפרויקטים מגוונים ולקוחות מובילים בתעשייה"
     }
   ];
 
@@ -203,12 +199,8 @@ const ForConsultants = () => {
               </Button>
             </div>
 
-            {/* Trust Indicators - Compact */}
+            {/* Trust Indicators - Simplified for launch */}
             <div className="flex flex-wrap justify-center items-center gap-4 lg:gap-6 text-xs lg:text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
-              <span className="flex items-center gap-2">
-                <Coins className="w-3 h-3 lg:w-4 lg:h-4 text-green-500" />
-                +40% הכנסות
-              </span>
               <span className="flex items-center gap-2">
                 <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-tech-purple" />
                 תשלומים מובטחים
@@ -285,7 +277,7 @@ const ForConsultants = () => {
               <span className="gradient-text">היתרונות</span>
               <span className="text-foreground"> שלך</span>
             </h2>
-            <p className="text-xl text-muted-foreground">למה אלפי יועצים כבר בחרו בנו</p>
+            <p className="text-xl text-muted-foreground">למה יועצים בוחרים בנו</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 max-w-7xl mx-auto">
@@ -293,12 +285,6 @@ const ForConsultants = () => {
               <Card key={index} className="p-8 text-center hover-scale animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
                 <div className="w-16 h-16 bg-gradient-to-r from-tech-purple to-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <CheckCircle className="w-8 h-8 text-white" />
-                </div>
-                
-                <div className="mb-4">
-                  <Badge variant="outline" className="text-xs">
-                    {benefit.stat}
-                  </Badge>
                 </div>
                 
                 <h3 className="text-xl font-bold mb-4">{benefit.title}</h3>
@@ -309,46 +295,7 @@ const ForConsultants = () => {
         </div>
       </section>
 
-      {/* Success Stories */}
-      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
-              <span className="text-foreground">יועצים</span>
-              <span className="gradient-text"> מצליחים</span>
-            </h2>
-            <p className="text-xl text-muted-foreground">סיפורי הצלחה של יועצים שהצמיחו את העסק דרך הפלטפורמה</p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-8 lg:p-12 relative overflow-hidden hover-scale animate-scale-in" style={{animationDelay: `${index * 0.2}s`}}>
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-green-100 text-green-800">
-                    {testimonial.earnings}
-                  </Badge>
-                </div>
-                
-                <div className="mt-8 space-y-6">
-                  <div className="flex text-yellow-500 text-2xl">
-                    {"★".repeat(5)}
-                  </div>
-                  
-                  <blockquote className="text-xl italic text-muted-foreground leading-relaxed">
-                    "{testimonial.quote}"
-                  </blockquote>
-                  
-                  <div>
-                    <div className="font-bold text-xl">{testimonial.name}</div>
-                    <div className="text-muted-foreground">{testimonial.title}</div>
-                    <div className="text-sm text-tech-purple font-medium">{testimonial.expertise}</div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Success Stories - Hidden for launch */}
 
       {/* Pricing Section */}
       <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-muted/30">
