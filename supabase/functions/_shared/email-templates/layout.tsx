@@ -2,7 +2,6 @@ import {
   Body,
   Container,
   Head,
-  Heading,
   Html,
   Img,
   Link,
@@ -25,7 +24,12 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Text style={logoText}>Billding</Text>
+          <Img
+            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/email-assets/billding-logo.png"
+            width="180"
+            alt="Billding"
+            style={logo}
+          />
         </Section>
         
         {children}
@@ -77,13 +81,11 @@ const header = {
   marginBottom: '24px',
 }
 
-const logoText = {
-  fontSize: '28px',
-  fontWeight: 'bold' as const,
-  color: '#2563eb',
-  textAlign: 'center' as const,
+const logo = {
+  display: 'block' as const,
   margin: '0 auto 16px',
-  letterSpacing: '-0.5px',
+  maxWidth: '180px',
+  height: 'auto',
 }
 
 const footerSection = {
