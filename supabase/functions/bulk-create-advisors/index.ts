@@ -245,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
                   </div>
                   
                   <p style="text-align: center; margin-top: 30px;">
-                    <a href="https://www.billding.ai/auth?type=advisor&mode=login" 
+                    <a href="https://billding.ai/auth?type=advisor&mode=login" 
                        style="display: inline-block; background-color: #4F46E5; color: white; padding: 14px 40px; 
                               text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
                       התחבר למערכת
