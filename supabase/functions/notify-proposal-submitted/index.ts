@@ -84,7 +84,7 @@ serve(async (req) => {
     const filesCount = Array.isArray(proposal.files) ? proposal.files.length : 0;
 
     // Project URL
-    const projectUrl = `https://www.billding.ai/project/${project.id}`;
+    const projectUrl = `https://billding.ai/project/${project.id}`;
 
     // Render email
     const html = await renderAsync(

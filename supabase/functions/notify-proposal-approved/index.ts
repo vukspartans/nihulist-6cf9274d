@@ -114,7 +114,7 @@ serve(async (req) => {
     console.log('[Proposal Approved] Sending to:', allRecipients.length, 'recipient(s)', '(test_mode:', test_mode, ')');
 
     // Project URL for advisor
-    const projectUrl = `https://www.billding.ai/advisor-dashboard`;
+    const projectUrl = `https://billding.ai/advisor-dashboard`;
 
     // Render email
     const html = await renderAsync(

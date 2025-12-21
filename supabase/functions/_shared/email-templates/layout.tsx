@@ -41,7 +41,7 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
                 צוות Billding - הפלטפורמה המובילה לניהול פרויקטי בנייה
               </Text>
               <Text style={footerText}>
-                <Link href="https://www.billding.ai" style={footerLink}>
+                <Link href="https://billding.ai" style={footerLink}>
                   billding.ai
                 </Link>
                 {' | '}
