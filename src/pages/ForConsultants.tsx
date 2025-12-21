@@ -189,14 +189,6 @@ const ForConsultants = () => {
                 הצטרף עכשיו
               </Button>
               
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-8 py-4 sm:py-6 hover-scale"
-              >
-                <BarChart className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2" />
-                צפה איך זה עובד
-              </Button>
             </div>
 
             {/* Trust Indicators - Simplified for launch */}
