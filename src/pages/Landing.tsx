@@ -351,18 +351,18 @@ const Landing = memo(() => {
                 <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   מצא את מומחי הבנייה והנדל"ן הנכונים לפרויקט שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
-                <ul className="space-y-4 text-right">
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                <ul className="space-y-4 text-right" dir="rtl">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גישה למומחי בנייה מאומתים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">התאמה מבוססת בינה מלאכותית</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">תמחור שקוף וברור</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
                 <Button 
@@ -388,18 +388,18 @@ const Landing = memo(() => {
                 <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   הגע ליזמי נדל"ן והצמח את עסק הבנייה שלך. קבל התאמות עם פרויקטי בנייה איכותיים.
                 </p>
-                <ul className="space-y-4 text-right">
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                <ul className="space-y-4 text-right" dir="rtl">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גישה לפרויקטי בנייה איכותיים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">בניית מוניטין מקצועי</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גמישות בלוחות זמנים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
                 <Button 
