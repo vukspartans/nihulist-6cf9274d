@@ -1,18 +1,10 @@
 import {
-  Body,
   Button,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Img,
-  Link,
-  Preview,
   Section,
   Text,
 } from "npm:@react-email/components@0.0.22";
 import * as React from "npm:react@18.3.1";
+import { EmailLayout } from './layout.tsx';
 
 interface NegotiationRequestEmailProps {
   advisorCompany: string;
@@ -38,7 +30,6 @@ export const NegotiationRequestEmail = ({
   locale = 'he',
 }: NegotiationRequestEmailProps) => {
   const isHebrew = locale === 'he';
-  const direction = isHebrew ? 'rtl' : 'ltr';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat(isHebrew ? 'he-IL' : 'en-US', {
@@ -50,218 +41,98 @@ export const NegotiationRequestEmail = ({
   };
 
   const content = isHebrew ? {
-    preview: `בקשה לעדכון הצעת מחיר - ${projectName}`,
-    heading: '📋 בקשה לעדכון הצעת מחיר',
+    preview: `בקשה לעדכון הצעה - ${projectName}`,
+    heading: 'בקשה לעדכון הצעה',
     greeting: `שלום ${advisorCompany},`,
-    intro: `${entrepreneurName} מבקש עדכון להצעת המחיר שהגשת עבור פרויקט "${projectName}".`,
-    originalPriceLabel: 'מחיר מקורי:',
-    targetPriceLabel: 'מחיר יעד:',
-    reductionLabel: 'הפחתה מבוקשת:',
-    commentsLabel: 'הערות היזם:',
-    ctaButton: 'צפה בבקשה ועדכן הצעה',
-    footer: 'צוות Billding',
+    intro: `${entrepreneurName} מבקש עדכון להצעה לפרויקט "${projectName}".`,
+    ctaButton: 'עדכון הצעה',
   } : {
-    preview: `Request for Revised Proposal - ${projectName}`,
-    heading: '📋 Request for Revised Proposal',
+    preview: `Revision Request - ${projectName}`,
+    heading: 'Revision Request',
     greeting: `Hello ${advisorCompany},`,
-    intro: `${entrepreneurName} is requesting an update to your proposal for the project "${projectName}".`,
-    originalPriceLabel: 'Original Price:',
-    targetPriceLabel: 'Target Price:',
-    reductionLabel: 'Requested Reduction:',
-    commentsLabel: 'Initiator Comments:',
-    ctaButton: 'View Request and Update Proposal',
-    footer: 'Billding Team',
+    intro: `${entrepreneurName} is requesting an update to your proposal for "${projectName}".`,
+    ctaButton: 'Update Proposal',
   };
 
   return (
-    <Html lang={isHebrew ? 'he' : 'en'} dir={direction}>
-      <Head />
-      <Preview>{content.preview}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Section style={header}>
-            <Img
-              src="https://billding.ai/lovable-uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png"
-              width="120"
-              height="40"
-              alt="Billding"
-              style={logo}
-            />
-          </Section>
+    <EmailLayout preview={content.preview}>
+      <Section style={contentStyle}>
+        <Text style={heading}>{content.heading}</Text>
 
-          <Heading style={heading}>{content.heading}</Heading>
+        <Text style={paragraph}>{content.greeting}</Text>
+        <Text style={paragraph}>{content.intro}</Text>
 
-          <Text style={paragraph}>{content.greeting}</Text>
-          <Text style={paragraph}>{content.intro}</Text>
+        <Text style={detailText}>
+          {isHebrew ? 'מחיר מקורי' : 'Original'}: {formatCurrency(originalPrice)}
+          {targetPrice && <><br />{isHebrew ? 'מחיר יעד' : 'Target'}: {formatCurrency(targetPrice)}</>}
+          {targetReductionPercent && <><br />{isHebrew ? 'הפחתה מבוקשת' : 'Reduction'}: {targetReductionPercent}%</>}
+        </Text>
 
-          <Section style={priceBox}>
-            <Text style={priceRow}>
-              <span style={priceLabel}>{content.originalPriceLabel}</span>
-              <span style={priceValue}>{formatCurrency(originalPrice)}</span>
-            </Text>
-            {targetPrice && (
-              <Text style={priceRow}>
-                <span style={priceLabel}>{content.targetPriceLabel}</span>
-                <span style={targetPriceValue}>{formatCurrency(targetPrice)}</span>
-              </Text>
-            )}
-            {targetReductionPercent && (
-              <Text style={priceRow}>
-                <span style={priceLabel}>{content.reductionLabel}</span>
-                <span style={reductionValue}>{targetReductionPercent}%</span>
-              </Text>
-            )}
-          </Section>
+        {globalComment && (
+          <Text style={commentText}>
+            {isHebrew ? 'הערות' : 'Comments'}: {globalComment}
+          </Text>
+        )}
 
-          {globalComment && (
-            <>
-              <Text style={commentsHeading}>{content.commentsLabel}</Text>
-              <Section style={commentsBox}>
-                <Text style={commentText}>{globalComment}</Text>
-              </Section>
-            </>
-          )}
-
-          <Section style={buttonContainer}>
-            <Button style={button} href={responseUrl}>
-              {content.ctaButton}
-            </Button>
-          </Section>
-
-          <Hr style={hr} />
-
-          <Text style={footer}>{content.footer}</Text>
-        </Container>
-      </Body>
-    </Html>
+        <Section style={buttonContainer}>
+          <Button style={button} href={responseUrl}>
+            {content.ctaButton}
+          </Button>
+        </Section>
+      </Section>
+    </EmailLayout>
   );
 };
 
 export default NegotiationRequestEmail;
 
-const main = {
-  backgroundColor: '#f6f9fc',
-  fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
-};
-
-const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  padding: '20px 0 48px',
-  marginBottom: '64px',
-  maxWidth: '600px',
-};
-
-const header = {
-  padding: '20px 30px',
-  borderBottom: '1px solid #e6ebf1',
-};
-
-const logo = {
-  margin: '0 auto',
-  display: 'block',
+const contentStyle = {
+  padding: '24px',
 };
 
 const heading = {
+  fontSize: '20px',
+  fontWeight: 'bold',
   color: '#1a1a1a',
-  fontSize: '24px',
-  fontWeight: '600',
+  marginBottom: '16px',
   textAlign: 'center' as const,
-  margin: '30px 0 20px',
 };
 
 const paragraph = {
-  color: '#525f7f',
-  fontSize: '16px',
+  fontSize: '15px',
   lineHeight: '24px',
-  textAlign: 'right' as const,
-  padding: '0 30px',
+  color: '#333',
+  marginBottom: '12px',
 };
 
-const priceBox = {
-  backgroundColor: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  margin: '20px 30px',
-  padding: '20px',
-};
-
-const priceRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  margin: '8px 0',
-  fontSize: '16px',
-};
-
-const priceLabel = {
-  color: '#64748b',
-};
-
-const priceValue = {
-  color: '#1e293b',
-  fontWeight: '600',
-};
-
-const targetPriceValue = {
-  color: '#059669',
-  fontWeight: '700',
-  fontSize: '18px',
-};
-
-const reductionValue = {
-  color: '#dc2626',
-  fontWeight: '600',
-};
-
-const commentsHeading = {
-  color: '#1e293b',
+const detailText = {
   fontSize: '14px',
-  fontWeight: '600',
-  padding: '0 30px',
-  marginTop: '20px',
-  marginBottom: '8px',
-};
-
-const commentsBox = {
-  backgroundColor: '#fffbeb',
-  border: '1px solid #fcd34d',
-  borderRadius: '8px',
-  margin: '0 30px',
-  padding: '16px',
+  lineHeight: '22px',
+  color: '#525252',
+  margin: '16px 0',
 };
 
 const commentText = {
-  color: '#92400e',
   fontSize: '14px',
   lineHeight: '22px',
-  margin: 0,
+  color: '#64748b',
+  margin: '12px 0',
+  fontStyle: 'italic' as const,
 };
 
 const buttonContainer = {
   textAlign: 'center' as const,
-  margin: '32px 0',
+  margin: '24px 0',
 };
 
 const button = {
   backgroundColor: '#2563eb',
-  borderRadius: '8px',
+  borderRadius: '6px',
   color: '#fff',
   fontSize: '16px',
-  fontWeight: '600',
+  fontWeight: 'bold',
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '14px 32px',
-};
-
-const hr = {
-  borderColor: '#e6ebf1',
-  margin: '20px 30px',
-};
-
-const footer = {
-  color: '#8898aa',
-  fontSize: '12px',
-  lineHeight: '16px',
-  textAlign: 'center' as const,
+  padding: '12px 32px',
 };
