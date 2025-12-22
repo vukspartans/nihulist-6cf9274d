@@ -413,40 +413,39 @@ export const ProjectDetail = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir="rtl">
-        <TabsList className="grid w-full grid-cols-5 h-11">
-          <TabsTrigger value="proposals" className="text-right flex items-center gap-2">
-            <Send className="w-4 h-4" />
-            שליחת בקשה להצעות
+        <TabsList className="flex w-full h-auto overflow-x-auto gap-1 p-1">
+          <TabsTrigger value="proposals" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap">
+            <Send className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">שליחת בקשה להצעות</span>
           </TabsTrigger>
           <TabsTrigger 
             value="sent-rfps" 
-            className="text-right flex items-center gap-2"
+            className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap"
           >
-            <FileSignature className="w-4 h-4" />
-            בקשות שנשלחו
+            <FileSignature className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">בקשות שנשלחו</span>
           </TabsTrigger>
           <TabsTrigger 
             value="received" 
-            className="text-right flex items-center gap-2"
-            disabled={!rfpSent}
+            className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap"
           >
-            <Inbox className="w-4 h-4" />
-            הצעות שהתקבלו
+            <Inbox className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">הצעות שהתקבלו</span>
             {proposals.length > 0 && (
-              <Badge variant="secondary" className="mr-1">
+              <Badge variant="secondary" className="mr-1 text-xs">
                 {proposals.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="advisors" className="text-right flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            היועצים שלי
+          <TabsTrigger value="advisors" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap">
+            <Users className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">היועצים שלי</span>
           </TabsTrigger>
-          <TabsTrigger value="files" className="text-right flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            קבצים
+          <TabsTrigger value="files" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap">
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">קבצים</span>
             {projectFiles.length > 0 && (
-              <Badge variant="secondary" className="mr-1">
+              <Badge variant="secondary" className="mr-1 text-xs">
                 {projectFiles.length}
               </Badge>
             )}

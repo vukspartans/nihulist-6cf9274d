@@ -237,13 +237,16 @@ serve(async (req) => {
         }
       }
 
-      const { error: lineItemError } = await supabase
+      const { data: insertedLineItems, error: lineItemError } = await supabase
         .from("line_item_negotiations")
-        .insert(lineItemRecords);
+        .insert(lineItemRecords)
+        .select();
 
       if (lineItemError) {
         console.error("[Negotiation Request] Line item negotiations error:", lineItemError);
+        throw new Error(`Failed to save line item adjustments: ${lineItemError.message}`);
       }
+      console.log("[Negotiation Request] Line items created:", insertedLineItems?.length);
     }
 
     // Create negotiation comments if provided
@@ -257,17 +260,20 @@ serve(async (req) => {
         entity_reference: c.entity_reference,
       }));
 
-      const { error: commentsError } = await supabase
+      const { data: insertedComments, error: commentsError } = await supabase
         .from("negotiation_comments")
-        .insert(commentRecords);
+        .insert(commentRecords)
+        .select();
 
       if (commentsError) {
         console.error("[Negotiation Request] Comments error:", commentsError);
+        throw new Error(`Failed to save negotiation comments: ${commentsError.message}`);
       }
+      console.log("[Negotiation Request] Comments created:", insertedComments?.length);
     }
 
     // Update proposal status
-    await supabase
+    const { error: proposalUpdateError } = await supabase
       .from("proposals")
       .update({
         status: "negotiation_requested",
@@ -275,6 +281,12 @@ serve(async (req) => {
         negotiation_count: (proposal.negotiation_count || 0) + 1,
       })
       .eq("id", proposal_id);
+
+    if (proposalUpdateError) {
+      console.error("[Negotiation Request] Proposal update error:", proposalUpdateError);
+      throw new Error(`Failed to update proposal status: ${proposalUpdateError.message}`);
+    }
+    console.log("[Negotiation Request] Proposal status updated to negotiation_requested");
 
     // Send email to consultant
     const advisorEmail = advisorProfile?.email;

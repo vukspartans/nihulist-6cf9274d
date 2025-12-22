@@ -36,6 +36,7 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
+import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
@@ -79,9 +80,9 @@ const AppContent = () => {
         <ErrorBoundary>
           <Toaster />
           <Sonner />
-          <FeedbackWidget />
           <BrowserRouter>
             <ScrollToTop />
+            <FeedbackWidget />
             <RecoveryDeepLinkHandler />
             <AuthEventRouter />
             <Routes>
@@ -91,6 +92,16 @@ const AppContent = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verified" element={<EmailVerified />} />
             <Route path="/submit" element={<SupplierSubmit />} />
+            <Route 
+              path="/organization/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <OrganizationOnboarding />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
               element={
@@ -244,10 +255,20 @@ const AuthEventRouter = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthEventRouter] Auth event:', event, 'Session:', !!session);
+      
       if (event === 'PASSWORD_RECOVERY') {
-        if (pathname.startsWith('/heyadmin')) {
-          console.log('[AuthEvent] Admin password recovery');
+        // Set flag BEFORE navigating to ensure login page sees it
+        localStorage.setItem('passwordRecoveryPending', 'true');
+        
+        // Check if this is an admin recovery (check localStorage for last admin email or current path)
+        const lastAdminEmail = localStorage.getItem('lastAdminEmail');
+        const isAdminRecovery = pathname.startsWith('/heyadmin') || lastAdminEmail;
+        
+        if (isAdminRecovery) {
+          console.log('[AuthEvent] Admin password recovery - setting flag and navigating');
+          localStorage.setItem('adminPasswordRecovery', 'true');
           navigate('/heyadmin/login?type=recovery', { replace: true });
         } else {
           console.log('[AuthEvent] Non-admin password recovery');

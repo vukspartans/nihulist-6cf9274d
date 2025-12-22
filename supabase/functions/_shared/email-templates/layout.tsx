@@ -2,7 +2,6 @@ import {
   Body,
   Container,
   Head,
-  Heading,
   Html,
   Img,
   Link,
@@ -26,9 +25,8 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
       <Container style={container}>
         <Section style={header}>
           <Img
-            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/advisor-assets/billding-logo.png"
-            width="120"
-            height="40"
+            src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/email-assets/billding-logo.png"
+            width="180"
             alt="Billding"
             style={logo}
           />
@@ -43,9 +41,9 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
                 צוות Billding - הפלטפורמה המובילה לניהול פרויקטי בנייה
               </Text>
               <Text style={footerText}>
-                <Link href="https://www.billding.ai" style={footerLink}>
-                  billding.ai
-                </Link>
+              <Link href="https://billding.ai" style={footerLink}>
+                billding.ai
+              </Link>
                 {' | '}
                 <Link href="mailto:support@billding.ai" style={footerLink}>
                   support@billding.ai
@@ -63,6 +61,7 @@ const main = {
   backgroundColor: '#f6f9fc',
   fontFamily:
     '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+  direction: 'rtl' as const,
 }
 
 const container = {
@@ -71,6 +70,8 @@ const container = {
   padding: '20px 0 48px',
   marginBottom: '64px',
   maxWidth: '600px',
+  direction: 'rtl' as const,
+  textAlign: 'right' as const,
 }
 
 const header = {
@@ -81,7 +82,10 @@ const header = {
 }
 
 const logo = {
+  display: 'block' as const,
   margin: '0 auto 16px',
+  maxWidth: '180px',
+  height: 'auto',
 }
 
 const footerSection = {

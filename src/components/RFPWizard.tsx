@@ -26,8 +26,10 @@ import { AdvisorTypeRequestData } from './RequestEditorDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
+import { useRFPDraft } from '@/hooks/useRFPDraft';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sanitizeText, sanitizeHtml } from '@/utils/inputSanitization';
+import { PRODUCTION_URL } from '@/utils/urls';
 
 interface RFPWizardProps {
   projectId: string;
@@ -72,22 +74,24 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     attachments: []
   });
   const [proposalSent, setProposalSent] = useState(false);
+  const [savedDraftTypes, setSavedDraftTypes] = useState<string[]>([]);
   const { sendRFPInvitations, loading } = useRFP();
+  const { loadAllDrafts, deleteAllDrafts, loading: draftsLoading } = useRFPDraft(projectId);
   const { toast } = useToast();
 
-  // Load existing RFP from database
+  // Load existing RFP and drafts from database
   useEffect(() => {
-    const loadExistingRfp = async () => {
+    const loadExistingData = async () => {
+      // Load existing RFP
       const { data, error } = await supabase
         .from('rfps')
         .select('subject, body_html')
         .eq('project_id', projectId)
         .order('sent_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
-        // Convert HTML to plain text
         const htmlToPlainText = (html: string): string => {
           return html
             .replace(/<br\s*\/?>/gi, '\n')
@@ -103,9 +107,21 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
           content: data.body_html ? htmlToPlainText(data.body_html) : prev.content
         }));
       }
+
+      // Load saved drafts
+      const drafts = await loadAllDrafts();
+      const draftTypes = Object.keys(drafts);
+      if (draftTypes.length > 0) {
+        setRequestDataByType(drafts);
+        setSavedDraftTypes(draftTypes);
+        toast({
+          title: "טיוטות נטענו",
+          description: `נמצאו ${draftTypes.length} טיוטות שמורות`,
+        });
+      }
     };
 
-    loadExistingRfp();
+    loadExistingData();
   }, [projectId]);
 
   const totalSteps = 2;
@@ -180,8 +196,6 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       requestDataByType
     });
 
-    
-    
     // Build advisor-type pairs from recommended advisors
     const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
     
@@ -202,12 +216,31 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const typeData = requestDataByType[firstType];
     const emailSubject = typeData?.emailSubject || `בקשה להצעת מחיר - ${projectName}`;
     const emailBodyText = typeData?.emailBody || rfpContent.content;
-    const loginUrl = `${window.location.origin}/auth?type=advisor&mode=login`;
+    const loginUrl = `${PRODUCTION_URL}/auth?type=advisor&mode=login`;
     
     // Extract request data - sanitize before sending
     const requestTitle = typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined;
     const requestContent = typeData?.requestContent ? sanitizeText(typeData.requestContent, 5000) : undefined;
     const requestFiles = typeData?.requestAttachments;
+    
+    // Build advisor type data map for service details, fees, payment terms
+    const advisorTypeDataMap: Record<string, any> = {};
+    for (const [advisorType, data] of Object.entries(requestDataByType)) {
+      advisorTypeDataMap[advisorType] = {
+        requestTitle: data.requestTitle,
+        requestContent: data.requestContent,
+        requestFiles: data.requestAttachments,
+        serviceDetails: {
+          mode: data.serviceDetailsMode,
+          freeText: data.serviceDetailsFreeText,
+          file: data.serviceDetailsFile,
+          scopeItems: data.serviceScopeItems
+        },
+        feeItems: data.feeItems,
+        optionalFeeItems: data.optionalFeeItems,
+        paymentTerms: data.paymentTerms
+      };
+    }
     
     // SECURITY: Sanitize email content before sending
     const sanitizedEmailBody = emailBodyText
@@ -243,12 +276,16 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       emailBodyHtml,
       requestTitle,
       requestContent,
-      requestFiles
+      requestFiles,
+      advisorTypeDataMap
     );
     
     console.log('[RFPWizard] RFP Result:', result);
     
     if (result) {
+      // Clean up drafts after successful send
+      await deleteAllDrafts();
+      setSavedDraftTypes([]);
       setProposalSent(true);
       onRfpSent?.();
     }
@@ -382,6 +419,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
                 requestDataByType={requestDataByType}
                 onRequestDataChange={handleRequestDataChange}
                 onRemoveAdvisorType={handleRemoveAdvisorType}
+                savedDraftTypes={savedDraftTypes}
               />
             </div>
           )}

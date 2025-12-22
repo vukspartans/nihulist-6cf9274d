@@ -51,7 +51,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch proposal with all related data
+    // Fetch proposal with related data
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .select(`
@@ -59,25 +59,7 @@ serve(async (req) => {
         price,
         timeline_days,
         project_id,
-        advisor_id,
-        projects!fk_proposals_project (
-          id,
-          name,
-          owner_id,
-          profiles!projects_owner_id_fkey (
-            name,
-            email
-          )
-        ),
-        advisors (
-          id,
-          company_name,
-          user_id,
-          profiles!advisors_user_id_fkey (
-            email,
-            name
-          )
-        )
+        advisor_id
       `)
       .eq('id', proposal_id)
       .single();
@@ -87,17 +69,53 @@ serve(async (req) => {
       throw new Error('Proposal not found');
     }
 
-    console.log('[Proposal Approved] Proposal data:', proposal);
+    // Fetch project and entrepreneur separately for more reliable queries
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id, name, owner_id')
+      .eq('id', proposal.project_id)
+      .single();
 
-    const project = proposal.projects as any;
-    const advisor = proposal.advisors as any;
-    const entrepreneurProfile = project.profiles as any;
-    const advisorProfile = advisor.profiles as any;
+    if (projectError || !project) {
+      console.error('[Proposal Approved] Project not found:', projectError);
+      throw new Error('Project not found');
+    }
 
-    if (!advisorProfile?.email) {
-      console.error('[Proposal Approved] Advisor email not found');
+    // Fetch entrepreneur profile
+    const { data: entrepreneurProfile, error: entrepreneurError } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', project.owner_id)
+      .single();
+
+    if (entrepreneurError) {
+      console.warn('[Proposal Approved] Entrepreneur profile not found:', entrepreneurError);
+    }
+
+    // Fetch advisor and their profile
+    const { data: advisor, error: advisorError } = await supabase
+      .from('advisors')
+      .select('id, company_name, user_id')
+      .eq('id', proposal.advisor_id)
+      .single();
+
+    if (advisorError || !advisor) {
+      console.error('[Proposal Approved] Advisor not found:', advisorError);
+      throw new Error('Advisor not found');
+    }
+
+    const { data: advisorProfile, error: advisorProfileError } = await supabase
+      .from('profiles')
+      .select('email, name')
+      .eq('user_id', advisor.user_id)
+      .single();
+
+    if (advisorProfileError || !advisorProfile?.email) {
+      console.error('[Proposal Approved] Advisor profile/email not found:', advisorProfileError);
       throw new Error('Advisor email not found');
     }
+
+    console.log('[Proposal Approved] Data loaded - Proposal:', proposal.id, 'Project:', project.name, 'Advisor:', advisor.company_name);
 
     // Get team member emails
     const teamEmails = await getTeamMemberEmails(supabase, proposal.advisor_id, 'updates');
@@ -114,14 +132,14 @@ serve(async (req) => {
     console.log('[Proposal Approved] Sending to:', allRecipients.length, 'recipient(s)', '(test_mode:', test_mode, ')');
 
     // Project URL for advisor
-    const projectUrl = `https://www.billding.ai/advisor-dashboard`;
+    const projectUrl = `https://billding.ai/advisor-dashboard`;
 
     // Render email
     const html = await renderAsync(
       React.createElement(ProposalApprovedEmail, {
         advisorCompany: advisor.company_name || 'יועץ',
         projectName: project.name,
-        entrepreneurName: entrepreneurProfile.name || 'היזם',
+        entrepreneurName: entrepreneurProfile?.name || 'היזם',
         price: proposal.price,
         timelineDays: proposal.timeline_days,
         entrepreneurNotes: entrepreneur_notes || '',

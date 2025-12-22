@@ -244,37 +244,73 @@ export type Database = {
       }
       companies: {
         Row: {
+          activity_categories: Json | null
+          activity_regions: string[] | null
+          activity_scope: string | null
+          activity_scope_tier: string | null
+          country: string | null
           created_at: string
           description: string | null
           email: string | null
+          employee_count: string | null
+          founding_year: number | null
           id: string
+          linkedin_url: string | null
           location: string | null
           name: string
+          onboarding_completed_at: string | null
+          onboarding_skipped_at: string | null
           phone: string | null
+          primary_activity_category: string | null
+          registration_number: string | null
           type: string
           updated_at: string
           website: string | null
         }
         Insert: {
+          activity_categories?: Json | null
+          activity_regions?: string[] | null
+          activity_scope?: string | null
+          activity_scope_tier?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
+          employee_count?: string | null
+          founding_year?: number | null
           id?: string
+          linkedin_url?: string | null
           location?: string | null
           name: string
+          onboarding_completed_at?: string | null
+          onboarding_skipped_at?: string | null
           phone?: string | null
+          primary_activity_category?: string | null
+          registration_number?: string | null
           type: string
           updated_at?: string
           website?: string | null
         }
         Update: {
+          activity_categories?: Json | null
+          activity_regions?: string[] | null
+          activity_scope?: string | null
+          activity_scope_tier?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
+          employee_count?: string | null
+          founding_year?: number | null
           id?: string
+          linkedin_url?: string | null
           location?: string | null
           name?: string
+          onboarding_completed_at?: string | null
+          onboarding_skipped_at?: string | null
           phone?: string | null
+          primary_activity_category?: string | null
+          registration_number?: string | null
           type?: string
           updated_at?: string
           website?: string | null
@@ -664,6 +700,7 @@ export type Database = {
           email: string | null
           id: string
           name: string | null
+          organization_id: string | null
           phone: string | null
           requires_password_change: boolean | null
           role: string | null
@@ -681,6 +718,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          organization_id?: string | null
           phone?: string | null
           requires_password_change?: boolean | null
           role?: string | null
@@ -698,6 +736,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          organization_id?: string | null
           phone?: string | null
           requires_password_change?: boolean | null
           role?: string | null
@@ -706,7 +745,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_advisors: {
         Row: {
@@ -1063,6 +1110,8 @@ export type Database = {
           amended_from_id: string | null
           attachment_url: string | null
           conditions_json: Json | null
+          consultant_request_files: Json | null
+          consultant_request_notes: string | null
           currency: string | null
           current_version: number | null
           declaration_text: string | null
@@ -1077,15 +1126,19 @@ export type Database = {
           extracted_at: string | null
           extracted_text: string | null
           extracted_text_hash: string | null
+          fee_line_items: Json | null
           file_summaries: Json | null
           files: Json | null
           has_active_negotiation: boolean | null
           id: string
+          milestone_adjustments: Json | null
           negotiation_count: number | null
           price: number
           project_id: string
           scope_text: string | null
           seen_by_entrepreneur_at: string | null
+          selected_services: Json | null
+          services_notes: string | null
           signature_blob: string | null
           signature_meta_json: Json | null
           status: Database["public"]["Enums"]["proposal_status"]
@@ -1107,6 +1160,8 @@ export type Database = {
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
+          consultant_request_files?: Json | null
+          consultant_request_notes?: string | null
           currency?: string | null
           current_version?: number | null
           declaration_text?: string | null
@@ -1121,15 +1176,19 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          fee_line_items?: Json | null
           file_summaries?: Json | null
           files?: Json | null
           has_active_negotiation?: boolean | null
           id?: string
+          milestone_adjustments?: Json | null
           negotiation_count?: number | null
           price: number
           project_id: string
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
+          selected_services?: Json | null
+          services_notes?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -1151,6 +1210,8 @@ export type Database = {
           amended_from_id?: string | null
           attachment_url?: string | null
           conditions_json?: Json | null
+          consultant_request_files?: Json | null
+          consultant_request_notes?: string | null
           currency?: string | null
           current_version?: number | null
           declaration_text?: string | null
@@ -1165,15 +1226,19 @@ export type Database = {
           extracted_at?: string | null
           extracted_text?: string | null
           extracted_text_hash?: string | null
+          fee_line_items?: Json | null
           file_summaries?: Json | null
           files?: Json | null
           has_active_negotiation?: boolean | null
           id?: string
+          milestone_adjustments?: Json | null
           negotiation_count?: number | null
           price?: number
           project_id?: string
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
+          selected_services?: Json | null
+          services_notes?: string | null
           signature_blob?: string | null
           signature_meta_json?: Json | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -1294,11 +1359,15 @@ export type Database = {
           id: string
           last_notification_at: string | null
           opened_at: string | null
+          payment_terms: Json | null
           personalized_body_html: string | null
           request_content: string | null
           request_files: Json | null
           request_title: string | null
           rfp_id: string
+          service_details_file: Json | null
+          service_details_mode: string | null
+          service_details_text: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
@@ -1319,11 +1388,15 @@ export type Database = {
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
+          payment_terms?: Json | null
           personalized_body_html?: string | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
           rfp_id: string
+          service_details_file?: Json | null
+          service_details_mode?: string | null
+          service_details_text?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token: string
@@ -1344,11 +1417,15 @@ export type Database = {
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
+          payment_terms?: Json | null
           personalized_body_html?: string | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
           rfp_id?: string
+          service_details_file?: Json | null
+          service_details_mode?: string | null
+          service_details_text?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["rfp_invite_status"]
           submit_token?: string
@@ -1375,6 +1452,74 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_request_drafts: {
+        Row: {
+          advisor_type: string
+          created_at: string | null
+          fee_items: Json | null
+          has_been_reviewed: boolean | null
+          id: string
+          optional_fee_items: Json | null
+          payment_terms: Json | null
+          project_id: string
+          request_attachments: Json | null
+          request_content: string | null
+          request_title: string | null
+          service_details_file: Json | null
+          service_details_free_text: string | null
+          service_details_mode: string | null
+          service_scope_items: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          advisor_type: string
+          created_at?: string | null
+          fee_items?: Json | null
+          has_been_reviewed?: boolean | null
+          id?: string
+          optional_fee_items?: Json | null
+          payment_terms?: Json | null
+          project_id: string
+          request_attachments?: Json | null
+          request_content?: string | null
+          request_title?: string | null
+          service_details_file?: Json | null
+          service_details_free_text?: string | null
+          service_details_mode?: string | null
+          service_scope_items?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          advisor_type?: string
+          created_at?: string | null
+          fee_items?: Json | null
+          has_been_reviewed?: boolean | null
+          id?: string
+          optional_fee_items?: Json | null
+          payment_terms?: Json | null
+          project_id?: string
+          request_attachments?: Json | null
+          request_content?: string | null
+          request_title?: string | null
+          service_details_file?: Json | null
+          service_details_free_text?: string | null
+          service_details_mode?: string | null
+          service_scope_items?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_request_drafts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1620,7 +1765,9 @@ export type Database = {
           id: string
           message: string | null
           page_url: string | null
+          phone: string | null
           rating: number
+          status: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -1630,7 +1777,9 @@ export type Database = {
           id?: string
           message?: string | null
           page_url?: string | null
+          phone?: string | null
           rating: number
+          status?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1640,7 +1789,9 @@ export type Database = {
           id?: string
           message?: string | null
           page_url?: string | null
+          phone?: string | null
           rating?: number
+          status?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1769,6 +1920,30 @@ export type Database = {
         Returns: boolean
       }
       canonicalize_advisor_name: { Args: { name: string }; Returns: string }
+      create_organization_for_user: {
+        Args: {
+          p_activity_categories?: Json
+          p_activity_regions?: string[]
+          p_activity_scope?: string
+          p_activity_scope_tier?: string
+          p_country?: string
+          p_description?: string
+          p_email?: string
+          p_employee_count?: string
+          p_founding_year?: number
+          p_linkedin_url?: string
+          p_location?: string
+          p_name: string
+          p_onboarding_completed_at?: string
+          p_onboarding_skipped_at?: string
+          p_phone?: string
+          p_primary_activity_category?: string
+          p_registration_number?: string
+          p_type?: string
+          p_website?: string
+        }
+        Returns: Json
+      }
       enqueue_notification: {
         Args: {
           p_body_html: string
@@ -1850,7 +2025,11 @@ export type Database = {
       normalize_project_type: { Args: { legacy_type: string }; Returns: string }
       refresh_proposal_summary: { Args: never; Returns: undefined }
       reject_proposal_with_cleanup: {
-        Args: { p_proposal_id: string; p_rejection_reason?: string }
+        Args: {
+          p_owner_id?: string
+          p_proposal_id: string
+          p_rejection_reason?: string
+        }
         Returns: Json
       }
       send_rfp_invitations:

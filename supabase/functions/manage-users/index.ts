@@ -51,21 +51,11 @@ serve(async (req) => {
       }
     );
 
-    // Create regular client to verify the requesting user is an admin
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
+    // Extract the JWT token from the authorization header
+    const token = authHeader.replace('Bearer ', '');
 
-    // Verify the user is authenticated
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Verify the user is authenticated using the token directly
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
       console.error('User authentication failed:', userError);
       throw new Error('Unauthorized');
@@ -227,7 +217,186 @@ serve(async (req) => {
         throw new Error('Cannot delete your own account');
       }
 
-      // Delete the user (this will cascade to profiles and user_roles)
+      // First, get the advisor_id if user is an advisor
+      const { data: advisorData } = await supabaseAdmin
+        .from('advisors')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Delete related data in order (to respect foreign key constraints)
+      // If the user is an advisor, we must delete any rows that reference advisors.id first.
+
+      // 1. Advisor-linked cleanup
+      if (advisorData?.id) {
+        const advisorId = advisorData.id;
+
+        // 1a. Proposals (and children)
+        const { data: proposalsForAdvisor, error: proposalsFetchError } = await supabaseAdmin
+          .from('proposals')
+          .select('id')
+          .eq('advisor_id', advisorId);
+
+        if (proposalsFetchError) {
+          console.error('Failed fetching proposals for advisor:', proposalsFetchError);
+          throw new Error('Failed fetching proposals for advisor');
+        }
+
+        const proposalIds = (proposalsForAdvisor ?? []).map((p: { id: string }) => p.id);
+
+        if (proposalIds.length > 0) {
+          // Negotiation sessions and related tables
+          const { data: sessions, error: sessionsFetchError } = await supabaseAdmin
+            .from('negotiation_sessions')
+            .select('id')
+            .in('proposal_id', proposalIds);
+
+          if (sessionsFetchError) {
+            console.error('Failed fetching negotiation sessions:', sessionsFetchError);
+            throw new Error('Failed fetching negotiation sessions');
+          }
+
+          const sessionIds = (sessions ?? []).map((s: { id: string }) => s.id);
+
+          if (sessionIds.length > 0) {
+            const { error: commentsDeleteError } = await supabaseAdmin
+              .from('negotiation_comments')
+              .delete()
+              .in('session_id', sessionIds);
+            if (commentsDeleteError) {
+              console.error('Failed deleting negotiation comments:', commentsDeleteError);
+              throw new Error('Failed deleting negotiation comments');
+            }
+
+            const { error: lineItemNegotiationsDeleteError } = await supabaseAdmin
+              .from('line_item_negotiations')
+              .delete()
+              .in('session_id', sessionIds);
+            if (lineItemNegotiationsDeleteError) {
+              console.error('Failed deleting line item negotiations:', lineItemNegotiationsDeleteError);
+              throw new Error('Failed deleting line item negotiations');
+            }
+
+            const { error: sessionsDeleteError } = await supabaseAdmin
+              .from('negotiation_sessions')
+              .delete()
+              .in('id', sessionIds);
+            if (sessionsDeleteError) {
+              console.error('Failed deleting negotiation sessions:', sessionsDeleteError);
+              throw new Error('Failed deleting negotiation sessions');
+            }
+          }
+
+          // Proposal children
+          const { error: proposalLineItemsDeleteError } = await supabaseAdmin
+            .from('proposal_line_items')
+            .delete()
+            .in('proposal_id', proposalIds);
+          if (proposalLineItemsDeleteError) {
+            console.error('Failed deleting proposal line items:', proposalLineItemsDeleteError);
+            throw new Error('Failed deleting proposal line items');
+          }
+
+          const { error: proposalVersionsDeleteError } = await supabaseAdmin
+            .from('proposal_versions')
+            .delete()
+            .in('proposal_id', proposalIds);
+          if (proposalVersionsDeleteError) {
+            console.error('Failed deleting proposal versions:', proposalVersionsDeleteError);
+            throw new Error('Failed deleting proposal versions');
+          }
+
+          // Signatures that may reference proposal approvals
+          const { error: signaturesDeleteError } = await supabaseAdmin
+            .from('signatures')
+            .delete()
+            .in('entity_id', proposalIds);
+          if (signaturesDeleteError) {
+            console.error('Failed deleting signatures:', signaturesDeleteError);
+            throw new Error('Failed deleting signatures');
+          }
+
+          // Finally the proposals
+          const { error: proposalsDeleteError } = await supabaseAdmin
+            .from('proposals')
+            .delete()
+            .in('id', proposalIds);
+          if (proposalsDeleteError) {
+            console.error('Failed deleting proposals:', proposalsDeleteError);
+            throw new Error('Failed deleting proposals');
+          }
+        }
+
+        // 1b. RFP invites that reference advisors.id (this was the FK violation)
+        const { error: invitesDeleteError } = await supabaseAdmin
+          .from('rfp_invites')
+          .delete()
+          .eq('advisor_id', advisorId);
+        if (invitesDeleteError) {
+          console.error('Failed deleting rfp_invites for advisor:', invitesDeleteError);
+          throw new Error('Failed deleting RFP invites');
+        }
+
+        // 1c. Advisor team members
+        console.log('Deleting advisor team members for advisor:', advisorId);
+        const { error: teamDeleteError } = await supabaseAdmin
+          .from('advisor_team_members')
+          .delete()
+          .eq('advisor_id', advisorId);
+        if (teamDeleteError) {
+          console.error('Failed deleting advisor team members:', teamDeleteError);
+          throw new Error('Failed deleting advisor team members');
+        }
+      }
+
+      // 2. Company memberships
+      console.log('Deleting company members for user:', userId);
+      const { error: companyMembersDeleteError } = await supabaseAdmin
+        .from('company_members')
+        .delete()
+        .eq('user_id', userId);
+      if (companyMembersDeleteError) {
+        console.error('Failed deleting company members:', companyMembersDeleteError);
+        throw new Error('Failed deleting company members');
+      }
+
+      // 3. User roles
+      console.log('Deleting user roles for user:', userId);
+      const { error: rolesDeleteError } = await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+      if (rolesDeleteError) {
+        console.error('Failed deleting user roles:', rolesDeleteError);
+        throw new Error('Failed deleting user roles');
+      }
+
+      // 4. Advisor record
+      if (advisorData?.id) {
+        console.log('Deleting advisor record:', advisorData.id);
+        const { error: advisorDeleteError } = await supabaseAdmin
+          .from('advisors')
+          .delete()
+          .eq('id', advisorData.id);
+        if (advisorDeleteError) {
+          console.error('Failed deleting advisor record:', advisorDeleteError);
+          throw new Error('Failed deleting advisor record');
+        }
+      }
+
+      // 5. Delete profile
+      console.log('Deleting profile for user:', userId);
+      const { error: profileDeleteError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+      if (profileDeleteError) {
+        console.error('Failed deleting profile:', profileDeleteError);
+        throw new Error('Failed deleting profile');
+      }
+
+      // 6. Finally delete the auth user
+      console.log('Deleting auth user:', userId);
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (deleteError) {

@@ -57,6 +57,8 @@ export const useProposalEvaluation = () => {
     setError(null);
 
     try {
+      console.log('[Evaluation] Starting evaluation for project:', projectId);
+      
       const { data, error: invokeError } = await supabase.functions.invoke(
         'evaluate-proposals-batch',
         {
@@ -67,20 +69,34 @@ export const useProposalEvaluation = () => {
         }
       );
 
+      console.log('[Evaluation] Response received:', { data, error: invokeError });
+
       if (invokeError) {
-        throw invokeError;
+        console.error('[Evaluation] Invoke error:', invokeError);
+        throw new Error(invokeError.message || 'Failed to invoke evaluation function');
       }
 
-      if (!data.success) {
+      if (!data) {
+        throw new Error('No data returned from evaluation');
+      }
+
+      if (data.success === false) {
         throw new Error(data.error || 'Evaluation failed');
       }
 
+      // Handle both successful response formats
+      const result: EvaluationResult = {
+        batch_summary: data.batch_summary,
+        ranked_proposals: data.ranked_proposals || [],
+        evaluation_metadata: data.evaluation_metadata,
+      };
+
       toast({
         title: 'ההערכה הושלמה בהצלחה',
-        description: `נמצאו ${data.ranked_proposals.length} הצעות מדורגות`,
+        description: `נמצאו ${result.ranked_proposals.length} הצעות מדורגות`,
       });
 
-      return data as EvaluationResult;
+      return result;
     } catch (err: any) {
       const errorMessage = err.message || 'שגיאה בהערכת ההצעות';
       setError(errorMessage);

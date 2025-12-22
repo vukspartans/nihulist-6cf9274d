@@ -1,10 +1,85 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import mammoth from "https://esm.sh/mammoth@1.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// System Prompt – RFQ Outreach Generator
+const EXTRACTION_PROMPT = `You are an AI assistant that converts long, formal RFQ / scope documents into short supplier outreach messages.
+
+## Your Goal
+Create a concise, professional outreach message that can be sent via email or WhatsApp to suppliers, explaining:
+- What the project is
+- What services are required
+- What the supplier is expected to provide
+- What the next step is
+
+The output must be short, clear, and action-oriented.
+
+## Input
+You will receive:
+- A long RFQ, scope of work, or planning document
+- The document may be legal, repetitive, or overly detailed
+
+## Output Requirements
+You must generate:
+- A short outreach message in the same language as the input document
+- Written in plain, business-oriented language
+- Suitable for first contact with a supplier
+
+## Structure to Follow (Mandatory)
+
+**Subject line**
+Short and factual. Include role + general project location or type.
+
+**Opening sentence**
+One sentence explaining:
+- Who is managing the project
+- What kind of project it is
+- What type of supplier is needed
+
+**Scope summary (bullet points)**
+3–5 bullets max.
+Summarize only the core responsibilities, such as:
+- Planning / execution / supervision
+- Coordination with other stakeholders
+- Deliverables (plans, specs, BOQs, estimates, etc.)
+Ignore legal clauses, insurance language, and payment schedules.
+
+**Supplier requirements**
+2–4 bullets max, such as:
+- Fixed / lump-sum pricing
+- Relevant experience
+- Availability or involvement level
+
+**Call to action**
+A short closing line explaining the next step, e.g.:
+- Full RFQ will be sent if relevant
+- Ask for confirmation of interest
+
+## Hard Rules
+- Do not copy text verbatim from the document
+- Do not include personal names, signatures, or company footers
+- Do not include legal language or excessive detail
+- Do not exceed ~120–150 words total
+- No marketing language, no emojis, no hype
+
+## Tone
+- Professional
+- Direct
+- Efficient
+- Neutral and business-focused
+
+## Primary Success Criteria
+A supplier should be able to read the output in under 20 seconds and immediately understand:
+- Is this relevant to me?
+- What am I being asked to do?
+- What should I reply?
+
+OUTPUT THE MESSAGE DIRECTLY WITHOUT ANY PREAMBLE OR EXPLANATION.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -74,8 +149,6 @@ serve(async (req) => {
     const isPDF = mimeType.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
     const isImage = mimeType.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp)$/i.test(fileName);
     const isDocx = mimeType.includes("word") || fileName.toLowerCase().endsWith(".docx");
-    const isExcel = mimeType.includes("excel") || mimeType.includes("spreadsheet") || 
-                   fileName.toLowerCase().endsWith(".xlsx") || fileName.toLowerCase().endsWith(".xls");
 
     let extractedText = "";
     let parts: any[] = [];
@@ -95,66 +168,50 @@ serve(async (req) => {
             data: base64Data,
           },
         },
-        {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
-
-מהמסמך המצורף, חלץ את "תוכן הבקשה" או "תיאור הבקשה" - כלומר את המידע העיקרי שהיזם מבקש מהיועץ.
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-- מפרטים טכניים
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.
-אם יש פריטים רבים, סדר אותם ברשימה מנוקדת.
-אל תוסיף מידע שלא מופיע במסמך.
-אם לא מצאת תוכן רלוונטי, ציין זאת.`,
-        },
+        { text: EXTRACTION_PROMPT },
       ];
 
       console.log("[extract-rfp-content] Using Gemini vision for:", isPDF ? "PDF" : "Image");
     } else if (isDocx) {
-      // For DOCX, we need to extract text first
-      // Simple extraction - look for XML text content
-      const textDecoder = new TextDecoder("utf-8");
-      const rawContent = textDecoder.decode(new Uint8Array(fileData));
+      // For DOCX, use mammoth to properly extract text
+      console.log("[extract-rfp-content] Using mammoth for DOCX extraction");
       
-      // Try to extract text from DOCX (it's a ZIP with XML inside)
-      // This is a simplified approach - for production, use a proper library
-      const textMatches = rawContent.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
-      if (textMatches) {
-        extractedText = textMatches
-          .map((match) => match.replace(/<[^>]+>/g, ""))
-          .join(" ");
+      try {
+        const result = await mammoth.extractRawText({ 
+          arrayBuffer: fileData 
+        });
+        extractedText = result.value;
+        console.log("[extract-rfp-content] Mammoth extracted text length:", extractedText.length);
+        console.log("[extract-rfp-content] Mammoth text preview:", extractedText.substring(0, 500));
+      } catch (mammothError) {
+        console.error("[extract-rfp-content] Mammoth extraction error:", mammothError);
+        extractedText = "";
       }
 
       if (!extractedText.trim()) {
-        extractedText = "לא ניתן לחלץ טקסט מקובץ DOCX זה. אנא העלה קובץ PDF או תמונה.";
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "לא ניתן לחלץ טקסט מקובץ DOCX זה. אנא העלה קובץ PDF או תמונה.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
+      // Pass extracted DOCX text to Gemini for analysis
       parts = [
         {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
+          text: `${EXTRACTION_PROMPT}
 
-מהטקסט הבא שחולץ מהמסמך, חלץ את "תוכן הבקשה" או "תיאור הבקשה":
-
-${extractedText}
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.`,
+## תוכן המסמך:
+${extractedText}`,
         },
       ];
 
-      console.log("[extract-rfp-content] Extracted DOCX text length:", extractedText.length);
+      console.log("[extract-rfp-content] DOCX text extracted, sending to Gemini for analysis, length:", extractedText.length);
     } else {
       // For other text files
       const textDecoder = new TextDecoder("utf-8");
@@ -162,39 +219,32 @@ ${extractedText}
 
       parts = [
         {
-          text: `אתה מנתח מסמכי בקשה להצעות מחיר (RFP) בתחום הבנייה והנדסה בישראל.
+          text: `${EXTRACTION_PROMPT}
 
-מהטקסט הבא, חלץ את "תוכן הבקשה" או "תיאור הבקשה":
-
-${extractedText}
-
-חפש ספציפית:
-- תיאור הפרויקט והיקפו
-- דרישות ספציפיות מהיועץ
-- לוחות זמנים ומועדים
-- תנאים מיוחדים
-- היקף העבודה הנדרש
-
-החזר את התוכן בעברית, מסודר ומפורמט בצורה ברורה.`,
+## תוכן המסמך:
+${extractedText}`,
         },
       ];
 
       console.log("[extract-rfp-content] Using text extraction, length:", extractedText.length);
     }
 
-    // Call Gemini API
+    // Call Gemini 3 Pro Preview API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-goog-api-key": GOOGLE_API_KEY,
+        },
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             temperature: 0.2,
+            mediaResolution: "MEDIA_RESOLUTION_MEDIUM",
           },
-          ...(isPDF || isImage ? { mediaResolution: "MEDIA_RESOLUTION_MEDIUM" } : {}),
         }),
       }
     );

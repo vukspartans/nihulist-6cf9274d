@@ -75,70 +75,77 @@ export const DashboardStats = () => {
     }
   };
   if (loading) {
-    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        {[1, 2, 3, 4].map(i => <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-muted rounded mb-2"></div>
-              <div className="h-8 bg-muted rounded"></div>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6">
+        {[1, 2, 3, 4].map(i => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4 md:p-6">
+              <div className="h-3 md:h-4 bg-muted rounded mb-2"></div>
+              <div className="h-6 md:h-8 bg-muted rounded"></div>
             </CardContent>
-          </Card>)}
-      </div>;
+          </Card>
+        ))}
+      </div>
+    );
   }
-  return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">סה"כ פרויקטים</p>
-              <p className="text-2xl font-bold text-foreground">{stats.totalProjects}</p>
+        <CardContent className="p-3 md:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">פרויקטים</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{stats.totalProjects}</p>
             </div>
-            <div className="p-3 rounded-full bg-muted">
-              <BarChart className="w-6 h-6 text-primary" />
+            <div className="p-1.5 md:p-2.5 rounded-full bg-muted shrink-0">
+              <BarChart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
           </div>
         </CardContent>
       </Card>
       
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">פרויקטים עם בקשות</p>
-              <p className="text-2xl font-bold text-foreground">{stats.projectsWithRfps}</p>
+        <CardContent className="p-3 md:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">עם בקשות</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{stats.projectsWithRfps}</p>
             </div>
-            <div className="p-3 rounded-full bg-muted">
-              <TrendingUp className="w-6 h-6 text-success" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">בקשות שנשלחו</p>
-              <p className="text-2xl font-bold text-foreground">{stats.rfpsSent}</p>
-            </div>
-            <div className="p-3 rounded-full bg-muted">
-              <FileText className="w-6 h-6 text-accent" />
+            <div className="p-1.5 md:p-2.5 rounded-full bg-muted shrink-0">
+              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-success" />
             </div>
           </div>
         </CardContent>
       </Card>
       
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">הצעות מחיר מיועצים</p>
-              <p className="text-2xl font-bold text-foreground">{stats.totalProposals}</p>
+        <CardContent className="p-3 md:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">בקשות</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{stats.rfpsSent}</p>
             </div>
-            <div className="p-3 rounded-full bg-muted">
-              <Users className="w-6 h-6 text-info" />
+            <div className="p-1.5 md:p-2.5 rounded-full bg-muted shrink-0">
+              <FileText className="w-4 h-4 md:w-5 md:h-5 text-accent" />
             </div>
           </div>
         </CardContent>
       </Card>
-    </div>;
+      
+      <Card>
+        <CardContent className="p-3 md:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">הצעות</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{stats.totalProposals}</p>
+            </div>
+            <div className="p-1.5 md:p-2.5 rounded-full bg-muted shrink-0">
+              <Users className="w-4 h-4 md:w-5 md:h-5 text-info" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };

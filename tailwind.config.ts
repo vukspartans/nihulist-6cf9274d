@@ -18,6 +18,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'Open Sans', 'Noto Sans Hebrew', 'Arial Hebrew', 'system-ui', 'sans-serif'],
+				hebrew: ['Inter', 'Open Sans', 'Noto Sans Hebrew', 'Arial Hebrew', 'system-ui', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

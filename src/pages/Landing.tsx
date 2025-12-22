@@ -192,16 +192,12 @@ const Landing = memo(() => {
               <div className="space-y-4 animate-fade-in" style={{animationDelay: "0.6s"}}>
                 <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm font-medium text-muted-foreground">
                   <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
-                    <CheckCircle className="w-4 h-4 text-primary" />
-                    +500 פרויקטים
-                  </span>
-                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
-                    <UserCheck className="w-4 h-4 text-primary" />
-                    +1,000 יועצים
-                  </span>
-                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
                     <Shield className="w-4 h-4 text-primary" />
                     אבטחה ארגונית
+                  </span>
+                  <span className="flex items-center gap-1.5 sm:gap-2 hover-scale">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    יועצים מאומתים
                   </span>
                 </div>
               </div>
@@ -236,31 +232,14 @@ const Landing = memo(() => {
         </div>
         
         <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-20 animate-fade-in">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+          <div className="text-center mb-10 sm:mb-14 lg:mb-20 animate-fade-in">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black mb-4 sm:mb-6">
               <span className="text-foreground">מומחי בנייה ויזמי נדל"ן מאומתים</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">נבדקים בקפידה להבטחת איכות ואמינות מקסימלית בתחום הבנייה והנדל"ן</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 text-center max-w-5xl mx-auto mb-12 sm:mb-16 lg:mb-20">
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.1s"}}>
-                <div className="text-4xl lg:text-6xl font-black gradient-text">+500</div>
-                <div className="text-sm lg:text-base font-medium text-muted-foreground">פרויקטי בנייה הושלמו</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.2s"}}>
-                <div className="text-4xl lg:text-6xl font-black gradient-text">+1,000</div>
-                <div className="text-sm lg:text-base font-medium text-muted-foreground">מומחי בנייה מאומתים</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.3s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">95%</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">שביעות רצון</div>
-            </div>
-            <div className="space-y-4 animate-scale-in hover-scale" style={{animationDelay: "0.4s"}}>
-              <div className="text-4xl lg:text-6xl font-black gradient-text">24/7</div>
-              <div className="text-sm lg:text-base font-medium text-muted-foreground">תמיכה</div>
-            </div>
-          </div>
+          {/* Stats grid hidden for launch */}
 
           {/* Security Banner */}
           <div className="text-center animate-fade-in" style={{animationDelay: "0.5s"}}>
@@ -280,12 +259,12 @@ const Landing = memo(() => {
         </div>
         
         <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-24 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black mb-8">
+          <div className="text-center mb-10 sm:mb-16 lg:mb-24 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black mb-4 sm:mb-6 lg:mb-8">
               <span className="text-foreground">איך</span>
               <span className="gradient-text"> זה עובד</span>
             </h2>
-            <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
               שלושה צעדים פשוטים למציאת המומחה המושלם לכל פרויקט בנייה ונדל"ן
             </p>
           </div>
@@ -300,7 +279,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
                   <FileText className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">צור פרויקט בנייה</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">צור פרויקט בנייה</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -310,7 +289,7 @@ const Landing = memo(() => {
             </Card>
 
             {/* Step 2 */}
-            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <Card className="text-center p-6 sm:p-8 lg:p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.4s"}}>
               <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 2
               </div>
@@ -318,7 +297,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "1s"}}>
                   <Search className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">התאמה עם מומחים</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">התאמה עם מומחים</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -328,7 +307,7 @@ const Landing = memo(() => {
             </Card>
 
             {/* Step 3 */}
-            <Card className="text-center p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.6s"}}>
+            <Card className="text-center p-6 sm:p-8 lg:p-10 relative overflow-hidden hover-scale animate-slide-up" style={{animationDelay: "0.6s"}}>
               <div className="absolute top-6 right-6 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
                 3
               </div>
@@ -336,7 +315,7 @@ const Landing = memo(() => {
                 <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float" style={{animationDelay: "2s"}}>
                   <MessageSquare className="w-10 h-10 text-white" />
                 </div>
-                <CardTitle className="text-3xl font-bold">השווה ובחר</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">השווה ובחר</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -349,41 +328,41 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* Audience Section */}
-      <section className="py-32 lg:py-40 bg-muted/30 relative overflow-hidden">
+      <section className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-muted/30 relative overflow-hidden">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-24 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black mb-8">
+          <div className="text-center mb-10 sm:mb-16 lg:mb-24 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black mb-4 sm:mb-6 lg:mb-8">
               <span className="text-foreground">למי</span>
               <span className="gradient-text"> אנחנו מתאימים?</span>
             </h2>
           </div>
           
-          <div className="grid lg:grid-cols-2 gap-16 max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-16 max-w-7xl mx-auto">
             {/* For Entrepreneurs */}
-            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.2s"}}>
+            <Card className="p-6 sm:p-8 lg:p-12 xl:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.2s"}}>
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent"></div>
               <CardHeader className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-primary to-tech-purple rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float">
-                  <Briefcase className="w-10 h-10 text-white" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-primary to-tech-purple rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-4 sm:mb-6 lg:mb-8 animate-float">
+                  <Briefcase className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">ליזמי נדל"ן</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">ליזמי נדל"ן</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 relative">
-                <p className="text-xl text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-6 sm:space-y-8 relative">
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   מצא את מומחי הבנייה והנדל"ן הנכונים לפרויקט שלך. חסוך זמן, הפחת עלויות וקבל הדרכה מקצועית.
                 </p>
-                <ul className="space-y-4 text-right">
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                <ul className="space-y-4 text-right" dir="rtl">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גישה למומחי בנייה מאומתים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">התאמה מבוססת בינה מלאכותית</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">תמחור שקוף וברור</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
                 <Button 
@@ -397,30 +376,30 @@ const Landing = memo(() => {
             </Card>
 
             {/* For Consultants */}
-            <Card className="p-12 lg:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.4s"}}>
+            <Card className="p-6 sm:p-8 lg:p-12 xl:p-16 text-center lg:text-right hover-scale animate-slide-up relative overflow-hidden" style={{animationDelay: "0.4s"}}>
               <div className="absolute inset-0 bg-gradient-to-br from-tech-purple/5 to-transparent"></div>
               <CardHeader className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-tech-purple to-primary rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-8 animate-float" style={{animationDelay: "1s"}}>
-                  <UserCheck className="w-10 h-10 text-white" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-tech-purple to-primary rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto lg:mx-0 mb-4 sm:mb-6 lg:mb-8 animate-float" style={{animationDelay: "1s"}}>
+                  <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <CardTitle className="text-4xl font-bold mb-6">למומחי בנייה</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">למומחי בנייה</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 relative">
-                <p className="text-xl text-muted-foreground leading-relaxed">
+              <CardContent className="space-y-6 sm:space-y-8 relative">
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
                   הגע ליזמי נדל"ן והצמח את עסק הבנייה שלך. קבל התאמות עם פרויקטי בנייה איכותיים.
                 </p>
-                <ul className="space-y-4 text-right">
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                <ul className="space-y-4 text-right" dir="rtl">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גישה לפרויקטי בנייה איכותיים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">בניית מוניטין מקצועי</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
-                  <li className="flex items-center gap-3 justify-end hover-scale">
+                  <li className="flex items-center gap-3 hover-scale">
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                     <span className="text-lg">גמישות בלוחות זמנים</span>
-                    <CheckCircle className="w-6 h-6 text-primary" />
                   </li>
                 </ul>
                 <Button 
@@ -437,45 +416,19 @@ const Landing = memo(() => {
         </div>
       </section>
 
-      {/* Testimonials Section - Lazy Loaded with Optimized Component */}
-      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-primary via-tech-purple to-primary relative overflow-hidden">
-        {/* Background effects */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-tech-purple-light/20 rounded-full blur-3xl animate-float" style={{animationDelay: "2s"}}></div>
-        </div>
-        
-        <div className="container mx-auto px-4 lg:px-6 relative">
-          <div className="text-center mb-20 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black text-white mb-8">
-              מה אומרים <span className="text-tech-purple-light">הלקוחות שלנו?</span>
-            </h2>
-            <p className="text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed">
-              שמע את הסיפורים של מומחי בנייה ויזמי נדל"ן שהצליחו להגשים את החלומות שלהם
-            </p>
-          </div>
-          
-          <Suspense fallback={
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-pulse text-white text-xl">טוען עדויות...</div>
-            </div>
-          }>
-            <OptimizedTestimonials testimonials={testimonials} />
-          </Suspense>
-        </div>
-      </LazySection>
+      {/* Testimonials Section - Hidden for launch */}
 
       {/* Final CTA Section */}
-      <LazySection className="py-32 lg:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
+      <LazySection className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-background via-primary/5 to-tech-purple/5 relative overflow-hidden">
         <div className="container mx-auto px-4 lg:px-6 text-center">
-          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-            <h2 className="text-5xl lg:text-6xl font-black leading-tight">
+          <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight">
               <span className="text-foreground">מוכן לשדרג</span>
               <br />
               <span className="text-tech-purple-light">את העסק שלך?</span>
             </h2>
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-              הצטרף לאלפי יזמים ויועצים שכבר חווים את העתיד של שיתוף פעולה מקצועי
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
+              הצטרף ליזמים ויועצים שחווים את העתיד של שיתוף פעולה מקצועי
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -483,21 +436,12 @@ const Landing = memo(() => {
                 variant="hero" 
                 size="xl" 
                 onClick={() => setShowUserTypeDialog(true)}
-                className="text-xl px-12 py-6 bg-primary text-white hover:bg-primary/90 transition-transform duration-200 hover:scale-115"
+                className="text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 bg-primary text-white hover:bg-primary/90 transition-transform duration-200 hover:scale-115 w-full sm:w-auto"
               >
-                <Zap className="w-6 h-6 ml-2" />
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
                 התחל את הפרויקט הראשון היום
               </Button>
               
-              <Button 
-                variant="outline" 
-                size="xl" 
-                onClick={() => setShowDemoVideo(true)}
-                className="text-xl px-12 py-6 border-2 hover-scale"
-              >
-                <Play className="w-6 h-6 ml-2" />
-                צפה בהדגמה
-              </Button>
             </div>
             
             {/* Trust indicators */}
@@ -520,10 +464,10 @@ const Landing = memo(() => {
       </LazySection>
 
       {/* FAQ Preview Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-20 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black mb-4 sm:mb-6">
               <span className="text-foreground">שאלות</span>
               <span className="gradient-text"> נפוצות</span>
             </h2>

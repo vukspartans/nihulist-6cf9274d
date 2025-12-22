@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -25,6 +25,8 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { TeamMemberManager } from '@/components/TeamMemberManager';
+import OrganizationProfileTab from '@/components/OrganizationProfileTab';
+import { PRODUCTION_URL } from '@/utils/urls';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
@@ -225,11 +227,32 @@ const Profile = () => {
   };
 
   const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
+    console.log('[Profile] updateProfile called:', { field, userId: user?.id });
+    
+    if (!user?.id) {
+      console.error('[Profile] No user ID available');
+      toast({
+        title: "שגיאה",
+        description: "משתמש לא מחובר",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSaving(true);
     try {
       if (field === 'company') {
-        // Update advisor table for company info
-        const { error } = await supabase
+        console.log('[Profile] Updating company info:', {
+          companyName: editedData.companyName,
+          location: editedData.location,
+          foundingYear: editedData.foundingYear,
+          officeSize: editedData.officeSize,
+          officePhone: editedData.officePhone,
+          positionInOffice: editedData.positionInOffice,
+        });
+        
+        // Update advisor table for company info with select to verify update
+        const { data, error, count } = await supabase
           .from('advisors')
           .update({
             company_name: editedData.companyName,
@@ -239,9 +262,23 @@ const Profile = () => {
             office_phone: editedData.officePhone || null,
             position_in_office: editedData.positionInOffice || null,
           })
-          .eq('user_id', user?.id);
+          .eq('user_id', user.id)
+          .select();
+
+        console.log('[Profile] Company update result:', { data, error, count, rowsAffected: data?.length });
 
         if (error) throw error;
+        
+        // Check if any rows were actually updated
+        if (!data || data.length === 0) {
+          console.error('[Profile] No rows updated - advisor record may not exist for user:', user.id);
+          toast({
+            title: "שגיאה",
+            description: "לא נמצא רשומת יועץ עבור המשתמש. אנא פנה לתמיכה.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         setAdvisorProfile(prev => prev ? {
           ...prev,
@@ -346,7 +383,7 @@ const Profile = () => {
     setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth?type=recovery`,
+        redirectTo: `${PRODUCTION_URL}/auth?type=recovery`,
       });
 
       if (error) throw error;
@@ -768,7 +805,7 @@ const Profile = () => {
 
         {/* Tabs for Organization */}
         <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
-          <TabsList className={`grid w-full ${isAdvisor ? 'grid-cols-5' : 'grid-cols-2'} h-auto p-1`}>
+          <TabsList className={`grid w-full ${isAdvisor ? 'grid-cols-5' : 'grid-cols-3'} h-auto p-1`}>
             <TabsTrigger value="personal" className="gap-2 py-3 relative">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">פרטים אישיים</span>
@@ -777,7 +814,7 @@ const Profile = () => {
                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
               )}
             </TabsTrigger>
-            {isAdvisor && (
+            {isAdvisor ? (
               <>
                 <TabsTrigger value="company" className="gap-2 py-3 relative">
                   <Building className="h-4 w-4" />
@@ -804,6 +841,12 @@ const Profile = () => {
                   <span className="sm:hidden">צוות</span>
                 </TabsTrigger>
               </>
+            ) : (
+              <TabsTrigger value="organization" className="gap-2 py-3">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">ארגון</span>
+                <span className="sm:hidden">ארגון</span>
+              </TabsTrigger>
             )}
             <TabsTrigger value="settings" className="gap-2 py-3">
               <KeyRound className="h-4 w-4" />
@@ -1036,8 +1079,9 @@ const Profile = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 -mx-2 rounded-lg shadow-lg border">
                     <Button
+                      type="button"
                       onClick={() => updateProfile('company')}
                       disabled={saving}
                       className="flex-1"
@@ -1045,6 +1089,7 @@ const Profile = () => {
                       {saving ? 'שומר...' : 'שמור'}
                     </Button>
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => handleEditToggle('company')}
                       disabled={saving}
@@ -1554,6 +1599,13 @@ const Profile = () => {
                   {advisorId && <TeamMemberManager advisorId={advisorId} />}
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* Organization Tab - Only for entrepreneurs */}
+          {!isAdvisor && (
+            <TabsContent value="organization" className="space-y-4 mt-6 animate-fade-in">
+              <OrganizationProfileTab />
             </TabsContent>
           )}
 

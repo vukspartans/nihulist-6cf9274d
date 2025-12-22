@@ -37,45 +37,45 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
   const shouldShowWarning = showLegacyWarning && isLegacyType;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Current Selection Display */}
       {selectedType && (
-        <div className={`p-4 rounded-lg border ${
+        <div className={`p-3 sm:p-4 rounded-lg border ${
           shouldShowWarning 
             ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800' 
             : 'bg-primary/5 border-primary/20'
         }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-medium">{selectedType}</p>
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mt-0.5 sm:mt-0 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm sm:text-base">{selectedType}</p>
                 {selectedProjectCategory && (
-                  <Badge variant="secondary" className="mt-1 text-xs">
+                  <Badge variant="secondary" className="mt-1 text-[10px] sm:text-xs">
                     {selectedProjectCategory}
                   </Badge>
                 )}
                 {shouldShowWarning && (
                   <div className="mt-2">
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-300 dark:text-yellow-400">
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-300 dark:text-yellow-400 text-[10px] sm:text-xs">
                       סוג פרויקט ישן
                     </Badge>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                      מומלץ לעדכן לסוג פרויקט חדש מהרשימה למטה
+                    <p className="text-[10px] sm:text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                      מומלץ לעדכן לסוג פרויקט חדש
                     </p>
                   </div>
                 )}
               </div>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => {
                 setIsEditing(true);
               }}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-xs sm:text-sm flex-shrink-0 h-8 px-2 sm:px-3"
             >
-              שנה בחירה
+              שנה
             </Button>
           </div>
         </div>
