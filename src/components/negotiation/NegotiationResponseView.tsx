@@ -100,10 +100,11 @@ export const NegotiationResponseView = ({
   };
 
   const handleSubmit = async () => {
+    // Allow submitting even without line items (for proposals without itemized breakdown)
     const result = await respondToNegotiation({
       session_id: sessionId,
       consultant_message: consultantMessage || undefined,
-      updated_line_items: updatedLineItems,
+      updated_line_items: updatedLineItems.length > 0 ? updatedLineItems : [],
     });
 
     if (result) {
@@ -136,7 +137,8 @@ export const NegotiationResponseView = ({
 
   const originalTotal = session.proposal?.price || 0;
   const targetTotal = session.target_total || 0;
-  const newTotal = calculateNewTotal();
+  const hasLineItems = session.line_item_negotiations && session.line_item_negotiations.length > 0;
+  const newTotal = hasLineItems ? calculateNewTotal() : targetTotal;
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -195,13 +197,15 @@ export const NegotiationResponseView = ({
         </Card>
       )}
 
-      {/* Line Items */}
-      {session.line_item_negotiations && session.line_item_negotiations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">פריטים לעדכון</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Line Items or No Items Message */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            {hasLineItems ? "פריטים לעדכון" : "סיכום הצעה"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {hasLineItems ? (
             <div className="space-y-4">
               <div className="grid grid-cols-4 gap-4 text-sm font-medium text-muted-foreground pb-2 border-b">
                 <span>פריט</span>
@@ -210,7 +214,7 @@ export const NegotiationResponseView = ({
                 <span className="text-center">הצעה חדשה שלי</span>
               </div>
 
-              {session.line_item_negotiations.map((lineItem) => {
+              {session.line_item_negotiations!.map((lineItem) => {
                 const updatedItem = updatedLineItems.find(
                   (u) => u.line_item_id === lineItem.line_item_id
                 );
@@ -255,31 +259,40 @@ export const NegotiationResponseView = ({
                 );
               })}
             </div>
-
-            <Separator className="my-4" />
-
-            {/* Totals */}
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>סה״כ מקורי:</span>
-                <span className="font-medium">{formatCurrency(originalTotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>יעד היזם:</span>
-                <span className="font-medium text-amber-600">
-                  {formatCurrency(targetTotal)}
-                </span>
-              </div>
-              <div className="flex justify-between text-lg">
-                <span className="font-medium">סה״כ הצעה חדשה:</span>
-                <span className="font-bold text-green-600">
-                  {formatCurrency(newTotal)}
-                </span>
-              </div>
+          ) : (
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-muted-foreground mb-2">
+                הצעה זו אינה כוללת פירוט פריטים
+              </p>
+              <p className="text-sm">
+                היזם מבקש הנחה כוללת על סך ההצעה. ניתן לאשר את היעד או להוסיף הודעה עם הסבר.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          <Separator className="my-4" />
+
+          {/* Totals */}
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>סה״כ מקורי:</span>
+              <span className="font-medium">{formatCurrency(originalTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>יעד היזם:</span>
+              <span className="font-medium text-amber-600">
+                {formatCurrency(targetTotal)}
+              </span>
+            </div>
+            <div className="flex justify-between text-lg">
+              <span className="font-medium">סה״כ הצעה חדשה:</span>
+              <span className="font-bold text-green-600">
+                {formatCurrency(newTotal)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Response Message */}
       <Card>
