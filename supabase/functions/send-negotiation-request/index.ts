@@ -295,7 +295,7 @@ serve(async (req) => {
     if (advisorEmail) {
       const resend = new Resend(RESEND_API_KEY);
 
-      const responseUrl = `https://billding.ai/advisor-dashboard?negotiation=${session.id}`;
+      const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
       const emailHtml = await renderAsync(
         NegotiationRequestEmail({
