@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -92,9 +93,41 @@ export const NegotiationDialog = ({
   };
 
   const handleSubmit = async () => {
-    if (!latestVersion) {
-      console.error("No version found for proposal");
-      return;
+    let versionId = latestVersion?.id;
+    
+    // If no version exists, create one from the proposal data
+    if (!versionId) {
+      const { data: proposalData } = await supabase
+        .from("proposals")
+        .select("price, timeline_days, scope_text, terms, conditions_json")
+        .eq("id", proposal.id)
+        .single();
+      
+      if (proposalData) {
+        const { data: newVersion, error: versionError } = await supabase
+          .from("proposal_versions")
+          .insert({
+            proposal_id: proposal.id,
+            version_number: 1,
+            price: proposalData.price,
+            timeline_days: proposalData.timeline_days,
+            scope_text: proposalData.scope_text,
+            terms: proposalData.terms,
+            conditions_json: proposalData.conditions_json,
+            change_reason: "גרסה ראשונית",
+          })
+          .select("id")
+          .single();
+        
+        if (versionError || !newVersion) {
+          console.error("[NegotiationDialog] Failed to create version");
+          return;
+        }
+        versionId = newVersion.id;
+      } else {
+        console.error("[NegotiationDialog] No proposal data found");
+        return;
+      }
     }
 
     const negotiationComments: NegotiationCommentInput[] = Object.entries(comments)
@@ -107,7 +140,7 @@ export const NegotiationDialog = ({
     const result = await createNegotiationSession({
       project_id: proposal.project_id,
       proposal_id: proposal.id,
-      negotiated_version_id: latestVersion.id,
+      negotiated_version_id: versionId,
       target_total: calculateTargetTotal(),
       global_comment: globalComment || undefined,
       line_item_adjustments: adjustments.length > 0 ? adjustments : undefined,
