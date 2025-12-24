@@ -2,18 +2,25 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
+import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, FileText, ClipboardList, Calendar, CreditCard, ArrowLeft } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft } from "lucide-react";
 
 interface NegotiationResponseViewProps {
   sessionId: string;
   onSuccess?: () => void;
   onBack?: () => void;
+}
+
+interface LineItemDetails {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
 }
 
 export const NegotiationResponseView = ({
@@ -25,6 +32,7 @@ export const NegotiationResponseView = ({
   const [updatedLineItems, setUpdatedLineItems] = useState<UpdatedLineItem[]>([]);
   const [consultantMessage, setConsultantMessage] = useState("");
   const [loadingSession, setLoadingSession] = useState(true);
+  const [lineItemDetails, setLineItemDetails] = useState<Map<string, LineItemDetails>>(new Map());
 
   const { fetchNegotiationWithDetails, respondToNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -46,6 +54,28 @@ export const NegotiationResponseView = ({
           consultant_response_price: li.initiator_target_price,
         }))
       );
+
+      // Fetch line item details for names
+      const lineItemIds = data.line_item_negotiations.map((li) => li.line_item_id);
+      if (lineItemIds.length > 0) {
+        const { data: items } = await supabase
+          .from("proposal_line_items")
+          .select("id, name, description, category")
+          .in("id", lineItemIds);
+        
+        if (items) {
+          const detailsMap = new Map<string, LineItemDetails>();
+          items.forEach((item) => {
+            detailsMap.set(item.id, {
+              id: item.id,
+              name: item.name,
+              description: item.description || undefined,
+              category: item.category || undefined,
+            });
+          });
+          setLineItemDetails(detailsMap);
+        }
+      }
     }
     setLoadingSession(false);
   };
@@ -184,6 +214,7 @@ export const NegotiationResponseView = ({
                 const updatedItem = updatedLineItems.find(
                   (u) => u.line_item_id === lineItem.line_item_id
                 );
+                const details = lineItemDetails.get(lineItem.line_item_id);
 
                 return (
                   <div
@@ -191,9 +222,14 @@ export const NegotiationResponseView = ({
                     className="grid grid-cols-4 gap-4 items-center py-2"
                   >
                     <div>
-                      <p className="font-medium">פריט #{lineItem.line_item_id.slice(0, 8)}</p>
+                      <p className="font-medium">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
+                      {details?.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {details.description}
+                        </p>
+                      )}
                       {lineItem.initiator_note && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-amber-600 mt-0.5">
                           {lineItem.initiator_note}
                         </p>
                       )}
