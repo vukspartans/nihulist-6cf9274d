@@ -26,7 +26,6 @@ import { Separator } from '@/components/ui/separator';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { TeamMemberManager } from '@/components/TeamMemberManager';
 import OrganizationProfileTab from '@/components/OrganizationProfileTab';
-import { PRODUCTION_URL } from '@/utils/urls';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
@@ -227,32 +226,11 @@ const Profile = () => {
   };
 
   const updateProfile = async (field: 'name' | 'phone' | 'company' | 'activityRegions' | 'officeSize' | 'socialUrls') => {
-    console.log('[Profile] updateProfile called:', { field, userId: user?.id });
-    
-    if (!user?.id) {
-      console.error('[Profile] No user ID available');
-      toast({
-        title: "שגיאה",
-        description: "משתמש לא מחובר",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setSaving(true);
     try {
       if (field === 'company') {
-        console.log('[Profile] Updating company info:', {
-          companyName: editedData.companyName,
-          location: editedData.location,
-          foundingYear: editedData.foundingYear,
-          officeSize: editedData.officeSize,
-          officePhone: editedData.officePhone,
-          positionInOffice: editedData.positionInOffice,
-        });
-        
-        // Update advisor table for company info with select to verify update
-        const { data, error, count } = await supabase
+        // Update advisor table for company info
+        const { error } = await supabase
           .from('advisors')
           .update({
             company_name: editedData.companyName,
@@ -262,23 +240,9 @@ const Profile = () => {
             office_phone: editedData.officePhone || null,
             position_in_office: editedData.positionInOffice || null,
           })
-          .eq('user_id', user.id)
-          .select();
-
-        console.log('[Profile] Company update result:', { data, error, count, rowsAffected: data?.length });
+          .eq('user_id', user?.id);
 
         if (error) throw error;
-        
-        // Check if any rows were actually updated
-        if (!data || data.length === 0) {
-          console.error('[Profile] No rows updated - advisor record may not exist for user:', user.id);
-          toast({
-            title: "שגיאה",
-            description: "לא נמצא רשומת יועץ עבור המשתמש. אנא פנה לתמיכה.",
-            variant: "destructive",
-          });
-          return;
-        }
 
         setAdvisorProfile(prev => prev ? {
           ...prev,
@@ -383,7 +347,7 @@ const Profile = () => {
     setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${PRODUCTION_URL}/auth?type=recovery`,
+        redirectTo: `${window.location.origin}/auth?type=recovery`,
       });
 
       if (error) throw error;
@@ -1079,9 +1043,8 @@ const Profile = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex gap-2 sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 -mx-2 rounded-lg shadow-lg border">
+                  <div className="flex gap-2">
                     <Button
-                      type="button"
                       onClick={() => updateProfile('company')}
                       disabled={saving}
                       className="flex-1"
@@ -1089,7 +1052,6 @@ const Profile = () => {
                       {saving ? 'שומר...' : 'שמור'}
                     </Button>
                     <Button
-                      type="button"
                       variant="outline"
                       onClick={() => handleEditToggle('company')}
                       disabled={saving}

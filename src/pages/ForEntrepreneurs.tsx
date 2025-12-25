@@ -132,27 +132,39 @@ const ForEntrepreneurs = () => {
               חסוך זמן, הפחת סיכונים והשג תוצאות מעבר לציפיות.
             </p>
 
-            <div className="flex flex-row gap-2 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-slide-up" style={{animationDelay: "0.4s"}}>
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="flex-1 sm:flex-none text-sm sm:text-lg px-4 sm:px-10 py-4 sm:py-6 hover-scale"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale"
               >
-                <Zap className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2" />
-                התחל חינם
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
+                התחל חינם עכשיו
               </Button>
               
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 hover-scale hidden sm:flex"
+              >
+                <BarChart className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
+                צפה בדמו
+              </Button>
             </div>
 
-            {/* Trust Indicators - Simplified for launch */}
+            {/* Trust Indicators */}
             <div className="flex flex-wrap justify-center items-center gap-8 text-sm font-medium text-muted-foreground animate-fade-in" style={{animationDelay: "0.6s"}}>
               <span className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                יועצים מאומתים
+                <Coins className="w-4 h-4 text-green-500" />
+                ממוצע חיסכון: ₪250K
               </span>
               <span className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
-                תגובה מהירה
+                מהירות: 24 שעות
+              </span>
+              <span className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-500" />
+                דירוג: 4.9/5
               </span>
             </div>
           </div>
@@ -207,13 +219,15 @@ const ForEntrepreneurs = () => {
                 <div className="text-8xl animate-pulse">🎯</div>
               </div>
               
-              {/* Floating decorations */}
+              {/* Floating Stats */}
               <div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-lg animate-float">
-                <Target className="w-6 h-6 text-primary" />
+                <div className="text-2xl font-bold text-green-500">+300%</div>
+                <div className="text-sm text-muted-foreground">ROI ממוצע</div>
               </div>
               
               <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-lg animate-float" style={{animationDelay: "1s"}}>
-                <Shield className="w-6 h-6 text-tech-purple" />
+                <div className="text-2xl font-bold text-primary">72h</div>
+                <div className="text-sm text-muted-foreground">זמן מהיר</div>
               </div>
             </div>
           </div>
@@ -244,7 +258,45 @@ const ForEntrepreneurs = () => {
         </div>
       </section>
 
-      {/* Success Stories - Hidden for launch */}
+      {/* Success Stories */}
+      <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-background">
+        <div className="container mx-auto px-4 lg:px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl lg:text-5xl font-black mb-6">
+              <span className="text-foreground">סיפורי</span>
+              <span className="gradient-text"> הצלחה</span>
+            </h2>
+            <p className="text-xl text-muted-foreground">יזמים שהצליחו להאיץ את העסק עם היועצים הנכונים</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 max-w-6xl mx-auto">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="p-6 sm:p-8 lg:p-12 relative overflow-hidden hover-scale animate-scale-in" style={{animationDelay: `${index * 0.2}s`}}>
+                <div className="absolute top-4 left-4">
+                  <Badge className="bg-green-100 text-green-800">
+                    חסך {testimonial.savings}
+                  </Badge>
+                </div>
+                
+                <div className="mt-8 space-y-6">
+                  <div className="flex text-yellow-500 text-2xl">
+                    {"★".repeat(5)}
+                  </div>
+                  
+                  <blockquote className="text-xl italic text-muted-foreground leading-relaxed">
+                    "{testimonial.quote}"
+                  </blockquote>
+                  
+                  <div>
+                    <div className="font-bold text-xl">{testimonial.name}</div>
+                    <div className="text-muted-foreground">{testimonial.title}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-12 sm:py-16 lg:py-24 xl:py-32 bg-gradient-to-r from-primary via-tech-purple to-primary relative overflow-hidden">
@@ -258,18 +310,18 @@ const ForEntrepreneurs = () => {
             </h2>
             
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              הצטרף ליזמים שמצאו את היועצים המושלמים לעסק שלהם
+              הצטרף לאלפי יזמים שכבר מצאו את היועצים המושלמים לעסק שלהם
             </p>
             
-            <div className="flex flex-row gap-2 sm:gap-6 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
               <Button 
                 variant="hero" 
                 size="lg" 
                 onClick={() => navigate('/auth?type=entrepreneur')}
-                className="flex-1 sm:flex-none text-sm sm:text-xl px-4 sm:px-12 py-4 sm:py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
+                className="w-full sm:w-auto text-base sm:text-xl px-8 sm:px-12 py-5 sm:py-6 bg-white text-primary hover:bg-white/90 hover-scale group"
               >
-                <Zap className="w-4 h-4 sm:w-6 sm:h-6 ml-1 sm:ml-2 text-white/80 group-hover:text-white transition-colors" />
-                <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו</span>
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 ml-2 text-white/80 group-hover:text-white transition-colors" />
+                <span className="text-white/80 group-hover:text-white transition-colors">התחל עכשיו - חינם</span>
               </Button>
             </div>
             

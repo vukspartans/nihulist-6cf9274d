@@ -162,18 +162,11 @@ export default function AdvisorsManagement() {
     },
   });
 
-  // Delete advisor mutation - uses edge function for server-side deletion
+  // Delete advisor mutation
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke('manage-users', {
-        body: { 
-          action: 'delete',
-          userId,
-        },
-      });
-
+      const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
     },
     onSuccess: async (_, userId) => {
       await logAdminAction("delete", "advisors", userId);
@@ -184,20 +177,12 @@ export default function AdvisorsManagement() {
       setDeleteDialogOpen(false);
       setSelectedAdvisor(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Error deleting advisor:", error);
-      if (error.message?.includes('Cannot delete')) {
-        toast({
-          title: "לא ניתן למחוק את החשבון שלך",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: t.advisors.messages.error,
-          description: error.message || "שגיאה במחיקת היועץ",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: t.advisors.messages.error,
+        variant: "destructive",
+      });
     },
   });
 

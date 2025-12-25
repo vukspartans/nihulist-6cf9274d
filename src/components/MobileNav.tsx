@@ -77,22 +77,22 @@ const MobileNav = ({
             צור קשר
           </Button>
           
-          <div className="border-t border-border mt-4 pt-4 flex flex-row gap-2">
+          <div className="border-t border-border mt-4 pt-4 space-y-3">
             {onLoginClick && (
               <Button 
                 variant="outline" 
-                className="flex-1 text-sm" 
-                size="default"
+                className="w-full text-base" 
+                size="lg"
                 onClick={onLoginClick}
               >
-                התחבר
+                התחברו למערכת
               </Button>
             )}
             {(ctaAction || onSignupClick) && (
               <Button 
                 variant="premium" 
-                className="flex-1 text-sm" 
-                size="default"
+                className="w-full text-base" 
+                size="lg"
                 onClick={ctaAction || onSignupClick}
               >
                 {ctaText}

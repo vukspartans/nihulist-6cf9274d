@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNegotiation } from "@/hooks/useNegotiation";
-import { useToast } from "@/hooks/use-toast";
+import { useProposalVersions } from "@/hooks/useProposalVersions";
 import { RefreshCw, Users } from "lucide-react";
 
 interface ProposalForBulk {
@@ -39,7 +39,6 @@ export const BulkNegotiationDialog = ({
   proposals,
   onSuccess,
 }: BulkNegotiationDialogProps) => {
-  const { toast } = useToast();
   const [selectedProposals, setSelectedProposals] = useState<Set<string>>(
     new Set(proposals.map((p) => p.id))
   );
@@ -49,7 +48,6 @@ export const BulkNegotiationDialog = ({
   const [reductionValue, setReductionValue] = useState(10);
   const [bulkMessage, setBulkMessage] = useState("");
   const [sendingProgress, setSendingProgress] = useState(0);
-  const [skippedProposals, setSkippedProposals] = useState<string[]>([]);
 
   const { createNegotiationSession, loading } = useNegotiation();
 
@@ -82,7 +80,6 @@ export const BulkNegotiationDialog = ({
   const handleSubmit = async () => {
     const selectedList = proposals.filter((p) => selectedProposals.has(p.id));
     let successCount = 0;
-    const skipped: string[] = [];
 
     for (let i = 0; i < selectedList.length; i++) {
       const proposal = selectedList[i];
@@ -96,43 +93,8 @@ export const BulkNegotiationDialog = ({
         .order("version_number", { ascending: false })
         .limit(1);
 
-      let versionId = versions?.[0]?.id;
-      
-      // If no version exists, create one from the proposal data
-      if (!versionId) {
-        const { data: proposalData } = await supabase
-          .from("proposals")
-          .select("price, timeline_days, scope_text, terms, conditions_json")
-          .eq("id", proposal.id)
-          .single();
-        
-        if (proposalData) {
-          const { data: newVersion, error: versionError } = await supabase
-            .from("proposal_versions")
-            .insert({
-              proposal_id: proposal.id,
-              version_number: 1,
-              price: proposalData.price,
-              timeline_days: proposalData.timeline_days,
-              scope_text: proposalData.scope_text,
-              terms: proposalData.terms,
-              conditions_json: proposalData.conditions_json,
-              change_reason: "גרסה ראשונית",
-            })
-            .select("id")
-            .single();
-          
-          if (versionError || !newVersion) {
-            console.error("[BulkNegotiation] Failed to create version for", proposal.id);
-            skipped.push(proposal.supplier_name);
-            continue;
-          }
-          versionId = newVersion.id;
-        } else {
-          skipped.push(proposal.supplier_name);
-          continue;
-        }
-      }
+      const versionId = versions?.[0]?.id;
+      if (!versionId) continue;
 
       const result = await createNegotiationSession({
         project_id: proposal.project_id,
@@ -145,19 +107,9 @@ export const BulkNegotiationDialog = ({
         bulk_message: bulkMessage || undefined,
       });
 
-      if (result && !('existingSession' in result)) {
+      if (result) {
         successCount++;
       }
-    }
-
-    setSkippedProposals(skipped);
-
-    if (skipped.length > 0) {
-      toast({
-        title: "חלק מהבקשות לא נשלחו",
-        description: `הבקשות ל-${skipped.join(", ")} לא נשלחו`,
-        variant: "destructive",
-      });
     }
 
     if (successCount > 0) {
@@ -174,7 +126,6 @@ export const BulkNegotiationDialog = ({
     setReductionValue(10);
     setBulkMessage("");
     setSendingProgress(0);
-    setSkippedProposals([]);
     onOpenChange(false);
   };
 

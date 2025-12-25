@@ -114,7 +114,7 @@ serve(async (req) => {
     }
 
     // Dashboard URL for advisor
-    const dashboardUrl = `https://billding.ai/advisor-dashboard`;
+    const dashboardUrl = `https://www.billding.ai/advisor-dashboard`;
 
     // Render email
     const html = await renderAsync(

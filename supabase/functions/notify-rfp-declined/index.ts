@@ -90,7 +90,7 @@ serve(async (req) => {
     console.log('[RFP Declined] Sending to:', recipientEmail, '(test_mode:', test_mode, ')');
 
     // Project URL
-    const projectUrl = `https://billding.ai/project/${project.id}`;
+    const projectUrl = `https://www.billding.ai/project/${project.id}`;
 
     // Render email
     const html = await renderAsync(

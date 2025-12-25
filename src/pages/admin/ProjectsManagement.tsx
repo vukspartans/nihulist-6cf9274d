@@ -110,28 +110,9 @@ const ProjectsManagement = () => {
   };
 
   const columns: Column<Project>[] = [
-    { 
-      header: adminTranslations.projects.name, 
-      cell: (item) => (
-        <span className="max-w-[120px] sm:max-w-[200px] truncate block" title={item.name}>
-          {item.name}
-        </span>
-      ),
-    },
-    { 
-      header: adminTranslations.projects.type, 
-      cell: (item) => (
-        <span className="hidden md:block">{item.type || "-"}</span>
-      ),
-    },
-    { 
-      header: adminTranslations.projects.location, 
-      cell: (item) => (
-        <span className="max-w-[100px] sm:max-w-[150px] truncate block" title={item.location || ""}>
-          {item.location || "-"}
-        </span>
-      ),
-    },
+    { header: adminTranslations.projects.name, accessorKey: "name" },
+    { header: adminTranslations.projects.type, accessorKey: "type" },
+    { header: adminTranslations.projects.location, accessorKey: "location" },
     {
       header: adminTranslations.projects.budget,
       cell: (item) => item.budget ? `₪${item.budget.toLocaleString('he-IL')}` : adminTranslations.common.na,
@@ -144,28 +125,27 @@ const ProjectsManagement = () => {
         </Badge>
       ),
     },
-    { 
-      header: adminTranslations.projects.phase, 
-      cell: (item) => (
-        <span className="hidden lg:block">{item.phase || "-"}</span>
-      ),
-    },
+    { header: adminTranslations.projects.phase, accessorKey: "phase" },
     {
       header: adminTranslations.projects.actions,
       cell: (item) => (
         <Button
-          size="icon"
-          variant={item.archived ? "ghost" : "ghost"}
-          className={item.archived ? "h-8 w-8" : "h-8 w-8 text-destructive hover:text-destructive"}
-          title={item.archived ? adminTranslations.projects.restore : adminTranslations.projects.archive}
+          size="sm"
+          variant={item.archived ? "outline" : "destructive"}
           onClick={() =>
             archiveMutation.mutate({ id: item.id, archived: !item.archived })
           }
         >
           {item.archived ? (
-            <ArchiveRestore className="w-4 h-4" />
+            <>
+              <ArchiveRestore className="w-4 h-4 ml-1" />
+              {adminTranslations.projects.restore}
+            </>
           ) : (
-            <Archive className="w-4 h-4" />
+            <>
+              <Archive className="w-4 h-4 ml-1" />
+              {adminTranslations.projects.archive}
+            </>
           )}
         </Button>
       ),
@@ -204,10 +184,8 @@ const ProjectsManagement = () => {
           </div>
         </div>
 
-        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm">
-          <div className="p-2 sm:p-4 lg:p-6">
-            <DataTable data={projects} columns={columns} />
-          </div>
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
+          <DataTable data={projects} columns={columns} />
         </div>
       </div>
     </AdminLayout>

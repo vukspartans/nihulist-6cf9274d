@@ -369,10 +369,7 @@ export const adminTranslations = {
       rating: "דירוג",
       message: "הודעה",
       email: "אימייל",
-      phone: "טלפון",
       page: "עמוד",
-      status: "סטטוס",
-      actions: "פעולות",
     },
     ratings: {
       1: "גרוע מאוד",
@@ -381,18 +378,8 @@ export const adminTranslations = {
       4: "טוב",
       5: "מצוין",
     },
-    status: {
-      pending: "מחכה",
-      handled: "טופל",
-    },
     noFeedback: "אין משובים להצגה",
     exportButton: "ייצא לאקסל",
-    statusUpdated: "סטטוס עודכן בהצלחה",
-    updateError: "שגיאה בעדכון הסטטוס",
-    deleted: "משוב נמחק בהצלחה",
-    deleteError: "שגיאה במחיקת המשוב",
-    deleteConfirmTitle: "מחיקת משוב",
-    deleteConfirmDesc: "האם אתה בטוח שברצונך למחוק משוב זה? פעולה זו אינה ניתנת לביטול.",
   },
 
   // Common

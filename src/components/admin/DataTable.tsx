@@ -39,10 +39,7 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4 w-full">
-      <div className="border rounded-lg overflow-hidden relative">
-        {/* Scroll indicator for mobile */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 opacity-0 md:opacity-0 transition-opacity" id="scroll-indicator-left" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 md:hidden" />
+      <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

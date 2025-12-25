@@ -59,9 +59,8 @@ serve(async (req) => {
 
     const { session_id, consultant_message, updated_line_items } = body;
 
-    // session_id is required, but updated_line_items can be empty for proposals without line items
-    if (!session_id) {
-      throw new Error("Missing required field: session_id");
+    if (!session_id || !updated_line_items || updated_line_items.length === 0) {
+      throw new Error("Missing required fields: session_id, updated_line_items");
     }
 
     // Service role client for database operations
@@ -93,12 +92,11 @@ serve(async (req) => {
     }
 
     // Call the database function to create new version
-    // Pass empty array if no line items (for proposals without itemized breakdown)
     const { data: result, error: rpcError } = await supabase.rpc(
       "submit_negotiation_response",
       {
         p_session_id: session_id,
-        p_updated_line_items: updated_line_items || [],
+        p_updated_line_items: updated_line_items,
         p_consultant_message: consultant_message,
       }
     );
@@ -118,10 +116,11 @@ serve(async (req) => {
       .eq("user_id", projectData.owner_id)
       .single();
 
-    // Calculate new total - use target_total if no line items provided
-    const newTotal = updated_line_items && updated_line_items.length > 0
-      ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
-      : session.target_total || (session.proposal as any).price;
+    // Calculate new total
+    const newTotal = updated_line_items.reduce(
+      (sum, item) => sum + item.consultant_response_price,
+      0
+    );
 
     // Send email to entrepreneur
     if (entrepreneurProfile?.email) {

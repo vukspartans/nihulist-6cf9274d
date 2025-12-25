@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavigationLogo from '@/components/NavigationLogo';
 import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
@@ -113,7 +113,6 @@ const AdvisorDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const [rfpInvites, setRfpInvites] = useState<RFPInvite[]>([]);
   const [proposals, setProposals] = useState<AdvisorProposal[]>([]);
@@ -131,14 +130,6 @@ const AdvisorDashboard = () => {
   const [proposalViewDialogOpen, setProposalViewDialogOpen] = useState(false);
   const [selectedProposalToView, setSelectedProposalToView] = useState<string | null>(null);
   const { declineRFP, loading: declining } = useDeclineRFP();
-
-  // Handle negotiation query param redirect
-  useEffect(() => {
-    const negotiationId = searchParams.get('negotiation');
-    if (negotiationId) {
-      navigate(`/negotiation/${negotiationId}`, { replace: true });
-    }
-  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (user) {

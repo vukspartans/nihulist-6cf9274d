@@ -147,26 +147,24 @@ serve(async (req) => {
         // Get advisor details
         const { data: advisor, error: advisorError } = await supabase
           .from('advisors')
-          .select('company_name, user_id')
+          .select(`
+            company_name,
+            user_id,
+            profiles (
+              name
+            )
+          `)
           .eq('id', invite.advisor_id)
           .single()
 
         if (advisorError || !advisor) {
-          console.error('[send-rfp-email] Advisor not found:', invite.advisor_id, advisorError)
+          console.error('[send-rfp-email] Advisor not found:', invite.advisor_id)
           continue
         }
 
-        // Get profile separately using user_id (correct join)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, email')
-          .eq('user_id', advisor.user_id)
-          .single()
-
-        const advisorName = profile?.name || ''
-        const companyName = advisor.company_name || 'היועץ'
-        
-        console.log(`[send-rfp-email] Processing advisor: ${companyName}, name: ${advisorName}, email: ${invite.email}`)
+        const advisorData = advisor as unknown as Advisor & { profiles: Profile }
+        const advisorName = advisorData.profiles?.name || ''
+        const companyName = advisorData.company_name || 'היועץ'
 
         // Format deadline
         const deadlineDate = new Date(invite.deadline_at).toLocaleDateString('he-IL', {
@@ -178,7 +176,7 @@ serve(async (req) => {
         })
 
         // Build login URL with context
-        const loginUrl = `https://billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
+        const loginUrl = `https://www.billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
 
         // Parse request files if they exist
         let requestFiles = null

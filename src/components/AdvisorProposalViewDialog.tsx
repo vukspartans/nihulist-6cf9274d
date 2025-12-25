@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,14 +9,13 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useNegotiation } from '@/hooks/useNegotiation';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import {
   Home, List, FileText, Clock, Calendar, Download,
   CheckCircle, XCircle, AlertCircle, Eye, Loader2, MapPin, Building2,
-  FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins, MessageSquare
+  FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins
 } from 'lucide-react';
 
 // Reusable section header component
@@ -79,27 +77,17 @@ interface ProposalData {
 
 export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: AdvisorProposalViewDialogProps) {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('main');
   const [loading, setLoading] = useState(true);
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(false);
-  const [negotiationSessionId, setNegotiationSessionId] = useState<string | null>(null);
-  const { fetchNegotiationByProposal } = useNegotiation();
 
   useEffect(() => {
     if (open && proposalId) {
       fetchProposal();
-      checkActiveNegotiation();
     }
   }, [open, proposalId]);
-
-  const checkActiveNegotiation = async () => {
-    if (!proposalId) return;
-    const session = await fetchNegotiationByProposal(proposalId);
-    setNegotiationSessionId(session?.id || null);
-  };
 
   const fetchProposal = async () => {
     setLoading(true);
@@ -316,22 +304,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
 
           {/* Status Banner */}
           <div className={`px-3 py-1.5 text-xs text-right border-b ${statusConfig.bannerClass}`}>
-            <div className="flex items-center justify-between gap-2">
-              <span>{statusConfig.bannerText}</span>
-              {proposal.status === 'negotiation_requested' && negotiationSessionId && (
-                <Button
-                  size="sm"
-                  className="h-6 text-xs gap-1"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/negotiation/${negotiationSessionId}`);
-                  }}
-                >
-                  <MessageSquare className="h-3 w-3" />
-                  הגב לבקשה
-                </Button>
-              )}
-            </div>
+            {statusConfig.bannerText}
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">

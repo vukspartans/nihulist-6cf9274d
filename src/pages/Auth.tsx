@@ -16,7 +16,6 @@ import { ExpertiseSelector } from "@/components/ExpertiseSelector";
 import { TermsAndConditions } from "@/components/TermsAndConditions";
 import { getPrimaryRole, getDashboardRouteForRole, type AppRole } from '@/lib/roleNavigation';
 import { useAuth } from '@/hooks/useAuth';
-import { PRODUCTION_URL } from '@/utils/urls';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -245,7 +244,7 @@ const Auth = () => {
         });
       } else {
         // Signup - step 2
-        const redirectUrl = `${PRODUCTION_URL}/auth/verified`;
+        const redirectUrl = `${window.location.origin}/auth/verified`;
         
         const { error } = await supabase.auth.signUp({
           email: formData.email,
@@ -338,7 +337,7 @@ const Auth = () => {
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${PRODUCTION_URL}/auth/verified`
+          emailRedirectTo: `${window.location.origin}/auth/verified`
         }
       });
 
@@ -365,7 +364,7 @@ const Auth = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${PRODUCTION_URL}/auth?type=recovery`,
+        redirectTo: `${window.location.origin}/auth?type=recovery`,
       });
 
       if (error) throw error;

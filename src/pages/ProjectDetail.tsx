@@ -428,6 +428,7 @@ export const ProjectDetail = () => {
           <TabsTrigger 
             value="received" 
             className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap"
+            disabled={!rfpSent}
           >
             <Inbox className="w-4 h-4 flex-shrink-0" />
             <span className="hidden sm:inline">הצעות שהתקבלו</span>

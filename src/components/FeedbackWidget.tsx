@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 import { MessageSquareHeart, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Ordered from worst (1) to best (5) - displayed reversed in RTL
 const RATING_OPTIONS = [
   { value: 1, emoji: "🤢", label: "גרוע מאוד" },
   { value: 2, emoji: "😕", label: "לא טוב" },
@@ -41,8 +40,6 @@ const DASHBOARD_PATHS = [
   '/heyadmin'
 ];
 
-const ATTENTION_DELAY_MS = 10 * 60 * 1000; // 10 minutes
-
 export function FeedbackWidget() {
   const { user } = useAuth();
   const location = useLocation();
@@ -50,32 +47,12 @@ export function FeedbackWidget() {
   const [rating, setRating] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shouldAnimate, setShouldAnimate] = useState(false);
 
   // Only show on dashboard pages when user is logged in
   const isOnDashboard = DASHBOARD_PATHS.some(path => 
     location.pathname.startsWith(path)
   );
-
-  // Set up attention animation timer after 10 minutes
-  useEffect(() => {
-    if (!user || !isOnDashboard) return;
-
-    const timer = setTimeout(() => {
-      setShouldAnimate(true);
-    }, ATTENTION_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [user, isOnDashboard]);
-
-  // Reset animation when sheet is opened
-  useEffect(() => {
-    if (open) {
-      setShouldAnimate(false);
-    }
-  }, [open]);
 
   if (!user || !isOnDashboard) {
     return null;
@@ -96,7 +73,6 @@ export function FeedbackWidget() {
         rating,
         message: message.trim() || null,
         email: email.trim() || null,
-        phone: phone.trim() || null,
         user_id: user?.id || null,
         page_url: window.location.href,
         user_agent: navigator.userAgent,
@@ -113,7 +89,6 @@ export function FeedbackWidget() {
       setRating(null);
       setMessage("");
       setEmail("");
-      setPhone("");
       setOpen(false);
     } catch (error) {
       console.error("Error submitting feedback:", error);
@@ -140,8 +115,7 @@ export function FeedbackWidget() {
             "shadow-lg hover:shadow-xl transition-all duration-300",
             "hover:translate-x-1",
             "border-r border-t border-b border-primary-glow/30",
-            "writing-mode-vertical",
-            shouldAnimate && "animate-attention-pulse"
+            "writing-mode-vertical"
           )}
           style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
         >
@@ -161,10 +135,10 @@ export function FeedbackWidget() {
         </SheetHeader>
 
         <div className="mt-8 space-y-6">
-          {/* Rating Selection - flex-row-reverse for RTL: מצוין on right, גרוע מאוד on left */}
+          {/* Rating Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">דרג את החוויה שלך</Label>
-            <div className="flex flex-row-reverse justify-between gap-2">
+            <div className="flex justify-between gap-2">
               {RATING_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -213,23 +187,6 @@ export function FeedbackWidget() {
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              dir="ltr"
-              className="text-left"
-            />
-          </div>
-
-          {/* Phone Field */}
-          <div className="space-y-2">
-            <Label htmlFor="feedback-phone">
-              מספר טלפון{" "}
-              <span className="text-muted-foreground">(לא חובה)</span>
-            </Label>
-            <Input
-              id="feedback-phone"
-              type="tel"
-              placeholder="050-000-0000"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
               dir="ltr"
               className="text-left"
             />
