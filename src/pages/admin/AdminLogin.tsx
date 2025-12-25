@@ -11,6 +11,7 @@ import { Shield, Loader2, Lock, ArrowLeft, Home } from "lucide-react";
 import { z } from "zod";
 import { adminTranslations } from "@/constants/adminTranslations";
 import type { Session, User } from "@supabase/supabase-js";
+import { PRODUCTION_URL } from '@/utils/urls';
 
 const loginSchema = z.object({
   email: z.string().email(adminTranslations.login.invalidEmail),
@@ -205,7 +206,7 @@ const AdminLogin = () => {
       localStorage.setItem('lastAdminEmail', email);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/heyadmin/login?type=recovery`,
+        redirectTo: `${PRODUCTION_URL}/heyadmin/login?type=recovery`,
       });
 
       if (error) throw error;
@@ -268,7 +269,7 @@ const AdminLogin = () => {
       localStorage.setItem('lastAdminEmail', session.user.email);
       
       const { error } = await supabase.auth.resetPasswordForEmail(session.user.email, {
-        redirectTo: `${window.location.origin}/heyadmin/login?type=recovery`,
+        redirectTo: `${PRODUCTION_URL}/heyadmin/login?type=recovery`,
       });
 
       if (error) throw error;

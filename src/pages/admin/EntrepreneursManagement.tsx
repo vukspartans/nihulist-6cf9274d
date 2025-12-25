@@ -90,11 +90,19 @@ export default function EntrepreneursManagement() {
   const columns: Column<Entrepreneur>[] = [
     {
       header: t.entrepreneurs.columns.name,
-      accessorKey: "name",
+      cell: (entrepreneur) => (
+        <span className="max-w-[120px] sm:max-w-[180px] truncate block" title={entrepreneur.name || ""}>
+          {entrepreneur.name || "-"}
+        </span>
+      ),
     },
     {
       header: t.entrepreneurs.columns.email,
-      accessorKey: "email",
+      cell: (entrepreneur) => (
+        <span className="max-w-[140px] sm:max-w-[200px] truncate block" title={entrepreneur.email || ""}>
+          {entrepreneur.email || "-"}
+        </span>
+      ),
     },
     {
       header: t.entrepreneurs.columns.phone,
@@ -102,7 +110,11 @@ export default function EntrepreneursManagement() {
     },
     {
       header: t.entrepreneurs.columns.company,
-      accessorKey: "company_name",
+      cell: (entrepreneur) => (
+        <span className="max-w-[100px] sm:max-w-[150px] truncate block" title={entrepreneur.company_name || ""}>
+          {entrepreneur.company_name || "-"}
+        </span>
+      ),
     },
     {
       header: t.entrepreneurs.columns.createdAt,
@@ -111,30 +123,32 @@ export default function EntrepreneursManagement() {
     {
       header: t.entrepreneurs.columns.actions,
       cell: (entrepreneur) => (
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title={t.entrepreneurs.editButton}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedEntrepreneur(entrepreneur);
               setEditDialogOpen(true);
             }}
           >
-            <Pencil className="h-4 w-4 ml-2" />
-            {t.entrepreneurs.editButton}
+            <Pencil className="h-4 w-4 text-primary" />
           </Button>
           <Button
-            variant="destructive"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            title={t.entrepreneurs.deleteButton}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedEntrepreneur(entrepreneur);
               setDeleteDialogOpen(true);
             }}
           >
-            <Trash2 className="h-4 w-4 ml-2" />
-            {t.entrepreneurs.deleteButton}
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -163,11 +177,13 @@ export default function EntrepreneursManagement() {
           placeholder={t.entrepreneurs.searchPlaceholder}
         />
 
-        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4 lg:p-6 shadow-sm overflow-x-auto">
-          <DataTable
-            data={filteredEntrepreneurs}
-            columns={columns}
-          />
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm">
+          <div className="p-2 sm:p-4 lg:p-6">
+            <DataTable
+              data={filteredEntrepreneurs}
+              columns={columns}
+            />
+          </div>
         </div>
 
         <CreateEntrepreneurDialog

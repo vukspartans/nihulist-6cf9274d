@@ -1,9 +1,7 @@
 import {
   Section,
   Text,
-  Link,
   Button,
-  Hr,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 import { EmailLayout } from './layout.tsx'
@@ -29,50 +27,29 @@ export const ProposalSubmittedEmail = ({
   filesCount,
   projectUrl,
 }: ProposalSubmittedEmailProps) => (
-  <EmailLayout preview={`הצעה חדשה התקבלה לפרויקט ${projectName}`}>
+  <EmailLayout preview={`הצעה חדשה לפרויקט ${projectName}`}>
     <Section style={content}>
-      <Text style={heading}>הצעה חדשה התקבלה!</Text>
+      <Text style={heading}>הצעה חדשה התקבלה</Text>
       
       <Text style={paragraph}>
         שלום {entrepreneurName},
       </Text>
       
       <Text style={paragraph}>
-        קיבלת הצעת מחיר חדשה לפרויקט <strong>"{projectName}"</strong> מאת {advisorCompany}.
+        קיבלת הצעת מחיר חדשה לפרויקט "{projectName}" מאת {advisorCompany} ({advisorType}).
       </Text>
 
-      <Section style={detailsBox}>
-        <Text style={detailsTitle}>פרטי ההצעה:</Text>
-        <Text style={detailItem}>
-          <strong>סוג היועץ:</strong> {advisorType}
-        </Text>
-        <Text style={detailItem}>
-          <strong>שם המשרד:</strong> {advisorCompany}
-        </Text>
-        <Text style={detailItem}>
-          <strong>מחיר מוצע:</strong> ₪{price.toLocaleString('he-IL')}
-        </Text>
-        <Text style={detailItem}>
-          <strong>לוח זמנים:</strong> {timelineDays} ימים
-        </Text>
-        {filesCount > 0 && (
-          <Text style={detailItem}>
-            <strong>קבצים מצורפים:</strong> {filesCount}
-          </Text>
-        )}
-      </Section>
+      <Text style={detailText}>
+        מחיר: ₪{price.toLocaleString('he-IL')}<br />
+        לוח זמנים: {timelineDays} ימים
+        {filesCount > 0 && <><br />קבצים: {filesCount}</>}
+      </Text>
 
       <Section style={buttonContainer}>
         <Button href={projectUrl} style={button}>
-          צפה בהצעה ואשר
+          צפה בהצעה
         </Button>
       </Section>
-
-      <Hr style={divider} />
-
-      <Text style={footer}>
-        מומלץ לבחון את ההצעה ולהשוות עם הצעות אחרות לפני קבלת החלטה.
-      </Text>
     </Section>
   </EmailLayout>
 )
@@ -84,7 +61,7 @@ const content = {
 }
 
 const heading = {
-  fontSize: '24px',
+  fontSize: '20px',
   fontWeight: 'bold',
   color: '#1a1a1a',
   marginBottom: '16px',
@@ -92,32 +69,17 @@ const heading = {
 }
 
 const paragraph = {
-  fontSize: '16px',
+  fontSize: '15px',
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
 }
 
-const detailsBox = {
-  backgroundColor: '#f6f9fc',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '20px 0',
-  border: '1px solid #e6ebf1',
-}
-
-const detailsTitle = {
-  fontSize: '18px',
-  fontWeight: 'bold',
-  color: '#1a1a1a',
-  marginBottom: '12px',
-}
-
-const detailItem = {
-  fontSize: '15px',
+const detailText = {
+  fontSize: '14px',
   lineHeight: '22px',
-  color: '#333',
-  margin: '8px 0',
+  color: '#525252',
+  margin: '16px 0',
 }
 
 const buttonContainer = {
@@ -126,7 +88,7 @@ const buttonContainer = {
 }
 
 const button = {
-  backgroundColor: '#6772e5',
+  backgroundColor: '#2563eb',
   borderRadius: '6px',
   color: '#fff',
   fontSize: '16px',
@@ -135,16 +97,4 @@ const button = {
   textAlign: 'center' as const,
   display: 'inline-block',
   padding: '12px 32px',
-}
-
-const divider = {
-  borderColor: '#e6ebf1',
-  margin: '24px 0',
-}
-
-const footer = {
-  fontSize: '14px',
-  color: '#666',
-  lineHeight: '20px',
-  textAlign: 'center' as const,
 }
