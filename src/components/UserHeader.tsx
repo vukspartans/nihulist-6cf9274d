@@ -33,23 +33,16 @@ export const UserHeader = () => {
   }, [user]);
 
   const fetchProfile = async () => {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('name')
-        .eq('user_id', user?.id)
-        .single();
+    const { data } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('user_id', user?.id)
+      .maybeSingle(); // Use maybeSingle to avoid PGRST116 errors
 
-      setLocalProfile({
-        name: data?.name || null,
-        email: user?.email || ''
-      });
-    } catch (error) {
-      setLocalProfile({
-        name: null,
-        email: user?.email || ''
-      });
-    }
+    setLocalProfile({
+      name: data?.name || null,
+      email: user?.email || ''
+    });
   };
 
   const handleSignOut = async () => {
