@@ -11,13 +11,14 @@ import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { generateProposalPDF } from '@/utils/generateProposalPDF';
 import JSZip from 'jszip';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
   FileText, Banknote, Clock, Download, CheckCircle, XCircle, AlertCircle, Calendar,
   Eye, Sparkles, RefreshCw, Loader2, Building2, MapPin, Star, Globe, Linkedin,
-  Users, Target, FolderDown, DollarSign, Briefcase, FileCheck, Scale, FileImage, FileSpreadsheet, File
+  Users, Target, FolderDown, DollarSign, Briefcase, FileCheck, Scale, FileImage, FileSpreadsheet, File, Printer, CalendarCheck
 } from 'lucide-react';
 
 interface UploadedFile { name: string; url: string; size: number; type: string; }
@@ -30,9 +31,10 @@ interface ProposalDetailDialogProps {
   proposal: {
     id: string; project_id: string; advisor_id: string; supplier_name: string; price: number; timeline_days: number; currency?: string; scope_text?: string;
     conditions_json?: { payment_terms?: string; assumptions?: string; exclusions?: string; validity_days?: number; };
-    files?: UploadedFile[]; signature_blob?: string; signature_meta_json?: { timestamp?: string; signer_name?: string; signer_email?: string; };
+    files?: UploadedFile[]; signature_blob?: string; signature_meta_json?: { timestamp?: string; signer_name?: string; signer_email?: string; stampImage?: string; };
     status: string; submitted_at: string; ai_analysis?: string | null; ai_analysis_generated_at?: string | null; file_summaries?: Record<string, string> | null;
     advisors?: AdvisorInfo; rfp_invite?: RfpInviteContext; seen_by_entrepreneur_at?: string | null;
+    fee_line_items?: any[]; milestone_adjustments?: any[];
   };
   projectId?: string;
   projectName?: string;
@@ -55,6 +57,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const conditions = proposal.conditions_json || {};
   const advisorInfo = proposal.advisors;
   const rfpContext = proposal.rfp_invite;
+
+  // Calculate completion date
+  const submissionDate = new Date(proposal.submitted_at);
+  const estimatedCompletionDate = addDays(submissionDate, proposal.timeline_days);
 
   useEffect(() => {
     if (open && proposal.id && !proposal.seen_by_entrepreneur_at) markProposalAsSeen();
@@ -116,6 +122,37 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
   };
 
+  const handleExportPDF = async () => {
+    try {
+      await generateProposalPDF({
+        supplierName: proposal.supplier_name,
+        projectName: projectName || 'פרויקט',
+        price: proposal.price,
+        timelineDays: proposal.timeline_days,
+        submittedAt: proposal.submitted_at,
+        scopeText: proposal.scope_text,
+        conditions: proposal.conditions_json,
+        feeLineItems: proposal.fee_line_items?.map((item: any) => ({
+          description: item.description || item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          total: item.total,
+          is_optional: item.is_optional,
+        })),
+        milestones: proposal.milestone_adjustments?.map((m: any) => ({
+          description: m.description,
+          percentage: m.percentage,
+        })),
+        signaturePng: proposal.signature_blob || undefined,
+        stampImage: proposal.signature_meta_json?.stampImage,
+      });
+      toast({ title: "PDF נפתח להדפסה" });
+    } catch {
+      toast({ title: "שגיאה ביצירת PDF", variant: "destructive" });
+    }
+  };
+
   const handleReject = async () => {
     const reason = prompt("נא להזין סיבת דחייה:"); if (!reason) return;
     try {
@@ -170,11 +207,21 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
-          <DialogHeader className="p-4 pb-3">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
+          <DialogHeader className="p-4 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between" dir="rtl">
               <DialogTitle className="text-lg font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
-              {getStatusBadge(proposal.status)}
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleExportPDF}>
+                      <Printer className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>ייצוא PDF</TooltipContent>
+                </Tooltip>
+                {getStatusBadge(proposal.status)}
+              </div>
             </div>
             {proposal.status === 'submitted' && (
               <div className="flex items-center gap-2 pt-2 justify-end" dir="rtl">
@@ -190,15 +237,15 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
             )}
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-4 flex-shrink-0">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
               <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-[calc(90vh-160px)]">
+            <ScrollArea className="flex-1">
               <TabsContent value="details" className="p-4 space-y-3 m-0">
                 {advisorInfo && (
                   <Card className="border-primary/20 bg-primary/5">
@@ -239,10 +286,11 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     </CardContent>
                   </Card>
                 )}
-                <div className="grid grid-cols-3 gap-2">
-                  <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-base">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-base">{proposal.timeline_days} ימים</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר</p><p className="font-bold text-base">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><CalendarCheck className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">סיום משוער</p><p className="font-bold text-sm">{format(estimatedCompletionDate, "dd/MM/yyyy", { locale: he })}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-sm">{proposal.timeline_days} ימים</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
                 </div>
                 {proposal.scope_text && (
                   <div className="space-y-1.5">
@@ -321,6 +369,12 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     <Card>
                       <CardContent className="p-3 space-y-3">
                         <div className="bg-white border rounded-lg p-3"><img src={proposal.signature_blob} alt="חתימה" className="max-h-20 mx-auto" /></div>
+                        {proposal.signature_meta_json?.stampImage && (
+                          <div className="bg-white border rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground text-center mb-2">חותמת חברה</p>
+                            <img src={proposal.signature_meta_json.stampImage} alt="חותמת" className="max-h-16 mx-auto" />
+                          </div>
+                        )}
                         {proposal.signature_meta_json && (
                           <div className="text-xs text-muted-foreground space-y-1 text-right">
                             {proposal.signature_meta_json.timestamp && <p>נחתם: {formatDate(proposal.signature_meta_json.timestamp)}</p>}

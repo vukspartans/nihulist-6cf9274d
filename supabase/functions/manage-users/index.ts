@@ -16,6 +16,12 @@ interface CreateUserRequest {
   name?: string;
   phone?: string;
   roles?: string[];
+  // Advisor-specific fields
+  companyName?: string;
+  location?: string;
+  expertise?: string[];
+  specialties?: string[];
+  activityRegions?: string[];
 }
 
 interface DeleteUserRequest {
@@ -82,9 +88,24 @@ serve(async (req) => {
     const { action } = requestData;
 
     if (action === 'create') {
-      const { email, password, name, phone, roles: userRoles } = requestData as CreateUserRequest;
+      const { 
+        email, 
+        password, 
+        name, 
+        phone, 
+        roles: userRoles,
+        companyName,
+        location,
+        expertise,
+        specialties,
+        activityRegions
+      } = requestData as CreateUserRequest;
 
-      console.log('Creating user:', email);
+      console.log('Creating user:', email, 'with roles:', userRoles);
+
+      // Determine if this is an advisor
+      const isAdvisor = userRoles && userRoles.includes('advisor');
+      const profileRole = isAdvisor ? 'advisor' : 'entrepreneur';
 
       // Create the user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -105,18 +126,46 @@ serve(async (req) => {
       console.log('User created:', newUser.user.id);
 
       // Create profile
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: newUser.user.id,
-        email: email,
-        name: name || '',
-        phone: phone || null,
-        role: 'entrepreneur', // Default role
-      });
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          user_id: newUser.user.id,
+          email: email,
+          name: name || '',
+          phone: phone || null,
+          role: profileRole,
+          admin_approved: true, // Admin-created users are pre-approved
+          requires_password_change: true, // Force password change on first login
+        });
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
+      }
+
+      // If advisor, create advisors table entry
+      if (isAdvisor) {
+        console.log('Creating advisor record for user:', newUser.user.id);
+        const { error: advisorError } = await supabaseAdmin
+          .from('advisors')
+          .insert({
+            user_id: newUser.user.id,
+            company_name: companyName || null,
+            location: location || null,
+            expertise: expertise || [],
+            specialties: specialties || [],
+            activity_regions: activityRegions || [],
+            is_active: true,
+            admin_approved: true,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+          });
+
+        if (advisorError) {
+          console.error('Advisor creation error:', advisorError);
+          // Don't fail - advisor can update profile later
+        } else {
+          console.log('Advisor record created successfully');
+        }
       }
 
       // Assign roles if provided

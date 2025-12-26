@@ -71,22 +71,69 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [rolesLoading, setRolesLoading] = useState(true);
 
   // Fetch user profile and roles
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userEmail?: string) => {
     setProfileLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid PGRST116 errors
       
       if (error) throw error;
-      setProfile(data);
+      
+      // If no profile exists, create a minimal one as fallback
+      if (!data && userEmail) {
+        console.warn('[useAuth] No profile found, creating minimal profile for:', userId);
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: userId,
+            email: userEmail,
+            role: 'entrepreneur',
+            name: userEmail.split('@')[0],
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('[useAuth] Failed to create profile:', createError);
+          setProfile(null);
+        } else {
+          setProfile(newProfile);
+          // Also ensure user has a role entry
+          await ensureUserRole(userId, 'entrepreneur');
+        }
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setProfile(null);
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  // Ensure user has at least one role in user_roles table
+  const ensureUserRole = async (userId: string, defaultRole: AppRole = 'entrepreneur') => {
+    try {
+      const { data: existingRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      if (!existingRoles || existingRoles.length === 0) {
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: defaultRole,
+          });
+        console.log('[useAuth] Created default role for user:', defaultRole);
+      }
+    } catch (error) {
+      console.error('[useAuth] Error ensuring user role:', error);
     }
   };
 
@@ -130,7 +177,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Defer Supabase calls to avoid deadlock
           setTimeout(() => {
             Promise.all([
-              fetchProfile(session.user!.id),
+              fetchProfile(session.user!.id, session.user!.email),
               fetchRoles(session.user!.id)
             ]).catch((err) => {
               console.error('[useAuth] Deferred auth fetch error:', err);
@@ -157,7 +204,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setProfileLoading(true);
         setRolesLoading(true);
         Promise.all([
-          fetchProfile(session.user.id),
+          fetchProfile(session.user.id, session.user.email),
           fetchRoles(session.user.id)
         ]).catch((err) => {
           console.error('[useAuth] Initial session fetch error:', err);
