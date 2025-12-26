@@ -17,3 +17,5 @@ COMMENT ON COLUMN public.projects.is_large_scale IS
   'Computed: true if units > 40 OR advisors_budget > 1M ILS. Works with just advisors_budget if units is NULL.';
 
 
+
+
