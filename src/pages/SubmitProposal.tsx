@@ -719,38 +719,38 @@ const SubmitProposal = () => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
-            <TabsList className="w-full flex flex-wrap gap-1 h-auto p-1 mb-6">
+            <TabsList className="w-full flex flex-wrap justify-start gap-1 h-auto p-1 mb-6">
               <TabsTrigger value="request" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">פרטי הבקשה</span>
+                <FileText className="h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger value="fees" className="flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
                 <span className="hidden sm:inline">שכר טרחה</span>
+                <Receipt className="h-4 w-4" />
               </TabsTrigger>
               {hasServiceScope && (
                 <TabsTrigger value="services" className="flex items-center gap-2">
-                  <ListChecks className="h-4 w-4" />
                   <span className="hidden sm:inline">שירותים</span>
+                  <ListChecks className="h-4 w-4" />
                 </TabsTrigger>
               )}
               {hasPaymentTerms && (
                 <TabsTrigger value="milestones" className="flex items-center gap-2">
-                  <Milestone className="h-4 w-4" />
                   <span className="hidden sm:inline">אבני דרך</span>
+                  <Milestone className="h-4 w-4" />
                 </TabsTrigger>
               )}
               <TabsTrigger value="scope" className="flex items-center gap-2">
-                <FileDown className="h-4 w-4" />
                 <span className="hidden sm:inline">היקף עבודה</span>
+                <FileDown className="h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger value="files" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">קבצים</span>
+                <Upload className="h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger value="signature" className="flex items-center gap-2">
-                <PenTool className="h-4 w-4" />
                 <span className="hidden sm:inline">חתימה</span>
+                <PenTool className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
 
