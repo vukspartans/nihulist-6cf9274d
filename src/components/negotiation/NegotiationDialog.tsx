@@ -198,8 +198,8 @@ export const NegotiationDialog = ({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5 text-amber-600" />
             בקשת הצעה מחודשת - {proposal.supplier_name}
+            <RefreshCw className="h-5 w-5 text-amber-600" />
           </DialogTitle>
           <DialogDescription>
             ערוך את הפריטים והוסף הערות לבקשת עדכון ההצעה
@@ -242,7 +242,7 @@ export const NegotiationDialog = ({
           </Alert>
         ) : (
           <>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="items">פריטים</TabsTrigger>
                 <TabsTrigger value="comments">הערות</TabsTrigger>
@@ -274,8 +274,8 @@ export const NegotiationDialog = ({
             {commentTypes.map(({ type, label, icon }) => (
               <div key={type} className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  {icon}
                   {label}
+                  {icon}
                 </Label>
                 <Textarea
                   placeholder={`הערות לגבי ${label}...`}
@@ -315,8 +315,8 @@ export const NegotiationDialog = ({
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
                 הערה כללית
+                <MessageSquare className="h-4 w-4" />
               </Label>
               <Textarea
                 placeholder="הודעה כללית ליועץ..."
@@ -328,10 +328,7 @@ export const NegotiationDialog = ({
           </TabsContent>
             </Tabs>
 
-            <DialogFooter className="flex-row-reverse gap-2 mt-4">
-              <Button variant="outline" onClick={handleClose} disabled={loading}>
-                ביטול
-              </Button>
+            <DialogFooter className="gap-2 mt-4">
               <Button onClick={handleSubmit} disabled={loading}>
                 {loading ? (
                   <>
@@ -341,6 +338,9 @@ export const NegotiationDialog = ({
                 ) : (
                   "שלח בקשה לעדכון"
                 )}
+              </Button>
+              <Button variant="outline" onClick={handleClose} disabled={loading}>
+                ביטול
               </Button>
             </DialogFooter>
           </>
