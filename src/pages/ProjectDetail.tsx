@@ -15,6 +15,7 @@ import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
 import { SentRFPsTab } from '@/components/SentRFPsTab';
 import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog';
 import { ProposalDetailDialog } from '@/components/ProposalDetailDialog';
+import { VersionBadge } from '@/components/negotiation';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 import { PROJECT_PHASES } from '@/constants/project';
@@ -595,6 +596,13 @@ export const ProjectDetail = () => {
                                     {proposal.advisors?.company_name || proposal.supplier_name}
                                   </h4>
                                   {getStatusBadge(proposal.status)}
+                                  {(proposal.current_version > 1 || proposal.has_active_negotiation) && (
+                                    <VersionBadge 
+                                      currentVersion={proposal.current_version || 1} 
+                                      hasActiveNegotiation={proposal.has_active_negotiation}
+                                      status={proposal.status}
+                                    />
+                                  )}
                                 </div>
                                 
                                 {/* Expertise badges */}
