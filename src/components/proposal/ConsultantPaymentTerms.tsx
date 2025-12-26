@@ -222,7 +222,7 @@ export function ConsultantPaymentTerms({
               "font-bold",
               isValidTotal ? "bg-green-100 dark:bg-green-950/30" : "bg-orange-100 dark:bg-orange-950/30"
             )}>
-              <TableCell colSpan={3} className="text-left">
+              <TableCell colSpan={3} className="text-right">
                 סה"כ:
               </TableCell>
               <TableCell className={cn(
