@@ -106,12 +106,13 @@ export const NegotiationResponseView = ({
         .single();
 
       if (proposal) {
-        // Find the RFP invite for this advisor and project
+        // Find the RFP invite for this advisor and project (join through rfps table)
         const { data: rfpInvite } = await supabase
           .from("rfp_invites")
-          .select("request_files")
+          .select("request_files, rfps!inner(project_id)")
           .eq("advisor_id", proposal.advisor_id)
-          .single();
+          .eq("rfps.project_id", proposal.project_id)
+          .maybeSingle();
 
         if (rfpInvite?.request_files) {
           // Parse the request_files JSON - safely cast with type guard

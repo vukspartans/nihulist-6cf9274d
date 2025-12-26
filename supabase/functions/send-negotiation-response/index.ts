@@ -127,7 +127,7 @@ serve(async (req) => {
     if (entrepreneurProfile?.email) {
       const resend = new Resend(RESEND_API_KEY);
 
-      const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
+      const proposalUrl = `https://www.nihulist.co.il/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
       const emailHtml = await renderAsync(
         NegotiationResponseEmail({
@@ -143,7 +143,7 @@ serve(async (req) => {
       );
 
       await resend.emails.send({
-        from: "Billding <notifications@billding.ai>",
+        from: "ניהוליסט <notifications@nihulist.co.il>",
         to: entrepreneurProfile.email,
         subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
         html: emailHtml,
