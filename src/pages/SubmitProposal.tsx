@@ -718,8 +718,8 @@ const SubmitProposal = () => {
         <ProposalProgressStepper steps={steps} className="mb-8" />
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full flex flex-wrap justify-start gap-1 h-auto p-1 mb-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+            <TabsList className="w-full flex flex-wrap gap-1 h-auto p-1 mb-6">
               <TabsTrigger value="request" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">פרטי הבקשה</span>
