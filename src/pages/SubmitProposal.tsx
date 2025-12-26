@@ -772,7 +772,7 @@ const SubmitProposal = () => {
                   {entrepreneurData?.request_content && (
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">תיאור הבקשה</Label>
-                      <div className="mt-1 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
+                      <div className="mt-1 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-right">
                         {entrepreneurData.request_content}
                       </div>
                     </div>
@@ -801,7 +801,7 @@ const SubmitProposal = () => {
                   {entrepreneurData?.service_details_mode === 'free_text' && entrepreneurData.service_details_text && (
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">פירוט השירותים</Label>
-                      <div className="mt-1 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
+                      <div className="mt-1 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-right">
                         {entrepreneurData.service_details_text}
                       </div>
                     </div>
