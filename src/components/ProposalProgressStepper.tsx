@@ -18,7 +18,7 @@ export function ProposalProgressStepper({ steps, className }: ProposalProgressSt
 
   return (
     <div className={cn("w-full py-6", className)} dir="rtl">
-      <div className="flex items-center justify-between relative">
+      <div className="flex flex-row-reverse items-center justify-between relative">
         {/* Background line */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-border z-0" />
         
