@@ -295,7 +295,7 @@ serve(async (req) => {
     if (advisorEmail) {
       const resend = new Resend(RESEND_API_KEY);
 
-      const responseUrl = `https://www.nihulist.co.il/negotiation/${session.id}`;
+      const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
       const emailHtml = await renderAsync(
         NegotiationRequestEmail({
@@ -312,7 +312,7 @@ serve(async (req) => {
       );
 
       await resend.emails.send({
-        from: "ניהוליסט <notifications@nihulist.co.il>",
+        from: "Billding <notifications@billding.ai>",
         to: advisorEmail,
         subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
         html: emailHtml,
@@ -334,7 +334,7 @@ serve(async (req) => {
             member.notification_preferences.includes("rfp_requests")
           ) {
             await resend.emails.send({
-              from: "ניהוליסט <notifications@nihulist.co.il>",
+              from: "Billding <notifications@billding.ai>",
               to: member.email,
               subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
               html: emailHtml,
