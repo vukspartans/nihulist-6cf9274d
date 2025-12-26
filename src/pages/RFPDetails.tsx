@@ -621,8 +621,8 @@ const RFPDetails = () => {
             onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
             className="hidden md:flex items-center gap-2"
           >
-            <ArrowRight className="h-4 w-4" />
             חזרה לדשבורד
+            <ArrowRight className="h-4 w-4" />
           </Button>
           <UserHeader />
         </div>
@@ -681,10 +681,10 @@ const RFPDetails = () => {
           {/* Project Summary Card - Compact */}
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Building2 className="h-4 w-4" />
-                פרטי הפרויקט
-              </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              פרטי הפרויקט
+              <Building2 className="h-4 w-4" />
+            </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -728,20 +728,20 @@ const RFPDetails = () => {
               <Tabs defaultValue="main" dir="rtl">
                 <TabsList className="w-full grid grid-cols-4 h-auto p-1 bg-muted/50">
                   <TabsTrigger value="main" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
-                    <Home className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">ראשי</span>
+                    <Home className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </TabsTrigger>
                   <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
-                    <List className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">שירותים</span>
+                    <List className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </TabsTrigger>
                   <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
-                    <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">שכ"ט</span>
+                    <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </TabsTrigger>
                   <TabsTrigger value="payment" className="flex items-center gap-1.5 text-xs md:text-sm py-2 data-[state=active]:bg-background">
-                    <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">תשלום</span>
+                    <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </TabsTrigger>
                 </TabsList>
 
@@ -1060,18 +1060,18 @@ const RFPDetails = () => {
                   }
                 }}
                 size="lg"
-                className="flex-1 sm:flex-none sm:min-w-[180px]"
+                className="flex-1 sm:flex-none sm:min-w-[180px] gap-2"
               >
-                <Send className="w-4 h-4 ml-2" />
+                <Send className="w-4 h-4" />
                 הגש הצעת מחיר
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setDeclineDialogOpen(true)}
                 size="lg"
-                className="flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none gap-2"
               >
-                <X className="w-4 h-4 ml-2" />
+                <X className="w-4 h-4" />
                 דחה בקשה
               </Button>
             </>
@@ -1119,10 +1119,10 @@ const RFPDetails = () => {
                 variant="outline"
                 size="lg"
                 onClick={() => setViewProposalDialogOpen(true)}
-                className="sm:mr-auto"
+                className="sm:mr-auto gap-2"
               >
-                <Eye className="w-4 h-4 ml-2" />
                 צפה בהצעה שלי
+                <Eye className="w-4 h-4" />
               </Button>
             </div>
           ) : (
@@ -1136,10 +1136,10 @@ const RFPDetails = () => {
             variant="ghost" 
             onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
             size="lg"
-            className="sm:hidden"
+            className="sm:hidden gap-2"
           >
-            <ArrowRight className="w-4 h-4 ml-2" />
             חזרה לדשבורד
+            <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
