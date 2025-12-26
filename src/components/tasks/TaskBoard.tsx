@@ -1,10 +1,25 @@
 import { useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { TaskCard } from './TaskCard';
+import { DraggableTaskCard } from './DraggableTaskCard';
+import { DroppableColumn } from './DroppableColumn';
 import { CreateTaskDialog } from './CreateTaskDialog';
 import { TaskDetailDialog } from './TaskDetailDialog';
 import type { ProjectTask, TaskStatus } from '@/types/task';
@@ -42,6 +57,46 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
+  const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
+
+  // Configure sensors for drag detection
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms delay on touch to prevent accidental drags
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = tasks.find((t) => t.id === event.active.id);
+    setActiveTask(task || null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const newStatus = over.id as TaskStatus;
+    
+    // Only update if dropped on a different column
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && task.status !== newStatus && COLUMNS.some(col => col.id === newStatus)) {
+      await updateTaskStatus(taskId, newStatus);
+    }
+  };
 
   const handleEditTask = (task: ProjectTask) => {
     setSelectedTask(task);
@@ -107,31 +162,31 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {COLUMNS.map((column) => {
-              const columnTasks = getTasksByStatus(column.id);
-              return (
-                <div key={column.id} className="space-y-3">
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between pb-2 border-b">
-                    <div className="flex items-center gap-2">
-                      <column.icon className={`h-4 w-4 ${column.color}`} />
-                      <span className="font-medium text-sm">{column.title}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {columnTasks.length}
-                    </Badge>
-                  </div>
-
-                  {/* Column Tasks */}
-                  <div className="space-y-2 min-h-[100px]">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {COLUMNS.map((column) => {
+                const columnTasks = getTasksByStatus(column.id);
+                return (
+                  <DroppableColumn
+                    key={column.id}
+                    id={column.id}
+                    title={column.title}
+                    icon={column.icon}
+                    color={column.color}
+                    taskCount={columnTasks.length}
+                  >
                     {columnTasks.length === 0 ? (
                       <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">
-                        אין משימות
+                        גרור משימות לכאן
                       </div>
                     ) : (
                       columnTasks.map((task) => (
-                        <TaskCard
+                        <DraggableTaskCard
                           key={task.id}
                           task={task}
                           onStatusChange={updateTaskStatus}
@@ -140,11 +195,25 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
                         />
                       ))
                     )}
-                  </div>
+                  </DroppableColumn>
+                );
+              })}
+            </div>
+
+            {/* Drag Overlay - shows floating card during drag */}
+            <DragOverlay>
+              {activeTask && (
+                <div className="opacity-90 rotate-2 scale-105">
+                  <TaskCard
+                    task={activeTask}
+                    onStatusChange={updateTaskStatus}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                  />
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </CardContent>
 
