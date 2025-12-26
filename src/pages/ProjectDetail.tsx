@@ -289,6 +289,8 @@ export const ProjectDetail = () => {
       accepted: { variant: 'success', label: '✓ הצעה אושרה' },
       rejected: { variant: 'destructive', label: 'נדחתה' },
       withdrawn: { variant: 'muted', label: 'בוטל' },
+      resubmitted: { variant: 'secondary', label: '🔄 הצעה מעודכנת' },
+      negotiation_requested: { variant: 'warning', label: '💬 במשא ומתן' },
     };
 
     const config = statusConfig[status] || { variant: 'secondary', label: status };
@@ -311,7 +313,7 @@ export const ProjectDetail = () => {
   };
 
   const handleCompareProposals = () => {
-    const submittedProposals = proposals.filter(p => p.status === 'submitted');
+    const submittedProposals = proposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted');
     if (submittedProposals.length > 0) {
       setSelectedProposalIds(submittedProposals.map(p => p.id));
       setComparisonDialogOpen(true);
@@ -480,7 +482,7 @@ export const ProjectDetail = () => {
                     <Badge variant="secondary">{proposals.length}</Badge>
                   )}
                 </CardTitle>
-                {proposals.filter(p => p.status === 'submitted').length > 0 && (
+                {proposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted').length > 0 && (
                   <Button
                     variant="outline"
                     onClick={handleCompareProposals}
@@ -510,8 +512,8 @@ export const ProjectDetail = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {[...proposals]
                     .sort((a, b) => {
-                      // Sort: accepted first, then submitted, then others
-                      const statusOrder: Record<string, number> = { 'accepted': 0, 'submitted': 1, 'rejected': 2 };
+                      // Sort: accepted first, then resubmitted/submitted, then negotiation, then others
+                      const statusOrder: Record<string, number> = { 'accepted': 0, 'resubmitted': 1, 'submitted': 2, 'negotiation_requested': 3, 'rejected': 4 };
                       return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
                     })
                     .map((proposal) => {

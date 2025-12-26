@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Check, Clock, X, ArrowLeft } from 'lucide-react';
+import { Check, Clock, X, ArrowLeft, RefreshCw, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProposalStatusBadgeProps {
@@ -46,6 +46,18 @@ export const ProposalStatusBadge = ({
           text: 'נמשכה',
           icon: ArrowLeft,
           className: 'bg-gray-500 text-white border-gray-600 hover:bg-gray-600',
+        };
+      case 'resubmitted':
+        return {
+          text: 'הצעה מעודכנת',
+          icon: RefreshCw,
+          className: 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600',
+        };
+      case 'negotiation_requested':
+        return {
+          text: 'במשא ומתן',
+          icon: MessageCircle,
+          className: 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600',
         };
       default:
         return {
