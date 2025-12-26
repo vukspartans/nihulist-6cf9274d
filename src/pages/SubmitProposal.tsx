@@ -720,37 +720,37 @@ const SubmitProposal = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full flex flex-wrap justify-end flex-row-reverse gap-1 h-auto p-1 mb-6">
-              <TabsTrigger value="request" className="flex items-center gap-2">
-                <span className="hidden sm:inline">פרטי הבקשה</span>
+              <TabsTrigger value="request" className="flex items-center gap-2 flex-row-reverse">
                 <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">פרטי הבקשה</span>
               </TabsTrigger>
-              <TabsTrigger value="fees" className="flex items-center gap-2">
-                <span className="hidden sm:inline">שכר טרחה</span>
+              <TabsTrigger value="fees" className="flex items-center gap-2 flex-row-reverse">
                 <Receipt className="h-4 w-4" />
+                <span className="hidden sm:inline">שכר טרחה</span>
               </TabsTrigger>
               {hasServiceScope && (
-                <TabsTrigger value="services" className="flex items-center gap-2">
-                  <span className="hidden sm:inline">שירותים</span>
+                <TabsTrigger value="services" className="flex items-center gap-2 flex-row-reverse">
                   <ListChecks className="h-4 w-4" />
+                  <span className="hidden sm:inline">שירותים</span>
                 </TabsTrigger>
               )}
               {hasPaymentTerms && (
-                <TabsTrigger value="milestones" className="flex items-center gap-2">
-                  <span className="hidden sm:inline">אבני דרך</span>
+                <TabsTrigger value="milestones" className="flex items-center gap-2 flex-row-reverse">
                   <Milestone className="h-4 w-4" />
+                  <span className="hidden sm:inline">אבני דרך</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="scope" className="flex items-center gap-2">
-                <span className="hidden sm:inline">היקף עבודה</span>
+              <TabsTrigger value="scope" className="flex items-center gap-2 flex-row-reverse">
                 <FileDown className="h-4 w-4" />
+                <span className="hidden sm:inline">היקף עבודה</span>
               </TabsTrigger>
-              <TabsTrigger value="files" className="flex items-center gap-2">
-                <span className="hidden sm:inline">קבצים</span>
+              <TabsTrigger value="files" className="flex items-center gap-2 flex-row-reverse">
                 <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">קבצים</span>
               </TabsTrigger>
-              <TabsTrigger value="signature" className="flex items-center gap-2">
-                <span className="hidden sm:inline">חתימה</span>
+              <TabsTrigger value="signature" className="flex items-center gap-2 flex-row-reverse">
                 <PenTool className="h-4 w-4" />
+                <span className="hidden sm:inline">חתימה</span>
               </TabsTrigger>
             </TabsList>
 
@@ -788,10 +788,10 @@ const SubmitProposal = () => {
                             href={file.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted/50 transition-colors"
+                            className="flex items-center gap-2 flex-row-reverse p-2 border rounded-lg hover:bg-muted/50 transition-colors"
                           >
-                            <span className="text-sm">{file.name}</span>
                             <FileDown className="h-4 w-4 text-primary" />
+                            <span className="text-sm">{file.name}</span>
                           </a>
                         ))}
                       </div>
@@ -814,10 +814,10 @@ const SubmitProposal = () => {
                         href={entrepreneurData.service_details_file.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        className="mt-2 flex items-center gap-2 flex-row-reverse p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
-                        <span>{entrepreneurData.service_details_file.name}</span>
                         <FileDown className="h-5 w-5 text-primary" />
+                        <span>{entrepreneurData.service_details_file.name}</span>
                       </a>
                     </div>
                   )}
@@ -833,9 +833,9 @@ const SubmitProposal = () => {
               {/* Phase 3.5: Consultant Response Section */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    תגובה לבקשה (אופציונלי)
+                  <CardTitle className="flex items-center gap-2 flex-row-reverse">
                     <Edit3 className="h-5 w-5" />
+                    תגובה לבקשה (אופציונלי)
                   </CardTitle>
                   <CardDescription>
                     הוסיפו הערות או קבצים נוספים בתגובה לבקשת היזם
@@ -865,10 +865,10 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-start">
-                <Button type="button" onClick={() => setActiveTab('fees')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך לשכר טרחה
-                </Button>
+                    <Button type="button" onClick={() => setActiveTab('fees')} className="flex flex-row-reverse gap-2">
+                      <ArrowLeft className="h-4 w-4" />
+                      המשך לשכר טרחה
+                    </Button>
               </div>
             </TabsContent>
 
@@ -916,9 +916,9 @@ const SubmitProposal = () => {
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
                         </div>
                         {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
-                          <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
-                            <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
+                          <div className="flex items-center gap-2 flex-row-reverse mt-2 text-green-600 text-sm">
                             <CheckCircle className="h-4 w-4" />
+                            <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
                           </div>
                         )}
                       </div>
@@ -1016,13 +1016,13 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'scope')} className="flex flex-row-reverse gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="gap-2">
-                  חזרה
+                <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="flex flex-row-reverse gap-2">
                   <ArrowRight className="h-4 w-4" />
+                  חזרה
                 </Button>
               </div>
             </TabsContent>
@@ -1032,9 +1032,9 @@ const SubmitProposal = () => {
               <TabsContent value="services" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      בחירת שירותים
+                    <CardTitle className="flex items-center gap-2 flex-row-reverse">
                       <ListChecks className="h-5 w-5" />
+                      בחירת שירותים
                     </CardTitle>
                     <CardDescription>
                       סמנו את השירותים שתספקו במסגרת ההצעה
@@ -1055,13 +1055,13 @@ const SubmitProposal = () => {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'scope')} className="flex flex-row-reverse gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     המשך {hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="gap-2">
-                    חזרה
+                  <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="flex flex-row-reverse gap-2">
                     <ArrowRight className="h-4 w-4" />
+                    חזרה
                   </Button>
                 </div>
               </TabsContent>
@@ -1072,9 +1072,9 @@ const SubmitProposal = () => {
               <TabsContent value="milestones" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      אבני דרך ותנאי תשלום
+                    <CardTitle className="flex items-center gap-2 flex-row-reverse">
                       <Milestone className="h-5 w-5" />
+                      אבני דרך ותנאי תשלום
                     </CardTitle>
                     <CardDescription>
                       התאימו את אחוזי התשלום לכל אבן דרך
@@ -1090,13 +1090,13 @@ const SubmitProposal = () => {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab('scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab('scope')} className="flex flex-row-reverse gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     המשך להיקף עבודה
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                    חזרה
+                  <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')} className="flex flex-row-reverse gap-2">
                     <ArrowRight className="h-4 w-4" />
+                    חזרה
                   </Button>
                 </div>
               </TabsContent>
@@ -1133,13 +1133,13 @@ const SubmitProposal = () => {
               <ConditionsBuilder value={conditions} onChange={setConditions} />
 
               <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
+                <Button type="button" onClick={() => setActiveTab('files')} className="flex flex-row-reverse gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   המשך לקבצים
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                  חזרה
+                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="flex flex-row-reverse gap-2">
                   <ArrowRight className="h-4 w-4" />
+                  חזרה
                 </Button>
               </div>
             </TabsContent>
@@ -1148,9 +1148,9 @@ const SubmitProposal = () => {
             <TabsContent value="files" className="space-y-6">
               <Card className="border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    קבצים נלווים (אופציונלי)
+                  <CardTitle className="flex items-center gap-2 flex-row-reverse">
                     <Upload className="h-5 w-5" />
+                    קבצים נלווים (אופציונלי)
                   </CardTitle>
                   <CardDescription>
                     העלו תוכניות, מפרטים טכניים, או מסמכים רלוונטיים
@@ -1163,13 +1163,13 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('signature')} className="gap-2">
+                <Button type="button" onClick={() => setActiveTab('signature')} className="flex flex-row-reverse gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   המשך לחתימה
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('scope')} className="gap-2">
-                  חזרה
+                <Button type="button" variant="outline" onClick={() => setActiveTab('scope')} className="flex flex-row-reverse gap-2">
                   <ArrowRight className="h-4 w-4" />
+                  חזרה
                 </Button>
               </div>
             </TabsContent>
@@ -1200,7 +1200,7 @@ const SubmitProposal = () => {
 
               <Card className="border-2 border-primary shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 flex-row-reverse">
                     <Edit3 className="h-5 w-5" />
                     חתימה דיגיטלית
                   </CardTitle>
@@ -1219,7 +1219,7 @@ const SubmitProposal = () => {
                     <SignatureCanvas onSign={setSignature} />
                   </Suspense>
                   {signature && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm mt-2">
+                    <div className="flex items-center gap-2 flex-row-reverse text-green-600 text-sm mt-2">
                       <CheckCircle className="h-4 w-4" />
                       חתימה נקלטה בהצלחה
                     </div>
@@ -1228,18 +1228,18 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-between items-center">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('files')}>
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                <Button type="button" variant="outline" onClick={() => setActiveTab('files')} className="flex flex-row-reverse gap-2">
+                  <ArrowRight className="h-4 w-4" />
                   חזרה
                 </Button>
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="shadow-lg hover:shadow-xl transition-all" 
+                  className="flex flex-row-reverse gap-2 shadow-lg hover:shadow-xl transition-all" 
                   disabled={submitting}
                 >
+                  <Send className="h-4 w-4" />
                   {submitting ? "שולח..." : "סיכום ואישור"}
-                  <Send className="mr-2 h-4 w-4" />
                 </Button>
               </div>
             </TabsContent>
