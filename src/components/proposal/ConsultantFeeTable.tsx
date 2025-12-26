@@ -325,7 +325,7 @@ export function ConsultantFeeTable({
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={5} className="text-left font-medium">
+              <TableCell colSpan={5} className="text-right font-medium">
                 סה"כ פריטי יזם:
               </TableCell>
               <TableCell className="text-center font-bold">
@@ -335,7 +335,7 @@ export function ConsultantFeeTable({
             </TableRow>
             {additionalItems.length > 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-left font-medium text-green-700">
+                <TableCell colSpan={5} className="text-right font-medium text-green-700">
                   סה"כ פריטים נוספים:
                 </TableCell>
                 <TableCell className="text-center font-bold text-green-700">
@@ -345,7 +345,7 @@ export function ConsultantFeeTable({
               </TableRow>
             )}
             <TableRow className="bg-primary/10">
-              <TableCell colSpan={5} className="text-left font-bold text-lg">
+              <TableCell colSpan={5} className="text-right font-bold text-lg">
                 סה"כ הצעה:
               </TableCell>
               <TableCell className="text-center font-bold text-lg text-primary">
