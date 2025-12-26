@@ -245,7 +245,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <TabsContent value="details" className="p-4 space-y-3 m-0">
                 {advisorInfo && (
                   <Card className="border-primary/20 bg-primary/5">
