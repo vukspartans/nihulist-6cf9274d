@@ -94,7 +94,7 @@ const contentStyle = {
 const heading = {
   fontSize: '20px',
   fontWeight: 'bold',
-  color: '#059669',
+  color: '#2563eb',
   marginBottom: '16px',
   textAlign: 'center' as const,
 };
@@ -127,7 +127,7 @@ const buttonContainer = {
 };
 
 const button = {
-  backgroundColor: '#059669',
+  backgroundColor: '#2563eb',
   borderRadius: '6px',
   color: '#fff',
   fontSize: '16px',
