@@ -67,15 +67,12 @@ serve(async (req) => {
     // Service role client for database operations
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get session and validate consultant ownership
+    // Step 1: Get session with proposal and project (without nested advisor)
     const { data: session, error: sessionError } = await supabase
       .from("negotiation_sessions")
       .select(`
         *,
-        proposal:proposal_id (
-          id, price, advisor_id, project_id, current_version,
-          advisors:advisor_id (id, company_name, user_id)
-        ),
+        proposal:proposal_id (id, price, advisor_id, project_id, current_version),
         project:project_id (id, name, owner_id)
       `)
       .eq("id", session_id)
@@ -83,12 +80,29 @@ serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
+      console.error("[Negotiation Response] Session query error:", sessionError);
       throw new Error("Negotiation session not found or not awaiting response");
     }
 
+    console.log("[Negotiation Response] Session found:", session.id);
+
+    // Step 2: Get advisor details separately
+    const proposalData = session.proposal as any;
+    const { data: advisorData, error: advisorError } = await supabase
+      .from("advisors")
+      .select("id, company_name, user_id")
+      .eq("id", proposalData.advisor_id)
+      .single();
+
+    if (advisorError || !advisorData) {
+      console.error("[Negotiation Response] Advisor query error:", advisorError);
+      throw new Error("Advisor not found");
+    }
+
+    console.log("[Negotiation Response] Advisor found:", advisorData.id);
+
     // Validate consultant owns the advisor
-    const advisorData = (session.proposal as any)?.advisors;
-    if (!advisorData || advisorData.user_id !== user.id) {
+    if (advisorData.user_id !== user.id) {
       throw new Error("Not authorized - must be the consultant for this negotiation");
     }
 
