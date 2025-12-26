@@ -1254,7 +1254,27 @@ const SubmitProposal = () => {
           timelineDays={timelineDays} 
           scopeText={scopeText} 
           fileCount={files.length} 
-          hasSignature={!!signature} 
+          hasSignature={!!signature}
+          feeLineItems={[
+            ...(entrepreneurData?.fee_items || []).map(item => ({
+              description: item.description,
+              quantity: item.quantity || 1,
+              unit_price: consultantPrices[item.id] || 0,
+              total: (consultantPrices[item.id] || 0) * (item.quantity || 1),
+              is_optional: item.is_optional,
+            })),
+            ...additionalFeeItems.map(item => ({
+              description: item.description,
+              quantity: item.quantity || 1,
+              unit_price: item.consultant_unit_price || 0,
+              total: (item.consultant_unit_price || 0) * (item.quantity || 1),
+              is_optional: item.is_optional,
+            }))
+          ]}
+          milestones={consultantMilestones.map(m => ({
+            description: m.description,
+            percentage: m.consultant_percentage,
+          }))}
         />
       </div>
       <BackToTop />
