@@ -207,7 +207,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
+        <DialogContent className="max-w-3xl h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
           <DialogHeader className="p-4 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between" dir="rtl">
               <DialogTitle className="text-lg font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
