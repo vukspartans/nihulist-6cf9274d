@@ -499,7 +499,7 @@ async function callGoogleAIStudio(
   userContent: string,
   apiKey: string
 ): Promise<EvaluationResult> {
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash';
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002';
   
   console.log('[Evaluate] Using Google AI Studio API');
   console.log('[Evaluate] Model:', model);
@@ -958,7 +958,7 @@ serve(async (req) => {
     // Get model name for metadata
     const model = aiProvider === 'openai'
       ? (Deno.env.get('OPENAI_MODEL') || 'gpt-4o')
-      : (Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash');
+      : (Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002');
 
     for (const rankedProposal of evaluationResult.ranked_proposals) {
       const proposal = proposals.find((p: any) => p.id === rankedProposal.proposal_id);

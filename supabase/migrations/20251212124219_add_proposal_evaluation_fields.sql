@@ -38,3 +38,5 @@ COMMENT ON COLUMN public.proposals.extracted_text IS
   'Full text extracted from proposal files (PDF/DOCX). May contain PII - consider redaction.';
 
 
+
+
