@@ -690,6 +690,216 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_milestones: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          display_order: number | null
+          due_date: string | null
+          id: string
+          name: string
+          percentage_of_total: number | null
+          project_advisor_id: string | null
+          project_id: string
+          status: string
+          task_id: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          display_order?: number | null
+          due_date?: string | null
+          id?: string
+          name: string
+          percentage_of_total?: number | null
+          project_advisor_id?: string | null
+          project_id: string
+          status?: string
+          task_id?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          display_order?: number | null
+          due_date?: string | null
+          id?: string
+          name?: string
+          percentage_of_total?: number | null
+          project_advisor_id?: string | null
+          project_id?: string
+          status?: string
+          task_id?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_milestones_project_advisor_id_fkey"
+            columns: ["project_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "project_advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_milestones_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          approver_signature_id: string | null
+          attachments: Json | null
+          category: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          external_party_id: string | null
+          external_party_name: string | null
+          id: string
+          invoice_file_url: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_milestone_id: string | null
+          payment_reference: string | null
+          project_advisor_id: string | null
+          project_id: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          request_number: string | null
+          source_type: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          total_amount: number | null
+          updated_at: string
+          vat_amount: number | null
+          vat_percent: number | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approver_signature_id?: string | null
+          attachments?: Json | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          external_party_id?: string | null
+          external_party_name?: string | null
+          id?: string
+          invoice_file_url?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_milestone_id?: string | null
+          payment_reference?: string | null
+          project_advisor_id?: string | null
+          project_id: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          request_number?: string | null
+          source_type?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_percent?: number | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approver_signature_id?: string | null
+          attachments?: Json | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          external_party_id?: string | null
+          external_party_name?: string | null
+          id?: string
+          invoice_file_url?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_milestone_id?: string | null
+          payment_reference?: string | null
+          project_advisor_id?: string | null
+          project_id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          request_number?: string | null
+          source_type?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_approver_signature_id_fkey"
+            columns: ["approver_signature_id"]
+            isOneToOne: false
+            referencedRelation: "signatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_payment_milestone_id_fkey"
+            columns: ["payment_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "payment_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_project_advisor_id_fkey"
+            columns: ["project_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "project_advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           admin_approved: boolean
@@ -900,6 +1110,106 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_tasks: {
+        Row: {
+          actual_end_date: string | null
+          actual_start_date: string | null
+          assigned_advisor_id: string | null
+          assigned_user_id: string | null
+          block_reason: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          duration_days: number | null
+          id: string
+          is_blocked: boolean | null
+          is_milestone: boolean | null
+          name: string
+          notes: string | null
+          phase: string | null
+          planned_end_date: string | null
+          planned_start_date: string | null
+          progress_percent: number | null
+          project_id: string
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          assigned_advisor_id?: string | null
+          assigned_user_id?: string | null
+          block_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration_days?: number | null
+          id?: string
+          is_blocked?: boolean | null
+          is_milestone?: boolean | null
+          name: string
+          notes?: string | null
+          phase?: string | null
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          assigned_advisor_id?: string | null
+          assigned_user_id?: string | null
+          block_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration_days?: number | null
+          id?: string
+          is_blocked?: boolean | null
+          is_milestone?: boolean | null
+          name?: string
+          notes?: string | null
+          phase?: string | null
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_assigned_advisor_id_fkey"
+            columns: ["assigned_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1758,6 +2068,90 @@ export type Database = {
         }
         Relationships: []
       }
+      task_dependencies: {
+        Row: {
+          created_at: string
+          dependency_type: string
+          depends_on_task_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          dependency_type?: string
+          depends_on_task_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          dependency_type?: string
+          depends_on_task_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_depends_on_task_id_fkey"
+            columns: ["depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_templates: {
+        Row: {
+          advisor_specialty: string | null
+          created_at: string
+          default_duration_days: number | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_milestone: boolean | null
+          name: string
+          phase: string | null
+          project_type: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_specialty?: string | null
+          created_at?: string
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_milestone?: boolean | null
+          name: string
+          phase?: string | null
+          project_type: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_specialty?: string | null
+          created_at?: string
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_milestone?: boolean | null
+          name?: string
+          phase?: string | null
+          project_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_feedback: {
         Row: {
           created_at: string | null
@@ -1991,6 +2385,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_advisor_assigned_to_task: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_advisor_invited_to_entrepreneur: {
         Args: { _advisor_user_id: string; _entrepreneur_user_id: string }
         Returns: boolean
@@ -2016,6 +2414,10 @@ export type Database = {
         Returns: boolean
       }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_task_project_owner: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_user_advisor: { Args: { _user_id: string }; Returns: boolean }
       is_user_entrepreneur: { Args: { _user_id: string }; Returns: boolean }
       is_user_invited_to_rfp: {
