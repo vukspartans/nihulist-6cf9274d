@@ -719,7 +719,7 @@ const SubmitProposal = () => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full flex flex-wrap justify-start gap-1 h-auto p-1 mb-6">
+            <TabsList className="w-full flex flex-wrap justify-end flex-row-reverse gap-1 h-auto p-1 mb-6">
               <TabsTrigger value="request" className="flex items-center gap-2">
                 <span className="hidden sm:inline">פרטי הבקשה</span>
                 <FileText className="h-4 w-4" />
