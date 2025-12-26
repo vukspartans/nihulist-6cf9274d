@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import NavigationLogo from '@/components/NavigationLogo';
 import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
+import { TaskBoard } from '@/components/tasks';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -444,6 +445,10 @@ export const ProjectDetail = () => {
             <Users className="w-4 h-4 flex-shrink-0" />
             <span className="hidden sm:inline">היועצים שלי</span>
           </TabsTrigger>
+          <TabsTrigger value="tasks" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap">
+            <CheckSquare className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">משימות</span>
+          </TabsTrigger>
           <TabsTrigger value="files" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2 min-w-[44px] whitespace-nowrap">
             <FileText className="w-4 h-4 flex-shrink-0" />
             <span className="hidden sm:inline">קבצים</span>
@@ -707,6 +712,10 @@ export const ProjectDetail = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="tasks">
+          <TaskBoard projectId={project.id} />
         </TabsContent>
       </Tabs>
 
