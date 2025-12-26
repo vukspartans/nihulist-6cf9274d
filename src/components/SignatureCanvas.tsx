@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Upload, X, Stamp } from 'lucide-react';
 
 interface SignatureCanvasProps {
   onSign: (signatureData: SignatureData) => void;
@@ -13,14 +13,17 @@ export interface SignatureData {
   png: string; // base64
   vector: Array<{ x: number; y: number }[]>; // stroke paths
   timestamp: string;
+  stampImage?: string; // optional company stamp base64
 }
 
 export function SignatureCanvas({ onSign, required = false, className = '' }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [strokes, setStrokes] = useState<Array<{ x: number; y: number }[]>>([]);
   const [currentStroke, setCurrentStroke] = useState<{ x: number; y: number }[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
+  const [stampImage, setStampImage] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -103,6 +106,35 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
     setHasSigned(false);
   };
 
+  const handleStampUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setStampImage(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeStamp = () => {
+    setStampImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const save = () => {
     const canvas = canvasRef.current;
     if (!canvas || !hasSigned) return;
@@ -112,6 +144,7 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
       png,
       vector: strokes,
       timestamp: new Date().toISOString(),
+      stampImage: stampImage || undefined,
     };
 
     onSign(signatureData);
@@ -165,6 +198,61 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-muted-foreground">
               חתמו כאן
             </div>
+          )}
+        </div>
+
+        {/* Company Stamp Upload Section */}
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Stamp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">חותמת חברה (אופציונלי)</span>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              onChange={handleStampUpload}
+              className="hidden"
+            />
+            {!stampImage && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-3 w-3 ml-1" />
+                העלאה
+              </Button>
+            )}
+          </div>
+          
+          {stampImage && (
+            <div className="flex items-center gap-3 p-2 bg-background rounded border">
+              <img 
+                src={stampImage} 
+                alt="חותמת חברה" 
+                className="h-16 w-auto object-contain"
+              />
+              <div className="flex-1 text-sm text-muted-foreground">
+                חותמת הועלתה בהצלחה
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={removeStamp}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          
+          {!stampImage && (
+            <p className="text-xs text-muted-foreground">
+              ניתן להעלות קובץ PNG או JPG (עד 2MB)
+            </p>
           )}
         </div>
 
