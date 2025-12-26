@@ -8,7 +8,7 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2 } from "lucide-react";
 
 interface NegotiationResponseViewProps {
   sessionId: string;
@@ -23,6 +23,13 @@ interface LineItemDetails {
   category?: string;
 }
 
+interface ProjectFile {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+}
+
 export const NegotiationResponseView = ({
   sessionId,
   onSuccess,
@@ -33,6 +40,8 @@ export const NegotiationResponseView = ({
   const [consultantMessage, setConsultantMessage] = useState("");
   const [loadingSession, setLoadingSession] = useState(true);
   const [lineItemDetails, setLineItemDetails] = useState<Map<string, LineItemDetails>>(new Map());
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
 
   const { fetchNegotiationWithDetails, respondToNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -77,7 +86,118 @@ export const NegotiationResponseView = ({
         }
       }
     }
+
+    // Load project files from RFP invite
+    if (data?.proposal_id) {
+      await loadProjectFiles(data.proposal_id);
+    }
+
     setLoadingSession(false);
+  };
+
+  const loadProjectFiles = async (proposalId: string) => {
+    setLoadingFiles(true);
+    try {
+      // Get the proposal to find the advisor_id
+      const { data: proposal } = await supabase
+        .from("proposals")
+        .select("advisor_id, project_id")
+        .eq("id", proposalId)
+        .single();
+
+      if (proposal) {
+        // Find the RFP invite for this advisor and project
+        const { data: rfpInvite } = await supabase
+          .from("rfp_invites")
+          .select("request_files")
+          .eq("advisor_id", proposal.advisor_id)
+          .single();
+
+        if (rfpInvite?.request_files) {
+          // Parse the request_files JSON - safely cast with type guard
+          const rawFiles = Array.isArray(rfpInvite.request_files) 
+            ? rfpInvite.request_files 
+            : [];
+          const parsedFiles: ProjectFile[] = rawFiles
+            .filter((f): f is { name: string; url: string; size?: number; type?: string } => 
+              typeof f === 'object' && f !== null && 'name' in f && 'url' in f
+            )
+            .map(f => ({ name: String(f.name), url: String(f.url), size: f.size, type: f.type }));
+          setProjectFiles(parsedFiles);
+        }
+
+        // Also try to get project files
+        const { data: projectFilesData } = await supabase
+          .from("project_files")
+          .select("file_name, file_url, size_mb, file_type")
+          .eq("project_id", proposal.project_id);
+
+        if (projectFilesData && projectFilesData.length > 0) {
+          const additionalFiles: ProjectFile[] = projectFilesData.map((f) => ({
+            name: f.file_name,
+            url: f.file_url,
+            size: f.size_mb ? f.size_mb * 1024 * 1024 : undefined,
+            type: f.file_type,
+          }));
+          setProjectFiles((prev) => [...prev, ...additionalFiles]);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading project files:", error);
+    }
+    setLoadingFiles(false);
+  };
+
+  const handleViewFile = async (file: ProjectFile) => {
+    try {
+      // Try to get a signed URL if it's a storage URL
+      if (file.url.includes("supabase")) {
+        const pathMatch = file.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+        if (pathMatch) {
+          const [, bucket, path] = pathMatch;
+          const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+          if (data?.signedUrl) {
+            window.open(data.signedUrl, "_blank");
+            return;
+          }
+        }
+      }
+      window.open(file.url, "_blank");
+    } catch {
+      window.open(file.url, "_blank");
+    }
+  };
+
+  const handleDownloadFile = async (file: ProjectFile) => {
+    try {
+      let url = file.url;
+      
+      // Try to get a signed URL if it's a storage URL
+      if (file.url.includes("supabase")) {
+        const pathMatch = file.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+        if (pathMatch) {
+          const [, bucket, path] = pathMatch;
+          const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+          if (data?.signedUrl) {
+            url = data.signedUrl;
+          }
+        }
+      }
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      window.open(file.url, "_blank");
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -157,6 +277,63 @@ export const NegotiationResponseView = ({
           </Button>
         )}
       </div>
+
+      {/* Project Files Section */}
+      {(projectFiles.length > 0 || loadingFiles) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              קבצי הפרויקט
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingFiles ? (
+              <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                טוען קבצים...
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {projectFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">{file.name}</span>
+                      {file.size && (
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleViewFile(file)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDownloadFile(file)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Initiator Comments */}
       {comments.length > 0 && (
