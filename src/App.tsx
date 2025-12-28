@@ -231,21 +231,26 @@ const AppContent = () => {
 };
 
 const RecoveryDeepLinkHandler = () => {
-  const { pathname, search } = useLocation();
-  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => {
+    const hash = window.location.hash;
     // Check if the URL hash contains type=recovery
-    if (window.location.hash.includes('type=recovery')) {
-      if (pathname.startsWith('/heyadmin')) {
-        console.log('[Recovery] Admin recovery deep-link detected');
-        navigate('/heyadmin/login?type=recovery', { replace: true });
-      } else {
-        console.log('[Recovery] Non-admin recovery deep-link detected');
-        navigate('/auth?type=recovery', { replace: true });
+    if (hash.includes('type=recovery')) {
+      // Determine target path based on current location
+      const targetPath = pathname.startsWith('/heyadmin') 
+        ? '/heyadmin/login' 
+        : '/auth';
+      
+      console.log('[Recovery] Deep-link detected, preserving hash and redirecting to:', targetPath);
+      
+      // Use window.location.href to preserve the hash fragment (navigate() loses it)
+      // Only redirect if we're not already on the target path
+      if (!pathname.includes(targetPath.replace('/', ''))) {
+        window.location.href = `${window.location.origin}${targetPath}${hash}`;
       }
     }
-  }, [pathname, search, navigate]);
+  }, [pathname]);
 
   return null;
 };
