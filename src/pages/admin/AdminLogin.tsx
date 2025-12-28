@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Shield, Loader2, Lock, ArrowLeft, Home } from "lucide-react";
+import { Shield, Loader2, Lock, ArrowLeft, Home, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { adminTranslations } from "@/constants/adminTranslations";
 import type { Session, User } from "@supabase/supabase-js";
@@ -32,6 +32,9 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
@@ -77,8 +80,8 @@ const AdminLogin = () => {
           setUser(data.session.user);
           setIsPasswordReset(true);
           
-          // Clean up the URL hash to avoid confusion
-          window.history.replaceState(null, '', window.location.pathname + '?type=recovery');
+          // Clean up the URL completely to avoid confusion and loops
+          window.history.replaceState(null, '', window.location.pathname);
         }
       });
     }
@@ -271,6 +274,11 @@ const AdminLogin = () => {
       return;
     }
 
+    if (newPassword !== confirmNewPassword) {
+      toast.error("הסיסמאות אינן תואמות");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -284,7 +292,7 @@ const AdminLogin = () => {
 
       if (error) throw error;
 
-      toast.success("הסיסמה עודכנה בהצלחה");
+      toast.success("הסיסמה עודכנה בהצלחה! מעביר להתחברות...");
       
       // Clear ALL recovery flags and reset states
       localStorage.removeItem('adminPasswordRecovery');
@@ -292,7 +300,11 @@ const AdminLogin = () => {
       localStorage.removeItem('lastAdminEmail');
       setIsPasswordReset(false);
       setNewPassword("");
-      navigate("/heyadmin/login");
+      setConfirmNewPassword("");
+      
+      // Sign out and redirect to clean login URL to break the recovery loop
+      await supabase.auth.signOut();
+      window.location.href = '/heyadmin/login';
     } catch (error: any) {
       toast.error(error.message || "לא ניתן לעדכן את הסיסמה");
     } finally {
@@ -344,18 +356,54 @@ const AdminLogin = () => {
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">סיסמה חדשה</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={loading}
-                  dir="ltr"
-                />
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    dir="ltr"
+                    className="pl-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">הסיסמה חייבת להכיל לפחות 6 תווים</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmNewPassword">אימות סיסמה חדשה</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmNewPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    dir="ltr"
+                    className="pl-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
