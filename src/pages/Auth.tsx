@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Lock, User as UserIcon, Briefcase, Home, FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building2, Mail, Lock, User as UserIcon, Briefcase, Home, FileText, WifiOff, RefreshCw } from "lucide-react";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +50,8 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user: authUser, loading: authLoading, primaryRole } = useAuth();
+  const { isOnline, wasOffline } = useNetworkStatus();
+  const [networkError, setNetworkError] = useState(false);
 
   useEffect(() => {
     console.log("Auth component mounting, checking URL params");
@@ -228,7 +232,18 @@ const Auth = () => {
       }
     }
 
+    // Check network status before attempting
+    if (!isOnline) {
+      toast({
+        title: "אין חיבור לאינטרנט",
+        description: "בדקו את חיבור האינטרנט ונסו שוב",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
+    setNetworkError(false);
 
     try {
       if (isLogin) {
@@ -290,10 +305,31 @@ const Auth = () => {
         });
       }
     } catch (error: any) {
+      // Handle network errors specifically
+      const isNetworkError = 
+        error.message === 'Failed to fetch' ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('network') ||
+        error.name === 'TypeError' && error.message === 'Failed to fetch';
+      
+      if (isNetworkError) {
+        setNetworkError(true);
+        toast({
+          title: "שגיאת תקשורת",
+          description: "לא ניתן להתחבר לשרת. בדקו את חיבור האינטרנט ונסו שוב.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       let errorMessage = error.message || "אירעה שגיאה בתהליך ההתחברות";
       
       if (isLogin && error.message?.includes('Email not confirmed')) {
         errorMessage = "החשבון טרם אומת. אנא בדקו את המייל שלכם ולחצו על קישור האימות.";
+      } else if (isLogin && error.message?.includes('Invalid login credentials')) {
+        errorMessage = "פרטי ההתחברות שגויים. בדקו את האימייל והסיסמה.";
+      } else if (error.message?.includes('rate limit')) {
+        errorMessage = "ביצעתם יותר מדי ניסיונות. נסו שוב בעוד מספר דקות.";
       }
       
       toast({
@@ -695,6 +731,39 @@ const Auth = () => {
             ? 'border-primary/20 shadow-lg shadow-primary/10' 
             : 'border-tech-purple/20 shadow-lg shadow-tech-purple/10'
         }`}>
+          {/* Network Status Alert */}
+          {(!isOnline || networkError) && (
+            <Alert variant="destructive" className="mb-4">
+              <WifiOff className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  {!isOnline 
+                    ? "אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב."
+                    : "שגיאת תקשורת עם השרת. נסו שוב."
+                  }
+                </span>
+                {networkError && isOnline && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setNetworkError(false)}
+                    className="h-6 px-2"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Back online notification */}
+          {wasOffline && isOnline && (
+            <Alert className="mb-4 border-green-500/50 bg-green-500/10">
+              <AlertDescription className="text-green-700 dark:text-green-400">
+                ✓ חיבור האינטרנט חזר. ניתן להמשיך.
+              </AlertDescription>
+            </Alert>
+          )}
           <CardHeader className="text-center space-y-3 sm:space-y-4 p-0 sm:p-6">
             {/* Role Badge */}
             <div className="flex justify-center">
