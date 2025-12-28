@@ -5,18 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, BarChart3, Trash2, RefreshCw, MessageSquare } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle } from 'lucide-react';
 import { ProposalApprovalDialog } from './ProposalApprovalDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useProposalEvaluation } from '@/hooks/useProposalEvaluation';
-import { ProposalComparisonCharts } from './ProposalComparisonCharts';
 import { exportToExcel, exportToPDF } from '@/utils/exportProposals';
 import { VersionBadge, RejectProposalDialog, NegotiationDialog, BulkNegotiationDialog } from './negotiation';
 import { useNegotiation } from '@/hooks/useNegotiation';
 import { useLineItems } from '@/hooks/useLineItems';
+import { WhyRecommendedPanel } from './WhyRecommendedPanel';
 
 interface Proposal {
   id: string;
@@ -62,8 +61,9 @@ export const ProposalComparisonDialog = ({
   const { evaluateProposals, loading: evaluationLoading } = useProposalEvaluation();
   const [evaluationResult, setEvaluationResult] = useState<any>(null);
   const [projectName, setProjectName] = useState<string>('');
-  const [showCharts, setShowCharts] = useState(false);
   const [evaluationProgress, setEvaluationProgress] = useState<number>(0);
+  const [selectedProposalForWhy, setSelectedProposalForWhy] = useState<Proposal | null>(null);
+  const [whyRecommendedOpen, setWhyRecommendedOpen] = useState(false);
   
   // Negotiation state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -79,6 +79,21 @@ export const ProposalComparisonDialog = ({
       fetchProjectName();
     }
   }, [open, proposalIds, projectId]);
+
+  // Set default selected proposal when proposals are loaded and have evaluation
+  useEffect(() => {
+    if (proposals.length > 0 && !selectedProposalForWhy) {
+      const topRanked = proposals.find(p => p.evaluation_rank === 1);
+      if (topRanked) {
+        setSelectedProposalForWhy(topRanked);
+      } else {
+        const withScore = proposals.find(p => p.evaluation_score != null);
+        if (withScore) {
+          setSelectedProposalForWhy(withScore);
+        }
+      }
+    }
+  }, [proposals]);
 
   const fetchProjectName = async () => {
     try {
@@ -138,7 +153,18 @@ export const ProposalComparisonDialog = ({
       if (result) {
         setEvaluationResult(result);
         await fetchProposals(); // Refresh to get updated evaluation data
-        setShowCharts(true); // Auto-show charts after evaluation
+        // Set default selected proposal to rank #1 after refresh
+        setTimeout(() => {
+          const topRanked = proposals.find(p => p.evaluation_rank === 1);
+          if (topRanked) {
+            setSelectedProposalForWhy(topRanked);
+          } else {
+            const withScore = proposals.find(p => p.evaluation_score != null);
+            if (withScore) {
+              setSelectedProposalForWhy(withScore);
+            }
+          }
+        }, 500);
       }
     } catch (error) {
       clearInterval(progressInterval);
@@ -233,16 +259,31 @@ export const ProposalComparisonDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <div className="flex items-center justify-between flex-wrap gap-4 flex-row-reverse">
             <DialogTitle className="flex items-center gap-2 text-right">
               <Award className="w-5 h-5" />
               השוואת הצעות מחיר - {advisorType}
             </DialogTitle>
             <div className="flex items-center gap-2 flex-wrap flex-row-reverse justify-end">
-              {proposals.some(p => p.evaluation_rank) && (
+              {proposals.some(p => p.evaluation_rank || p.evaluation_score) && (
                 <>
+                  <Button
+                    onClick={() => {
+                      const selected = selectedProposalForWhy || proposals.find(p => p.evaluation_rank === 1) || proposals.find(p => p.evaluation_score != null);
+                      if (selected) {
+                        setSelectedProposalForWhy(selected);
+                        setWhyRecommendedOpen(true);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                    למה מומלץ?
+                  </Button>
                   <Button
                     onClick={handleExportExcel}
                     variant="outline"
@@ -261,15 +302,6 @@ export const ProposalComparisonDialog = ({
                     <FileText className="w-4 h-4" />
                     PDF
                   </Button>
-                  <Button
-                    onClick={() => setShowCharts(!showCharts)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    {showCharts ? 'הסתר גרפים' : 'הצג גרפים'}
-                  </Button>
                 </>
               )}
               <Button
@@ -284,16 +316,17 @@ export const ProposalComparisonDialog = ({
           </div>
         </DialogHeader>
 
+        <div className="overflow-y-auto px-6 pb-6" style={{ maxHeight: 'calc(90vh - 180px)' }}>
         {/* Progressive Loading Indicator */}
         {evaluationLoading && evaluationProgress > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">מעריך הצעות...</span>
+          <div className="mb-4" dir="rtl">
+            <div className="flex items-center justify-between text-sm mb-2 flex-row-reverse">
               <span className="text-muted-foreground">{evaluationProgress}%</span>
+              <span className="text-muted-foreground">מעריך הצעות...</span>
             </div>
-            <div className="w-full bg-secondary rounded-full h-2">
+            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
               <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300 absolute right-0"
                 style={{ width: `${evaluationProgress}%` }}
               />
             </div>
@@ -304,36 +337,11 @@ export const ProposalComparisonDialog = ({
           <Alert className="mb-4">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-1">
-                <div>
-                  ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
-                </div>
-                {evaluationResult.batch_summary.project_type_detected === 'LARGE_SCALE' && (
-                  <div className="text-sm font-semibold">
-                    פרויקט בקנה מידה גדול - משקל ניסיון מוגבר
-                  </div>
-                )}
-                {evaluationResult.evaluation_metadata && (
-                  <div className="text-xs text-muted-foreground mt-2 flex items-center gap-2 flex-wrap" dir="rtl">
-                    <span>מודל AI: {evaluationResult.evaluation_metadata.model_used}</span>
-                    <span>•</span>
-                    <span>ספק: {evaluationResult.evaluation_metadata.provider === 'openai' ? 'OpenAI' : 'Google AI Studio'}</span>
-                    {evaluationResult.evaluation_metadata.total_evaluation_time_ms && (
-                      <>
-                        <span>•</span>
-                        <span>זמן: {(evaluationResult.evaluation_metadata.total_evaluation_time_ms / 1000).toFixed(1)}ש'</span>
-                      </>
-                    )}
-                  </div>
-                )}
+              <div>
+                ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
               </div>
             </AlertDescription>
           </Alert>
-        )}
-
-        {/* Charts Section */}
-        {showCharts && proposals.some(p => p.evaluation_rank) && (
-          <ProposalComparisonCharts proposals={proposals} />
         )}
 
         {/* Bulk Actions Bar */}
@@ -363,25 +371,18 @@ export const ProposalComparisonDialog = ({
           </Alert>
         )}
 
-        {/* Tabs for Table and Charts View */}
-        <Tabs defaultValue="table" className="w-full">
-          <TabsList className="mb-4 flex justify-end">
-            <TabsTrigger value="table">טבלה</TabsTrigger>
-            {proposals.some(p => p.evaluation_rank) && (
-              <TabsTrigger value="charts">גרפים</TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="table" className="space-y-4">
-            <div className="flex items-center gap-2 mb-4 flex-wrap justify-end">
+        {/* Table Section */}
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap flex-row-reverse justify-end" dir="rtl">
               <span className="text-sm text-muted-foreground">מיין לפי:</span>
               <Button
                 variant={sortBy === 'score' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('score')}
                 disabled={!proposals.some(p => p.evaluation_rank)}
+                className="flex items-center gap-1.5"
               >
-                <Award className="w-3 h-3 ml-1" />
+                <Award className="w-3 h-3" />
                 דירוג AI
               </Button>
               <Button
@@ -532,6 +533,27 @@ export const ProposalComparisonDialog = ({
                             </div>
                           </div>
                         )}
+                        {/* Show red flags even if not knocked out */}
+                        {evalData?.flags?.red_flags && evalData.flags.red_flags.length > 0 && !evalData?.flags?.knockout_triggered && (
+                          <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                            <div className="flex items-start gap-2" dir="rtl">
+                              <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <div className="font-semibold text-orange-900 dark:text-orange-100 text-sm mb-1">
+                                  דגלים אדומים
+                                </div>
+                                <div className="text-xs text-orange-800 dark:text-orange-200 mb-2">
+                                  זוהו בעיות פוטנציאליות או סיכונים בהצעה זו שכדאי לבדוק לפני קבלת החלטה
+                                </div>
+                                <ul className="list-disc list-inside space-y-0.5 text-xs text-orange-700 dark:text-orange-300">
+                                  {evalData.flags.red_flags.slice(0, 5).map((flag: string, idx: number) => (
+                                    <li key={idx}>{flag}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2" dir="rtl">
@@ -589,6 +611,24 @@ export const ProposalComparisonDialog = ({
                               </TooltipTrigger>
                               <TooltipContent>אשר הצעה</TooltipContent>
                             </Tooltip>
+                            {(proposal.evaluation_rank || proposal.evaluation_score != null) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setSelectedProposalForWhy(proposal);
+                                      setWhyRecommendedOpen(true);
+                                    }}
+                                    className="h-7 w-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                  >
+                                    <HelpCircle className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>למה מומלץ?</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -628,18 +668,8 @@ export const ProposalComparisonDialog = ({
             </TooltipProvider>
           </div>
         )}
-          </TabsContent>
-
-          <TabsContent value="charts">
-            {proposals.some(p => p.evaluation_rank) ? (
-              <ProposalComparisonCharts proposals={proposals} />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">ביצע הערכה AI כדי לראות גרפים</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
+        </div>
       </DialogContent>
 
       {selectedProposal && (
@@ -694,6 +724,12 @@ export const ProposalComparisonDialog = ({
           setSelectedProposalIds(new Set());
           fetchProposals();
         }}
+      />
+
+      <WhyRecommendedPanel
+        open={whyRecommendedOpen}
+        onOpenChange={setWhyRecommendedOpen}
+        proposal={selectedProposalForWhy}
       />
     </Dialog>
   );
