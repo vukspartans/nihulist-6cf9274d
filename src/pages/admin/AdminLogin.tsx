@@ -41,7 +41,50 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading } = useAuth();
 
-  // Check for pending recovery flag on mount (set by AuthEventRouter)
+  // Check for recovery tokens in URL hash and set session manually
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    
+    // Parse hash parameters (format: #access_token=...&refresh_token=...&type=recovery...)
+    const hashString = hash.substring(1); // Remove leading #
+    const hashParams = new URLSearchParams(hashString);
+    
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
+    
+    console.log('[AdminLogin] Hash check - type:', type, 'hasAccessToken:', !!accessToken, 'hasRefreshToken:', !!refreshToken);
+    
+    if (type === 'recovery' && accessToken && refreshToken) {
+      console.log('[AdminLogin] Recovery tokens found in hash, setting session manually');
+      localStorage.setItem('adminPasswordRecovery', 'true');
+      
+      // Manually set the Supabase session using the tokens from the hash
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('[AdminLogin] Failed to set session from hash tokens:', error);
+          toast.error('קישור האיפוס פג תוקף או לא תקין. נסה שוב.');
+          return;
+        }
+        
+        if (data.session) {
+          console.log('[AdminLogin] Session set successfully from hash tokens');
+          setSession(data.session);
+          setUser(data.session.user);
+          setIsPasswordReset(true);
+          
+          // Clean up the URL hash to avoid confusion
+          window.history.replaceState(null, '', window.location.pathname + '?type=recovery');
+        }
+      });
+    }
+  }, []);
+
+  // Check for pending recovery flag on mount (set by AuthEventRouter) - fallback
   useEffect(() => {
     const recoveryPending = localStorage.getItem('passwordRecoveryPending');
     const adminRecovery = localStorage.getItem('adminPasswordRecovery');
