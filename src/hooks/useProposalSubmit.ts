@@ -128,7 +128,13 @@ export const useProposalSubmit = () => {
         throw new Error('Declaration text is too long');
       }
       
-      if (!data.scopeText || data.scopeText.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH) {
+      // Only require long scopeText if no structured data is provided
+      const hasStructuredScope = 
+        (data.feeLineItems && data.feeLineItems.length > 0) ||
+        (data.selectedServices && data.selectedServices.length > 0) ||
+        (data.milestoneAdjustments && data.milestoneAdjustments.length > 0);
+
+      if (!hasStructuredScope && (!data.scopeText || data.scopeText.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH)) {
         throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
       }
 
