@@ -715,7 +715,7 @@ const SubmitProposal = () => {
       supplierName: advisorProfile?.company_name || '',
       price: parseFloat(price),
       timelineDays: parseInt(timelineDays) || 30, // Default to 30 days if not specified
-      scopeText: servicesNotes || 'ראה פירוט שירותים', // Use services notes as scope
+      scopeText: servicesNotes || 'ראה פירוט שירותים בטבלאות', // Use services notes as scope (min 20 chars)
       conditions,
       uploadedFiles: files,
       signature,
