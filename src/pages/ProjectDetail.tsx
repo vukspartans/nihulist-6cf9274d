@@ -588,7 +588,12 @@ export const ProjectDetail = () => {
       {selectedProposal && (
         <ProposalDetailDialog
           open={detailDialogOpen}
-          onOpenChange={setDetailDialogOpen}
+          onOpenChange={(open) => {
+            setDetailDialogOpen(open);
+            if (!open) {
+              setSelectedProposal(null);
+            }
+          }}
           proposal={selectedProposal}
           projectId={project.id}
           projectName={project.name || project.location}

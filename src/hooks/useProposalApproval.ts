@@ -86,31 +86,36 @@ export const useProposalApproval = () => {
         description: 'היועץ נוסף לפרויקט',
       });
 
-      // Send email notification to advisor (non-blocking)
+      // Send email notification to advisor
       console.log('[Approval] Sending email notification for proposal:', data.proposalId);
-      supabase.functions
-        .invoke('notify-proposal-approved', {
-          body: {
-            proposal_id: data.proposalId,
-            entrepreneur_notes: data.notes,
-            test_mode: false,
-          },
-        })
-        .then(({ data: emailData, error: emailError }) => {
-          if (emailError) {
-            console.error('[Approval] Email notification failed:', emailError);
-            toast({
-              title: 'שים לב',
-              description: 'ההצעה אושרה אך שליחת המייל ליועץ נכשלה',
-              variant: 'destructive',
-            });
-          } else {
-            console.log('[Approval] Email notification sent:', emailData);
-          }
-        })
-        .catch((err) => {
-          console.error('[Approval] Email notification error:', err);
+      try {
+        const { data: emailData, error: emailError } = await supabase.functions
+          .invoke('notify-proposal-approved', {
+            body: {
+              proposal_id: data.proposalId,
+              entrepreneur_notes: data.notes,
+              test_mode: false,
+            },
+          });
+
+        if (emailError) {
+          console.error('[Approval] Email notification failed:', emailError);
+          toast({
+            title: 'שים לב',
+            description: 'ההצעה אושרה אך שליחת המייל ליועץ נכשלה',
+            variant: 'destructive',
+          });
+        } else {
+          console.log('[Approval] Email notification sent successfully:', emailData);
+        }
+      } catch (emailErr) {
+        console.error('[Approval] Email notification error:', emailErr);
+        toast({
+          title: 'שים לב',
+          description: 'ההצעה אושרה אך שליחת המייל ליועץ נכשלה',
+          variant: 'destructive',
         });
+      }
 
       // Invalidate relevant caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });

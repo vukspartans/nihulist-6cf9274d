@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar } from 'lucide-react';
 import { useRFPInvitesWithDetails } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalComparisonDialog } from './ProposalComparisonDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -137,14 +137,21 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                 <AccordionItem key={rfp.rfpId} value={rfp.rfpId}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-4">
-                        <span className="font-medium">{rfp.subject}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(rfp.sentAt), 'dd/MM/yyyy HH:mm', { locale: he })}
-                        </span>
+                      <div className="flex flex-col items-start text-right gap-1">
+                        {/* Show unique advisor types as badges instead of generic title */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {[...new Set(rfp.advisorInvites.map(inv => inv.advisorType).filter(Boolean))].map((type, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {type}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>נשלח: {format(new Date(rfp.sentAt), 'dd/MM/yyyy', { locale: he })}</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {/* PHASE 4: Changed from "הצעות" to "בקשות" */}
                         <Badge variant="outline">{rfp.totalInvites} בקשות</Badge>
                         {proposalsCount > 0 && (
                           <Badge variant="success">{proposalsCount} הצעות</Badge>
