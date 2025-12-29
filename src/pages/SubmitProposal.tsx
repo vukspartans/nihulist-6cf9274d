@@ -1066,6 +1066,7 @@ const SubmitProposal = () => {
                       onUpload={setConsultantRequestFiles} 
                       advisorId={advisorProfile?.id}
                       maxFiles={5}
+                      existingFiles={consultantRequestFiles}
                     />
                   </div>
                 </CardContent>
@@ -1252,7 +1253,11 @@ const SubmitProposal = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <FileUpload onUpload={setFiles} advisorId={advisorProfile?.id} />
+                  <FileUpload 
+                    onUpload={setFiles} 
+                    advisorId={advisorProfile?.id}
+                    existingFiles={files}
+                  />
                 </CardContent>
               </Card>
 
