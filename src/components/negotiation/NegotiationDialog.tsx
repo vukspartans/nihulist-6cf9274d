@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useLineItems } from "@/hooks/useLineItems";
 import { useProposalVersions } from "@/hooks/useProposalVersions";
 import type { LineItemAdjustment, NegotiationCommentInput, CommentType } from "@/types/negotiation";
-import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle, Upload, X, File } from "lucide-react";
+import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle, Upload, X, File, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
@@ -46,6 +46,7 @@ interface UploadedFile {
   name: string;
   url: string;
   size: number;
+  storagePath?: string;
 }
 
 export const NegotiationDialog = ({
@@ -67,12 +68,63 @@ export const NegotiationDialog = ({
   });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [loadingExistingFiles, setLoadingExistingFiles] = useState(false);
 
   const { createNegotiationSession, cancelNegotiation, loading } = useNegotiation();
   const { lineItems, loading: lineItemsLoading } = useLineItems(proposal.id);
   const { getLatestVersion } = useProposalVersions(proposal.id);
 
   const latestVersion = getLatestVersion();
+
+  // Prefetch existing files when dialog opens
+  useEffect(() => {
+    const fetchExistingFiles = async () => {
+      if (!open || !proposal.id) return;
+      
+      setLoadingExistingFiles(true);
+      try {
+        const { data: files, error } = await supabase.storage
+          .from('negotiation-files')
+          .list(proposal.id);
+
+        if (error) {
+          console.log('[NegotiationDialog] No existing files or bucket access:', error.message);
+          setLoadingExistingFiles(false);
+          return;
+        }
+
+        if (files && files.length > 0) {
+          const filesWithUrls: UploadedFile[] = [];
+          
+          for (const file of files) {
+            const storagePath = `${proposal.id}/${file.name}`;
+            const { data: signedUrlData } = await supabase.storage
+              .from('negotiation-files')
+              .createSignedUrl(storagePath, 3600); // 1 hour expiry
+            
+            if (signedUrlData?.signedUrl) {
+              filesWithUrls.push({
+                name: file.name,
+                url: signedUrlData.signedUrl,
+                size: file.metadata?.size || 0,
+                storagePath,
+              });
+            }
+          }
+          
+          if (filesWithUrls.length > 0) {
+            setUploadedFiles(filesWithUrls);
+          }
+        }
+      } catch (err) {
+        console.error('[NegotiationDialog] Error fetching existing files:', err);
+      } finally {
+        setLoadingExistingFiles(false);
+      }
+    };
+
+    fetchExistingFiles();
+  }, [open, proposal.id]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -83,44 +135,29 @@ export const NegotiationDialog = ({
     for (const file of acceptedFiles) {
       try {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${proposal.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const storagePath = `${proposal.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
         
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
           .from('negotiation-files')
-          .upload(fileName, file);
+          .upload(storagePath, file);
 
         if (error) {
-          // Bucket might not exist, try proposal-files as fallback
-          const { data: fallbackData, error: fallbackError } = await supabase.storage
-            .from('proposal-files')
-            .upload(`negotiation/${fileName}`, file);
-          
-          if (fallbackError) {
-            console.error('[NegotiationDialog] File upload error:', fallbackError);
-            toast.error(`שגיאה בהעלאת ${file.name}`);
-            continue;
-          }
-          
-          const { data: urlData } = supabase.storage
-            .from('proposal-files')
-            .getPublicUrl(`negotiation/${fileName}`);
-          
-          newFiles.push({
-            name: file.name,
-            url: urlData.publicUrl,
-            size: file.size,
-          });
-        } else {
-          const { data: urlData } = supabase.storage
-            .from('negotiation-files')
-            .getPublicUrl(fileName);
-          
-          newFiles.push({
-            name: file.name,
-            url: urlData.publicUrl,
-            size: file.size,
-          });
+          console.error('[NegotiationDialog] File upload error:', error);
+          toast.error(`שגיאה בהעלאת ${file.name}`);
+          continue;
         }
+        
+        // Use signed URL since bucket is private
+        const { data: signedUrlData } = await supabase.storage
+          .from('negotiation-files')
+          .createSignedUrl(storagePath, 3600);
+        
+        newFiles.push({
+          name: file.name,
+          url: signedUrlData?.signedUrl || '',
+          size: file.size,
+          storagePath,
+        });
       } catch (err) {
         console.error('[NegotiationDialog] Upload error:', err);
         toast.error(`שגיאה בהעלאת ${file.name}`);
@@ -408,7 +445,12 @@ export const NegotiationDialog = ({
               </div>
 
               {/* Uploaded files list */}
-              {uploadedFiles.length > 0 && (
+              {loadingExistingFiles ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>טוען קבצים קיימים...</span>
+                </div>
+              ) : uploadedFiles.length > 0 && (
                 <div className="space-y-2 mt-2">
                   {uploadedFiles.map((file, index) => (
                     <div
@@ -417,10 +459,20 @@ export const NegotiationDialog = ({
                     >
                       <div className="flex items-center gap-2">
                         <File className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{file.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({formatFileSize(file.size)})
-                        </span>
+                        <a 
+                          href={file.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          {file.name}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                        {file.size > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({formatFileSize(file.size)})
+                          </span>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
