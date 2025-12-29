@@ -739,7 +739,7 @@ serve(async (req) => {
         )
       `)
       .eq('project_id', project_id)
-      .eq('status', 'submitted');
+      .in('status', ['submitted', 'resubmitted']);
 
     if (proposal_ids && proposal_ids.length > 0) {
       proposalsQuery = proposalsQuery.in('id', proposal_ids);

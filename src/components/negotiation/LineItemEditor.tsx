@@ -43,6 +43,7 @@ export const LineItemEditor = ({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(
     new Set(adjustments.map((a) => a.line_item_id))
   );
+  const [editedQuantities, setEditedQuantities] = useState<Record<string, number>>({});
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("he-IL", {
@@ -89,6 +90,10 @@ export const LineItemEditor = ({
     } else {
       newSelected.delete(itemId);
       onAdjustmentChange(adjustments.filter((a) => a.line_item_id !== itemId));
+      // Clear edited quantity
+      const newQuantities = { ...editedQuantities };
+      delete newQuantities[itemId];
+      setEditedQuantities(newQuantities);
     }
     setSelectedItems(newSelected);
   };
@@ -144,6 +149,29 @@ export const LineItemEditor = ({
     );
   };
 
+  const handleQuantityChange = (itemId: string, newQuantity: number) => {
+    const item = lineItems.find((li) => li.id === itemId);
+    if (!item || newQuantity <= 0) return;
+
+    setEditedQuantities((prev) => ({ ...prev, [itemId]: newQuantity }));
+
+    // Calculate new total based on unit price
+    const unitPrice = item.quantity > 0 ? item.total / item.quantity : item.total;
+    const newTotal = unitPrice * newQuantity;
+
+    // Update the adjustment to reflect new price
+    const existing = adjustments.find((a) => a.line_item_id === itemId);
+    if (existing) {
+      onAdjustmentChange(
+        adjustments.map((a) =>
+          a.line_item_id === itemId
+            ? { ...a, adjustment_type: "price_change", adjustment_value: newTotal }
+            : a
+        )
+      );
+    }
+  };
+
   const totals = useMemo(() => {
     let originalTotal = 0;
     let targetTotal = 0;
@@ -183,7 +211,8 @@ export const LineItemEditor = ({
           <TableRow>
             {!readOnly && <TableHead className="w-10"></TableHead>}
             <TableHead>פריט</TableHead>
-            <TableHead className="text-center">כמות</TableHead>
+            <TableHead className="text-center">יחידה</TableHead>
+            <TableHead className="text-center w-20">כמות</TableHead>
             <TableHead className="text-left">מחיר מקורי</TableHead>
             {!readOnly && <TableHead className="text-center">התאמה</TableHead>}
             {showTargetColumn && (
@@ -192,6 +221,7 @@ export const LineItemEditor = ({
             <TableHead className="text-left">
               {readOnly ? "הצעה חדשה" : "סה״כ יעד"}
             </TableHead>
+            {!readOnly && <TableHead className="text-center min-w-[150px]">הערות</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -207,6 +237,7 @@ export const LineItemEditor = ({
                   adjustment.adjustment_value
                 )
               : item.total;
+            const displayQuantity = editedQuantities[item.id] ?? item.quantity;
 
             return (
               <TableRow
@@ -238,7 +269,24 @@ export const LineItemEditor = ({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-center">{item.quantity}</TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground">
+                  {(item as any).unit || "יח׳"}
+                </TableCell>
+                <TableCell className="text-center">
+                  {isSelected && !readOnly ? (
+                    <Input
+                      type="number"
+                      value={displayQuantity}
+                      onChange={(e) =>
+                        handleQuantityChange(item.id, parseFloat(e.target.value) || 1)
+                      }
+                      className="w-16 text-center"
+                      min={1}
+                    />
+                  ) : (
+                    <span>{item.quantity}</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-left font-medium">
                   {formatCurrency(item.total)}
                 </TableCell>
@@ -303,6 +351,20 @@ export const LineItemEditor = ({
                     ? formatCurrency(targetPrice)
                     : "-"}
                 </TableCell>
+
+                {!readOnly && (
+                  <TableCell>
+                    {isSelected && (
+                      <Textarea
+                        placeholder="הערה..."
+                        value={adjustment?.initiator_note || ""}
+                        onChange={(e) => handleNoteChange(item.id, e.target.value)}
+                        className="min-h-[40px] text-sm resize-none"
+                        rows={1}
+                      />
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}
