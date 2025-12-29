@@ -132,13 +132,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         submittedAt: proposal.submitted_at,
         scopeText: proposal.scope_text,
         conditions: proposal.conditions_json,
-        feeLineItems: proposal.fee_line_items?.map((item: any) => ({
+        feeItems: proposal.fee_line_items?.map((item: any) => ({
           description: item.description || item.name,
           quantity: item.quantity,
           unit: item.unit,
-          unit_price: item.unit_price,
+          unitPrice: item.unit_price,
           total: item.total,
-          is_optional: item.is_optional,
+          isOptional: item.is_optional,
         })),
         milestones: proposal.milestone_adjustments?.map((m: any) => ({
           description: m.description,

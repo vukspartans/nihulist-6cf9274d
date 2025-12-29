@@ -2,17 +2,18 @@
  * Generates a PDF of a proposal using browser print functionality
  */
 
-interface FeeLineItem {
+export interface FeeLineItem {
   description: string;
   quantity?: number;
   unit?: string;
-  unit_price?: number;
+  unitPrice?: number;
   total: number;
-  is_optional?: boolean;
+  isOptional?: boolean;
 }
 
-interface ProposalPDFData {
-  supplierName: string;
+export interface ProposalPDFData {
+  advisorName?: string;
+  supplierName?: string;
   projectName: string;
   price: number;
   timelineDays: number;
@@ -24,7 +25,7 @@ interface ProposalPDFData {
     exclusions?: string;
     validity_days?: number;
   };
-  feeLineItems?: FeeLineItem[];
+  feeItems?: FeeLineItem[];
   milestones?: Array<{
     description: string;
     percentage: number;
@@ -57,9 +58,9 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
 
   // Generate fee table rows
   let feeTableHtml = '';
-  if (data.feeLineItems && data.feeLineItems.length > 0) {
-    const mandatoryItems = data.feeLineItems.filter(item => !item.is_optional);
-    const optionalItems = data.feeLineItems.filter(item => item.is_optional);
+  if (data.feeItems && data.feeItems.length > 0) {
+    const mandatoryItems = data.feeItems.filter(item => !item.isOptional);
+    const optionalItems = data.feeItems.filter(item => item.isOptional);
     
     const generateRows = (items: FeeLineItem[]) => items.map((item, idx) => `
       <tr>
@@ -67,7 +68,7 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
         <td style="padding: 8px; border: 1px solid #e5e7eb;">${item.description}</td>
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'יחידה'}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unit_price ? formatCurrency(item.unit_price) : '-'}</td>
+        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(item.total)}</td>
       </tr>
     `).join('');
