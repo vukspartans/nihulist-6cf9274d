@@ -275,6 +275,12 @@ const SubmitProposal = () => {
       conditions,
       declarationAccepted,
       activeTab,
+      // Additional fields for complete persistence
+      files,
+      consultantRequestFiles,
+      signature,
+      paymentTermType,
+      paymentTermsComment,
       savedAt: new Date().toISOString(),
     };
     
@@ -286,7 +292,7 @@ const SubmitProposal = () => {
     } catch (error) {
       console.error('[SubmitProposal] Failed to save draft:', error);
     }
-  }, [draftKey, price, timelineDays, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, activeTab]);
+  }, [draftKey, price, timelineDays, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, activeTab, files, consultantRequestFiles, signature, paymentTermType, paymentTermsComment]);
 
   const loadDraft = useCallback(() => {
     if (!draftKey) return false;
@@ -311,6 +317,12 @@ const SubmitProposal = () => {
       if (draftData.declarationAccepted) setDeclarationAccepted(draftData.declarationAccepted);
       if (draftData.activeTab) setActiveTab(draftData.activeTab);
       if (draftData.savedAt) setLastSavedAt(new Date(draftData.savedAt));
+      // Restore additional fields
+      if (draftData.files) setFiles(draftData.files);
+      if (draftData.consultantRequestFiles) setConsultantRequestFiles(draftData.consultantRequestFiles);
+      if (draftData.signature) setSignature(draftData.signature);
+      if (draftData.paymentTermType) setPaymentTermType(draftData.paymentTermType);
+      if (draftData.paymentTermsComment) setPaymentTermsComment(draftData.paymentTermsComment);
       
       console.log('[SubmitProposal] Draft loaded from', draftData.savedAt);
       return true;
@@ -348,7 +360,7 @@ const SubmitProposal = () => {
     if (!loading && entrepreneurData) {
       setIsDraftDirty(true);
     }
-  }, [price, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted]);
+  }, [price, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, files, consultantRequestFiles, signature, paymentTermType, paymentTermsComment]);
 
   // Auto-save on tab change
   useEffect(() => {
