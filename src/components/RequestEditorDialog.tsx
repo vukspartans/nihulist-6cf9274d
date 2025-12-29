@@ -811,28 +811,38 @@ export const RequestEditorDialog = ({
                 </div>
 
                 {/* Project Files Section */}
-                {projectFiles.length > 0 && (
-                  <Collapsible open={projectFilesOpen} onOpenChange={setProjectFilesOpen} className="space-y-2">
-                    <CollapsibleTrigger asChild>
-                      <div className="flex items-center justify-between cursor-pointer group">
-                        <div className="flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4 text-primary" />
-                          <Label className="cursor-pointer">קבצי הפרויקט</Label>
-                          <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                            {projectFiles.length}
-                          </Badge>
-                        </div>
-                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${projectFilesOpen ? 'rotate-180' : ''}`} />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1.5">
-                      {loadingProjectFiles ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          טוען קבצים...
-                        </div>
-                      ) : (
-                        projectFiles.map((file) => {
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-primary" />
+                    <Label>קבצי הפרויקט</Label>
+                    {!loadingProjectFiles && projectFiles.length > 0 && (
+                      <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                        {projectFiles.length}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {loadingProjectFiles ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      טוען קבצים...
+                    </div>
+                  ) : projectFiles.length === 0 ? (
+                    <div className="text-sm text-muted-foreground py-2 text-right">
+                      לא הועלו קבצים לפרויקט
+                    </div>
+                  ) : (
+                    <Collapsible open={projectFilesOpen} onOpenChange={setProjectFilesOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between px-2 h-8">
+                          <span className="text-xs text-muted-foreground">
+                            {projectFilesOpen ? 'הסתר קבצים' : 'הצג קבצים'}
+                          </span>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${projectFilesOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-1.5 pt-2">
+                        {projectFiles.map((file) => {
                           const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.file_name);
                           const isPDF = /\.pdf$/i.test(file.file_name);
                           
@@ -887,11 +897,11 @@ export const RequestEditorDialog = ({
                               </Button>
                             </div>
                           );
-                        })
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+                </div>
 
                 {/* Combined: AI Extraction + File Attachments */}
                 <div className="space-y-2">
