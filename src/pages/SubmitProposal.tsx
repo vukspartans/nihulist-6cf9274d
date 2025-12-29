@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useBeforeUnload } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,6 +121,14 @@ const SubmitProposal = () => {
   const [consultantRequestNotes, setConsultantRequestNotes] = useState('');
   const [consultantRequestFiles, setConsultantRequestFiles] = useState<any[]>([]);
 
+  // Draft saving state
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const draftKey = `proposal-draft-${rfp_id || invite_id}`;
+
+  // Track initial services for detecting deselected items
+  const [initialSelectedServices, setInitialSelectedServices] = useState<string[]>([]);
+
   // Format price with thousand separators
   const formatPrice = (value: string): string => {
     const num = parseFloat(value.replace(/[^\d]/g, ''));
@@ -231,8 +239,135 @@ const SubmitProposal = () => {
         .filter(item => item.is_included && item.id)
         .map(item => item.id!);
       setSelectedServices(initialSelected);
+      // Track initial services for detecting deselected items
+      setInitialSelectedServices(initialSelected);
     }
   }, [entrepreneurData]);
+
+  // Calculate deselected services (items that were initially selected but now are not)
+  const getDeselectedServices = useCallback(() => {
+    if (!entrepreneurData?.service_scope_items) return [];
+    
+    return initialSelectedServices
+      .filter(serviceId => !selectedServices.includes(serviceId))
+      .map(serviceId => {
+        const item = entrepreneurData.service_scope_items.find(s => s.id === serviceId);
+        return item?.task_name || serviceId;
+      });
+  }, [initialSelectedServices, selectedServices, entrepreneurData]);
+
+  // Draft saving functions
+  const saveDraft = useCallback(() => {
+    if (!draftKey) return;
+    
+    const draftData = {
+      price,
+      timelineDays,
+      consultantPrices,
+      additionalFeeItems,
+      rowComments,
+      selectedServices,
+      servicesNotes,
+      consultantMilestones,
+      consultantRequestNotes,
+      conditions,
+      declarationAccepted,
+      activeTab,
+      savedAt: new Date().toISOString(),
+    };
+    
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+      setLastSavedAt(new Date());
+      setIsDraftDirty(false);
+      console.log('[SubmitProposal] Draft saved');
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to save draft:', error);
+    }
+  }, [draftKey, price, timelineDays, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, activeTab]);
+
+  const loadDraft = useCallback(() => {
+    if (!draftKey) return false;
+    
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (!savedDraft) return false;
+      
+      const draftData = JSON.parse(savedDraft);
+      
+      if (draftData.price) setPrice(draftData.price);
+      if (draftData.price) setPriceDisplay(parseFloat(draftData.price).toLocaleString('he-IL'));
+      if (draftData.timelineDays) setTimelineDays(draftData.timelineDays);
+      if (draftData.consultantPrices) setConsultantPrices(draftData.consultantPrices);
+      if (draftData.additionalFeeItems) setAdditionalFeeItems(draftData.additionalFeeItems);
+      if (draftData.rowComments) setRowComments(draftData.rowComments);
+      if (draftData.selectedServices) setSelectedServices(draftData.selectedServices);
+      if (draftData.servicesNotes) setServicesNotes(draftData.servicesNotes);
+      if (draftData.consultantMilestones) setConsultantMilestones(draftData.consultantMilestones);
+      if (draftData.consultantRequestNotes) setConsultantRequestNotes(draftData.consultantRequestNotes);
+      if (draftData.conditions) setConditions(draftData.conditions);
+      if (draftData.declarationAccepted) setDeclarationAccepted(draftData.declarationAccepted);
+      if (draftData.activeTab) setActiveTab(draftData.activeTab);
+      if (draftData.savedAt) setLastSavedAt(new Date(draftData.savedAt));
+      
+      console.log('[SubmitProposal] Draft loaded from', draftData.savedAt);
+      return true;
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to load draft:', error);
+      return false;
+    }
+  }, [draftKey]);
+
+  const clearDraft = useCallback(() => {
+    if (!draftKey) return;
+    try {
+      localStorage.removeItem(draftKey);
+      console.log('[SubmitProposal] Draft cleared');
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to clear draft:', error);
+    }
+  }, [draftKey]);
+
+  // Load draft on mount (after entrepreneur data is loaded)
+  useEffect(() => {
+    if (entrepreneurData && !loading) {
+      const hasDraft = loadDraft();
+      if (hasDraft) {
+        toast({
+          title: "טיוטה נטענה",
+          description: "נמצאה טיוטה שמורה. המשיכו מאיפה שהפסקתם.",
+        });
+      }
+    }
+  }, [entrepreneurData, loading]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (!loading && entrepreneurData) {
+      setIsDraftDirty(true);
+    }
+  }, [price, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted]);
+
+  // Auto-save on tab change
+  useEffect(() => {
+    if (isDraftDirty && !loading) {
+      saveDraft();
+    }
+  }, [activeTab]);
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDraftDirty) {
+        e.preventDefault();
+        e.returnValue = 'יש לך שינויים שלא נשמרו. האם אתה בטוח שברצונך לעזוב?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDraftDirty]);
 
   // Validate fee items
   const validateFeeItems = useCallback(() => {
@@ -611,6 +746,11 @@ const SubmitProposal = () => {
       selectedServices: hasServiceScope ? selectedServices : undefined,
       servicesNotes: servicesNotes || undefined,
       
+      // Phase 4: Deselected services as comment
+      deselectedServicesComment: getDeselectedServices().length > 0 
+        ? `שירותים שלא ייכללו בהצעה: ${getDeselectedServices().join(', ')}`
+        : undefined,
+      
       // Phase 3.6: Milestone adjustments
       milestoneAdjustments: hasPaymentTerms ? consultantMilestones.map(m => ({
         id: m.id,
@@ -629,6 +769,9 @@ const SubmitProposal = () => {
     console.log('[SubmitProposal] Submission result:', result);
     
     if (result.success) {
+      // Clear draft on successful submission
+      clearDraft();
+      
       queryClient.invalidateQueries({ queryKey: ['rfp-invites'] });
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
       queryClient.invalidateQueries({ queryKey: ['advisor-profile'] });
@@ -709,12 +852,32 @@ const SubmitProposal = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
+        <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
         <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
+          {lastSavedAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              נשמר לאחרונה: {lastSavedAt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={saveDraft}
+            disabled={!isDraftDirty}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            שמור טיוטה
+          </Button>
           <Button 
             variant="outline" 
-            onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+            onClick={() => {
+              if (isDraftDirty) {
+                saveDraft();
+              }
+              navigate(getDashboardRouteForRole(primaryRole));
+            }}
             className="flex items-center gap-2"
           >
             <ArrowRight className="h-4 w-4" />
