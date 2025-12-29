@@ -83,9 +83,26 @@ export const useNegotiation = () => {
       return result as NegotiationResponseOutput;
     } catch (error: any) {
       console.error("[useNegotiation] respondToNegotiation error:", error);
+      
+      // Try to parse specific error messages from the edge function
+      let errorMessage = "לא ניתן לשלוח את ההצעה";
+      
+      if (error?.context) {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody?.error?.includes("not awaiting response")) {
+            errorMessage = "כבר שלחת תגובה לבקשה זו או שהמשא ומתן הסתיים";
+          } else if (errorBody?.error) {
+            errorMessage = errorBody.error;
+          }
+        } catch (parseError) {
+          console.error("[useNegotiation] Error parsing context:", parseError);
+        }
+      }
+      
       toast({
         title: "שגיאה",
-        description: error.message || "לא ניתן לשלוח את ההצעה",
+        description: errorMessage,
         variant: "destructive",
       });
       return null;
@@ -141,14 +158,19 @@ export const useNegotiation = () => {
   };
 
   const fetchNegotiationByProposal = async (
-    proposalId: string
+    proposalId: string,
+    activeOnly: boolean = false
   ): Promise<NegotiationSession | null> => {
     try {
+      const statuses: ("open" | "awaiting_response" | "responded" | "cancelled" | "resolved")[] = activeOnly 
+        ? ["awaiting_response"] 
+        : ["open", "awaiting_response", "responded"];
+      
       const { data, error } = await supabase
         .from("negotiation_sessions")
         .select("*")
         .eq("proposal_id", proposalId)
-        .in("status", ["open", "awaiting_response", "responded"])
+        .in("status", statuses)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
