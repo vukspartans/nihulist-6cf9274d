@@ -404,10 +404,12 @@ const SubmitProposal = () => {
   const steps = [
     { id: 1, title: 'פרטי הבקשה', completed: true },
     { id: 2, title: 'שכר טרחה', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!price },
-    { id: 3, title: 'קבצים מצורפים', completed: files.length > 0 },
-    { id: 4, title: 'חתימה דיגיטלית', completed: !!signature },
-    { id: 5, title: 'אישור והגשה', completed: declarationAccepted },
-  ];
+    ...(hasServiceScope ? [{ id: 0, title: 'שירותים', completed: selectedServices.length > 0 }] : []),
+    ...(hasPaymentTerms ? [{ id: 0, title: 'אבני דרך', completed: consultantMilestones.length > 0 }] : []),
+    { id: 0, title: 'קבצים מצורפים', completed: files.length > 0 },
+    { id: 0, title: 'חתימה דיגיטלית', completed: !!signature },
+    { id: 0, title: 'אישור והגשה', completed: declarationAccepted },
+  ].map((step, index) => ({ ...step, id: index + 1 }));
 
   useEffect(() => {
     if (user && (rfp_id || invite_id)) {
