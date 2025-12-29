@@ -136,6 +136,14 @@ const RFPDetails = () => {
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
   const [existingProposal, setExistingProposal] = useState<{ id: string; status: string } | null>(null);
   const [viewProposalDialogOpen, setViewProposalDialogOpen] = useState(false);
+  const [projectFiles, setProjectFiles] = useState<Array<{
+    id: string;
+    file_name: string;
+    file_url: string;
+    size_mb?: number;
+    file_type?: string;
+    custom_name?: string;
+  }>>([]);
 
   const { declineRFP, loading: declining } = useDeclineRFP();
   const [fileLoading, setFileLoading] = useState<string | null>(null);
@@ -526,6 +534,43 @@ const RFPDetails = () => {
         setExistingProposal(proposalData);
       }
 
+      // Fetch project files
+      const projectId = invite.rfps.projects.id;
+      const { data: projectFilesData, error: projectFilesError } = await supabase
+        .from('project_files')
+        .select('id, file_name, file_url, size_mb, file_type, custom_name')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (projectFilesData && !projectFilesError) {
+        console.log('[RFPDetails] Project files fetched:', projectFilesData.length);
+        // Generate signed URLs for the files
+        const filesWithUrls = await Promise.all(
+          projectFilesData.map(async (file) => {
+            // Extract storage path from file_url if it's a full URL, or use file_url as path
+            let storagePath = file.file_url;
+            
+            // If it's already a signed URL, extract the path
+            if (file.file_url.includes('project-files/')) {
+              const match = file.file_url.match(/project-files\/(.+?)(\?|$)/);
+              if (match) {
+                storagePath = match[1];
+              }
+            }
+
+            const { data: signedData } = await supabase.storage
+              .from('project-files')
+              .createSignedUrl(storagePath, 86400); // 24 hours
+
+            return { 
+              ...file, 
+              file_url: signedData?.signedUrl || file.file_url 
+            };
+          })
+        );
+        setProjectFiles(filesWithUrls);
+      }
+
     } catch (error) {
       console.error('[RFPDetails] Unexpected error:', error);
       toast({
@@ -656,13 +701,10 @@ const RFPDetails = () => {
                 <div>
                   <Label className="text-xs text-muted-foreground">תאריך קבלה</Label>
                   <p className="text-sm font-medium mt-1">
-                    {new Date(inviteDetails?.created_at || '').toLocaleDateString('he-IL')}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">תאריך שליחה</Label>
-                  <p className="text-sm font-medium mt-1">
-                    {new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')}
+                    {inviteDetails?.created_at 
+                      ? new Date(inviteDetails.created_at).toLocaleDateString('he-IL')
+                      : '—'
+                    }
                   </p>
                 </div>
                 {/* Deadline - Compact inline */}
@@ -811,6 +853,56 @@ const RFPDetails = () => {
                             >
                               <Download className="h-3.5 w-3.5" />
                               <span className="hidden sm:inline">{fileLoading === file.name ? 'מוריד...' : 'הורד'}</span>
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Project Files Section */}
+                  {projectFiles.length > 0 && (
+                    <div className="mt-6 pt-4 border-t">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="font-medium text-sm">קבצי הפרויקט ({projectFiles.length})</Label>
+                        {projectFiles.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadAllFiles(projectFiles.map(f => ({ 
+                              url: f.file_url, 
+                              name: f.custom_name || f.file_name 
+                            })))}
+                            disabled={fileLoading === 'all'}
+                            className="gap-1.5 text-xs h-8"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            {fileLoading === 'all' ? 'מוריד...' : 'הורד הכל'}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {projectFiles.map((file) => (
+                          <div 
+                            key={file.id}
+                            className="flex items-center gap-2 p-2.5 bg-muted rounded-lg"
+                          >
+                            <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span className="flex-1 text-sm truncate">{file.custom_name || file.file_name}</span>
+                            {file.size_mb && (
+                              <Badge variant="outline" className="text-xs hidden sm:flex">
+                                {file.size_mb.toFixed(2)} MB
+                              </Badge>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadFile({ url: file.file_url, name: file.custom_name || file.file_name })}
+                              disabled={fileLoading === file.file_name || fileLoading === 'all'}
+                              className="gap-1.5 h-8 text-xs"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">{fileLoading === file.file_name ? 'מוריד...' : 'הורד'}</span>
                             </Button>
                           </div>
                         ))}
