@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,8 +11,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, XCircle, Download, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
+import { useToast } from '@/hooks/use-toast';
 
 interface FeeLineItem {
   description: string;
@@ -38,6 +42,8 @@ interface ConfirmProposalDialogProps {
   hasSignature: boolean;
   feeLineItems?: FeeLineItem[];
   milestones?: MilestoneItem[];
+  projectName?: string;
+  advisorName?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -53,16 +59,62 @@ export function ConfirmProposalDialog({
   onOpenChange,
   onConfirm,
   price,
+  timelineDays,
   fileCount,
   hasSignature,
   feeLineItems = [],
   milestones = [],
+  projectName = 'פרויקט',
+  advisorName = 'יועץ',
 }: ConfirmProposalDialogProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const { toast } = useToast();
+  
   const mandatoryItems = feeLineItems.filter(item => !item.is_optional);
   const optionalItems = feeLineItems.filter(item => item.is_optional);
   const totalMandatory = mandatoryItems.reduce((sum, item) => sum + item.total, 0);
   const totalOptional = optionalItems.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = totalMandatory + totalOptional;
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const pdfData: ProposalPDFData = {
+        projectName,
+        advisorName,
+        submittedAt: new Date().toISOString(),
+        price: parseFloat(price) || 0,
+        timelineDays: parseInt(timelineDays) || 0,
+        feeItems: feeLineItems.map(item => ({
+          description: item.description,
+          unit: item.unit || 'פאושלי',
+          quantity: item.quantity || 1,
+          unitPrice: item.unit_price || item.total,
+          total: item.total,
+          isOptional: item.is_optional || false,
+        })),
+        milestones: milestones.map(m => ({
+          description: m.description,
+          percentage: m.percentage,
+        })),
+      };
+      
+      await generateProposalPDF(pdfData);
+      toast({
+        title: "PDF נוצר בהצלחה",
+        description: "חלון ההדפסה נפתח",
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "שגיאה בייצוא PDF",
+        description: "אנא נסו שוב",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -165,11 +217,27 @@ export function ConfirmProposalDialog({
         </ScrollArea>
         
         {/* Sticky Footer */}
-        <AlertDialogFooter className="px-6 py-4 border-t bg-background">
-          <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>
-            אישור והגשת הצעה
-          </AlertDialogAction>
+        <AlertDialogFooter className="px-6 py-4 border-t bg-background flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="gap-2"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            ייצוא ל-PDF
+          </Button>
+          <div className="flex gap-2">
+            <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirm}>
+              אישור והגשת הצעה
+            </AlertDialogAction>
+          </div>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -116,6 +116,8 @@ const SubmitProposal = () => {
 
   // Payment terms / milestones state
   const [consultantMilestones, setConsultantMilestones] = useState<ConsultantMilestone[]>([]);
+  const [paymentTermType, setPaymentTermType] = useState<'current' | 'net_30' | 'net_60' | 'net_90'>('current');
+  const [paymentTermsComment, setPaymentTermsComment] = useState('');
 
   // Phase 3.5: Consultant response to request
   const [consultantRequestNotes, setConsultantRequestNotes] = useState('');
@@ -1172,6 +1174,8 @@ const SubmitProposal = () => {
                       onSelectionChange={setSelectedServices}
                       consultantNotes={servicesNotes}
                       onNotesChange={setServicesNotes}
+                      projectFiles={projectFiles}
+                      requestFiles={entrepreneurData?.request_files || []}
                     />
                   </CardContent>
                 </Card>
@@ -1207,6 +1211,10 @@ const SubmitProposal = () => {
                       entrepreneurTerms={entrepreneurData?.payment_terms || null}
                       consultantMilestones={consultantMilestones}
                       onMilestonesChange={setConsultantMilestones}
+                      paymentTermType={paymentTermType}
+                      onPaymentTermTypeChange={setPaymentTermType}
+                      paymentTermsComment={paymentTermsComment}
+                      onPaymentTermsCommentChange={setPaymentTermsComment}
                     />
                   </CardContent>
                 </Card>
