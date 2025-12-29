@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,11 @@ export function FileUpload({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Sync internal state when existingFiles prop changes (fixes tab switching persistence)
+  useEffect(() => {
+    setFiles(existingFiles);
+  }, [existingFiles]);
+
   // Sanitize filename to remove Hebrew and special characters
   const sanitizeFilename = (filename: string): string => {
     const lastDotIndex = filename.lastIndexOf('.');
@@ -64,8 +69,15 @@ export function FileUpload({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setError(null);
     
+    // Use functional update to get current file count
+    let currentFileCount = 0;
+    setFiles(prev => {
+      currentFileCount = prev.length;
+      return prev;
+    });
+    
     // Validate total count
-    if (files.length + acceptedFiles.length > maxFiles) {
+    if (currentFileCount + acceptedFiles.length > maxFiles) {
       setError(`ניתן להעלות עד ${maxFiles} קבצים`);
       return;
     }
@@ -118,9 +130,12 @@ export function FileUpload({
         uploadedFiles.push(uploadedFile);
       }
 
-      const newFiles = [...files, ...uploadedFiles];
-      setFiles(newFiles);
-      onUpload(newFiles);
+      // Use functional update to avoid stale closure issues
+      setFiles(prev => {
+        const newFiles = [...prev, ...uploadedFiles];
+        onUpload(newFiles);
+        return newFiles;
+      });
 
       toast({
         title: 'הקבצים הועלו בהצלחה',
@@ -133,7 +148,7 @@ export function FileUpload({
       setUploading(false);
       setProgress(0);
     }
-  }, [files, maxFiles, maxSize, proposalId, advisorId, onUpload, toast]);
+  }, [maxFiles, maxSize, proposalId, advisorId, onUpload, toast, sanitizeFilename]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -144,12 +159,19 @@ export function FileUpload({
   });
 
   const removeFile = async (index: number) => {
-    const fileToRemove = files[index];
+    // Get file from current state to avoid stale closure
+    let fileToRemove: UploadedFile | null = null;
+    setFiles(prev => {
+      fileToRemove = prev[index];
+      return prev;
+    });
+    
+    if (!fileToRemove) return;
     
     // Delete from storage
     const { error } = await supabase.storage
       .from('proposal-files')
-      .remove([fileToRemove.url]);
+      .remove([(fileToRemove as UploadedFile).url]);
 
     if (error) {
       console.error('Delete error:', error);
@@ -161,9 +183,12 @@ export function FileUpload({
       return;
     }
 
-    const newFiles = files.filter((_, i) => i !== index);
-    setFiles(newFiles);
-    onUpload(newFiles);
+    // Use functional update to avoid stale closure issues
+    setFiles(prev => {
+      const newFiles = prev.filter((_, i) => i !== index);
+      onUpload(newFiles);
+      return newFiles;
+    });
   };
 
   const formatFileSize = (bytes: number) => {
