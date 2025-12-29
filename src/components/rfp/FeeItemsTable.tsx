@@ -4,15 +4,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, FileDown, Loader2 } from 'lucide-react';
 import { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
 import { FEE_UNITS, CHARGE_TYPES } from '@/constants/rfpUnits';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface FeeItemsTableProps {
   items: RFPFeeItem[];
   optionalItems: RFPFeeItem[];
   onItemsChange: (items: RFPFeeItem[]) => void;
   onOptionalItemsChange: (items: RFPFeeItem[]) => void;
+  advisorType?: string;
   feeCategoriesFromItems?: string[];
 }
 
@@ -21,8 +24,10 @@ export const FeeItemsTable = ({
   optionalItems,
   onItemsChange,
   onOptionalItemsChange,
+  advisorType,
   feeCategoriesFromItems = []
 }: FeeItemsTableProps) => {
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   
   const addItem = (isOptional: boolean) => {
     const targetItems = isOptional ? optionalItems : items;
@@ -64,36 +69,104 @@ export const FeeItemsTable = ({
     setItems(newItems);
   };
 
-  const calculateTotal = (itemsList: RFPFeeItem[]): number => {
-    return itemsList.reduce((sum, item) => {
-      const price = item.unit_price || 0;
-      const qty = item.quantity || 1;
-      return sum + (price * qty);
-    }, 0);
-  };
+  const loadTemplates = async () => {
+    if (!advisorType) {
+      toast.error('לא נבחר סוג יועץ');
+      return;
+    }
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase
+        .from('default_fee_item_templates')
+        .select('*')
+        .eq('advisor_specialty', advisorType)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.info('לא נמצאו תבניות עבור סוג יועץ זה');
+        return;
+      }
+
+      // Separate into required and optional items
+      const requiredItems: RFPFeeItem[] = [];
+      const optionalTemplateItems: RFPFeeItem[] = [];
+
+      data.forEach((template, index) => {
+        const feeItem: RFPFeeItem = {
+          item_number: index + 1,
+          description: template.description,
+          unit: template.unit as FeeUnit,
+          quantity: Number(template.default_quantity) || 1,
+          unit_price: undefined, // Entrepreneur doesn't set prices
+          charge_type: template.charge_type as ChargeType,
+          is_optional: template.is_optional || false,
+          display_order: template.display_order
+        };
+
+        if (template.is_optional) {
+          optionalTemplateItems.push(feeItem);
+        } else {
+          requiredItems.push(feeItem);
+        }
+      });
+
+      // Renumber items
+      requiredItems.forEach((item, idx) => {
+        item.item_number = idx + 1;
+        item.display_order = idx;
+      });
+      optionalTemplateItems.forEach((item, idx) => {
+        item.item_number = idx + 1;
+        item.display_order = idx;
+      });
+
+      onItemsChange(requiredItems);
+      onOptionalItemsChange(optionalTemplateItems);
+      
+      toast.success(`נטענו ${data.length} פריטי תבנית`);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast.error('שגיאה בטעינת תבניות');
+    } finally {
+      setLoadingTemplates(false);
+    }
   };
 
   const renderTable = (tableItems: RFPFeeItem[], isOptional: boolean, title: string) => (
     <div className="space-y-3" dir="rtl">
       <div className="flex items-center justify-between flex-col-reverse sm:flex-row-reverse gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addItem(isOptional)}
-          className="flex items-center gap-2 flex-row-reverse w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4" />
-          הוסף שורה
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addItem(isOptional)}
+            className="flex items-center gap-2 flex-row-reverse flex-1 sm:flex-none"
+          >
+            <Plus className="h-4 w-4" />
+            הוסף שורה
+          </Button>
+          {!isOptional && advisorType && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={loadTemplates}
+              disabled={loadingTemplates}
+              className="flex items-center gap-2 flex-row-reverse flex-1 sm:flex-none"
+            >
+              {loadingTemplates ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              טען תבנית
+            </Button>
+          )}
+        </div>
         <Label className="text-base font-semibold text-right">{title}</Label>
       </div>
       
@@ -161,50 +234,36 @@ export const FeeItemsTable = ({
               </div>
             </div>
             
-            {/* Row 4: Price & Charge Type (side by side) */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">מחיר יחידה</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={item.unit_price || ''}
-                  onChange={(e) => updateItem(index, 'unit_price', e.target.value ? Number(e.target.value) : undefined, isOptional)}
-                  placeholder="₪"
-                  className="text-left"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">סוג החיוב</Label>
-                <Select
-                  value={item.charge_type}
-                  onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CHARGE_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Row 4: Charge Type (full width - removed price) */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">סוג החיוב</Label>
+              <Select
+                value={item.charge_type}
+                onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHARGE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         ))}
         
         {tableItems.length === 0 && (
           <div className="border rounded-lg p-6 text-center text-muted-foreground">
-            לחץ על "הוסף שורה" להוספת פריט שכ"ט
+            {advisorType ? 'לחץ על "טען תבנית" או "הוסף שורה"' : 'לחץ על "הוסף שורה" להוספת פריט שכ"ט'}
           </div>
         )}
       </div>
 
-      {/* Desktop Table */}
+      {/* Desktop Table - removed price column */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -213,7 +272,6 @@ export const FeeItemsTable = ({
               <TableHead className="min-w-[200px] text-right">תיאור</TableHead>
               <TableHead className="w-24 text-right">יחידה</TableHead>
               <TableHead className="w-20 text-center">כמות</TableHead>
-              <TableHead className="w-28 text-right">מחיר יחידה</TableHead>
               <TableHead className="w-28 text-right">סוג החיוב</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -260,17 +318,6 @@ export const FeeItemsTable = ({
                   />
                 </TableCell>
                 <TableCell>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={item.unit_price || ''}
-                    onChange={(e) => updateItem(index, 'unit_price', e.target.value ? Number(e.target.value) : undefined, isOptional)}
-                    placeholder="₪"
-                    className="text-left"
-                    dir="ltr"
-                  />
-                </TableCell>
-                <TableCell>
                   <Select
                     value={item.charge_type}
                     onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
@@ -302,27 +349,14 @@ export const FeeItemsTable = ({
             ))}
             {tableItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  לחץ על "הוסף שורה" להוספת פריט שכ"ט
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  {advisorType ? 'לחץ על "טען תבנית" או "הוסף שורה"' : 'לחץ על "הוסף שורה" להוספת פריט שכ"ט'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      
-      {tableItems.length > 0 && (
-        <div className="flex justify-end">
-          <div className="bg-muted px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto text-center sm:text-right">
-            <span className="text-sm text-muted-foreground ml-2">
-              {isOptional ? 'סה"כ אופציונלי:' : 'שכ"ט כולל:'}
-            </span>
-            <span className="font-bold text-lg">
-              {formatCurrency(calculateTotal(tableItems))}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -333,17 +367,6 @@ export const FeeItemsTable = ({
       <div className="border-t pt-6">
         {renderTable(optionalItems, true, 'סעיפים אופציונליים')}
       </div>
-      
-      {(items.length > 0 || optionalItems.length > 0) && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <div className="flex items-center justify-between flex-row-reverse">
-            <span className="text-xl font-bold text-primary">
-              {formatCurrency(calculateTotal(items))}
-            </span>
-            <span className="font-semibold text-right">סה"כ שכ"ט (ללא אופציונלי):</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
