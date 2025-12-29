@@ -766,6 +766,11 @@ const SubmitProposal = () => {
       // Phase 3.5: Request response
       consultantRequestNotes: consultantRequestNotes || undefined,
       consultantRequestFiles: consultantRequestFiles.length > 0 ? consultantRequestFiles : undefined,
+      
+      // Phase 4: Payment terms change tracking
+      paymentTermType: paymentTermType,
+      paymentTermsComment: paymentTermsComment || undefined,
+      entrepreneurPaymentTermType: entrepreneurData?.payment_terms?.payment_term_type as 'current' | 'net_30' | 'net_60' | 'net_90' | undefined,
     });
     
     console.log('[SubmitProposal] Submission result:', result);
