@@ -58,6 +58,9 @@ export interface SubmitProposalData {
   selectedServices?: string[];
   servicesNotes?: string;
   
+  // Phase 4: Deselected services comment (sent to investor)
+  deselectedServicesComment?: string;
+  
   // Phase 3.6: Milestone adjustments
   milestoneAdjustments?: MilestoneAdjustment[];
   
@@ -217,7 +220,9 @@ export const useProposalSubmit = () => {
         milestone_adjustments: (data.milestoneAdjustments || []) as any,
         consultant_request_notes: data.consultantRequestNotes || null,
         consultant_request_files: (data.consultantRequestFiles || []) as any,
-        services_notes: data.servicesNotes || null,
+        services_notes: data.deselectedServicesComment 
+          ? `${data.servicesNotes || ''}\n\n${data.deselectedServicesComment}`.trim()
+          : (data.servicesNotes || null),
       };
 
       const { data: proposal, error: proposalError } = await supabase
