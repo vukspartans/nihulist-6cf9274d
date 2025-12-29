@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, ArrowRight, ArrowLeft, FileText, Receipt, Wallet, PenTool, FileDown, Milestone, ListChecks } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, Send, ArrowRight, ArrowLeft, FileText, Receipt, PenTool, FileDown, Milestone, ListChecks, FolderOpen } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -27,10 +27,7 @@ import { ConsultantFeeTable, ConsultantFeeRow } from '@/components/proposal/Cons
 import { ConsultantPaymentTerms, ConsultantMilestone } from '@/components/proposal/ConsultantPaymentTerms';
 import { ConsultantServicesSelection } from '@/components/proposal/ConsultantServicesSelection';
 import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, differenceInDays } from 'date-fns';
-import { he } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
 import { PROPOSAL_VALIDATION } from '@/utils/constants';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RFPFeeItem, PaymentTerms, ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest';
@@ -96,7 +93,9 @@ const SubmitProposal = () => {
   // Form state - original
   const [price, setPrice] = useState('');
   const [priceDisplay, setPriceDisplay] = useState('');
-  const [completionDate, setCompletionDate] = useState<Date>();
+  
+  // Project files state
+  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; file_name: string; url: string }>>([]);
   const [timelineDays, setTimelineDays] = useState('');
   const [scopeText, setScopeText] = useState('');
   const [conditions, setConditions] = useState<Record<string, any>>({});
@@ -135,29 +134,31 @@ const SubmitProposal = () => {
     setPriceDisplay(formatPrice(rawValue));
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    setCompletionDate(date);
-    if (date) {
-      const days = differenceInDays(date, new Date());
-      setTimelineDays(Math.max(1, days).toString());
-    } else {
-      setTimelineDays('');
+  // Auto-calculate timeline from project dates
+  useEffect(() => {
+    if (rfpDetails?.projects?.timeline_end && rfpDetails?.projects?.timeline_start) {
+      const start = new Date(rfpDetails.projects.timeline_start);
+      const end = new Date(rfpDetails.projects.timeline_end);
+      const days = differenceInDays(end, start);
+      if (days > 0 && !timelineDays) {
+        setTimelineDays(days.toString());
+      }
     }
-  };
+  }, [rfpDetails]);
 
   // Fee table handlers
   const handleFeeItemPriceChange = useCallback((itemId: string, price: number | null) => {
     setConsultantPrices(prev => ({ ...prev, [itemId]: price }));
   }, []);
 
-  const handleAddFeeItem = useCallback(() => {
+  const handleAddFeeItem = useCallback((isOptional: boolean = false) => {
     const newItem: ConsultantFeeRow = {
       item_number: (entrepreneurData?.fee_items.length || 0) + additionalFeeItems.length + 1,
       description: '',
       unit: 'lump_sum',
       quantity: 1,
       charge_type: 'one_time',
-      is_optional: false,
+      is_optional: isOptional,
       display_order: additionalFeeItems.length,
       consultant_unit_price: null,
       consultant_comment: '',
@@ -265,11 +266,10 @@ const SubmitProposal = () => {
 
   const steps = [
     { id: 1, title: 'פרטי הבקשה', completed: true },
-    { id: 2, title: hasFeeItems ? 'שכר טרחה' : 'מחיר ולו"ז', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!(price && timelineDays) },
-    { id: 3, title: 'היקף העבודה', completed: scopeText.length >= 20 },
-    { id: 4, title: 'קבצים מצורפים', completed: files.length > 0 },
-    { id: 5, title: 'חתימה דיגיטלית', completed: !!signature },
-    { id: 6, title: 'אישור והגשה', completed: declarationAccepted },
+    { id: 2, title: 'שכר טרחה', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!price },
+    { id: 3, title: 'קבצים מצורפים', completed: files.length > 0 },
+    { id: 4, title: 'חתימה דיגיטלית', completed: !!signature },
+    { id: 5, title: 'אישור והגשה', completed: declarationAccepted },
   ];
 
   useEffect(() => {
@@ -414,6 +414,22 @@ const SubmitProposal = () => {
 
       setRfpDetails(inviteDetails.rfps as any);
 
+      // Fetch project files
+      if (inviteDetails.rfps?.projects?.id) {
+        const { data: pFiles } = await supabase
+          .from('project_files')
+          .select('id, file_name, file_url')
+          .eq('project_id', inviteDetails.rfps.projects.id);
+        
+        if (pFiles && pFiles.length > 0) {
+          const filesWithUrls = await Promise.all(pFiles.map(async (f) => {
+            const { data } = await supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600);
+            return { id: f.id, file_name: f.file_name, url: data?.signedUrl || f.file_url };
+          }));
+          setProjectFiles(filesWithUrls);
+        }
+      }
+
       // Fetch entrepreneur request data (fee items, service scope, payment terms)
       await fetchEntrepreneurData(inviteDetails.id);
 
@@ -514,12 +530,9 @@ const SubmitProposal = () => {
       toast({ title: "שגיאה", description: `מחיר ההצעה חייב להיות בין ₪${PROPOSAL_VALIDATION.MIN_PRICE.toLocaleString('he-IL')} ל-₪${PROPOSAL_VALIDATION.MAX_PRICE.toLocaleString('he-IL')}`, variant: "destructive" });
       return false;
     }
-    if (!timelineDays || parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000) {
+    // Timeline is now optional - auto-calculated or not required
+    if (timelineDays && (parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000)) {
       toast({ title: "שגיאה", description: "זמן ביצוע חייב להיות בין יום אחד ל-1000 ימים", variant: "destructive" });
-      return false;
-    }
-    if (scopeText.length < 20) {
-      toast({ title: "שגיאה", description: "היקף העבודה חייב להכיל לפחות 20 תווים", variant: "destructive" });
       return false;
     }
     return true;
@@ -562,8 +575,8 @@ const SubmitProposal = () => {
       advisorId: advisorProfile?.id || '',
       supplierName: advisorProfile?.company_name || '',
       price: parseFloat(price),
-      timelineDays: parseInt(timelineDays),
-      scopeText: scopeText,
+      timelineDays: parseInt(timelineDays) || 30, // Default to 30 days if not specified
+      scopeText: servicesNotes || 'ראה פירוט שירותים', // Use services notes as scope
       conditions,
       uploadedFiles: files,
       signature,
@@ -664,10 +677,7 @@ const SubmitProposal = () => {
               <CardDescription className="space-y-2">
                 <p>הצעת המחיר שלך נשלחה ליזם ותופיע ברשימת ההצעות שלך</p>
                 <p className="text-sm font-medium text-foreground mt-4">
-                  מחיר הצעה: ₪{parseFloat(price).toLocaleString('he-IL')}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  תאריך סיום: {completionDate ? format(completionDate, "PPP", { locale: he }) : `${timelineDays} ימים`}
+                  סה"כ שכר טרחה: ₪{parseFloat(price).toLocaleString('he-IL')}
                 </p>
               </CardDescription>
             </CardHeader>
@@ -740,10 +750,6 @@ const SubmitProposal = () => {
                   <Milestone className="h-4 w-4" />
                 </TabsTrigger>
               )}
-              <TabsTrigger value="scope" className="flex items-center gap-2">
-                <span className="hidden sm:inline">היקף עבודה</span>
-                <FileDown className="h-4 w-4" />
-              </TabsTrigger>
               <TabsTrigger value="files" className="flex items-center gap-2">
                 <span className="hidden sm:inline">קבצים</span>
                 <Upload className="h-4 w-4" />
@@ -822,13 +828,44 @@ const SubmitProposal = () => {
                     </div>
                   )}
 
-                  {!hasRequestContent && !entrepreneurData?.service_details_text && !entrepreneurData?.service_details_file && (
+                  {!hasRequestContent && !entrepreneurData?.service_details_text && !entrepreneurData?.service_details_file && projectFiles.length === 0 && (
                     <p className="text-muted-foreground text-center py-8">
                       לא הוזנו פרטים נוספים ע"י היזם
                     </p>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Project Files Section */}
+              {projectFiles.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FolderOpen className="h-5 w-5" />
+                      קבצי פרויקט
+                    </CardTitle>
+                    <CardDescription>
+                      קבצים שצורפו לפרויקט ע"י היזם
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {projectFiles.map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <FileDown className="h-5 w-5 text-primary" />
+                          <span className="flex-1">{file.file_name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Phase 3.5: Consultant Response Section */}
               <Card>
@@ -899,115 +936,37 @@ const SubmitProposal = () => {
                       errors={feeErrors}
                     />
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="price">מחיר הצעה (₪) *</Label>
-                        <div className="relative">
-                          <Input
-                            id="price"
-                            type="text"
-                            value={priceDisplay}
-                            onChange={handlePriceChange}
-                            placeholder="0"
-                            className="text-left pr-8 focus:ring-2 focus:ring-primary focus:border-primary"
-                            dir="ltr"
-                            required
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                    <div className="space-y-2">
+                      <Label htmlFor="price">מחיר הצעה (₪) *</Label>
+                      <div className="relative">
+                        <Input
+                          id="price"
+                          type="text"
+                          value={priceDisplay}
+                          onChange={handlePriceChange}
+                          placeholder="0"
+                          className="text-left pr-8 focus:ring-2 focus:ring-primary focus:border-primary"
+                          dir="ltr"
+                          required
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                      </div>
+                      {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
+                        <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
                         </div>
-                        {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
-                          <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="timeline">תאריך סיום משוער</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              id="timeline"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-right font-normal",
-                                !completionDate && "text-muted-foreground"
-                              )}
-                              dir="rtl"
-                            >
-                              <CalendarIcon className="h-4 w-4" />
-                              {completionDate ? (
-                                format(completionDate, "PPP", { locale: he })
-                              ) : (
-                                <span>בחרו תאריך סיום</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={completionDate}
-                              onSelect={handleDateSelect}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        {timelineDays && (
-                          <p className="text-xs text-muted-foreground">
-                            משך ביצוע: {timelineDays} ימים
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Timeline selection for fee table mode */}
+                  {/* Total display for fee table mode */}
                   {hasFeeItems && (
-                    <div className="border-t pt-6 mt-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="timeline-fees">תאריך סיום משוער *</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                id="timeline-fees"
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-right font-normal",
-                                  !completionDate && "text-muted-foreground"
-                                )}
-                                dir="rtl"
-                              >
-                                <CalendarIcon className="h-4 w-4" />
-                                {completionDate ? (
-                                  format(completionDate, "PPP", { locale: he })
-                                ) : (
-                                  <span>בחרו תאריך סיום</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={completionDate}
-                                onSelect={handleDateSelect}
-                                disabled={(date) => date < new Date()}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          {timelineDays && (
-                            <p className="text-xs text-muted-foreground">
-                              משך ביצוע: {timelineDays} ימים
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>סה"כ הצעה</Label>
-                          <div className="text-2xl font-bold text-primary">
-                            ₪{parseFloat(price || '0').toLocaleString('he-IL')}
-                          </div>
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-lg">סה"כ הצעה:</Label>
+                        <div className="text-2xl font-bold text-primary">
+                          ₪{parseFloat(price || '0').toLocaleString('he-IL')}
                         </div>
                       </div>
                     </div>
@@ -1016,9 +975,9 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
+                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="gap-2">
                   <ArrowRight className="h-4 w-4" />
@@ -1055,9 +1014,9 @@ const SubmitProposal = () => {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
+                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="gap-2">
                     <ArrowRight className="h-4 w-4" />
@@ -1090,9 +1049,9 @@ const SubmitProposal = () => {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab('scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    המשך להיקף עבודה
+                    המשך לקבצים
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')} className="gap-2">
                     <ArrowRight className="h-4 w-4" />
@@ -1102,47 +1061,6 @@ const SubmitProposal = () => {
               </TabsContent>
             )}
 
-            {/* Tab: Scope */}
-            <TabsContent value="scope" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>היקף עבודה</CardTitle>
-                  <CardDescription>תארו את היקף העבודה המוצע</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="scope">תיאור מפורט</Label>
-                    <Textarea 
-                      id="scope" 
-                      value={scopeText} 
-                      onChange={(e) => setScopeText(e.target.value)} 
-                      placeholder="פרט את היקף העבודה המוצע (מינימום 20 תווים)" 
-                      rows={6} 
-                      required 
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>מינימום 20 תווים</span>
-                      <span className={cn("font-medium", scopeText.length < 20 ? "text-destructive" : "text-green-600")} dir="rtl">
-                        20 / {scopeText.length}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <ConditionsBuilder value={conditions} onChange={setConditions} />
-
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך לקבצים
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
-            </TabsContent>
 
             {/* Tab 4: Files */}
             <TabsContent value="files" className="space-y-6">
@@ -1167,7 +1085,7 @@ const SubmitProposal = () => {
                   <ArrowLeft className="h-4 w-4" />
                   המשך לחתימה
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('scope')} className="gap-2">
+                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
                   <ArrowRight className="h-4 w-4" />
                   חזרה
                 </Button>

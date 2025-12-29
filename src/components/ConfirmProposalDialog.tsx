@@ -53,8 +53,6 @@ export function ConfirmProposalDialog({
   onOpenChange,
   onConfirm,
   price,
-  timelineDays,
-  scopeText,
   fileCount,
   hasSignature,
   feeLineItems = [],
@@ -64,6 +62,7 @@ export function ConfirmProposalDialog({
   const optionalItems = feeLineItems.filter(item => item.is_optional);
   const totalMandatory = mandatoryItems.reduce((sum, item) => sum + item.total, 0);
   const totalOptional = optionalItems.reduce((sum, item) => sum + item.total, 0);
+  const grandTotal = totalMandatory + totalOptional;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -77,15 +76,12 @@ export function ConfirmProposalDialog({
         
         <ScrollArea className="flex-1 px-6">
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <Label className="text-muted-foreground text-xs">מחיר מוצע</Label>
-                <p className="text-2xl font-bold mt-1">₪{parseFloat(price || '0').toLocaleString()}</p>
-              </div>
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <Label className="text-muted-foreground text-xs">זמן ביצוע</Label>
-                <p className="text-2xl font-bold mt-1">{timelineDays} ימים</p>
-              </div>
+            {/* Total Fee - Prominent Display */}
+            <div className="p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
+              <Label className="text-muted-foreground text-xs">סה״כ שכר טרחה</Label>
+              <p className="text-3xl font-bold text-primary mt-1">
+                {formatCurrency(grandTotal > 0 ? grandTotal : parseFloat(price || '0'))}
+              </p>
             </div>
             
             {/* Fee Line Items Breakdown */}
@@ -100,7 +96,7 @@ export function ConfirmProposalDialog({
                     </div>
                   ))}
                   <div className="flex justify-between items-center pt-2 font-semibold">
-                    <span>סה״כ</span>
+                    <span>סה״כ פריטים עיקריים</span>
                     <span className="text-primary">{formatCurrency(totalMandatory)}</span>
                   </div>
                 </div>
@@ -136,18 +132,13 @@ export function ConfirmProposalDialog({
                       <span className="text-muted-foreground">{milestone.description}</span>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">{milestone.percentage}%</Badge>
-                        <span className="font-medium">{formatCurrency(parseFloat(price || '0') * milestone.percentage / 100)}</span>
+                        <span className="font-medium">{formatCurrency((grandTotal > 0 ? grandTotal : parseFloat(price || '0')) * milestone.percentage / 100)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            
-            <div className="p-4 border rounded-lg">
-              <Label className="text-muted-foreground text-xs mb-2 block">היקף העבודה</Label>
-              <p className="text-sm line-clamp-4">{scopeText}</p>
-            </div>
             
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <Label className="text-muted-foreground text-xs">קבצים מצורפים</Label>
