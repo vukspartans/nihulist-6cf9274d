@@ -689,8 +689,8 @@ export const RequestEditorDialog = ({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full max-w-5xl max-h-[90vh] sm:max-h-[95vh] flex flex-col" dir="rtl">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-5xl h-[90vh] sm:h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             עריכת בקשה - {advisorType}
@@ -726,7 +726,7 @@ export const RequestEditorDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 min-h-0 overflow-y-auto" dir="rtl">
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
               <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
