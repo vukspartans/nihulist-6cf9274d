@@ -129,24 +129,14 @@ export const NegotiationDialog = ({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
 
-    // === DIAGNOSTIC: Check auth before upload ===
+    // Check auth before upload
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !sessionData.session) {
-      console.error('[NegotiationDialog] AUTH CHECK FAILED - No session!', sessionError);
+      console.error('[NegotiationDialog] No session - user must re-authenticate');
       toast.error('שגיאה: יש להתחבר מחדש למערכת');
       return;
     }
-    
-    const currentUserId = sessionData.session.user.id;
-    console.log('[NegotiationDialog] AUTH CHECK:', {
-      currentUserId,
-      proposalId: proposal.id,
-      projectId: proposal.project_id,
-      expectedOwnerId: '975deb79-83ff-4a85-9a00-b4b122af0bdf', // From DB query
-      isOwner: currentUserId === '975deb79-83ff-4a85-9a00-b4b122af0bdf'
-    });
-    // === END DIAGNOSTIC ===
 
     setUploading(true);
     const newFiles: UploadedFile[] = [];
@@ -155,8 +145,6 @@ export const NegotiationDialog = ({
       try {
         const fileExt = file.name.split('.').pop();
         const storagePath = `${proposal.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        
-        console.log('[NegotiationDialog] Attempting upload:', { storagePath, bucket: 'negotiation-files' });
         
         const { error } = await supabase.storage
           .from('negotiation-files')
