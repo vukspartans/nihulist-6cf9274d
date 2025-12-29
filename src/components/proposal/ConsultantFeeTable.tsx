@@ -39,7 +39,7 @@ interface ConsultantFeeTableProps {
   consultantPrices: Record<string, number | null>;
   onPriceChange: (itemId: string, price: number | null) => void;
   additionalItems: ConsultantFeeRow[];
-  onAddItem: () => void;
+  onAddItem: (isOptional: boolean) => void;
   onRemoveItem: (index: number) => void;
   onUpdateAdditionalItem: (index: number, field: keyof ConsultantFeeRow, value: any) => void;
   rowComments: Record<string, string>;
@@ -356,15 +356,26 @@ export function ConsultantFeeTable({
           </TableFooter>
         </Table>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onAddItem}
-          className="w-full border-dashed border-2 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-950/20"
-        >
-          <Plus className="h-4 w-4 ml-2" />
-          הוסף פריט נוסף
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onAddItem(false)}
+            className="flex-1 border-dashed border-2 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-950/20"
+          >
+            <Plus className="h-4 w-4 ml-2" />
+            הוסף פריט עיקרי
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onAddItem(true)}
+            className="flex-1 border-dashed border-2 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+          >
+            <Plus className="h-4 w-4 ml-2" />
+            הוסף פריט אופציונלי
+          </Button>
+        </div>
 
         {/* Validation warnings */}
         {Object.keys(errors).length > 0 && (
