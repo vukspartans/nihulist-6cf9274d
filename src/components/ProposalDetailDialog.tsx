@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
+import { NegotiationDialog } from '@/components/negotiation/NegotiationDialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
@@ -18,12 +19,31 @@ import { he } from 'date-fns/locale';
 import { 
   FileText, Banknote, Clock, Download, CheckCircle, XCircle, AlertCircle, Calendar,
   Eye, Sparkles, RefreshCw, Loader2, Building2, MapPin, Star, Globe, Linkedin,
-  Users, Target, FolderDown, DollarSign, Briefcase, FileCheck, Scale, FileImage, FileSpreadsheet, File, Printer, CalendarCheck
+  Users, Target, FolderDown, DollarSign, Briefcase, FileCheck, Scale, FileImage, 
+  FileSpreadsheet, File, Printer, CalendarCheck, MessageSquare, ListChecks, CreditCard
 } from 'lucide-react';
 
 interface UploadedFile { name: string; url: string; size: number; type: string; }
 interface AdvisorInfo { id: string; company_name: string | null; logo_url: string | null; expertise: string[] | null; rating: number | null; location: string | null; founding_year: number | null; office_size: string | null; website: string | null; linkedin_url: string | null; }
 interface RfpInviteContext { advisor_type: string | null; request_title: string | null; deadline_at: string | null; }
+
+interface FeeLineItem {
+  description?: string;
+  name?: string;
+  unit?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  is_optional?: boolean;
+  comment?: string;
+}
+
+interface MilestoneAdjustment {
+  description: string;
+  entrepreneur_percentage?: number;
+  consultant_percentage?: number;
+  is_entrepreneur_defined?: boolean;
+}
 
 interface ProposalDetailDialogProps {
   open: boolean;
@@ -34,7 +54,8 @@ interface ProposalDetailDialogProps {
     files?: UploadedFile[]; signature_blob?: string; signature_meta_json?: { timestamp?: string; signer_name?: string; signer_email?: string; stampImage?: string; };
     status: string; submitted_at: string; ai_analysis?: string | null; ai_analysis_generated_at?: string | null; file_summaries?: Record<string, string> | null;
     advisors?: AdvisorInfo; rfp_invite?: RfpInviteContext; seen_by_entrepreneur_at?: string | null;
-    fee_line_items?: any[]; milestone_adjustments?: any[];
+    fee_line_items?: FeeLineItem[]; milestone_adjustments?: MilestoneAdjustment[];
+    selected_services?: any[]; services_notes?: string;
   };
   projectId?: string;
   projectName?: string;
@@ -46,6 +67,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('details');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showNegotiationDialog, setShowNegotiationDialog] = useState(false);
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(proposal.ai_analysis || null);
@@ -57,6 +79,15 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const conditions = proposal.conditions_json || {};
   const advisorInfo = proposal.advisors;
   const rfpContext = proposal.rfp_invite;
+  const feeLineItems = proposal.fee_line_items || [];
+  const milestoneAdjustments = proposal.milestone_adjustments || [];
+  const selectedServices = proposal.selected_services || [];
+
+  // Separate mandatory and optional fee items
+  const mandatoryFees = feeLineItems.filter(item => !item.is_optional);
+  const optionalFees = feeLineItems.filter(item => item.is_optional);
+  const mandatoryTotal = mandatoryFees.reduce((sum, item) => sum + (item.total || 0), 0);
+  const optionalTotal = optionalFees.reduce((sum, item) => sum + (item.total || 0), 0);
 
   // Calculate completion date
   const submissionDate = new Date(proposal.submitted_at);
@@ -132,17 +163,17 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         submittedAt: proposal.submitted_at,
         scopeText: proposal.scope_text,
         conditions: proposal.conditions_json,
-        feeLineItems: proposal.fee_line_items?.map((item: any) => ({
-          description: item.description || item.name,
+        feeItems: feeLineItems.map((item) => ({
+          description: item.description || item.name || '',
           quantity: item.quantity,
           unit: item.unit,
-          unit_price: item.unit_price,
+          unitPrice: item.unit_price,
           total: item.total,
-          is_optional: item.is_optional,
+          isOptional: item.is_optional,
         })),
-        milestones: proposal.milestone_adjustments?.map((m: any) => ({
+        milestones: milestoneAdjustments.map((m) => ({
           description: m.description,
-          percentage: m.percentage,
+          percentage: m.consultant_percentage || m.entrepreneur_percentage,
         })),
         signaturePng: proposal.signature_blob || undefined,
         stampImage: proposal.signature_meta_json?.stampImage,
@@ -191,6 +222,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       submitted: { label: "הוגש", variant: "default", icon: CheckCircle }, accepted: { label: "אושר", variant: "default", icon: CheckCircle },
       rejected: { label: "נדחה", variant: "destructive", icon: XCircle }, under_review: { label: "בבדיקה", variant: "secondary", icon: AlertCircle },
       draft: { label: "טיוטה", variant: "outline", icon: FileText }, withdrawn: { label: "בוטל", variant: "outline", icon: XCircle },
+      negotiation_requested: { label: "במו״מ", variant: "secondary", icon: MessageSquare }, resubmitted: { label: "הוגש מחדש", variant: "default", icon: RefreshCw },
     };
     const c = cfg[status] || cfg.draft; const Icon = c.icon;
     return <Badge variant={c.variant} className="gap-1"><Icon className="w-3 h-3" />{c.label}</Badge>;
@@ -204,13 +236,67 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     </h4>
   );
 
+  // Fee table component
+  const FeeTable = ({ items, title, showOptionalBadge = false }: { items: FeeLineItem[]; title: string; showOptionalBadge?: boolean }) => (
+    <div className="space-y-1.5">
+      <SectionHeader icon={DollarSign} className="text-xs">{title}</SectionHeader>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50">
+                <tr className="text-muted-foreground border-b">
+                  <th className="text-right p-2 font-medium">תיאור</th>
+                  <th className="text-center p-2 font-medium">יחידה</th>
+                  <th className="text-center p-2 font-medium">כמות</th>
+                  <th className="text-center p-2 font-medium">מחיר יח׳</th>
+                  <th className="text-left p-2 font-medium">סה״כ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="p-2 text-right">
+                      <span>{item.description || item.name}</span>
+                      {showOptionalBadge && item.is_optional && (
+                        <Badge variant="outline" className="ms-2 text-[10px]">אופציונלי</Badge>
+                      )}
+                      {item.comment && (
+                        <p className="text-muted-foreground text-[10px] mt-0.5">{item.comment}</p>
+                      )}
+                    </td>
+                    <td className="p-2 text-center text-muted-foreground">{item.unit || '-'}</td>
+                    <td className="p-2 text-center">{item.quantity || 1}</td>
+                    <td className="p-2 text-center">{item.unit_price ? formatCurrency(item.unit_price) : '-'}</td>
+                    <td className="p-2 text-left font-medium">{item.total ? formatCurrency(item.total) : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-muted/30">
+                <tr>
+                  <td colSpan={4} className="p-2 text-right font-semibold">סה״כ</td>
+                  <td className="p-2 text-left font-bold text-primary">
+                    {formatCurrency(items.reduce((sum, item) => sum + (item.total || 0), 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Dialog title - Project name + Category
+  const dialogTitle = `${projectName || 'פרויקט'} - ${rfpContext?.advisor_type || 'הצעת מחיר'}`;
+
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
           <DialogHeader className="p-4 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between" dir="rtl">
-              <DialogTitle className="text-lg font-bold text-right">הצעת מחיר - {proposal.supplier_name}</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-right">{dialogTitle}</DialogTitle>
               <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -223,11 +309,16 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {getStatusBadge(proposal.status)}
               </div>
             </div>
-            {proposal.status === 'submitted' && (
+            {/* Action buttons - including Negotiation */}
+            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
               <div className="flex items-center gap-2 pt-2 justify-end" dir="rtl">
                 <Button variant="destructive" size="sm" onClick={handleReject}>
                   <XCircle className="w-4 h-4 me-1" />
                   דחה הצעה
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowNegotiationDialog(true)}>
+                  <MessageSquare className="w-4 h-4 me-1" />
+                  משא ומתן
                 </Button>
                 <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
                   <CheckCircle className="w-4 h-4 me-1" />
@@ -240,13 +331,15 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full flex flex-row-reverse justify-start rounded-none border-b bg-transparent px-4 flex-shrink-0">
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
-              <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאים</TabsTrigger>
-              <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">קבצים {files.length > 0 && `(${files.length})`}</TabsTrigger>
+              <TabsTrigger value="services" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">שירותים</TabsTrigger>
+              <TabsTrigger value="payment" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאי תשלום</TabsTrigger>
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 min-h-0">
+              {/* Details Tab */}
               <TabsContent value="details" className="p-4 space-y-3 m-0">
+                {/* Vendor Details */}
                 {advisorInfo && (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="p-3">
@@ -274,10 +367,12 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Submitted For */}
                 {rfpContext && (rfpContext.advisor_type || rfpContext.request_title) && (
-                  <Card className="border-blue-200 bg-blue-50/50">
+                  <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
                     <CardContent className="p-3">
-                      <SectionHeader icon={Target} className="mb-1.5 text-xs text-blue-700">הגשה עבור</SectionHeader>
+                      <SectionHeader icon={Target} className="mb-1.5 text-xs text-blue-700 dark:text-blue-400">הגשה עבור</SectionHeader>
                       <div className="space-y-1 text-xs text-right">
                         {rfpContext.advisor_type && <p><span className="font-medium">סוג יועץ:</span> {rfpContext.advisor_type}</p>}
                         {rfpContext.request_title && <p><span className="font-medium">כותרת:</span> {rfpContext.request_title}</p>}
@@ -286,18 +381,41 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     </CardContent>
                   </Card>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+
+                {/* Key Metrics - Removed Timeline and reduced to 2 cards */}
+                <div className="grid grid-cols-2 gap-2">
                   <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><CalendarCheck className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">סיום משוער</p><p className="font-bold text-sm">{format(estimatedCompletionDate, "dd/MM/yyyy", { locale: he })}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" /><p className="text-xs text-muted-foreground">לו״ז</p><p className="font-bold text-sm">{proposal.timeline_days} ימים</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
                 </div>
-                {proposal.scope_text && (
-                  <div className="space-y-1.5">
-                    <SectionHeader icon={Briefcase} className="text-xs">היקף העבודה</SectionHeader>
-                    <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap leading-relaxed">{proposal.scope_text}</p></CardContent></Card>
-                  </div>
+
+                {/* Fee Rows Display */}
+                {mandatoryFees.length > 0 && (
+                  <FeeTable items={mandatoryFees} title="פירוט שכר טרחה" />
                 )}
+
+                {optionalFees.length > 0 && (
+                  <FeeTable items={optionalFees} title="פריטים אופציונליים" showOptionalBadge />
+                )}
+
+                {/* Totals Summary */}
+                {feeLineItems.length > 0 && (
+                  <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-bold text-green-700 dark:text-green-400">{formatCurrency(mandatoryTotal)}</span>
+                        <span className="text-muted-foreground">סה״כ חובה:</span>
+                      </div>
+                      {optionalTotal > 0 && (
+                        <div className="flex justify-between items-center text-sm mt-1">
+                          <span className="font-medium text-muted-foreground">{formatCurrency(optionalTotal)}</span>
+                          <span className="text-muted-foreground">סה״כ אופציונלי:</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI Analysis */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Button variant="outline" size="sm" onClick={() => generateAiAnalysis(!!aiAnalysis)} disabled={isGeneratingAi}>
@@ -311,19 +429,139 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 </div>
               </TabsContent>
 
-              <TabsContent value="conditions" className="p-4 space-y-3 m-0">
+              {/* Services Tab */}
+              <TabsContent value="services" className="p-4 space-y-3 m-0">
+                {/* Selected Services */}
+                <div className="space-y-1.5">
+                  <SectionHeader icon={ListChecks} className="text-xs text-blue-600">שירותים נבחרים</SectionHeader>
+                  {selectedServices.length > 0 ? (
+                    <Card>
+                      <CardContent className="p-3">
+                        <ul className="space-y-1.5 text-right">
+                          {selectedServices.map((service, i) => (
+                            <li key={i} className="flex items-center gap-2 justify-end text-sm">
+                              <span>{typeof service === 'string' ? service : service.name || service.task_name}</span>
+                              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לא נבחרו שירותים ספציפיים</CardContent></Card>
+                  )}
+                </div>
+
+                {/* Services Notes */}
+                {proposal.services_notes && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={FileText} className="text-xs">הערות שירותים</SectionHeader>
+                    <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{proposal.services_notes}</p></CardContent></Card>
+                  </div>
+                )}
+
+                {/* Attached Files */}
+                {files.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      {files.length > 1 && (
+                        <Button variant="outline" size="sm" onClick={handleDownloadAll}>
+                          הורד הכל
+                          <FolderDown className="w-4 h-4 ms-1.5" />
+                        </Button>
+                      )}
+                      <SectionHeader icon={FileText} className="text-xs">קבצים מצורפים</SectionHeader>
+                    </div>
+                    {loadingUrls ? (
+                      <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground text-sm">טוען קבצים...<Loader2 className="w-3 h-3 animate-spin" /></div>
+                    ) : (
+                      <div className="space-y-2">
+                        {files.map((file, i) => { 
+                          const Icon = getFileIcon(file.name); 
+                          const hasSummary = !!fileSummaries[file.name]; 
+                          const isGen = generatingFileSummary === file.name; 
+                          return (
+                            <Card key={i}>
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between mb-1.5" dir="rtl">
+                                  <div className="flex items-center gap-1">
+                                    <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>generateFileSummary(file, !!fileSummaries[file.name])} disabled={isGen}>{isGen?<Loader2 className="w-3 h-3 animate-spin"/>:hasSummary?<RefreshCw className="w-3 h-3"/>:<Sparkles className="w-3 h-3"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
+                                    <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleDownload(file)}><Download className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
+                                    <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleViewFile(file)}><Eye className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
+                                  </div>
+                                  <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                                    <span className="text-xs text-muted-foreground flex-shrink-0">({(file.size/1024).toFixed(1)} KB)</span>
+                                    <span className="text-xs font-medium truncate">{file.name}</span>
+                                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                  </div>
+                                </div>
+                                {hasSummary && <><Separator className="my-1.5" /><div className="text-right"><AIAnalysisDisplay content={fileSummaries[file.name]} /></div></>}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Payment Terms Tab */}
+              <TabsContent value="payment" className="p-4 space-y-3 m-0">
+                {/* Milestone Breakdown */}
+                {milestoneAdjustments.length > 0 && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={CreditCard} className="text-xs text-green-600">אבני דרך לתשלום</SectionHeader>
+                    <Card>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/50">
+                              <tr className="text-muted-foreground border-b">
+                                <th className="text-right p-2 font-medium">שלב</th>
+                                <th className="text-center p-2 font-medium">אחוז</th>
+                                <th className="text-left p-2 font-medium">סכום משוער</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {milestoneAdjustments.map((milestone, i) => {
+                                const percentage = milestone.consultant_percentage ?? milestone.entrepreneur_percentage ?? 0;
+                                const amount = (proposal.price * percentage) / 100;
+                                return (
+                                  <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                                    <td className="p-2 text-right">{milestone.description}</td>
+                                    <td className="p-2 text-center font-medium">{percentage}%</td>
+                                    <td className="p-2 text-left">{formatCurrency(amount)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Payment Terms Text */}
                 <div className="space-y-1.5">
                   <SectionHeader icon={Banknote} className="text-xs text-green-600">תנאי תשלום</SectionHeader>
                   <Card><CardContent className="p-3 text-right"><p className="text-xs">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card>
                 </div>
+
+                {/* Assumptions */}
                 <div className="space-y-1.5">
                   <SectionHeader icon={FileCheck} className="text-xs text-blue-600">הנחות יסוד</SectionHeader>
                   <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card>
                 </div>
+
+                {/* Exclusions */}
                 <div className="space-y-1.5">
                   <SectionHeader icon={Scale} className="text-xs text-purple-600">החרגות</SectionHeader>
                   <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card>
                 </div>
+
+                {/* Validity */}
                 {conditions.validity_days && (
                   <div className="space-y-1.5">
                     <SectionHeader icon={Clock} className="text-xs">תוקף ההצעה</SectionHeader>
@@ -332,36 +570,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 )}
               </TabsContent>
 
-              <TabsContent value="files" className="p-4 space-y-3 m-0">
-                {files.length > 1 && (
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={handleDownloadAll}>
-                      הורד הכל
-                      <FolderDown className="w-4 h-4 ms-1.5" />
-                    </Button>
-                  </div>
-                )}
-                {loadingUrls ? <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground text-sm">טוען קבצים...<Loader2 className="w-3 h-3 animate-spin" /></div>
-                : files.length === 0 ? <Card><CardContent className="p-4 text-center text-muted-foreground"><FileText className="w-6 h-6 mx-auto mb-2 opacity-50" /><p className="text-sm">לא צורפו קבצים להצעה זו</p></CardContent></Card>
-                : <div className="space-y-2">{files.map((file, i) => { const Icon = getFileIcon(file.name); const hasSummary = !!fileSummaries[file.name]; const isGen = generatingFileSummary === file.name; return (
-                  <Card key={i}><CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-1.5" dir="rtl">
-                      <div className="flex items-center gap-1">
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>generateFileSummary(file, !!fileSummaries[file.name])} disabled={isGen}>{isGen?<Loader2 className="w-3 h-3 animate-spin"/>:hasSummary?<RefreshCw className="w-3 h-3"/>:<Sparkles className="w-3 h-3"/>}</Button></TooltipTrigger><TooltipContent>{hasSummary?'נתח מחדש':'ניתוח AI'}</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleDownload(file)}><Download className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>הורדה</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>handleViewFile(file)}><Eye className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>צפייה</TooltipContent></Tooltip>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-                        <span className="text-xs text-muted-foreground flex-shrink-0">({(file.size/1024).toFixed(1)} KB)</span>
-                        <span className="text-xs font-medium truncate">{file.name}</span>
-                        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      </div>
-                    </div>
-                    {hasSummary && <><Separator className="my-1.5" /><div className="text-right"><AIAnalysisDisplay content={fileSummaries[file.name]} /></div></>}
-                  </CardContent></Card>
-                );})}</div>}
-              </TabsContent>
-
+              {/* Signature Tab */}
               <TabsContent value="signature" className="p-4 space-y-3 m-0">
                 <div className="space-y-1.5">
                   <SectionHeader icon={FileCheck} className="text-xs">חתימה דיגיטלית</SectionHeader>
@@ -395,6 +604,22 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       </Dialog>
 
       <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} />
+      
+      <NegotiationDialog
+        open={showNegotiationDialog}
+        onOpenChange={setShowNegotiationDialog}
+        proposal={{
+          id: proposal.id,
+          price: proposal.price,
+          supplier_name: proposal.supplier_name,
+          project_id: proposal.project_id,
+        }}
+        onSuccess={() => {
+          onStatusChange?.();
+          onSuccess?.();
+          onOpenChange(false);
+        }}
+      />
     </TooltipProvider>
   );
 }

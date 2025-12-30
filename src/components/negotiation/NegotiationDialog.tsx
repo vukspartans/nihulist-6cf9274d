@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -17,8 +17,10 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useLineItems } from "@/hooks/useLineItems";
 import { useProposalVersions } from "@/hooks/useProposalVersions";
 import type { LineItemAdjustment, NegotiationCommentInput, CommentType } from "@/types/negotiation";
-import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle } from "lucide-react";
+import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle, Upload, X, File, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
 
 interface NegotiationDialogProps {
   open: boolean;
@@ -40,6 +42,13 @@ const commentTypes: { type: CommentType; label: string; icon: React.ReactNode }[
   { type: "payment", label: "תנאי תשלום", icon: <CreditCard className="h-4 w-4" /> },
 ];
 
+interface UploadedFile {
+  name: string;
+  url: string;
+  size: number;
+  storagePath?: string;
+}
+
 export const NegotiationDialog = ({
   open,
   onOpenChange,
@@ -57,12 +66,136 @@ export const NegotiationDialog = ({
     payment: "",
     general: "",
   });
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [loadingExistingFiles, setLoadingExistingFiles] = useState(false);
 
   const { createNegotiationSession, cancelNegotiation, loading } = useNegotiation();
   const { lineItems, loading: lineItemsLoading } = useLineItems(proposal.id);
   const { getLatestVersion } = useProposalVersions(proposal.id);
 
   const latestVersion = getLatestVersion();
+
+  // Prefetch existing files when dialog opens
+  useEffect(() => {
+    const fetchExistingFiles = async () => {
+      if (!open || !proposal.id) return;
+      
+      setLoadingExistingFiles(true);
+      try {
+        const { data: files, error } = await supabase.storage
+          .from('negotiation-files')
+          .list(proposal.id);
+
+        if (error) {
+          console.log('[NegotiationDialog] No existing files or bucket access:', error.message);
+          setLoadingExistingFiles(false);
+          return;
+        }
+
+        if (files && files.length > 0) {
+          const filesWithUrls: UploadedFile[] = [];
+          
+          for (const file of files) {
+            const storagePath = `${proposal.id}/${file.name}`;
+            const { data: signedUrlData } = await supabase.storage
+              .from('negotiation-files')
+              .createSignedUrl(storagePath, 3600); // 1 hour expiry
+            
+            if (signedUrlData?.signedUrl) {
+              filesWithUrls.push({
+                name: file.name,
+                url: signedUrlData.signedUrl,
+                size: file.metadata?.size || 0,
+                storagePath,
+              });
+            }
+          }
+          
+          if (filesWithUrls.length > 0) {
+            setUploadedFiles(filesWithUrls);
+          }
+        }
+      } catch (err) {
+        console.error('[NegotiationDialog] Error fetching existing files:', err);
+      } finally {
+        setLoadingExistingFiles(false);
+      }
+    };
+
+    fetchExistingFiles();
+  }, [open, proposal.id]);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+
+    // Check auth before upload
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData.session) {
+      console.error('[NegotiationDialog] No session - user must re-authenticate');
+      toast.error('שגיאה: יש להתחבר מחדש למערכת');
+      return;
+    }
+
+    setUploading(true);
+    const newFiles: UploadedFile[] = [];
+
+    for (const file of acceptedFiles) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const storagePath = `${proposal.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error } = await supabase.storage
+          .from('negotiation-files')
+          .upload(storagePath, file);
+
+        if (error) {
+          console.error('[NegotiationDialog] File upload error:', error);
+          toast.error(`שגיאה בהעלאת ${file.name}: ${error.message}`);
+          continue;
+        }
+        
+        // Use signed URL since bucket is private
+        const { data: signedUrlData } = await supabase.storage
+          .from('negotiation-files')
+          .createSignedUrl(storagePath, 3600);
+        
+        newFiles.push({
+          name: file.name,
+          url: signedUrlData?.signedUrl || '',
+          size: file.size,
+          storagePath,
+        });
+      } catch (err) {
+        console.error('[NegotiationDialog] Upload error:', err);
+        toast.error(`שגיאה בהעלאת ${file.name}`);
+      }
+    }
+
+    if (newFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...newFiles]);
+      toast.success(`${newFiles.length} קבצים הועלו בהצלחה`);
+    }
+    setUploading(false);
+  }, [proposal.id, proposal.project_id]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+  });
+
+  const removeFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("he-IL", {
@@ -71,6 +204,12 @@ export const NegotiationDialog = ({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const calculateTargetTotal = (): number => {
@@ -137,6 +276,20 @@ export const NegotiationDialog = ({
         content: content.trim(),
       }));
 
+    // Add file references to the document comment if files were uploaded
+    if (uploadedFiles.length > 0) {
+      const filesList = uploadedFiles.map(f => `- ${f.name}`).join('\n');
+      const existingDocComment = negotiationComments.find(c => c.comment_type === 'document');
+      if (existingDocComment) {
+        existingDocComment.content += `\n\nקבצים מצורפים:\n${filesList}`;
+      } else {
+        negotiationComments.push({
+          comment_type: 'document',
+          content: `קבצים מצורפים:\n${filesList}`,
+        });
+      }
+    }
+
     const result = await createNegotiationSession({
       project_id: proposal.project_id,
       proposal_id: proposal.id,
@@ -145,6 +298,7 @@ export const NegotiationDialog = ({
       global_comment: globalComment || undefined,
       line_item_adjustments: adjustments.length > 0 ? adjustments : undefined,
       comments: negotiationComments.length > 0 ? negotiationComments : undefined,
+      files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
     });
 
     // Handle existing session response
@@ -174,6 +328,7 @@ export const NegotiationDialog = ({
     setAdjustments([]);
     setGlobalComment("");
     setExistingSessionId(null);
+    setUploadedFiles([]);
     setComments({
       document: "",
       scope: "",
@@ -193,7 +348,7 @@ export const NegotiationDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
         dir="rtl"
       >
         <DialogHeader>
@@ -245,7 +400,7 @@ export const NegotiationDialog = ({
             <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="items">פריטים</TabsTrigger>
-                <TabsTrigger value="comments">הערות</TabsTrigger>
+                <TabsTrigger value="comments">הערות וקבצים</TabsTrigger>
                 <TabsTrigger value="summary">סיכום</TabsTrigger>
               </TabsList>
 
@@ -271,6 +426,78 @@ export const NegotiationDialog = ({
           </TabsContent>
 
           <TabsContent value="comments" className="mt-4 space-y-4">
+            {/* File Upload Section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                העלאת קבצים
+              </Label>
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                }`}
+              >
+                <input {...getInputProps()} />
+                {uploading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>מעלה...</span>
+                  </div>
+                ) : isDragActive ? (
+                  <p className="text-primary">שחרר את הקבצים כאן...</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    גרור קבצים לכאן או לחץ לבחירה (PDF, תמונות, Word, Excel)
+                  </p>
+                )}
+              </div>
+
+              {/* Uploaded files list */}
+              {loadingExistingFiles ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>טוען קבצים קיימים...</span>
+                </div>
+              ) : uploadedFiles.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <File className="h-4 w-4 text-muted-foreground" />
+                        <a 
+                          href={file.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          {file.name}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                        {file.size > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({formatFileSize(file.size)})
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Comment types */}
             {commentTypes.map(({ type, label, icon }) => (
               <div key={type} className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -313,6 +540,21 @@ export const NegotiationDialog = ({
               )}
             </div>
 
+            {/* Uploaded files summary */}
+            {uploadedFiles.length > 0 && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <Label className="text-sm text-muted-foreground mb-2 block">קבצים מצורפים ({uploadedFiles.length})</Label>
+                <ul className="text-sm space-y-1">
+                  {uploadedFiles.map((file, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <File className="h-3 w-3 text-muted-foreground" />
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 הערה כללית
@@ -329,7 +571,7 @@ export const NegotiationDialog = ({
             </Tabs>
 
             <DialogFooter className="gap-2 mt-4">
-              <Button onClick={handleSubmit} disabled={loading}>
+              <Button onClick={handleSubmit} disabled={loading || uploading}>
                 {loading ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin me-2" />

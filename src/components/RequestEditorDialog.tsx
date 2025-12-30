@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2, Database } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2, Database, FolderOpen, Download, ExternalLink } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useRFPDraft } from '@/hooks/useRFPDraft';
@@ -93,6 +95,21 @@ export const RequestEditorDialog = ({
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  
+  // Project files state
+  interface ProjectFile {
+    id: string;
+    file_name: string;
+    custom_name: string | null;
+    file_url: string;
+    file_type: string;
+    size_mb: number;
+    ai_summary: string | null;
+    created_at: string;
+  }
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
+  const [loadingProjectFiles, setLoadingProjectFiles] = useState(false);
+  const [projectFilesOpen, setProjectFilesOpen] = useState(true);
 
   // Auto-enable preview when AI content is generated
   useEffect(() => {
@@ -227,6 +244,32 @@ export const RequestEditorDialog = ({
 
     refreshSignedUrls();
   }, []);
+
+  // Fetch project files
+  useEffect(() => {
+    const fetchProjectFiles = async () => {
+      if (!isOpen || !projectId) return;
+      setLoadingProjectFiles(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('project_files')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+          setProjectFiles(data);
+        }
+      } catch (err) {
+        console.error('[RequestEditor] Error fetching project files:', err);
+      } finally {
+        setLoadingProjectFiles(false);
+      }
+    };
+    
+    fetchProjectFiles();
+  }, [isOpen, projectId]);
 
   // Prevent dialog from closing when returning from preview tab
   useEffect(() => {
@@ -503,6 +546,50 @@ export const RequestEditorDialog = ({
     }
   };
 
+  const handleViewProjectFile = async (file: ProjectFile) => {
+    try {
+      setCanAutoClose(false);
+      
+      // Extract the path from file_url if it's a storage path
+      const filePath = file.file_url;
+      
+      const { data, error } = await supabase.storage
+        .from('project-files')
+        .createSignedUrl(filePath, 3600);
+      
+      if (error) {
+        console.error('[RequestEditor] Signed URL error:', error);
+        toast({
+          title: "שגיאה",
+          description: "לא ניתן לפתוח את הקובץ",
+          variant: "destructive",
+        });
+        setCanAutoClose(true);
+        return;
+      }
+      
+      // Open in new tab using link click method (avoids popup blockers)
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        setCanAutoClose(true);
+      }, 500);
+    } catch (error) {
+      setCanAutoClose(true);
+      console.error('[RequestEditor] View project file error:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לפתוח את הקובץ",
+        variant: "destructive",
+      });
+    }
+  };
+
   const removeAttachment = async (index: number) => {
     const file = formData.requestAttachments[index];
     
@@ -602,8 +689,8 @@ export const RequestEditorDialog = ({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full max-w-5xl max-h-[90vh] sm:max-h-[95vh] flex flex-col" dir="rtl">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-5xl h-[90vh] sm:h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             עריכת בקשה - {advisorType}
@@ -639,7 +726,7 @@ export const RequestEditorDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 min-h-0 overflow-y-auto" dir="rtl">
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
               <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
@@ -720,6 +807,99 @@ export const RequestEditorDialog = ({
                       dir="rtl"
                       placeholder="תאר את הפרויקט והדרישות שלך"
                     />
+                  )}
+                </div>
+
+                {/* Project Files Section */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-primary" />
+                    <Label>קבצי הפרויקט</Label>
+                    {!loadingProjectFiles && projectFiles.length > 0 && (
+                      <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                        {projectFiles.length}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {loadingProjectFiles ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      טוען קבצים...
+                    </div>
+                  ) : projectFiles.length === 0 ? (
+                    <div className="text-sm text-muted-foreground py-2 text-right">
+                      לא הועלו קבצים לפרויקט
+                    </div>
+                  ) : (
+                    <Collapsible open={projectFilesOpen} onOpenChange={setProjectFilesOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between px-2 h-8">
+                          <span className="text-xs text-muted-foreground">
+                            {projectFilesOpen ? 'הסתר קבצים' : 'הצג קבצים'}
+                          </span>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${projectFilesOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-1.5 pt-2">
+                        {projectFiles.map((file) => {
+                          const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.file_name);
+                          const isPDF = /\.pdf$/i.test(file.file_name);
+                          
+                          return (
+                            <div 
+                              key={file.id}
+                              className="group flex items-center gap-2 p-2 bg-primary/5 hover:bg-primary/10 rounded-md border border-primary/20 hover:border-primary/40 transition-all"
+                              dir="rtl"
+                            >
+                              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                {isImage ? (
+                                  <FileText className="h-4 w-4 text-primary" />
+                                ) : isPDF ? (
+                                  <FileText className="h-4 w-4 text-red-500" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-primary" />
+                                )}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0 text-right">
+                                <span className="text-sm font-medium truncate block">
+                                  {file.custom_name || file.file_name}
+                                </span>
+                                {file.ai_summary && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="text-xs text-muted-foreground truncate block cursor-help">
+                                          {file.ai_summary.substring(0, 60)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" dir="rtl" className="max-w-sm">
+                                        <p className="text-sm">{file.ai_summary}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                              
+                              <Badge variant="outline" className="text-xs flex-shrink-0">
+                                {(file.size_mb * 1024).toFixed(0)} KB
+                              </Badge>
+                              
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewProjectFile(file)}
+                                className="h-7 w-7 p-0 opacity-70 hover:opacity-100"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                 </div>
 
@@ -899,6 +1079,7 @@ export const RequestEditorDialog = ({
                   optionalItems={formData.optionalFeeItems || []}
                   onItemsChange={(items) => setFormData(prev => ({ ...prev, feeItems: items }))}
                   onOptionalItemsChange={(items) => setFormData(prev => ({ ...prev, optionalFeeItems: items }))}
+                  advisorType={advisorType}
                 />
               </TabsContent>
 

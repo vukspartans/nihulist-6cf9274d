@@ -97,6 +97,7 @@ export interface NegotiationRequestInput {
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
   comments?: NegotiationCommentInput[];
+  files?: { name: string; url: string; size: number }[];
 }
 
 export interface LineItemAdjustment {

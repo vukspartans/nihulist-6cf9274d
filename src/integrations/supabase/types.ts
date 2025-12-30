@@ -355,6 +355,45 @@ export type Database = {
           },
         ]
       }
+      default_fee_item_templates: {
+        Row: {
+          advisor_specialty: string
+          charge_type: string | null
+          created_at: string | null
+          default_quantity: number | null
+          description: string
+          display_order: number
+          id: string
+          is_optional: boolean | null
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_specialty: string
+          charge_type?: string | null
+          created_at?: string | null
+          default_quantity?: number | null
+          description: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          unit?: string
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_specialty?: string
+          charge_type?: string | null
+          created_at?: string | null
+          default_quantity?: number | null
+          description?: string
+          display_order?: number
+          id?: string
+          is_optional?: boolean | null
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       default_service_scope_templates: {
         Row: {
           advisor_specialty: string

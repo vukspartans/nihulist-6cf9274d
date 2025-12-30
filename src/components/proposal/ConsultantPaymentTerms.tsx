@@ -8,6 +8,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Lock, AlertCircle, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PaymentTerms, MilestonePayment } from '@/types/rfpRequest';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export interface ConsultantMilestone {
   id: string;
@@ -18,17 +27,30 @@ export interface ConsultantMilestone {
   is_entrepreneur_defined: boolean;
 }
 
+export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
+
 interface ConsultantPaymentTermsProps {
   entrepreneurTerms: PaymentTerms | null;
   consultantMilestones: ConsultantMilestone[];
   onMilestonesChange: (milestones: ConsultantMilestone[]) => void;
+  paymentTermType?: PaymentTermType;
+  onPaymentTermTypeChange?: (type: PaymentTermType) => void;
+  paymentTermsComment?: string;
+  onPaymentTermsCommentChange?: (comment: string) => void;
 }
 
 export function ConsultantPaymentTerms({
   entrepreneurTerms,
   consultantMilestones,
   onMilestonesChange,
+  paymentTermType,
+  onPaymentTermTypeChange,
+  paymentTermsComment,
+  onPaymentTermsCommentChange,
 }: ConsultantPaymentTermsProps) {
+  // Detect if payment terms differ from entrepreneur's
+  const entrepreneurPaymentType = entrepreneurTerms?.payment_term_type;
+  const hasPaymentTermsChanged = paymentTermType && entrepreneurPaymentType && paymentTermType !== entrepreneurPaymentType;
   // Calculate total
   const totalPercentage = consultantMilestones.reduce((sum, m) => sum + m.consultant_percentage, 0);
   const isValidTotal = Math.abs(totalPercentage - 100) < 0.01;
@@ -272,18 +294,51 @@ export function ConsultantPaymentTerms({
           </Alert>
         )}
 
-        {/* Payment Term Type */}
-        {entrepreneurTerms?.payment_term_type && (
-          <div className="bg-muted/50 rounded-lg p-3 text-sm">
-            <span className="font-medium">תנאי תשלום: </span>
-            <span className="text-muted-foreground">
-              {entrepreneurTerms.payment_term_type === 'current' && 'שוטף'}
-              {entrepreneurTerms.payment_term_type === 'net_30' && 'שוטף + 30'}
-              {entrepreneurTerms.payment_term_type === 'net_60' && 'שוטף + 60'}
-              {entrepreneurTerms.payment_term_type === 'net_90' && 'שוטף + 90'}
-            </span>
+        {/* Payment Term Type - Editable */}
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          <Label className="font-medium">תנאי תשלום</Label>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Select
+                value={paymentTermType || entrepreneurPaymentType || 'current'}
+                onValueChange={(v) => onPaymentTermTypeChange?.(v as PaymentTermType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר תנאי תשלום" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current">שוטף</SelectItem>
+                  <SelectItem value="net_30">שוטף + 30</SelectItem>
+                  <SelectItem value="net_60">שוטף + 60</SelectItem>
+                  <SelectItem value="net_90">שוטף + 90</SelectItem>
+                </SelectContent>
+              </Select>
+              {entrepreneurPaymentType && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  היזם ביקש: {entrepreneurPaymentType === 'current' ? 'שוטף' : 
+                    entrepreneurPaymentType === 'net_30' ? 'שוטף + 30' :
+                    entrepreneurPaymentType === 'net_60' ? 'שוטף + 60' : 'שוטף + 90'}
+                </p>
+              )}
+            </div>
           </div>
-        )}
+          
+          {hasPaymentTermsChanged && (
+            <div className="space-y-2 pt-2 border-t border-orange-200 dark:border-orange-800">
+              <Label className="text-orange-700 dark:text-orange-400">
+                <AlertCircle className="h-4 w-4 inline ml-1" />
+                שינית את תנאי התשלום - אנא הסבר מדוע
+              </Label>
+              <Textarea
+                value={paymentTermsComment}
+                onChange={(e) => onPaymentTermsCommentChange?.(e.target.value)}
+                placeholder="הסבר את הסיבה לשינוי בתנאי התשלום..."
+                rows={2}
+                className="border-orange-300 focus:ring-orange-400"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Notes */}
         {entrepreneurTerms?.notes && (

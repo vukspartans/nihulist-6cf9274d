@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useBeforeUnload } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, CalendarIcon, Send, ArrowRight, ArrowLeft, FileText, Receipt, Wallet, PenTool, FileDown, Milestone, ListChecks } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, Send, ArrowRight, ArrowLeft, FileText, Receipt, PenTool, FileDown, Milestone, ListChecks, FolderOpen } from 'lucide-react';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -27,10 +27,7 @@ import { ConsultantFeeTable, ConsultantFeeRow } from '@/components/proposal/Cons
 import { ConsultantPaymentTerms, ConsultantMilestone } from '@/components/proposal/ConsultantPaymentTerms';
 import { ConsultantServicesSelection } from '@/components/proposal/ConsultantServicesSelection';
 import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, differenceInDays } from 'date-fns';
-import { he } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
 import { PROPOSAL_VALIDATION } from '@/utils/constants';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RFPFeeItem, PaymentTerms, ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest';
@@ -96,7 +93,9 @@ const SubmitProposal = () => {
   // Form state - original
   const [price, setPrice] = useState('');
   const [priceDisplay, setPriceDisplay] = useState('');
-  const [completionDate, setCompletionDate] = useState<Date>();
+  
+  // Project files state
+  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; file_name: string; url: string }>>([]);
   const [timelineDays, setTimelineDays] = useState('');
   const [scopeText, setScopeText] = useState('');
   const [conditions, setConditions] = useState<Record<string, any>>({});
@@ -117,10 +116,20 @@ const SubmitProposal = () => {
 
   // Payment terms / milestones state
   const [consultantMilestones, setConsultantMilestones] = useState<ConsultantMilestone[]>([]);
+  const [paymentTermType, setPaymentTermType] = useState<'current' | 'net_30' | 'net_60' | 'net_90'>('current');
+  const [paymentTermsComment, setPaymentTermsComment] = useState('');
 
   // Phase 3.5: Consultant response to request
   const [consultantRequestNotes, setConsultantRequestNotes] = useState('');
   const [consultantRequestFiles, setConsultantRequestFiles] = useState<any[]>([]);
+
+  // Draft saving state
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const draftKey = `proposal-draft-${rfp_id || invite_id}`;
+
+  // Track initial services for detecting deselected items
+  const [initialSelectedServices, setInitialSelectedServices] = useState<string[]>([]);
 
   // Format price with thousand separators
   const formatPrice = (value: string): string => {
@@ -135,29 +144,31 @@ const SubmitProposal = () => {
     setPriceDisplay(formatPrice(rawValue));
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    setCompletionDate(date);
-    if (date) {
-      const days = differenceInDays(date, new Date());
-      setTimelineDays(Math.max(1, days).toString());
-    } else {
-      setTimelineDays('');
+  // Auto-calculate timeline from project dates
+  useEffect(() => {
+    if (rfpDetails?.projects?.timeline_end && rfpDetails?.projects?.timeline_start) {
+      const start = new Date(rfpDetails.projects.timeline_start);
+      const end = new Date(rfpDetails.projects.timeline_end);
+      const days = differenceInDays(end, start);
+      if (days > 0 && !timelineDays) {
+        setTimelineDays(days.toString());
+      }
     }
-  };
+  }, [rfpDetails]);
 
   // Fee table handlers
   const handleFeeItemPriceChange = useCallback((itemId: string, price: number | null) => {
     setConsultantPrices(prev => ({ ...prev, [itemId]: price }));
   }, []);
 
-  const handleAddFeeItem = useCallback(() => {
+  const handleAddFeeItem = useCallback((isOptional: boolean = false) => {
     const newItem: ConsultantFeeRow = {
       item_number: (entrepreneurData?.fee_items.length || 0) + additionalFeeItems.length + 1,
       description: '',
       unit: 'lump_sum',
       quantity: 1,
       charge_type: 'one_time',
-      is_optional: false,
+      is_optional: isOptional,
       display_order: additionalFeeItems.length,
       consultant_unit_price: null,
       consultant_comment: '',
@@ -230,8 +241,147 @@ const SubmitProposal = () => {
         .filter(item => item.is_included && item.id)
         .map(item => item.id!);
       setSelectedServices(initialSelected);
+      // Track initial services for detecting deselected items
+      setInitialSelectedServices(initialSelected);
     }
   }, [entrepreneurData]);
+
+  // Calculate deselected services (items that were initially selected but now are not)
+  const getDeselectedServices = useCallback(() => {
+    if (!entrepreneurData?.service_scope_items) return [];
+    
+    return initialSelectedServices
+      .filter(serviceId => !selectedServices.includes(serviceId))
+      .map(serviceId => {
+        const item = entrepreneurData.service_scope_items.find(s => s.id === serviceId);
+        return item?.task_name || serviceId;
+      });
+  }, [initialSelectedServices, selectedServices, entrepreneurData]);
+
+  // Draft saving functions
+  const saveDraft = useCallback(() => {
+    if (!draftKey) return;
+    
+    const draftData = {
+      price,
+      timelineDays,
+      consultantPrices,
+      additionalFeeItems,
+      rowComments,
+      selectedServices,
+      servicesNotes,
+      consultantMilestones,
+      consultantRequestNotes,
+      conditions,
+      declarationAccepted,
+      activeTab,
+      // Additional fields for complete persistence
+      files,
+      consultantRequestFiles,
+      signature,
+      paymentTermType,
+      paymentTermsComment,
+      savedAt: new Date().toISOString(),
+    };
+    
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+      setLastSavedAt(new Date());
+      setIsDraftDirty(false);
+      console.log('[SubmitProposal] Draft saved');
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to save draft:', error);
+    }
+  }, [draftKey, price, timelineDays, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, activeTab, files, consultantRequestFiles, signature, paymentTermType, paymentTermsComment]);
+
+  const loadDraft = useCallback(() => {
+    if (!draftKey) return false;
+    
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (!savedDraft) return false;
+      
+      const draftData = JSON.parse(savedDraft);
+      
+      if (draftData.price) setPrice(draftData.price);
+      if (draftData.price) setPriceDisplay(parseFloat(draftData.price).toLocaleString('he-IL'));
+      if (draftData.timelineDays) setTimelineDays(draftData.timelineDays);
+      if (draftData.consultantPrices) setConsultantPrices(draftData.consultantPrices);
+      if (draftData.additionalFeeItems) setAdditionalFeeItems(draftData.additionalFeeItems);
+      if (draftData.rowComments) setRowComments(draftData.rowComments);
+      if (draftData.selectedServices) setSelectedServices(draftData.selectedServices);
+      if (draftData.servicesNotes) setServicesNotes(draftData.servicesNotes);
+      if (draftData.consultantMilestones) setConsultantMilestones(draftData.consultantMilestones);
+      if (draftData.consultantRequestNotes) setConsultantRequestNotes(draftData.consultantRequestNotes);
+      if (draftData.conditions) setConditions(draftData.conditions);
+      if (draftData.declarationAccepted) setDeclarationAccepted(draftData.declarationAccepted);
+      if (draftData.activeTab) setActiveTab(draftData.activeTab);
+      if (draftData.savedAt) setLastSavedAt(new Date(draftData.savedAt));
+      // Restore additional fields
+      if (draftData.files) setFiles(draftData.files);
+      if (draftData.consultantRequestFiles) setConsultantRequestFiles(draftData.consultantRequestFiles);
+      if (draftData.signature) setSignature(draftData.signature);
+      if (draftData.paymentTermType) setPaymentTermType(draftData.paymentTermType);
+      if (draftData.paymentTermsComment) setPaymentTermsComment(draftData.paymentTermsComment);
+      
+      console.log('[SubmitProposal] Draft loaded from', draftData.savedAt);
+      return true;
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to load draft:', error);
+      return false;
+    }
+  }, [draftKey]);
+
+  const clearDraft = useCallback(() => {
+    if (!draftKey) return;
+    try {
+      localStorage.removeItem(draftKey);
+      console.log('[SubmitProposal] Draft cleared');
+    } catch (error) {
+      console.error('[SubmitProposal] Failed to clear draft:', error);
+    }
+  }, [draftKey]);
+
+  // Load draft on mount (after entrepreneur data is loaded)
+  useEffect(() => {
+    if (entrepreneurData && !loading) {
+      const hasDraft = loadDraft();
+      if (hasDraft) {
+        toast({
+          title: "טיוטה נטענה",
+          description: "נמצאה טיוטה שמורה. המשיכו מאיפה שהפסקתם.",
+        });
+      }
+    }
+  }, [entrepreneurData, loading]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (!loading && entrepreneurData) {
+      setIsDraftDirty(true);
+    }
+  }, [price, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, files, consultantRequestFiles, signature, paymentTermType, paymentTermsComment]);
+
+  // Auto-save on tab change
+  useEffect(() => {
+    if (isDraftDirty && !loading) {
+      saveDraft();
+    }
+  }, [activeTab]);
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDraftDirty) {
+        e.preventDefault();
+        e.returnValue = 'יש לך שינויים שלא נשמרו. האם אתה בטוח שברצונך לעזוב?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDraftDirty]);
 
   // Validate fee items
   const validateFeeItems = useCallback(() => {
@@ -265,12 +415,13 @@ const SubmitProposal = () => {
 
   const steps = [
     { id: 1, title: 'פרטי הבקשה', completed: true },
-    { id: 2, title: hasFeeItems ? 'שכר טרחה' : 'מחיר ולו"ז', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!(price && timelineDays) },
-    { id: 3, title: 'היקף העבודה', completed: scopeText.length >= 20 },
-    { id: 4, title: 'קבצים מצורפים', completed: files.length > 0 },
-    { id: 5, title: 'חתימה דיגיטלית', completed: !!signature },
-    { id: 6, title: 'אישור והגשה', completed: declarationAccepted },
-  ];
+    { id: 2, title: 'שכר טרחה', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!price },
+    ...(hasServiceScope ? [{ id: 0, title: 'שירותים', completed: selectedServices.length > 0 }] : []),
+    ...(hasPaymentTerms ? [{ id: 0, title: 'אבני דרך', completed: consultantMilestones.length > 0 }] : []),
+    { id: 0, title: 'קבצים מצורפים', completed: files.length > 0 },
+    { id: 0, title: 'חתימה דיגיטלית', completed: !!signature },
+    { id: 0, title: 'אישור והגשה', completed: declarationAccepted },
+  ].map((step, index) => ({ ...step, id: index + 1 }));
 
   useEffect(() => {
     if (user && (rfp_id || invite_id)) {
@@ -414,6 +565,22 @@ const SubmitProposal = () => {
 
       setRfpDetails(inviteDetails.rfps as any);
 
+      // Fetch project files
+      if (inviteDetails.rfps?.projects?.id) {
+        const { data: pFiles } = await supabase
+          .from('project_files')
+          .select('id, file_name, file_url')
+          .eq('project_id', inviteDetails.rfps.projects.id);
+        
+        if (pFiles && pFiles.length > 0) {
+          const filesWithUrls = await Promise.all(pFiles.map(async (f) => {
+            const { data } = await supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600);
+            return { id: f.id, file_name: f.file_name, url: data?.signedUrl || f.file_url };
+          }));
+          setProjectFiles(filesWithUrls);
+        }
+      }
+
       // Fetch entrepreneur request data (fee items, service scope, payment terms)
       await fetchEntrepreneurData(inviteDetails.id);
 
@@ -514,12 +681,9 @@ const SubmitProposal = () => {
       toast({ title: "שגיאה", description: `מחיר ההצעה חייב להיות בין ₪${PROPOSAL_VALIDATION.MIN_PRICE.toLocaleString('he-IL')} ל-₪${PROPOSAL_VALIDATION.MAX_PRICE.toLocaleString('he-IL')}`, variant: "destructive" });
       return false;
     }
-    if (!timelineDays || parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000) {
+    // Timeline is now optional - auto-calculated or not required
+    if (timelineDays && (parseInt(timelineDays) < 1 || parseInt(timelineDays) > 1000)) {
       toast({ title: "שגיאה", description: "זמן ביצוע חייב להיות בין יום אחד ל-1000 ימים", variant: "destructive" });
-      return false;
-    }
-    if (scopeText.length < 20) {
-      toast({ title: "שגיאה", description: "היקף העבודה חייב להכיל לפחות 20 תווים", variant: "destructive" });
       return false;
     }
     return true;
@@ -562,8 +726,8 @@ const SubmitProposal = () => {
       advisorId: advisorProfile?.id || '',
       supplierName: advisorProfile?.company_name || '',
       price: parseFloat(price),
-      timelineDays: parseInt(timelineDays),
-      scopeText: scopeText,
+      timelineDays: parseInt(timelineDays) || 30, // Default to 30 days if not specified
+      scopeText: servicesNotes || 'ראה פירוט שירותים בטבלאות', // Use services notes as scope (min 20 chars)
       conditions,
       uploadedFiles: files,
       signature,
@@ -598,6 +762,11 @@ const SubmitProposal = () => {
       selectedServices: hasServiceScope ? selectedServices : undefined,
       servicesNotes: servicesNotes || undefined,
       
+      // Phase 4: Deselected services as comment
+      deselectedServicesComment: getDeselectedServices().length > 0 
+        ? `שירותים שלא ייכללו בהצעה: ${getDeselectedServices().join(', ')}`
+        : undefined,
+      
       // Phase 3.6: Milestone adjustments
       milestoneAdjustments: hasPaymentTerms ? consultantMilestones.map(m => ({
         id: m.id,
@@ -611,11 +780,19 @@ const SubmitProposal = () => {
       // Phase 3.5: Request response
       consultantRequestNotes: consultantRequestNotes || undefined,
       consultantRequestFiles: consultantRequestFiles.length > 0 ? consultantRequestFiles : undefined,
+      
+      // Phase 4: Payment terms change tracking
+      paymentTermType: paymentTermType,
+      paymentTermsComment: paymentTermsComment || undefined,
+      entrepreneurPaymentTermType: entrepreneurData?.payment_terms?.payment_term_type as 'current' | 'net_30' | 'net_60' | 'net_90' | undefined,
     });
     
     console.log('[SubmitProposal] Submission result:', result);
     
     if (result.success) {
+      // Clear draft on successful submission
+      clearDraft();
+      
       queryClient.invalidateQueries({ queryKey: ['rfp-invites'] });
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
       queryClient.invalidateQueries({ queryKey: ['advisor-profile'] });
@@ -664,10 +841,7 @@ const SubmitProposal = () => {
               <CardDescription className="space-y-2">
                 <p>הצעת המחיר שלך נשלחה ליזם ותופיע ברשימת ההצעות שלך</p>
                 <p className="text-sm font-medium text-foreground mt-4">
-                  מחיר הצעה: ₪{parseFloat(price).toLocaleString('he-IL')}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  תאריך סיום: {completionDate ? format(completionDate, "PPP", { locale: he }) : `${timelineDays} ימים`}
+                  סה"כ שכר טרחה: ₪{parseFloat(price).toLocaleString('he-IL')}
                 </p>
               </CardDescription>
             </CardHeader>
@@ -699,12 +873,32 @@ const SubmitProposal = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
+        <div className="sticky top-0 z-50 flex justify-between items-center p-6 border-b bg-background/95 backdrop-blur-sm">
         <NavigationLogo size="md" />
         <div className="flex items-center gap-4">
+          {lastSavedAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              נשמר לאחרונה: {lastSavedAt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={saveDraft}
+            disabled={!isDraftDirty}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            שמור טיוטה
+          </Button>
           <Button 
             variant="outline" 
-            onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+            onClick={() => {
+              if (isDraftDirty) {
+                saveDraft();
+              }
+              navigate(getDashboardRouteForRole(primaryRole));
+            }}
             className="flex items-center gap-2"
           >
             <ArrowRight className="h-4 w-4" />
@@ -740,10 +934,6 @@ const SubmitProposal = () => {
                   <Milestone className="h-4 w-4" />
                 </TabsTrigger>
               )}
-              <TabsTrigger value="scope" className="flex items-center gap-2">
-                <span className="hidden sm:inline">היקף עבודה</span>
-                <FileDown className="h-4 w-4" />
-              </TabsTrigger>
               <TabsTrigger value="files" className="flex items-center gap-2">
                 <span className="hidden sm:inline">קבצים</span>
                 <Upload className="h-4 w-4" />
@@ -822,13 +1012,44 @@ const SubmitProposal = () => {
                     </div>
                   )}
 
-                  {!hasRequestContent && !entrepreneurData?.service_details_text && !entrepreneurData?.service_details_file && (
+                  {!hasRequestContent && !entrepreneurData?.service_details_text && !entrepreneurData?.service_details_file && projectFiles.length === 0 && (
                     <p className="text-muted-foreground text-center py-8">
                       לא הוזנו פרטים נוספים ע"י היזם
                     </p>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Project Files Section */}
+              {projectFiles.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FolderOpen className="h-5 w-5" />
+                      קבצי פרויקט
+                    </CardTitle>
+                    <CardDescription>
+                      קבצים שצורפו לפרויקט ע"י היזם
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {projectFiles.map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <FileDown className="h-5 w-5 text-primary" />
+                          <span className="flex-1">{file.file_name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Phase 3.5: Consultant Response Section */}
               <Card>
@@ -859,6 +1080,7 @@ const SubmitProposal = () => {
                       onUpload={setConsultantRequestFiles} 
                       advisorId={advisorProfile?.id}
                       maxFiles={5}
+                      existingFiles={consultantRequestFiles}
                     />
                   </div>
                 </CardContent>
@@ -899,115 +1121,37 @@ const SubmitProposal = () => {
                       errors={feeErrors}
                     />
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="price">מחיר הצעה (₪) *</Label>
-                        <div className="relative">
-                          <Input
-                            id="price"
-                            type="text"
-                            value={priceDisplay}
-                            onChange={handlePriceChange}
-                            placeholder="0"
-                            className="text-left pr-8 focus:ring-2 focus:ring-primary focus:border-primary"
-                            dir="ltr"
-                            required
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                    <div className="space-y-2">
+                      <Label htmlFor="price">מחיר הצעה (₪) *</Label>
+                      <div className="relative">
+                        <Input
+                          id="price"
+                          type="text"
+                          value={priceDisplay}
+                          onChange={handlePriceChange}
+                          placeholder="0"
+                          className="text-left pr-8 focus:ring-2 focus:ring-primary focus:border-primary"
+                          dir="ltr"
+                          required
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">₪</span>
+                      </div>
+                      {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
+                        <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
                         </div>
-                        {price && parseFloat(price) >= 1000 && parseFloat(price) <= 10000000 && (
-                          <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>מחיר תקין: ₪{parseFloat(price).toLocaleString('he-IL')}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="timeline">תאריך סיום משוער</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              id="timeline"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-right font-normal",
-                                !completionDate && "text-muted-foreground"
-                              )}
-                              dir="rtl"
-                            >
-                              <CalendarIcon className="h-4 w-4" />
-                              {completionDate ? (
-                                format(completionDate, "PPP", { locale: he })
-                              ) : (
-                                <span>בחרו תאריך סיום</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={completionDate}
-                              onSelect={handleDateSelect}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        {timelineDays && (
-                          <p className="text-xs text-muted-foreground">
-                            משך ביצוע: {timelineDays} ימים
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Timeline selection for fee table mode */}
+                  {/* Total display for fee table mode */}
                   {hasFeeItems && (
-                    <div className="border-t pt-6 mt-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="timeline-fees">תאריך סיום משוער *</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                id="timeline-fees"
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-right font-normal",
-                                  !completionDate && "text-muted-foreground"
-                                )}
-                                dir="rtl"
-                              >
-                                <CalendarIcon className="h-4 w-4" />
-                                {completionDate ? (
-                                  format(completionDate, "PPP", { locale: he })
-                                ) : (
-                                  <span>בחרו תאריך סיום</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={completionDate}
-                                onSelect={handleDateSelect}
-                                disabled={(date) => date < new Date()}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          {timelineDays && (
-                            <p className="text-xs text-muted-foreground">
-                              משך ביצוע: {timelineDays} ימים
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>סה"כ הצעה</Label>
-                          <div className="text-2xl font-bold text-primary">
-                            ₪{parseFloat(price || '0').toLocaleString('he-IL')}
-                          </div>
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-lg">סה"כ הצעה:</Label>
+                        <div className="text-2xl font-bold text-primary">
+                          ₪{parseFloat(price || '0').toLocaleString('he-IL')}
                         </div>
                       </div>
                     </div>
@@ -1016,9 +1160,9 @@ const SubmitProposal = () => {
               </Card>
 
               <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
+                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="gap-2">
                   <ArrowRight className="h-4 w-4" />
@@ -1050,14 +1194,16 @@ const SubmitProposal = () => {
                       onSelectionChange={setSelectedServices}
                       consultantNotes={servicesNotes}
                       onNotesChange={setServicesNotes}
+                      projectFiles={projectFiles}
+                      requestFiles={entrepreneurData?.request_files || []}
                     />
                   </CardContent>
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'להיקף עבודה'}
+                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="gap-2">
                     <ArrowRight className="h-4 w-4" />
@@ -1085,14 +1231,18 @@ const SubmitProposal = () => {
                       entrepreneurTerms={entrepreneurData?.payment_terms || null}
                       consultantMilestones={consultantMilestones}
                       onMilestonesChange={setConsultantMilestones}
+                      paymentTermType={paymentTermType}
+                      onPaymentTermTypeChange={setPaymentTermType}
+                      paymentTermsComment={paymentTermsComment}
+                      onPaymentTermsCommentChange={setPaymentTermsComment}
                     />
                   </CardContent>
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab('scope')} className="gap-2">
+                  <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    המשך להיקף עבודה
+                    המשך לקבצים
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')} className="gap-2">
                     <ArrowRight className="h-4 w-4" />
@@ -1102,47 +1252,6 @@ const SubmitProposal = () => {
               </TabsContent>
             )}
 
-            {/* Tab: Scope */}
-            <TabsContent value="scope" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>היקף עבודה</CardTitle>
-                  <CardDescription>תארו את היקף העבודה המוצע</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="scope">תיאור מפורט</Label>
-                    <Textarea 
-                      id="scope" 
-                      value={scopeText} 
-                      onChange={(e) => setScopeText(e.target.value)} 
-                      placeholder="פרט את היקף העבודה המוצע (מינימום 20 תווים)" 
-                      rows={6} 
-                      required 
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>מינימום 20 תווים</span>
-                      <span className={cn("font-medium", scopeText.length < 20 ? "text-destructive" : "text-green-600")} dir="rtl">
-                        20 / {scopeText.length}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <ConditionsBuilder value={conditions} onChange={setConditions} />
-
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך לקבצים
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
-            </TabsContent>
 
             {/* Tab 4: Files */}
             <TabsContent value="files" className="space-y-6">
@@ -1158,7 +1267,11 @@ const SubmitProposal = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <FileUpload onUpload={setFiles} advisorId={advisorProfile?.id} />
+                  <FileUpload 
+                    onUpload={setFiles} 
+                    advisorId={advisorProfile?.id}
+                    existingFiles={files}
+                  />
                 </CardContent>
               </Card>
 
@@ -1167,7 +1280,7 @@ const SubmitProposal = () => {
                   <ArrowLeft className="h-4 w-4" />
                   המשך לחתימה
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('scope')} className="gap-2">
+                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
                   <ArrowRight className="h-4 w-4" />
                   חזרה
                 </Button>

@@ -15,6 +15,7 @@ import { SelectedAdvisorsTab } from '@/components/SelectedAdvisorsTab';
 import { SentRFPsTab } from '@/components/SentRFPsTab';
 import { ProposalComparisonDialog } from '@/components/ProposalComparisonDialog';
 import { ProposalDetailDialog } from '@/components/ProposalDetailDialog';
+import { ProposalComparisonTable } from '@/components/ProposalComparisonTable';
 import { VersionBadge } from '@/components/negotiation';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
@@ -122,11 +123,29 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-      // First fetch proposals with advisor data
+      // First fetch proposals with advisor data - include fee_line_items for comparison table
       const { data: proposalsData, error: proposalsError } = await supabase
         .from('proposals')
         .select(`
-          *,
+          id,
+          advisor_id,
+          project_id,
+          supplier_name,
+          price,
+          timeline_days,
+          submitted_at,
+          status,
+          scope_text,
+          files,
+          signature_blob,
+          fee_line_items,
+          current_version,
+          has_active_negotiation,
+          conditions_json,
+          terms,
+          ai_analysis,
+          file_summaries,
+          declaration_text,
           advisors!proposals_advisor_id_fkey (
             id,
             company_name,
@@ -505,181 +524,11 @@ export const ProjectDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {proposalsLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">טוען הצעות מחיר...</p>
-                </div>
-              ) : proposals.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">מחכה להצעות מחיר</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    הזמנות נשלחו לספקים והם יגיבו בקרוב. 
-                    ההצעות יופיעו כאן ברגע שיתקבלו.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {[...proposals]
-                    .sort((a, b) => {
-                      // Sort: accepted first, then resubmitted/submitted, then negotiation, then others
-                      const statusOrder: Record<string, number> = { 'accepted': 0, 'resubmitted': 1, 'submitted': 2, 'negotiation_requested': 3, 'rejected': 4 };
-                      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
-                    })
-                    .map((proposal) => {
-                    const lowestPrice = getLowestPrice();
-                    const fastestTimeline = getFastestTimeline();
-                    const isLowestPrice = lowestPrice === proposal.price;
-                    const isFastest = fastestTimeline === proposal.timeline_days;
-
-                    return (
-                      <Card 
-                        key={proposal.id} 
-                        className="border-r-4 border-r-primary hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col"
-                        onClick={() => handleViewProposal(proposal)}
-                      >
-                        <CardContent className="p-2.5 flex flex-col flex-1">
-                          <div className="flex justify-between items-start gap-3 mb-2" dir="rtl">
-                            {/* RIGHT SIDE (RTL): Price & Timeline */}
-                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xl font-bold text-primary">
-                                  {formatCurrency(proposal.price)}
-                                </p>
-                                {isLowestPrice && (
-                                  <Badge variant="success" className="text-xs px-1.5 py-0">
-                                    נמוך
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {proposal.timeline_days} ימים
-                                </p>
-                                {isFastest && (
-                                  <Badge variant="accent" className="text-xs px-1.5 py-0">
-                                    מהיר
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* LEFT SIDE (RTL): Advisor Info with Logo */}
-                            <div className="flex items-start gap-2 flex-1 min-w-0">
-                              {/* Advisor Logo */}
-                              {proposal.advisors?.logo_url ? (
-                                <div className="w-10 h-10 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                                  <img 
-                                    src={proposal.advisors.logo_url}
-                                    alt={proposal.advisors.company_name || proposal.supplier_name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.currentTarget;
-                                      target.style.display = 'none';
-                                      const parent = target.parentElement;
-                                      if (parent) {
-                                        parent.innerHTML = `
-                                          <div class="w-full h-full bg-primary/10 flex items-center justify-center">
-                                            <span class="text-base font-bold text-primary">
-                                              ${(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-                                            </span>
-                                          </div>
-                                        `;
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border border-border">
-                                  <span className="text-base font-bold text-primary">
-                                    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Advisor Details */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                  <h4 className="font-bold text-sm truncate">
-                                    {proposal.advisors?.company_name || proposal.supplier_name}
-                                  </h4>
-                                  {getStatusBadge(proposal.status)}
-                                  {(proposal.current_version > 1 || proposal.has_active_negotiation) && (
-                                    <VersionBadge 
-                                      currentVersion={proposal.current_version || 1} 
-                                      hasActiveNegotiation={proposal.has_active_negotiation}
-                                      status={proposal.status}
-                                    />
-                                  )}
-                                </div>
-                                
-                                {/* Expertise badges */}
-                                {proposal.advisors?.expertise && proposal.advisors.expertise.length > 0 && (
-                                  <div className="flex gap-1 mb-0.5 flex-wrap">
-                                    {proposal.advisors.expertise.slice(0, 2).map((exp: string, idx: number) => (
-                                      <Badge key={idx} variant="outline" className="text-xs px-1 py-0">
-                                        {exp}
-                                      </Badge>
-                                    ))}
-                                    {proposal.advisors.expertise.length > 2 && (
-                                      <Badge variant="outline" className="text-xs px-1 py-0">
-                                        +{proposal.advisors.expertise.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {proposal.scope_text && (
-                            <div className="border-t pt-1.5 mt-1.5 mb-1.5">
-                              <p className="text-xs text-muted-foreground line-clamp-2" dir="rtl">
-                                {proposal.scope_text}
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between mt-auto pt-1.5 border-t" dir="rtl">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {proposal.files && proposal.files.length > 0 && (
-                                <span className="flex items-center gap-1">
-                                  <FileText className="w-3 h-3" />
-                                  {proposal.files.length}
-                                </span>
-                              )}
-                              {proposal.signature_blob && (
-                                <span className="flex items-center gap-1 text-green-600">
-                                  <FileSignature className="w-3 h-3" />
-                                  חתום
-                                </span>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewProposal(proposal);
-                              }}
-                              className="h-7 text-xs px-2"
-                            >
-                              <Eye className="w-3 h-3 ml-1" />
-                              צפייה
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+              <ProposalComparisonTable
+                proposals={proposals}
+                onViewProposal={handleViewProposal}
+                loading={proposalsLoading}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -739,7 +588,12 @@ export const ProjectDetail = () => {
       {selectedProposal && (
         <ProposalDetailDialog
           open={detailDialogOpen}
-          onOpenChange={setDetailDialogOpen}
+          onOpenChange={(open) => {
+            setDetailDialogOpen(open);
+            if (!open) {
+              setSelectedProposal(null);
+            }
+          }}
           proposal={selectedProposal}
           projectId={project.id}
           projectName={project.name || project.location}

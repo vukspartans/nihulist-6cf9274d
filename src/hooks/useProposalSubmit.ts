@@ -58,12 +58,20 @@ export interface SubmitProposalData {
   selectedServices?: string[];
   servicesNotes?: string;
   
+  // Phase 4: Deselected services comment (sent to investor)
+  deselectedServicesComment?: string;
+  
   // Phase 3.6: Milestone adjustments
   milestoneAdjustments?: MilestoneAdjustment[];
   
   // Phase 3.6: Consultant request response
   consultantRequestNotes?: string;
   consultantRequestFiles?: UploadedFile[];
+  
+  // Phase 4: Payment terms change tracking
+  paymentTermType?: 'current' | 'net_30' | 'net_60' | 'net_90';
+  paymentTermsComment?: string;
+  entrepreneurPaymentTermType?: 'current' | 'net_30' | 'net_60' | 'net_90';
 }
 
 /**
@@ -120,7 +128,13 @@ export const useProposalSubmit = () => {
         throw new Error('Declaration text is too long');
       }
       
-      if (!data.scopeText || data.scopeText.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH) {
+      // Only require long scopeText if no structured data is provided
+      const hasStructuredScope = 
+        (data.feeLineItems && data.feeLineItems.length > 0) ||
+        (data.selectedServices && data.selectedServices.length > 0) ||
+        (data.milestoneAdjustments && data.milestoneAdjustments.length > 0);
+
+      if (!hasStructuredScope && (!data.scopeText || data.scopeText.trim().length < PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH)) {
         throw new Error(`תיאור היקף העבודה קצר מדי - מינימום ${PROPOSAL_VALIDATION.MIN_SCOPE_LENGTH} תווים`);
       }
 
@@ -217,7 +231,9 @@ export const useProposalSubmit = () => {
         milestone_adjustments: (data.milestoneAdjustments || []) as any,
         consultant_request_notes: data.consultantRequestNotes || null,
         consultant_request_files: (data.consultantRequestFiles || []) as any,
-        services_notes: data.servicesNotes || null,
+        services_notes: data.deselectedServicesComment 
+          ? `${data.servicesNotes || ''}\n\n${data.deselectedServicesComment}`.trim()
+          : (data.servicesNotes || null),
       };
 
       const { data: proposal, error: proposalError } = await supabase
@@ -437,6 +453,79 @@ export const useProposalSubmit = () => {
         .catch((err) => {
           console.error('[Proposal Submit] Email notification error:', err);
         });
+
+      // Phase 4: Payment terms change notification (non-blocking)
+      if (data.paymentTermType && 
+          data.entrepreneurPaymentTermType && 
+          data.paymentTermType !== data.entrepreneurPaymentTermType) {
+        console.log('[Proposal Submit] Payment terms changed, sending notification');
+        
+        // Fetch entrepreneur email
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('owner_id')
+          .eq('id', data.projectId)
+          .single();
+        
+        if (projectData?.owner_id) {
+          const { data: ownerProfile } = await supabase
+            .from('profiles')
+            .select('email, name')
+            .eq('user_id', projectData.owner_id)
+            .single();
+          
+          if (ownerProfile?.email) {
+            const paymentTermLabels: Record<string, string> = {
+              'current': 'שוטף',
+              'net_30': 'שוטף + 30',
+              'net_60': 'שוטף + 60',
+              'net_90': 'שוטף + 90',
+            };
+            
+            const originalTerm = paymentTermLabels[data.entrepreneurPaymentTermType] || data.entrepreneurPaymentTermType;
+            const newTerm = paymentTermLabels[data.paymentTermType] || data.paymentTermType;
+            
+            const notificationBody = `
+              <div dir="rtl" style="font-family: sans-serif;">
+                <h2>יועץ שינה תנאי תשלום בהצעה</h2>
+                <p>שלום ${ownerProfile.name || 'יזם יקר'},</p>
+                <p>היועץ <strong>${profile?.name || 'יועץ'}</strong> שינה את תנאי התשלום בהצעתו:</p>
+                <ul>
+                  <li>תנאי מקוריים: <strong>${originalTerm}</strong></li>
+                  <li>תנאים חדשים: <strong>${newTerm}</strong></li>
+                </ul>
+                ${data.paymentTermsComment ? `<p><strong>הסבר היועץ:</strong> ${data.paymentTermsComment}</p>` : ''}
+                <p>ניתן לצפות בהצעה המלאה במערכת.</p>
+              </div>
+            `;
+            
+            // Insert notification to queue
+            const { error: notifyError } = await supabase.rpc('enqueue_notification', {
+              p_notification_type: 'payment_terms_changed',
+              p_recipient_email: ownerProfile.email,
+              p_recipient_id: projectData.owner_id,
+              p_subject: 'יועץ שינה תנאי תשלום בהצעה',
+              p_body_html: notificationBody,
+              p_template_data: {
+                original_term: data.entrepreneurPaymentTermType,
+                new_term: data.paymentTermType,
+                comment: data.paymentTermsComment,
+                advisor_name: profile?.name,
+                proposal_id: proposal.id,
+              },
+              p_entity_type: 'proposal',
+              p_entity_id: proposal.id,
+              p_priority: 3, // High priority
+            });
+            
+            if (notifyError) {
+              console.error('[Proposal Submit] Payment terms notification failed:', notifyError);
+            } else {
+              console.log('[Proposal Submit] Payment terms notification queued');
+            }
+          }
+        }
+      }
 
       return { success: true, proposalId: proposal.id };
     } catch (error: any) {

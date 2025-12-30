@@ -256,6 +256,12 @@ export const NegotiationResponseView = ({
     );
   }
 
+  // Check if session can be responded to
+  const canRespond = session.status === "awaiting_response";
+  const isAlreadyResponded = session.status === "responded";
+  const isCancelled = session.status === "cancelled";
+  const isResolved = session.status === "resolved";
+
   const originalTotal = session.proposal?.price || 0;
   const targetTotal = session.target_total || 0;
   const hasLineItems = session.line_item_negotiations && session.line_item_negotiations.length > 0;
@@ -278,6 +284,55 @@ export const NegotiationResponseView = ({
           </Button>
         )}
       </div>
+
+      {/* Status Banner for non-respondable sessions */}
+      {!canRespond && (
+        <Card className={
+          isAlreadyResponded 
+            ? "bg-green-50 border-green-200" 
+            : isCancelled 
+              ? "bg-gray-50 border-gray-200" 
+              : "bg-amber-50 border-amber-200"
+        }>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              {isAlreadyResponded ? (
+                <>
+                  <Send className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800">ההצעה כבר נשלחה</p>
+                    <p className="text-sm text-green-700">כבר שלחת תגובה לבקשה זו. ההצעה המעודכנת נמצאת בבדיקת היזם.</p>
+                  </div>
+                </>
+              ) : isCancelled ? (
+                <>
+                  <RefreshCw className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-800">המשא ומתן בוטל</p>
+                    <p className="text-sm text-gray-700">בקשת המשא ומתן בוטלה ולא ניתן להגיב עליה.</p>
+                  </div>
+                </>
+              ) : isResolved ? (
+                <>
+                  <RefreshCw className="h-5 w-5 text-amber-600" />
+                  <div>
+                    <p className="font-medium text-amber-800">המשא ומתן הסתיים</p>
+                    <p className="text-sm text-amber-700">המשא ומתן הסתיים ולא ניתן להגיב עליו עוד.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-5 w-5 text-amber-600" />
+                  <div>
+                    <p className="font-medium text-amber-800">לא ניתן להגיב כעת</p>
+                    <p className="text-sm text-amber-700">סטטוס המשא ומתן הנוכחי: {session.status}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Project Files Section */}
       {(projectFiles.length > 0 || loadingFiles) && (
@@ -489,22 +544,26 @@ export const NegotiationResponseView = ({
 
       {/* Actions */}
       <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={onBack}>
-          ביטול
-        </Button>
-        <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin me-2" />
-              שולח...
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4 me-2" />
-              שלח הצעה מעודכנת
-            </>
-          )}
-        </Button>
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            {canRespond ? "ביטול" : "חזרה"}
+          </Button>
+        )}
+        {canRespond && (
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                שולח...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 me-2" />
+                שלח הצעה מעודכנת
+              </>
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );
