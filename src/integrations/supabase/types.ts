@@ -1484,6 +1484,7 @@ export type Database = {
           negotiation_count: number | null
           price: number
           project_id: string
+          rfp_invite_id: string | null
           scope_text: string | null
           seen_by_entrepreneur_at: string | null
           selected_services: Json | null
@@ -1534,6 +1535,7 @@ export type Database = {
           negotiation_count?: number | null
           price: number
           project_id: string
+          rfp_invite_id?: string | null
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
           selected_services?: Json | null
@@ -1584,6 +1586,7 @@ export type Database = {
           negotiation_count?: number | null
           price?: number
           project_id?: string
+          rfp_invite_id?: string | null
           scope_text?: string | null
           seen_by_entrepreneur_at?: string | null
           selected_services?: Json | null
@@ -1634,6 +1637,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_rfp_invite_id_fkey"
+            columns: ["rfp_invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_invites"
             referencedColumns: ["id"]
           },
           {

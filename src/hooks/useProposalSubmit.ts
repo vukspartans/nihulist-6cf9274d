@@ -210,10 +210,17 @@ export const useProposalSubmit = () => {
         vector_points: data.signature.vector.reduce((sum, stroke) => sum + stroke.length, 0)
       };
 
+      // CRITICAL: Require inviteId for proper proposal-to-invite linking
+      if (!data.inviteId) {
+        console.error('[Proposal Submit] Missing inviteId - this is required');
+        throw new Error('Missing invite ID - cannot submit proposal without linking to specific invite');
+      }
+
       // Insert proposal with structured data
       const proposalInsert: ProposalInsert = {
         project_id: data.projectId,
         advisor_id: data.advisorId,
+        rfp_invite_id: data.inviteId, // CRITICAL: Link proposal to specific invite
         price: data.price,
         timeline_days: data.timelineDays,
         scope_text: data.scopeText,
