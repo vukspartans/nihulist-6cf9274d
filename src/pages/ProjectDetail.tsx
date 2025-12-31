@@ -123,7 +123,7 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-      // First fetch proposals with advisor data - include fee_line_items for comparison table
+      // First fetch proposals with advisor data - include all consultant submission fields
       const { data: proposalsData, error: proposalsError } = await supabase
         .from('proposals')
         .select(`
@@ -146,6 +146,11 @@ export const ProjectDetail = () => {
           ai_analysis,
           file_summaries,
           declaration_text,
+          selected_services,
+          milestone_adjustments,
+          consultant_request_notes,
+          consultant_request_files,
+          services_notes,
           advisors!proposals_advisor_id_fkey (
             id,
             company_name,

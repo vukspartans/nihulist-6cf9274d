@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, FileText, AlertCircle, Building2, Calendar, Download, Eye, Image, FileSpreadsheet, File } from 'lucide-react';
+import { CheckCircle, FileSignature, FileText, AlertCircle, Building2, Calendar, Download, Eye, Image, FileSpreadsheet, File, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import FilePreviewModal from '@/components/FilePreviewModal';
 
@@ -41,6 +41,9 @@ interface ProposalApprovalDialogProps {
     fee_line_items?: FeeLineItem[];
     signature_blob?: string;
     submitted_at: string;
+    consultant_request_notes?: string;
+    consultant_request_files?: Array<{ name: string; path: string; size?: number }>;
+    services_notes?: string;
   };
   onSuccess?: () => void;
 }
@@ -204,6 +207,30 @@ export const ProposalApprovalDialog = ({
                   <Calendar className="h-4 w-4" />
                   <span>תאריך הגשה: {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</span>
                 </div>
+
+                {/* Consultant Response Section */}
+                {(proposal.consultant_request_notes || (proposal.consultant_request_files && proposal.consultant_request_files.length > 0)) && (
+                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4 text-orange-600" />
+                      <span className="font-semibold text-sm text-orange-800">תגובת היועץ לבקשה</span>
+                    </div>
+                    {proposal.consultant_request_notes && (
+                      <p className="text-sm whitespace-pre-wrap mb-2">{proposal.consultant_request_notes}</p>
+                    )}
+                    {proposal.consultant_request_files && proposal.consultant_request_files.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground">קבצים שצורפו על ידי היועץ:</p>
+                        {proposal.consultant_request_files.map((file, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Files with Preview */}
                 {proposal.files && proposal.files.length > 0 && (

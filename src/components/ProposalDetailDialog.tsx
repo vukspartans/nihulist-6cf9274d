@@ -56,6 +56,8 @@ interface ProposalDetailDialogProps {
     advisors?: AdvisorInfo; rfp_invite?: RfpInviteContext; seen_by_entrepreneur_at?: string | null;
     fee_line_items?: FeeLineItem[]; milestone_adjustments?: MilestoneAdjustment[];
     selected_services?: any[]; services_notes?: string;
+    consultant_request_notes?: string;
+    consultant_request_files?: Array<{ name: string; path: string; size?: number }>;
   };
   projectId?: string;
   projectName?: string;
@@ -82,6 +84,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const feeLineItems = proposal.fee_line_items || [];
   const milestoneAdjustments = proposal.milestone_adjustments || [];
   const selectedServices = proposal.selected_services || [];
+  const consultantNotes = proposal.consultant_request_notes || '';
+  const consultantFiles = proposal.consultant_request_files || [];
 
   // Separate mandatory and optional fee items
   const mandatoryFees = feeLineItems.filter(item => !item.is_optional);
@@ -378,6 +382,29 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                         {rfpContext.request_title && <p><span className="font-medium">כותרת:</span> {rfpContext.request_title}</p>}
                         {rfpContext.deadline_at && <p className="text-muted-foreground"><span className="font-medium">מועד אחרון:</span> {formatDate(rfpContext.deadline_at)}</p>}
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Consultant Response Section */}
+                {(consultantNotes || consultantFiles.length > 0) && (
+                  <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-800">
+                    <CardContent className="p-3">
+                      <SectionHeader icon={MessageSquare} className="mb-2 text-xs text-orange-700 dark:text-orange-400">תגובת היועץ לבקשה</SectionHeader>
+                      {consultantNotes && (
+                        <p className="text-sm whitespace-pre-wrap text-right mb-2">{consultantNotes}</p>
+                      )}
+                      {consultantFiles.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-muted-foreground text-right">קבצים שצורפו:</p>
+                          {consultantFiles.map((file, i) => (
+                            <div key={i} className="flex items-center gap-2 justify-end text-sm bg-background p-2 rounded border">
+                              <span className="truncate max-w-[200px]">{file.name}</span>
+                              <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
