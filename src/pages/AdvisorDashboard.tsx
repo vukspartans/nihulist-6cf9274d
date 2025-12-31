@@ -327,7 +327,7 @@ const AdvisorDashboard = () => {
           setRfpInvites(mergedInvites as any);
         }
 
-        // Fetch submitted proposals with approval data
+        // Fetch submitted proposals with approval data - include rfp_invite_id for proper matching
         const { data: proposalData } = await supabase
           .from('proposals')
           .select(`
@@ -350,11 +350,16 @@ const AdvisorDashboard = () => {
 
         setProposals(proposalData || []);
 
-        // Create a map of project_id -> proposal for quick lookup
-        const proposalsByProject = new Map(
-          (proposalData || []).map(p => [p.project_id, p])
-        );
-        setProposalMap(proposalsByProject);
+        // FIXED: Create a map of rfp_invite_id -> proposal for accurate matching
+        // This prevents proposals from "leaking" across different RFP invites
+        const proposalsByInvite = new Map<string, AdvisorProposal>();
+        (proposalData || []).forEach(p => {
+          // Primary: use rfp_invite_id if available
+          if (p.rfp_invite_id) {
+            proposalsByInvite.set(p.rfp_invite_id, p);
+          }
+        });
+        setProposalMap(proposalsByInvite);
       }
     } catch (error) {
       toast({
@@ -1029,17 +1034,20 @@ const AdvisorDashboard = () => {
                           צפייה בפרטים
                         </Button>
                         
-                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.rfps?.projects?.id) && (
+                        {/* FIXED: Check by invite.id (rfp_invite_id) not project_id */}
+                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.id) && (
                           <Button onClick={() => navigate(`/invite/${invite.id}/submit`)}>
                             הגשת הצעת מחיר
                           </Button>
                         )}
                         
-                        {proposalMap.has(invite.rfps?.projects?.id) && (
+                        {/* FIXED: Show proposal view button only if proposal exists for THIS invite */}
+                        {proposalMap.has(invite.id) && (
                           <Button 
                             variant="outline"
                             onClick={() => {
-                              const proposal = proposalMap.get(invite.rfps?.projects?.id);
+                              // FIXED: Look up proposal by invite.id (rfp_invite_id) not project_id
+                              const proposal = proposalMap.get(invite.id);
                               if (proposal) {
                                 setSelectedProposalToView(proposal.id);
                                 setProposalViewDialogOpen(true);
@@ -1049,7 +1057,8 @@ const AdvisorDashboard = () => {
                             צפייה בהצעה שהוגשה
                           </Button>
                         )}
-                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.rfps?.projects?.id) && (
+                        {/* FIXED: Show decline button only if no proposal exists for THIS specific invite */}
+                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.id) && (
                           <Button 
                             variant="outline"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
