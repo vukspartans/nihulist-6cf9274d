@@ -25,43 +25,7 @@ import {
 
 interface UploadedFile { name: string; url: string; size: number; type: string; }
 interface AdvisorInfo { id: string; company_name: string | null; logo_url: string | null; expertise: string[] | null; rating: number | null; location: string | null; founding_year: number | null; office_size: string | null; website: string | null; linkedin_url: string | null; }
-interface ServiceScopeItem {
-  id: string;
-  task_name: string;
-  is_included?: boolean;
-  is_optional?: boolean;
-  fee_category?: string;
-  display_order: number;
-}
-
-interface EntrepreneurFeeItem {
-  id: string;
-  description: string;
-  unit: string;
-  quantity?: number;
-  item_number: number;
-  is_optional?: boolean;
-  charge_type?: string;
-  display_order: number;
-}
-
-interface RfpInviteContext {
-  id?: string;
-  advisor_type: string | null;
-  request_title: string | null;
-  request_content?: string | null;
-  request_files?: Array<{ name: string; url: string; path: string }>;
-  deadline_at: string | null;
-  payment_terms?: {
-    milestones?: Array<{ description: string; percentage: number }>;
-    notes?: string;
-  };
-  service_details_mode?: string;
-  service_details_text?: string;
-  service_details_file?: { name: string; url: string; path: string };
-  service_scope_items?: ServiceScopeItem[];
-  entrepreneur_fee_items?: EntrepreneurFeeItem[];
-}
+interface RfpInviteContext { advisor_type: string | null; request_title: string | null; deadline_at: string | null; }
 
 interface FeeLineItem {
   description?: string;
@@ -494,70 +458,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
               {/* Services Tab */}
               <TabsContent value="services" className="p-4 space-y-3 m-0">
-                {/* Entrepreneur's Original Service Request */}
-                {rfpContext && (
-                  <div className="space-y-1.5">
-                    <SectionHeader icon={Target} className="text-xs text-purple-600">בקשת השירות המקורית (מהיזם)</SectionHeader>
-                    <Card className="border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
-                      <CardContent className="p-3">
-                        {/* Checklist Mode */}
-                        {rfpContext.service_details_mode === 'checklist' && rfpContext.service_scope_items && rfpContext.service_scope_items.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground text-right mb-2">רשימת משימות שהוגדרו:</p>
-                            <ul className="space-y-1 text-right">
-                              {rfpContext.service_scope_items.map((item, i) => {
-                                const isSelected = selectedServices.some(s => 
-                                  (typeof s === 'string' && s === item.task_name) || 
-                                  (s?.task_name === item.task_name) ||
-                                  (s?.id === item.id)
-                                );
-                                return (
-                                  <li key={i} className="flex items-center gap-2 justify-end text-sm">
-                                    <span className={isSelected ? '' : 'text-muted-foreground line-through'}>{item.task_name}</span>
-                                    {item.is_optional && <Badge variant="outline" className="text-[10px]">אופציונלי</Badge>}
-                                    {isSelected ? (
-                                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                    ) : (
-                                      <XCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                    )}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Free Text Mode */}
-                        {rfpContext.service_details_mode === 'free_text' && rfpContext.service_details_text && (
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground text-right mb-2">תיאור השירות:</p>
-                            <p className="text-sm whitespace-pre-wrap text-right bg-background p-2 rounded border">{rfpContext.service_details_text}</p>
-                          </div>
-                        )}
-
-                        {/* File Mode */}
-                        {rfpContext.service_details_mode === 'file' && rfpContext.service_details_file && (
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground text-right mb-2">קובץ מצורף:</p>
-                            <div className="flex items-center gap-2 justify-end text-sm bg-background p-2 rounded border">
-                              <span className="truncate">{rfpContext.service_details_file.name}</span>
-                              <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* No service details defined */}
-                        {!rfpContext.service_details_mode && !rfpContext.service_scope_items?.length && (
-                          <p className="text-sm text-muted-foreground text-center">לא הוגדרו פרטי שירות</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {/* Consultant's Selected Services / Response */}
+                {/* Selected Services */}
                 <div className="space-y-1.5">
-                  <SectionHeader icon={ListChecks} className="text-xs text-blue-600">תגובת היועץ</SectionHeader>
+                  <SectionHeader icon={ListChecks} className="text-xs text-blue-600">שירותים נבחרים</SectionHeader>
                   {selectedServices.length > 0 ? (
                     <Card>
                       <CardContent className="p-3">
@@ -572,14 +475,14 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       </CardContent>
                     </Card>
                   ) : (
-                    <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">היועץ לא בחר שירותים ספציפיים</CardContent></Card>
+                    <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לא נבחרו שירותים ספציפיים</CardContent></Card>
                   )}
                 </div>
 
                 {/* Services Notes */}
                 {proposal.services_notes && (
                   <div className="space-y-1.5">
-                    <SectionHeader icon={FileText} className="text-xs">הערות היועץ לשירותים</SectionHeader>
+                    <SectionHeader icon={FileText} className="text-xs">הערות שירותים</SectionHeader>
                     <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{proposal.services_notes}</p></CardContent></Card>
                   </div>
                 )}
@@ -632,44 +535,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
               {/* Payment Terms Tab */}
               <TabsContent value="payment" className="p-4 space-y-3 m-0">
-                {/* Entrepreneur's Original Payment Terms */}
-                {rfpContext?.payment_terms && (
-                  <div className="space-y-1.5">
-                    <SectionHeader icon={Target} className="text-xs text-purple-600">תנאי התשלום המקוריים (מהיזם)</SectionHeader>
-                    <Card className="border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
-                      <CardContent className="p-3">
-                        {rfpContext.payment_terms.milestones && rfpContext.payment_terms.milestones.length > 0 && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead className="bg-muted/50">
-                                <tr className="text-muted-foreground border-b">
-                                  <th className="text-right p-2 font-medium">שלב</th>
-                                  <th className="text-center p-2 font-medium">אחוז</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rfpContext.payment_terms.milestones.map((milestone, i) => (
-                                  <tr key={i} className="border-b last:border-0">
-                                    <td className="p-2 text-right">{milestone.description}</td>
-                                    <td className="p-2 text-center font-medium">{milestone.percentage}%</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                        {rfpContext.payment_terms.notes && (
-                          <p className="text-xs text-muted-foreground mt-2 text-right">{rfpContext.payment_terms.notes}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {/* Consultant's Milestone Adjustments */}
+                {/* Milestone Breakdown */}
                 {milestoneAdjustments.length > 0 && (
                   <div className="space-y-1.5">
-                    <SectionHeader icon={CreditCard} className="text-xs text-green-600">אבני דרך לתשלום (תגובת היועץ)</SectionHeader>
+                    <SectionHeader icon={CreditCard} className="text-xs text-green-600">אבני דרך לתשלום</SectionHeader>
                     <Card>
                       <CardContent className="p-0">
                         <div className="overflow-x-auto">
@@ -677,25 +546,18 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                             <thead className="bg-muted/50">
                               <tr className="text-muted-foreground border-b">
                                 <th className="text-right p-2 font-medium">שלב</th>
-                                <th className="text-center p-2 font-medium">יזם</th>
-                                <th className="text-center p-2 font-medium">יועץ</th>
+                                <th className="text-center p-2 font-medium">אחוז</th>
                                 <th className="text-left p-2 font-medium">סכום משוער</th>
                               </tr>
                             </thead>
                             <tbody>
                               {milestoneAdjustments.map((milestone, i) => {
-                                const consultantPct = milestone.consultant_percentage ?? milestone.entrepreneur_percentage ?? 0;
-                                const entrepreneurPct = milestone.entrepreneur_percentage ?? 0;
-                                const amount = (proposal.price * consultantPct) / 100;
-                                const hasChange = milestone.consultant_percentage !== undefined && milestone.entrepreneur_percentage !== undefined && milestone.consultant_percentage !== milestone.entrepreneur_percentage;
+                                const percentage = milestone.consultant_percentage ?? milestone.entrepreneur_percentage ?? 0;
+                                const amount = (proposal.price * percentage) / 100;
                                 return (
                                   <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
                                     <td className="p-2 text-right">{milestone.description}</td>
-                                    <td className="p-2 text-center text-muted-foreground">{entrepreneurPct}%</td>
-                                    <td className={`p-2 text-center font-medium ${hasChange ? 'text-orange-600' : ''}`}>
-                                      {consultantPct}%
-                                      {hasChange && <span className="text-[10px] ms-1">שונה</span>}
-                                    </td>
+                                    <td className="p-2 text-center font-medium">{percentage}%</td>
                                     <td className="p-2 text-left">{formatCurrency(amount)}</td>
                                   </tr>
                                 );

@@ -169,68 +169,30 @@ export const ProjectDetail = () => {
 
       if (proposalsError) throw proposalsError;
 
-      // Fetch RFP invite context for each proposal - including entrepreneur's original data
+      // Fetch RFP invite context for each proposal
       const proposalsWithContext = await Promise.all(
         (proposalsData || []).map(async (proposal) => {
-          // Get the latest RFP for this project
-          const { data: rfpData } = await supabase
-            .from('rfps')
-            .select('id')
-            .eq('project_id', id)
-            .order('sent_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (!rfpData?.id) {
-            return { ...proposal, rfp_invite: undefined };
-          }
-
-          // Get the RFP invite with full entrepreneur data
+          // Get the RFP invite for this advisor
           const { data: inviteData } = await supabase
             .from('rfp_invites')
-            .select(`
-              id,
-              advisor_type,
-              request_title,
-              request_content,
-              request_files,
-              deadline_at,
-              payment_terms,
-              service_details_mode,
-              service_details_text,
-              service_details_file
-            `)
+            .select('advisor_type, request_title, deadline_at')
             .eq('advisor_id', proposal.advisor_id)
-            .eq('rfp_id', rfpData.id)
+            .eq('rfp_id', (
+              await supabase
+                .from('rfps')
+                .select('id')
+                .eq('project_id', id)
+                .order('sent_at', { ascending: false })
+                .limit(1)
+                .single()
+            ).data?.id || '')
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
 
-          if (!inviteData?.id) {
-            return { ...proposal, rfp_invite: undefined };
-          }
-
-          // Fetch entrepreneur's service scope items
-          const { data: serviceScopeItems } = await supabase
-            .from('rfp_service_scope_items')
-            .select('*')
-            .eq('rfp_invite_id', inviteData.id)
-            .order('display_order');
-
-          // Fetch entrepreneur's fee items
-          const { data: entrepreneurFeeItems } = await supabase
-            .from('rfp_request_fee_items')
-            .select('*')
-            .eq('rfp_invite_id', inviteData.id)
-            .order('display_order');
-
           return {
             ...proposal,
-            rfp_invite: {
-              ...inviteData,
-              service_scope_items: serviceScopeItems || [],
-              entrepreneur_fee_items: entrepreneurFeeItems || []
-            }
+            rfp_invite: inviteData || undefined
           };
         })
       );
