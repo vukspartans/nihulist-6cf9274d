@@ -198,11 +198,13 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
 
     // Build advisor-type pairs from recommended advisors
     const advisorTypePairs: Array<{advisor_id: string, advisor_type: string}> = [];
+    const advisorTypes: string[] = [];
     
     // For each advisor type, send with custom content if available
     for (const [advisorType, advisorIds] of Object.entries(selectedRecommendedAdvisors)) {
       if (advisorIds.length === 0) continue;
       
+      advisorTypes.push(advisorType);
       advisorIds.forEach(advisorId => {
         advisorTypePairs.push({
           advisor_id: advisorId,
@@ -211,9 +213,61 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
       });
     }
 
+    // Auto-populate default fee templates for advisor types without custom data
+    const enrichedRequestDataByType = { ...requestDataByType };
+    
+    for (const advisorType of advisorTypes) {
+      if (!enrichedRequestDataByType[advisorType]) {
+        // Fetch default fee templates for this advisor type
+        const { data: templates } = await supabase
+          .from('default_fee_item_templates')
+          .select('*')
+          .eq('advisor_specialty', advisorType)
+          .order('display_order');
+        
+        if (templates && templates.length > 0) {
+          const requiredItems = templates
+            .filter(t => !t.is_optional)
+            .map((t, i) => ({
+              item_number: i + 1,
+              description: t.description,
+              unit: t.unit as any,
+              quantity: t.default_quantity || 1,
+              charge_type: t.charge_type as any,
+              is_optional: false,
+              display_order: t.display_order
+            }));
+            
+          const optionalItems = templates
+            .filter(t => t.is_optional)
+            .map((t, i) => ({
+              item_number: i + 1,
+              description: t.description,
+              unit: t.unit as any,
+              quantity: t.default_quantity || 1,
+              charge_type: t.charge_type as any,
+              is_optional: true,
+              display_order: t.display_order
+            }));
+          
+          enrichedRequestDataByType[advisorType] = {
+            requestTitle: `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`,
+            requestContent: rfpContent.content,
+            requestAttachments: [],
+            hasBeenReviewed: false,
+            serviceDetailsMode: 'free_text' as const,
+            feeItems: requiredItems,
+            optionalFeeItems: optionalItems
+          };
+          
+          console.log(`[RFPWizard] Auto-populated ${templates.length} default fee items for ${advisorType}`);
+        }
+      }
+    }
+
     // Use first type's data or default
     const firstType = Object.keys(selectedRecommendedAdvisors)[0];
-    const typeData = requestDataByType[firstType];
+    const typeData = enrichedRequestDataByType[firstType];
     const emailSubject = typeData?.emailSubject || `בקשה להצעת מחיר - ${projectName}`;
     const emailBodyText = typeData?.emailBody || rfpContent.content;
     const loginUrl = `${PRODUCTION_URL}/auth?type=advisor&mode=login`;
@@ -225,7 +279,7 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     
     // Build advisor type data map for service details, fees, payment terms
     const advisorTypeDataMap: Record<string, any> = {};
-    for (const [advisorType, data] of Object.entries(requestDataByType)) {
+    for (const [advisorType, data] of Object.entries(enrichedRequestDataByType)) {
       advisorTypeDataMap[advisorType] = {
         requestTitle: data.requestTitle,
         requestContent: data.requestContent,
