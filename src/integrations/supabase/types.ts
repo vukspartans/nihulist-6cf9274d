@@ -2466,6 +2466,10 @@ export type Database = {
         Returns: boolean
       }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_rfp_sent_by_user: {
+        Args: { _rfp_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_task_project_owner: {
         Args: { _task_id: string; _user_id: string }
         Returns: boolean
