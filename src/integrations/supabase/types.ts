@@ -1984,6 +1984,7 @@ export type Database = {
           project_id: string
           sent_at: string
           sent_by: string
+          status: string | null
           subject: string
         }
         Insert: {
@@ -1992,6 +1993,7 @@ export type Database = {
           project_id: string
           sent_at?: string
           sent_by: string
+          status?: string | null
           subject: string
         }
         Update: {
@@ -2000,6 +2002,7 @@ export type Database = {
           project_id?: string
           sent_at?: string
           sent_by?: string
+          status?: string | null
           subject?: string
         }
         Relationships: [

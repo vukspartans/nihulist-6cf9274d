@@ -26,7 +26,7 @@ import { AdvisorTypeRequestData } from './RequestEditorDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_TYPES } from '@/constants/project';
 import { useRFP } from '@/hooks/useRFP';
-import { useRFPDraft } from '@/hooks/useRFPDraft';
+import { useRFPDirectSave } from '@/hooks/useRFPDirectSave';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sanitizeText, sanitizeHtml } from '@/utils/inputSanitization';
 import { PRODUCTION_URL } from '@/utils/urls';
@@ -76,17 +76,18 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const [proposalSent, setProposalSent] = useState(false);
   const [savedDraftTypes, setSavedDraftTypes] = useState<string[]>([]);
   const { sendRFPInvitations, loading } = useRFP();
-  const { loadAllDrafts, deleteAllDrafts, loading: draftsLoading } = useRFPDraft(projectId);
+  const { loadAllSavedData, deleteAllDraftData, getDraftRFPId, loading: draftsLoading } = useRFPDirectSave(projectId);
   const { toast } = useToast();
 
-  // Load existing RFP and drafts from database
+  // Load existing RFP and saved data from database
   useEffect(() => {
     const loadExistingData = async () => {
-      // Load existing RFP
+      // Load existing sent RFP (for reference)
       const { data, error } = await supabase
         .from('rfps')
         .select('subject, body_html')
         .eq('project_id', projectId)
+        .eq('status', 'sent')
         .order('sent_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -108,15 +109,15 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         }));
       }
 
-      // Load saved drafts
-      const drafts = await loadAllDrafts();
-      const draftTypes = Object.keys(drafts);
-      if (draftTypes.length > 0) {
-        setRequestDataByType(drafts);
-        setSavedDraftTypes(draftTypes);
+      // Load saved data from rfp_invites (direct save, no drafts table)
+      const savedData = await loadAllSavedData();
+      const savedTypes = Object.keys(savedData);
+      if (savedTypes.length > 0) {
+        setRequestDataByType(savedData);
+        setSavedDraftTypes(savedTypes);
         toast({
-          title: "טיוטות נטענו",
-          description: `נמצאו ${draftTypes.length} טיוטות שמורות`,
+          title: "נתונים נטענו",
+          description: `נמצאו ${savedTypes.length} בקשות שמורות`,
         });
       }
     };
@@ -337,8 +338,8 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     console.log('[RFPWizard] RFP Result:', result);
     
     if (result) {
-      // Clean up drafts after successful send
-      await deleteAllDrafts();
+      // Clean up draft RFP data after successful send
+      await deleteAllDraftData();
       setSavedDraftTypes([]);
       setProposalSent(true);
       onRfpSent?.();

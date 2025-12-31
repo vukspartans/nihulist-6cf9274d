@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { handleError } from '@/utils/errorHandling';
 import { DEADLINES } from '@/utils/constants';
 import { ServiceScopeItem, RFPFeeItem, PaymentTerms, ServiceDetailsMode } from '@/types/rfpRequest';
 
@@ -32,17 +31,9 @@ export const useRFP = () => {
   const { toast } = useToast();
 
   /**
-   * Send RFP invitations to selected advisors
-   * @param projectId - UUID of the project
-   * @param advisorTypePairs - Array of {advisor_id, advisor_type} objects
-   * @param deadlineHours - Hours until deadline (default: 168 = 7 days)
-   * @param emailSubject - Custom email subject (optional)
-   * @param emailBodyHtml - Custom email body HTML (optional)
-   * @param requestTitle - Request title for advisors (optional)
-   * @param requestContent - Request content for advisors (optional)
-   * @param requestFiles - Uploaded file metadata (optional)
-   * @param advisorTypeDataMap - Map of advisor_type to additional data (service details, fees, payment terms)
-   * @returns RFPResult with rfp_id and invites_sent count
+   * Send RFP invitations to selected advisors.
+   * This function now works with data already saved to rfp_invites (from useRFPDirectSave).
+   * It updates the RFP status to 'sent' and triggers email sending.
    */
   const sendRFPInvitations = async (
     projectId: string,
@@ -102,12 +93,19 @@ export const useRFP = () => {
         rawData: result
       });
 
-      // If we have additional data per advisor type, save it to the related tables
+      // If we have additional data per advisor type, merge it with the created invites
       if (result && advisorTypeDataMap) {
-        await saveAdvisorTypeData(result.result_rfp_id, advisorTypePairs, advisorTypeDataMap);
+        await mergeAdvisorTypeData(result.result_rfp_id, advisorTypePairs, advisorTypeDataMap);
       }
       
       if (result) {
+        // Update any draft RFPs to 'sent' status
+        await supabase
+          .from('rfps')
+          .update({ status: 'sent' })
+          .eq('project_id', projectId)
+          .eq('status', 'draft');
+
         if (result.result_invites_sent === 0) {
           toast({
             title: "אזהרה",
@@ -186,15 +184,16 @@ export const useRFP = () => {
   };
 
   /**
-   * Save additional advisor type data (service details, fees, payment terms) to related tables
+   * Merge additional advisor type data with created invites.
+   * This handles the case where entrepreneurs provided custom data via RequestEditorDialog.
    */
-  const saveAdvisorTypeData = async (
+  const mergeAdvisorTypeData = async (
     rfpId: string,
     advisorTypePairs: Array<{advisor_id: string, advisor_type: string}>,
     advisorTypeDataMap: Record<string, AdvisorTypeData>
   ) => {
     try {
-      console.log('[useRFP] Saving advisor type data for RFP:', rfpId);
+      console.log('[useRFP] Merging advisor type data for RFP:', rfpId);
 
       // Get the invite IDs for each advisor type
       const { data: invites, error: invitesError } = await supabase
@@ -220,7 +219,7 @@ export const useRFP = () => {
         }
       }
 
-      // For each advisor type, save the additional data
+      // For each advisor type, merge the additional data
       for (const [advisorType, inviteIds] of Object.entries(invitesByType)) {
         const typeData = advisorTypeDataMap[advisorType];
         if (!typeData) continue;
@@ -253,29 +252,36 @@ export const useRFP = () => {
 
         // Save service scope items (checklist mode)
         if (typeData.serviceDetails?.mode === 'checklist' && typeData.serviceDetails.scopeItems) {
-          const scopeItems = typeData.serviceDetails.scopeItems.map((item, index) => ({
-            rfp_invite_id: inviteIds[0], // Use first invite as reference
-            task_name: item.task_name,
-            is_included: item.is_included,
-            is_optional: item.is_optional,
-            fee_category: item.fee_category,
-            display_order: item.display_order || index
-          }));
-
-          // Insert for all invites of this type
           for (const inviteId of inviteIds) {
-            const itemsForInvite = scopeItems.map(item => ({ ...item, rfp_invite_id: inviteId }));
-            const { error: scopeError } = await supabase
+            // Check if items already exist
+            const { data: existingItems } = await supabase
               .from('rfp_service_scope_items')
-              .insert(itemsForInvite);
+              .select('id')
+              .eq('rfp_invite_id', inviteId)
+              .limit(1);
 
-            if (scopeError) {
-              console.error('[useRFP] Error inserting scope items:', scopeError);
+            if (!existingItems || existingItems.length === 0) {
+              const scopeItems = typeData.serviceDetails.scopeItems.map((item, index) => ({
+                rfp_invite_id: inviteId,
+                task_name: item.task_name,
+                is_included: item.is_included,
+                is_optional: item.is_optional,
+                fee_category: item.fee_category,
+                display_order: item.display_order || index
+              }));
+
+              const { error: scopeError } = await supabase
+                .from('rfp_service_scope_items')
+                .insert(scopeItems);
+
+              if (scopeError) {
+                console.error('[useRFP] Error inserting scope items:', scopeError);
+              }
             }
           }
         }
 
-        // Save fee items
+        // Save fee items (only if not already saved)
         const allFeeItems = [
           ...(typeData.feeItems || []).map(item => ({ ...item, is_optional: false })),
           ...(typeData.optionalFeeItems || []).map(item => ({ ...item, is_optional: true }))
@@ -283,32 +289,41 @@ export const useRFP = () => {
 
         if (allFeeItems.length > 0) {
           for (const inviteId of inviteIds) {
-            const feeItemsForInvite = allFeeItems.map((item, index) => ({
-              rfp_invite_id: inviteId,
-              item_number: item.item_number || index + 1,
-              description: item.description,
-              unit: item.unit,
-              quantity: item.quantity || 1,
-              unit_price: item.unit_price || null,
-              charge_type: item.charge_type,
-              is_optional: item.is_optional,
-              display_order: item.display_order || index
-            }));
-
-            const { error: feeError } = await supabase
+            // Check if items already exist
+            const { data: existingItems } = await supabase
               .from('rfp_request_fee_items')
-              .insert(feeItemsForInvite);
+              .select('id')
+              .eq('rfp_invite_id', inviteId)
+              .limit(1);
 
-            if (feeError) {
-              console.error('[useRFP] Error inserting fee items:', feeError);
+            if (!existingItems || existingItems.length === 0) {
+              const feeItemsForInvite = allFeeItems.map((item, index) => ({
+                rfp_invite_id: inviteId,
+                item_number: item.item_number || index + 1,
+                description: item.description,
+                unit: item.unit,
+                quantity: item.quantity || 1,
+                unit_price: item.unit_price || null,
+                charge_type: item.charge_type,
+                is_optional: item.is_optional,
+                display_order: item.display_order || index
+              }));
+
+              const { error: feeError } = await supabase
+                .from('rfp_request_fee_items')
+                .insert(feeItemsForInvite);
+
+              if (feeError) {
+                console.error('[useRFP] Error inserting fee items:', feeError);
+              }
             }
           }
         }
       }
 
-      console.log('[useRFP] Finished saving advisor type data');
+      console.log('[useRFP] Finished merging advisor type data');
     } catch (error) {
-      console.error('[useRFP] Error saving advisor type data:', error);
+      console.error('[useRFP] Error merging advisor type data:', error);
     }
   };
 
