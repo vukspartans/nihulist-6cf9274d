@@ -1049,7 +1049,7 @@ const AdvisorDashboard = () => {
                             צפייה בהצעה שהוגשה
                           </Button>
                         )}
-                        {canSubmitProposal(invite.status, invite.deadline_at) && (
+                        {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.rfps?.projects?.id) && (
                           <Button 
                             variant="outline"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
