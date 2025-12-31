@@ -60,21 +60,39 @@ serve(async (req) => {
         continue;
       }
 
+      // Check for existing active invite for this advisor + RFP combination
+      const { data: existingInvite } = await supabase
+        .from("rfp_invites")
+        .select("id, status")
+        .eq("rfp_id", rfp_id)
+        .eq("advisor_id", advisor_id)
+        .not("status", "in", '("declined","expired")')
+        .maybeSingle();
+
+      if (existingInvite) {
+        console.log(`[send-rfp-with-deadline] Skipping duplicate invite for advisor ${advisor_id} - existing invite ${existingInvite.id} with status ${existingInvite.status}`);
+        results.push({
+          advisor_id,
+          invite_id: existingInvite.id,
+          status: 'already_exists',
+          deadline_at
+        });
+        continue;
+      }
+
       // Generate secure token
       const submit_token = crypto.randomUUID();
       
-      // Get or create RFP invite
+      // Create new RFP invite (no upsert - we've already checked for duplicates)
       const { data: invite, error: inviteError } = await supabase
         .from("rfp_invites")
-        .upsert({
+        .insert({
           rfp_id,
           advisor_id,
           email: advisor.profiles.email,
           submit_token,
           deadline_at: deadline_at.toISOString(),
           status: 'sent'
-        }, {
-          onConflict: 'rfp_id,advisor_id'
         })
         .select()
         .single();

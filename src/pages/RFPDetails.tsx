@@ -699,11 +699,13 @@ const RFPDetails = () => {
                   </div>
                 )}
                 <div>
-                  <Label className="text-xs text-muted-foreground">תאריך קבלה</Label>
+                  <Label className="text-xs text-muted-foreground">תאריך שליחה</Label>
                   <p className="text-sm font-medium mt-1">
-                    {inviteDetails?.created_at 
-                      ? new Date(inviteDetails.created_at).toLocaleDateString('he-IL')
-                      : '—'
+                    {rfpDetails?.sent_at 
+                      ? new Date(rfpDetails.sent_at).toLocaleDateString('he-IL')
+                      : inviteDetails?.created_at 
+                        ? new Date(inviteDetails.created_at).toLocaleDateString('he-IL')
+                        : '—'
                     }
                   </p>
                 </div>
