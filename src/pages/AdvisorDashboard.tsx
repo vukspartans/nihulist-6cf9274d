@@ -583,7 +583,7 @@ const AdvisorDashboard = () => {
 
   const unsubmittedInvites = rfpInvites.filter(invite => 
     ['sent', 'opened', 'in_progress', 'pending'].includes(invite.status) && 
-    !proposalMap.has(invite.rfps?.projects?.id)
+    !proposalMap.has(invite.id)
   );
 
   // Filter proposals by type
@@ -605,7 +605,7 @@ const AdvisorDashboard = () => {
     );
   } else if (filterType === 'unsubmitted') {
     displayedInvites = displayedInvites.filter(invite => 
-      !proposalMap.has(invite.rfps?.projects?.id)
+      !proposalMap.has(invite.id)
     );
   }
 
@@ -952,7 +952,7 @@ const AdvisorDashboard = () => {
                         </div>
                         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
                           {(() => {
-                            const proposal = proposalMap.get(invite.rfps?.projects?.id);
+                            const proposal = proposalMap.get(invite.id);
                             if (proposal) {
                               return (
                                 <ProposalStatusBadge 
