@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useRFPDirectSave } from '@/hooks/useRFPDirectSave';
+import { useRFPDraft } from '@/hooks/useRFPDraft';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +37,6 @@ interface RequestEditorDialogProps {
   projectName: string;
   projectId: string;
   rfpId?: string;
-  advisorId?: string | null;
   recipientCount: number;
   initialData?: Partial<AdvisorTypeRequestData>;
   onSave: (data: AdvisorTypeRequestData) => void;
@@ -80,14 +79,13 @@ export const RequestEditorDialog = ({
   projectName,
   projectId,
   rfpId,
-  advisorId = null,
   recipientCount,
   initialData,
   onSave,
   hasBeenReviewed = false
 }: RequestEditorDialogProps) => {
   const { toast } = useToast();
-  const { saveDirectly, loadSavedData, saving } = useRFPDirectSave(projectId);
+  const { saveDraft, loadDraft, saving } = useRFPDraft(projectId);
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [canAutoClose, setCanAutoClose] = useState(true);
@@ -174,15 +172,15 @@ export const RequestEditorDialog = ({
     ...initialData
   });
 
-  // Initialize form data and load saved data when dialog opens
+  // Initialize form data and load draft when dialog opens
   useEffect(() => {
-    const loadExistingData = async () => {
+    const loadExistingDraft = async () => {
       if (isOpen && !draftLoaded) {
-        const savedData = await loadSavedData(advisorType);
-        if (savedData) {
+        const draft = await loadDraft(advisorType);
+        if (draft) {
           setFormData(prev => ({
             ...defaultData,
-            ...savedData,
+            ...draft,
             // Preserve initialData overrides if they exist
             ...initialData
           }));
@@ -198,11 +196,11 @@ export const RequestEditorDialog = ({
     };
 
     if (isOpen) {
-      loadExistingData();
+      loadExistingDraft();
     } else {
       setDraftLoaded(false);
     }
-  }, [isOpen, advisorType, loadSavedData, draftLoaded]);
+  }, [isOpen, advisorType, loadDraft, draftLoaded]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -636,8 +634,8 @@ export const RequestEditorDialog = ({
       lastEditedAt: new Date()
     };
 
-    // Save directly to rfp_invites and related tables (no drafts table)
-    const saved = await saveDirectly(advisorType, advisorId, dataToSave);
+    // Save to database first
+    const saved = await saveDraft(advisorType, dataToSave);
     
     if (saved) {
       // Then update parent state
@@ -645,7 +643,7 @@ export const RequestEditorDialog = ({
       setIsOpen(false);
       toast({
         title: "נשמר בהצלחה",
-        description: `הבקשה עבור "${advisorType}" נשמרה`,
+        description: `הבקשה עבור "${advisorType}" נשמרה במאגר הנתונים`,
       });
     }
   };
