@@ -577,7 +577,9 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                       <Card>
                         <CardContent className="p-3">
                           <SectionHeader icon={Package}>פריטים חובה</SectionHeader>
-                          <div className="mt-2 overflow-x-auto">
+                          
+                          {/* Desktop Table */}
+                          <div className="hidden md:block mt-2" dir="rtl">
                             <Table>
                               <TableHeader>
                                 <TableRow>
@@ -591,7 +593,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                               <TableBody>
                                 {mandatoryItems.map((item, idx) => (
                                   <TableRow key={idx}>
-                                    <TableCell className="text-xs">
+                                    <TableCell className="text-xs text-right">
                                       {item.description}
                                       {item.comment && (
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
@@ -607,10 +609,35 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                               <TableFooter>
                                 <TableRow>
                                   <TableCell colSpan={4} className="text-xs font-bold text-right">סה״כ פריטי חובה</TableCell>
-                                  <TableCell className="text-xs font-bold">{formatCurrency(mandatoryTotal)}</TableCell>
+                                  <TableCell className="text-xs font-bold text-right">{formatCurrency(mandatoryTotal)}</TableCell>
                                 </TableRow>
                               </TableFooter>
                             </Table>
+                          </div>
+
+                          {/* Mobile Cards */}
+                          <div className="md:hidden mt-2 space-y-2">
+                            {mandatoryItems.map((item, idx) => (
+                              <div key={idx} className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                                <p className="text-xs font-medium text-right">{item.description}</p>
+                                <div className="flex gap-3 text-xs text-muted-foreground justify-end flex-wrap">
+                                  <span>{getFeeUnitLabel(item.unit || '') || '-'}</span>
+                                  <span>כמות: {item.quantity || 1}</span>
+                                  <span>מחיר: {formatCurrency(item.unit_price || 0)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-1 border-t">
+                                  <span className="text-xs font-bold">{formatCurrency(getItemTotal(item))}</span>
+                                  <span className="text-[10px] text-muted-foreground">סה״כ</span>
+                                </div>
+                                {item.comment && (
+                                  <p className="text-[10px] text-muted-foreground text-right">{item.comment}</p>
+                                )}
+                              </div>
+                            ))}
+                            <div className="flex justify-between items-center p-2 bg-muted rounded-lg">
+                              <span className="text-xs font-bold">{formatCurrency(mandatoryTotal)}</span>
+                              <span className="text-xs font-semibold">סה״כ פריטי חובה</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -621,7 +648,9 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                       <Card>
                         <CardContent className="p-3">
                           <SectionHeader icon={Plus}>פריטים אופציונליים</SectionHeader>
-                          <div className="mt-2 overflow-x-auto">
+                          
+                          {/* Desktop Table */}
+                          <div className="hidden md:block mt-2" dir="rtl">
                             <Table>
                               <TableHeader>
                                 <TableRow>
@@ -635,7 +664,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                               <TableBody>
                                 {optionalItems.map((item, idx) => (
                                   <TableRow key={idx}>
-                                    <TableCell className="text-xs">
+                                    <TableCell className="text-xs text-right">
                                       {item.description}
                                       {item.comment && (
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
@@ -651,10 +680,35 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                               <TableFooter>
                                 <TableRow>
                                   <TableCell colSpan={4} className="text-xs font-bold text-right">סה״כ אופציונלי</TableCell>
-                                  <TableCell className="text-xs font-bold">{formatCurrency(optionalTotal)}</TableCell>
+                                  <TableCell className="text-xs font-bold text-right">{formatCurrency(optionalTotal)}</TableCell>
                                 </TableRow>
                               </TableFooter>
                             </Table>
+                          </div>
+
+                          {/* Mobile Cards */}
+                          <div className="md:hidden mt-2 space-y-2">
+                            {optionalItems.map((item, idx) => (
+                              <div key={idx} className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                                <p className="text-xs font-medium text-right">{item.description}</p>
+                                <div className="flex gap-3 text-xs text-muted-foreground justify-end flex-wrap">
+                                  <span>{getFeeUnitLabel(item.unit || '') || '-'}</span>
+                                  <span>כמות: {item.quantity || 1}</span>
+                                  <span>מחיר: {formatCurrency(item.unit_price || 0)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-1 border-t">
+                                  <span className="text-xs font-bold">{formatCurrency(getItemTotal(item))}</span>
+                                  <span className="text-[10px] text-muted-foreground">סה״כ</span>
+                                </div>
+                                {item.comment && (
+                                  <p className="text-[10px] text-muted-foreground text-right">{item.comment}</p>
+                                )}
+                              </div>
+                            ))}
+                            <div className="flex justify-between items-center p-2 bg-muted rounded-lg">
+                              <span className="text-xs font-bold">{formatCurrency(optionalTotal)}</span>
+                              <span className="text-xs font-semibold">סה״כ אופציונלי</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
