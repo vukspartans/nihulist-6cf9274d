@@ -1309,34 +1309,32 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-primary shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Edit3 className="h-5 w-5" />
-                    חתימה דיגיטלית
-                  </CardTitle>
-                  <CardDescription>חתמו בתיבה למטה לאישור ההצעה</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={
-                    <div className="space-y-3">
-                      <Skeleton className="h-48 w-full rounded-md" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-9 w-24" />
-                        <Skeleton className="h-9 w-24" />
-                      </div>
+              <Suspense fallback={
+                <Card className="border-2 border-primary shadow-lg">
+                  <CardHeader>
+                    <CardTitle>חתימה דיגיטלית</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Skeleton className="h-48 w-full rounded-md" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-24" />
+                      <Skeleton className="h-9 w-24" />
                     </div>
-                  }>
-                    <SignatureCanvas onSign={setSignature} />
-                  </Suspense>
-                  {signature && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm mt-2">
-                      <CheckCircle className="h-4 w-4" />
-                      חתימה נקלטה בהצלחה
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              }>
+                <SignatureCanvas 
+                  onSign={setSignature} 
+                  className="border-2 border-primary shadow-lg"
+                />
+              </Suspense>
+              
+              {signature && (
+                <div className="flex items-center gap-2 text-green-600 text-sm p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  חתימה נקלטה בהצלחה
+                </div>
+              )}
 
               <div className="flex justify-between items-center">
                 <Button type="button" variant="outline" onClick={() => setActiveTab('files')} className="gap-2">
