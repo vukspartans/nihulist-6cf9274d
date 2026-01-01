@@ -42,7 +42,7 @@ interface ProposalApprovalDialogProps {
     signature_blob?: string;
     submitted_at: string;
     consultant_request_notes?: string;
-    consultant_request_files?: Array<{ name: string; path: string; size?: number }>;
+    consultant_request_files?: Array<{ name: string; path?: string; url?: string; size?: number }>;
     services_notes?: string;
   };
   onSuccess?: () => void;
