@@ -13,6 +13,7 @@ import { NegotiationDialog } from '@/components/negotiation/NegotiationDialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
+import { getFeeUnitLabel } from '@/constants/rfpUnits';
 import JSZip from 'jszip';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -76,6 +77,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [fileSummaries, setFileSummaries] = useState<Record<string, string>>(proposal.file_summaries || {});
   const [generatingFileSummary, setGeneratingFileSummary] = useState<string | null>(null);
+  const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
@@ -87,11 +89,17 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const consultantNotes = proposal.consultant_request_notes || '';
   const consultantFiles = proposal.consultant_request_files || [];
 
+  // Helper function to calculate item total
+  const getItemTotal = (item: FeeLineItem): number => {
+    if (item.total !== undefined && item.total !== null && item.total > 0) return item.total;
+    return (item.unit_price || 0) * (item.quantity || 1);
+  };
+
   // Separate mandatory and optional fee items
   const mandatoryFees = feeLineItems.filter(item => !item.is_optional);
   const optionalFees = feeLineItems.filter(item => item.is_optional);
-  const mandatoryTotal = mandatoryFees.reduce((sum, item) => sum + (item.total || 0), 0);
-  const optionalTotal = optionalFees.reduce((sum, item) => sum + (item.total || 0), 0);
+  const mandatoryTotal = mandatoryFees.reduce((sum, item) => sum + getItemTotal(item), 0);
+  const optionalTotal = optionalFees.reduce((sum, item) => sum + getItemTotal(item), 0);
 
   // Calculate completion date
   const submissionDate = new Date(proposal.submitted_at);
@@ -106,6 +114,32 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     if (proposal.ai_analysis) setAiAnalysis(proposal.ai_analysis);
     if (proposal.file_summaries) setFileSummaries(proposal.file_summaries);
   }, [open, proposal]);
+
+  // Fetch service names when dialog opens with selected services
+  useEffect(() => {
+    const fetchServiceNames = async () => {
+      if (!open || selectedServices.length === 0) return;
+      
+      const serviceIds = selectedServices
+        .map(s => typeof s === 'string' ? s : s.id)
+        .filter(id => typeof id === 'string' && id.length === 36);
+      
+      if (serviceIds.length === 0) return;
+      
+      const { data } = await supabase
+        .from('rfp_service_scope_items')
+        .select('id, task_name')
+        .in('id', serviceIds);
+      
+      if (data) {
+        const names: Record<string, string> = {};
+        data.forEach(item => { names[item.id] = item.task_name; });
+        setServiceNames(names);
+      }
+    };
+    
+    fetchServiceNames();
+  }, [open, selectedServices]);
 
   const markProposalAsSeen = async () => {
     try { await supabase.from('proposals').update({ seen_by_entrepreneur_at: new Date().toISOString() }).eq('id', proposal.id); } catch {}
@@ -240,13 +274,14 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     </h4>
   );
 
-  // Fee table component
+  // Fee table component with RTL support and proper calculations
   const FeeTable = ({ items, title, showOptionalBadge = false }: { items: FeeLineItem[]; title: string; showOptionalBadge?: boolean }) => (
     <div className="space-y-1.5">
       <SectionHeader icon={DollarSign} className="text-xs">{title}</SectionHeader>
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto" dir="rtl">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr className="text-muted-foreground border-b">
@@ -269,10 +304,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                         <p className="text-muted-foreground text-[10px] mt-0.5">{item.comment}</p>
                       )}
                     </td>
-                    <td className="p-2 text-center text-muted-foreground">{item.unit || '-'}</td>
+                    <td className="p-2 text-center text-muted-foreground">{getFeeUnitLabel(item.unit || '') || '-'}</td>
                     <td className="p-2 text-center">{item.quantity || 1}</td>
                     <td className="p-2 text-center">{item.unit_price ? formatCurrency(item.unit_price) : '-'}</td>
-                    <td className="p-2 text-left font-medium">{item.total ? formatCurrency(item.total) : '-'}</td>
+                    <td className="p-2 text-left font-medium">{formatCurrency(getItemTotal(item))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -280,11 +315,49 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 <tr>
                   <td colSpan={4} className="p-2 text-right font-semibold">סה״כ</td>
                   <td className="p-2 text-left font-bold text-primary">
-                    {formatCurrency(items.reduce((sum, item) => sum + (item.total || 0), 0))}
+                    {formatCurrency(items.reduce((sum, item) => sum + getItemTotal(item), 0))}
                   </td>
                 </tr>
               </tfoot>
             </table>
+          </div>
+          {/* Mobile card view */}
+          <div className="md:hidden p-2 space-y-2" dir="rtl">
+            {items.map((item, i) => (
+              <div key={i} className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-medium">{item.description || item.name}</span>
+                  {showOptionalBadge && item.is_optional && (
+                    <Badge variant="outline" className="text-[10px] flex-shrink-0">אופציונלי</Badge>
+                  )}
+                </div>
+                {item.comment && (
+                  <p className="text-muted-foreground text-[10px]">{item.comment}</p>
+                )}
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div className="text-center">
+                    <p className="text-muted-foreground">יחידה</p>
+                    <p className="font-medium">{getFeeUnitLabel(item.unit || '') || '-'}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-muted-foreground">כמות</p>
+                    <p className="font-medium">{item.quantity || 1}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-muted-foreground">מחיר יח׳</p>
+                    <p className="font-medium">{item.unit_price ? formatCurrency(item.unit_price) : '-'}</p>
+                  </div>
+                </div>
+                <div className="text-left pt-1 border-t">
+                  <span className="text-xs text-muted-foreground">סה״כ: </span>
+                  <span className="font-bold text-primary">{formatCurrency(getItemTotal(item))}</span>
+                </div>
+              </div>
+            ))}
+            <div className="border-t pt-2 flex justify-between items-center">
+              <span className="font-bold text-primary">{formatCurrency(items.reduce((sum, item) => sum + getItemTotal(item), 0))}</span>
+              <span className="font-semibold text-sm">סה״כ</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -465,12 +538,20 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     <Card>
                       <CardContent className="p-3">
                         <ul className="space-y-1.5 text-right">
-                          {selectedServices.map((service, i) => (
-                            <li key={i} className="flex items-center gap-2 justify-end text-sm">
-                              <span>{typeof service === 'string' ? service : service.name || service.task_name}</span>
-                              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            </li>
-                          ))}
+                          {selectedServices.map((service, i) => {
+                            // Resolve service name from UUID or use provided name
+                            const serviceId = typeof service === 'string' ? service : service.id;
+                            const displayName = typeof service === 'string' 
+                              ? (serviceNames[service] || service) 
+                              : (service.name || service.task_name || serviceNames[serviceId] || serviceId);
+                            
+                            return (
+                              <li key={i} className="flex items-center gap-2 justify-end text-sm">
+                                <span>{displayName}</span>
+                                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                              </li>
+                            );
+                          })}
                         </ul>
                       </CardContent>
                     </Card>
@@ -541,7 +622,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                     <SectionHeader icon={CreditCard} className="text-xs text-green-600">אבני דרך לתשלום</SectionHeader>
                     <Card>
                       <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        {/* Desktop table view */}
+                        <div className="hidden md:block overflow-x-auto" dir="rtl">
                           <table className="w-full text-xs">
                             <thead className="bg-muted/50">
                               <tr className="text-muted-foreground border-b">
@@ -553,7 +635,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                             <tbody>
                               {milestoneAdjustments.map((milestone, i) => {
                                 const percentage = milestone.consultant_percentage ?? milestone.entrepreneur_percentage ?? 0;
-                                const amount = (proposal.price * percentage) / 100;
+                                const amount = (mandatoryTotal * percentage) / 100;
                                 return (
                                   <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
                                     <td className="p-2 text-right">{milestone.description}</td>
@@ -564,6 +646,22 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                               })}
                             </tbody>
                           </table>
+                        </div>
+                        {/* Mobile card view */}
+                        <div className="md:hidden p-2 space-y-2" dir="rtl">
+                          {milestoneAdjustments.map((milestone, i) => {
+                            const percentage = milestone.consultant_percentage ?? milestone.entrepreneur_percentage ?? 0;
+                            const amount = (mandatoryTotal * percentage) / 100;
+                            return (
+                              <div key={i} className="border rounded-lg p-3 flex justify-between items-center bg-muted/20">
+                                <div className="text-left">
+                                  <p className="font-medium text-xs">{percentage}%</p>
+                                  <p className="text-[10px] text-muted-foreground">{formatCurrency(amount)}</p>
+                                </div>
+                                <span className="text-xs font-medium">{milestone.description}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </CardContent>
                     </Card>
@@ -580,12 +678,6 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 <div className="space-y-1.5">
                   <SectionHeader icon={FileCheck} className="text-xs text-blue-600">הנחות יסוד</SectionHeader>
                   <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card>
-                </div>
-
-                {/* Exclusions */}
-                <div className="space-y-1.5">
-                  <SectionHeader icon={Scale} className="text-xs text-purple-600">החרגות</SectionHeader>
-                  <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.exclusions || <span className="text-muted-foreground">לא צוינו החרגות</span>}</p></CardContent></Card>
                 </div>
 
                 {/* Validity */}
