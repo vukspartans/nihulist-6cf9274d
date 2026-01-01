@@ -530,21 +530,20 @@ const SubmitProposal = () => {
         return;
       }
 
-      // Check for existing proposal for this project + advisor (prevents duplicate submissions)
+      // Check for existing proposal for this specific invite (allows multiple proposals per project)
       const { data: proposalData } = await supabase
         .from('proposals')
         .select('id, status')
-        .eq('project_id', inviteDetails.rfps.projects.id)
-        .eq('advisor_id', advisor.id)
+        .eq('rfp_invite_id', inviteDetails.id)
         .not('status', 'eq', 'withdrawn')
         .maybeSingle();
 
       if (proposalData) {
-        console.log('[SubmitProposal] Existing proposal found, blocking submission:', proposalData);
+        console.log('[SubmitProposal] Existing proposal found for this invite, blocking submission:', proposalData);
         setExistingProposal(proposalData);
         toast({
           title: "כבר הגשת הצעה",
-          description: "כבר הגשת הצעה לפרויקט זה. לא ניתן להגיש הצעה נוספת.",
+          description: "כבר הגשת הצעה להזמנה זו. לא ניתן להגיש הצעה נוספת.",
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
@@ -698,20 +697,19 @@ const SubmitProposal = () => {
   const handleFinalSubmit = async () => {
     setShowConfirmDialog(false);
     
-    // Double-check: verify no existing proposal before submitting
-    if (rfpDetails?.projects.id && advisorProfile?.id) {
+    // Double-check: verify no existing proposal for this specific invite before submitting
+    if (currentInviteId) {
       const { data: existingCheck } = await supabase
         .from('proposals')
         .select('id, status')
-        .eq('project_id', rfpDetails.projects.id)
-        .eq('advisor_id', advisorProfile.id)
+        .eq('rfp_invite_id', currentInviteId)
         .not('status', 'eq', 'withdrawn')
         .maybeSingle();
 
       if (existingCheck) {
         toast({
           title: "כבר הגשת הצעה",
-          description: "כבר הגשת הצעה לפרויקט זה. לא ניתן להגיש הצעה נוספת.",
+          description: "כבר הגשת הצעה להזמנה זו. לא ניתן להגיש הצעה נוספת.",
           variant: "destructive",
         });
         navigate(getDashboardRouteForRole(primaryRole));
