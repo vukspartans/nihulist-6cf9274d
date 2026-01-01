@@ -914,67 +914,78 @@ const RFPDetails = () => {
 
                 {/* Tab 2: פירוט שירותים (Service Details) */}
                 <TabsContent value="services" className="space-y-4 mt-4">
-                  {/* Free text mode */}
-                  {inviteDetails?.service_details_mode === 'free_text' && inviteDetails?.service_details_text ? (
-                    <div>
-                      <Label className="font-medium text-sm">תיאור השירותים</Label>
-                      <div className="mt-2 p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm whitespace-pre-wrap">
-                          {inviteDetails.service_details_text}
-                        </p>
-                      </div>
-                    </div>
-                  ) : inviteDetails?.service_details_mode === 'file' && inviteDetails?.service_details_file ? (
-                    <div>
-                      <Label className="font-medium text-sm">קובץ פירוט שירותים</Label>
-                      <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg mt-2">
-                        <FileText className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span className="flex-1 text-sm truncate">{inviteDetails.service_details_file.name}</span>
-                        <Badge variant="outline" className="text-xs hidden sm:flex">
-                          {(inviteDetails.service_details_file.size / 1024 / 1024).toFixed(2)} MB
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadFile(inviteDetails.service_details_file!)}
-                          disabled={fileLoading === inviteDetails.service_details_file.name}
-                          className="gap-1.5 h-8 text-xs"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">{fileLoading === inviteDetails.service_details_file.name ? 'מוריד...' : 'הורד'}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ) : inviteDetails?.service_details_mode === 'checklist' && scopeItems.length > 0 ? (
-                    <div>
-                      <Label className="font-medium text-sm">רשימת שירותים</Label>
-                      <div className="space-y-1.5 mt-2">
-                        {scopeItems.map((item) => (
-                          <div 
-                            key={item.id} 
-                            className={`flex items-center gap-2 p-2.5 rounded-lg ${
-                              item.is_included ? 'bg-green-50 dark:bg-green-950/20' : 'bg-muted'
-                            }`}
-                          >
-                            {item.is_included ? (
-                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            )}
-                            <span className={`flex-1 text-sm ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
-                              {item.task_name}
-                            </span>
-                            <div className="flex gap-1.5 flex-shrink-0">
-                              {item.is_optional && (
-                                <Badge variant="outline" className="text-xs">אופציונלי</Badge>
-                              )}
-                              {item.fee_category && item.fee_category !== 'כללי' && (
-                                <Badge variant="secondary" className="text-xs hidden sm:flex">{item.fee_category}</Badge>
-                              )}
-                            </div>
+                  {/* Show all available content, not just the selected mode */}
+                  {(inviteDetails?.service_details_text || inviteDetails?.service_details_file || scopeItems.length > 0) ? (
+                    <div className="space-y-6">
+                      {/* Free text section - show if text exists */}
+                      {inviteDetails?.service_details_text && (
+                        <div>
+                          <Label className="font-medium text-sm">תיאור השירותים</Label>
+                          <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-sm whitespace-pre-wrap">
+                              {inviteDetails.service_details_text}
+                            </p>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
+
+                      {/* File section - show if file exists */}
+                      {inviteDetails?.service_details_file && (
+                        <div>
+                          <Label className="font-medium text-sm">קובץ פירוט שירותים</Label>
+                          <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg mt-2">
+                            <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span className="flex-1 text-sm truncate">{inviteDetails.service_details_file.name}</span>
+                            <Badge variant="outline" className="text-xs hidden sm:flex">
+                              {(inviteDetails.service_details_file.size / 1024 / 1024).toFixed(2)} MB
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadFile(inviteDetails.service_details_file!)}
+                              disabled={fileLoading === inviteDetails.service_details_file.name}
+                              className="gap-1.5 h-8 text-xs"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">{fileLoading === inviteDetails.service_details_file.name ? 'מוריד...' : 'הורד'}</span>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Checklist section - show if items exist */}
+                      {scopeItems.length > 0 && (
+                        <div>
+                          <Label className="font-medium text-sm">רשימת שירותים</Label>
+                          <div className="space-y-1.5 mt-2">
+                            {scopeItems.map((item) => (
+                              <div 
+                                key={item.id} 
+                                className={`flex items-center gap-2 p-2.5 rounded-lg ${
+                                  item.is_included ? 'bg-green-50 dark:bg-green-950/20' : 'bg-muted'
+                                }`}
+                              >
+                                {item.is_included ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                                <span className={`flex-1 text-sm ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
+                                  {item.task_name}
+                                </span>
+                                <div className="flex gap-1.5 flex-shrink-0">
+                                  {item.is_optional && (
+                                    <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                                  )}
+                                  {item.fee_category && item.fee_category !== 'כללי' && (
+                                    <Badge variant="secondary" className="text-xs hidden sm:flex">{item.fee_category}</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 text-muted-foreground">
