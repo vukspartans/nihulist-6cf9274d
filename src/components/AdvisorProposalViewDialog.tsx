@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNegotiation } from '@/hooks/useNegotiation';
+import { getFeeUnitLabel } from '@/constants/rfpUnits';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -115,7 +116,35 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [negotiationSessionId, setNegotiationSessionId] = useState<string | null>(null);
+  const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
   const { fetchNegotiationByProposal } = useNegotiation();
+
+  // Helper to calculate item total dynamically (fallback when total field is missing)
+  const getItemTotal = (item: FeeLineItem): number => {
+    if (item.total !== undefined && item.total !== null && item.total > 0) return item.total;
+    return (item.unit_price || 0) * (item.quantity || 1);
+  };
+
+  // Fetch service names from rfp_service_scope_items to resolve UUIDs
+  const fetchServiceNames = async (serviceIds: string[]) => {
+    if (serviceIds.length === 0) return;
+    try {
+      const { data, error } = await supabase
+        .from('rfp_service_scope_items')
+        .select('id, task_name')
+        .in('id', serviceIds);
+      
+      if (data && !error) {
+        const names: Record<string, string> = {};
+        data.forEach(item => {
+          names[item.id] = item.task_name;
+        });
+        setServiceNames(names);
+      }
+    } catch (err) {
+      console.error('Error fetching service names:', err);
+    }
+  };
 
   useEffect(() => {
     if (open && proposalId) {
@@ -160,6 +189,14 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
         services_notes: data.services_notes as string,
       };
       setProposal(proposalData);
+
+      // Fetch service names if there are selected services (which are UUIDs)
+      const serviceIds = (proposalData.selected_services || []).filter(
+        (s: any) => typeof s === 'string' && s.match(/^[0-9a-f-]{36}$/i)
+      );
+      if (serviceIds.length > 0) {
+        fetchServiceNames(serviceIds);
+      }
 
       // Combine all files for URL loading
       const allFiles = [
@@ -308,8 +345,8 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const feeLineItems = proposal?.fee_line_items || [];
   const mandatoryItems = feeLineItems.filter(item => !item.is_optional);
   const optionalItems = feeLineItems.filter(item => item.is_optional);
-  const mandatoryTotal = mandatoryItems.reduce((sum, item) => sum + (item.total || 0), 0);
-  const optionalTotal = optionalItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  const mandatoryTotal = mandatoryItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+  const optionalTotal = optionalItems.reduce((sum, item) => sum + getItemTotal(item), 0);
   const selectedServices = proposal?.selected_services || [];
   const milestoneAdjustments = proposal?.milestone_adjustments || [];
   
@@ -560,10 +597,10 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-xs">{item.quantity || 1}</TableCell>
-                                    <TableCell className="text-xs">{item.unit || '-'}</TableCell>
-                                    <TableCell className="text-xs">{formatCurrency(item.unit_price || 0)}</TableCell>
-                                    <TableCell className="text-xs font-medium">{formatCurrency(item.total || 0)}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.quantity || 1}</TableCell>
+                                    <TableCell className="text-xs text-right">{getFeeUnitLabel(item.unit || '') || '-'}</TableCell>
+                                    <TableCell className="text-xs text-right">{formatCurrency(item.unit_price || 0)}</TableCell>
+                                    <TableCell className="text-xs font-medium text-right">{formatCurrency(getItemTotal(item))}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -604,10 +641,10 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-xs">{item.quantity || 1}</TableCell>
-                                    <TableCell className="text-xs">{item.unit || '-'}</TableCell>
-                                    <TableCell className="text-xs">{formatCurrency(item.unit_price || 0)}</TableCell>
-                                    <TableCell className="text-xs font-medium">{formatCurrency(item.total || 0)}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.quantity || 1}</TableCell>
+                                    <TableCell className="text-xs text-right">{getFeeUnitLabel(item.unit || '') || '-'}</TableCell>
+                                    <TableCell className="text-xs text-right">{formatCurrency(item.unit_price || 0)}</TableCell>
+                                    <TableCell className="text-xs font-medium text-right">{formatCurrency(getItemTotal(item))}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -653,14 +690,19 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                         <CardContent className="p-3">
                           <SectionHeader icon={ClipboardList}>שירותים שנבחרו</SectionHeader>
                           <div className="mt-2 space-y-1">
-                            {selectedServices.map((service: any, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 p-1.5 bg-muted/50 rounded text-xs">
-                                <CheckCircle className="h-3 w-3 text-green-600 shrink-0" />
-                                <span className="text-right">
-                                  {typeof service === 'string' ? service : service.name || service.title || JSON.stringify(service)}
-                                </span>
-                              </div>
-                            ))}
+                            {selectedServices.map((service: any, idx: number) => {
+                              // Resolve UUID to service name
+                              const displayName = typeof service === 'string' 
+                                ? (serviceNames[service] || (service.match(/^[0-9a-f-]{36}$/i) ? 'טוען...' : service))
+                                : service.name || service.task_name || service.title || JSON.stringify(service);
+                              
+                              return (
+                                <div key={idx} className="flex items-center gap-2 p-1.5 bg-muted/50 rounded text-xs">
+                                  <CheckCircle className="h-3 w-3 text-green-600 shrink-0" />
+                                  <span className="text-right flex-1">{displayName}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </CardContent>
                       </Card>
