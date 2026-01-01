@@ -7,7 +7,7 @@ export interface FeeLineItem {
   quantity?: number;
   unit?: string;
   unitPrice?: number;
-  total: number;
+  total?: number;
   isOptional?: boolean;
 }
 
@@ -56,6 +56,12 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
   const completionDate = new Date(submissionDate);
   completionDate.setDate(completionDate.getDate() + data.timelineDays);
 
+  // Helper to calculate item total safely
+  const getItemTotal = (item: FeeLineItem): number => {
+    if (item.total !== undefined && item.total !== null && !isNaN(item.total)) return item.total;
+    return (item.unitPrice || 0) * (item.quantity || 1);
+  };
+
   // Generate fee table rows
   let feeTableHtml = '';
   if (data.feeItems && data.feeItems.length > 0) {
@@ -69,7 +75,7 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'יחידה'}</td>
         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(item.total)}</td>
+        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(getItemTotal(item))}</td>
       </tr>
     `).join('');
 
@@ -109,6 +115,12 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
   // Generate milestones table
   let milestonesHtml = '';
   if (data.milestones && data.milestones.length > 0) {
+    // Calculate mandatory total for milestone amounts
+    const mandatoryTotal = (data.feeItems || [])
+      .filter(item => !item.isOptional)
+      .reduce((sum, item) => sum + getItemTotal(item), 0);
+    const baseAmount = mandatoryTotal > 0 ? mandatoryTotal : data.price;
+    
     milestonesHtml = `
       <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">אבני דרך לתשלום</h3>
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -123,8 +135,8 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
           ${data.milestones.map(m => `
             <tr>
               <td style="padding: 8px; border: 1px solid #e5e7eb;">${m.description}</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${m.percentage}%</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${formatCurrency(data.price * m.percentage / 100)}</td>
+              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${m.percentage || 0}%</td>
+              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${formatCurrency(baseAmount * (m.percentage || 0) / 100)}</td>
             </tr>
           `).join('')}
         </tbody>

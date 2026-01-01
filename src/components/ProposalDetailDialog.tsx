@@ -86,6 +86,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     notes?: string;
     milestone_payments?: Array<{description: string; percentage: number; trigger?: string}>;
   } | null>(null);
+  const [consultantFileUrls, setConsultantFileUrls] = useState<Record<string, string>>({});
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
@@ -119,6 +120,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   useEffect(() => {
     if (open && files.length > 0) loadSignedUrls();
+    if (open && consultantFiles.length > 0) loadConsultantFileUrls();
     if (proposal.ai_analysis) setAiAnalysis(proposal.ai_analysis);
     if (proposal.file_summaries) setFileSummaries(proposal.file_summaries);
   }, [open, proposal]);
@@ -186,6 +188,42 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     setLoadingUrls(false);
   };
 
+  const loadConsultantFileUrls = async () => {
+    if (consultantFiles.length === 0) return;
+    const urls: Record<string, string> = {};
+    for (const file of consultantFiles) {
+      try {
+        const fileName = file.path?.split('/').pop() || file.name;
+        const filePath = `${proposal.id}/request-response/${fileName}`;
+        const { data } = await supabase.storage.from('proposal-files').createSignedUrl(filePath, 3600);
+        if (data?.signedUrl) urls[file.name] = data.signedUrl;
+      } catch {}
+    }
+    setConsultantFileUrls(urls);
+  };
+
+  const handleDownloadConsultantFile = async (file: { name: string; path?: string }) => {
+    const url = consultantFileUrls[file.name];
+    if (!url) { 
+      toast({ title: "שגיאה", description: "לא ניתן להוריד את הקובץ", variant: "destructive" }); 
+      return; 
+    }
+    try {
+      const res = await fetch(url); 
+      const blob = await res.blob(); 
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a'); 
+      link.href = blobUrl; 
+      link.download = file.name;
+      document.body.appendChild(link); 
+      link.click(); 
+      document.body.removeChild(link); 
+      URL.revokeObjectURL(blobUrl);
+    } catch { 
+      toast({ title: "שגיאה", description: "לא ניתן להוריד את הקובץ", variant: "destructive" }); 
+    }
+  };
+
   const handleViewFile = async (file: UploadedFile) => {
     const url = fileUrls[file.name];
     if (!url) { toast({ title: "שגיאה", description: "לא ניתן לטעון את הקובץ", variant: "destructive" }); return; }
@@ -233,7 +271,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           quantity: item.quantity,
           unit: item.unit,
           unitPrice: item.unit_price,
-          total: item.total,
+          total: getItemTotal(item),
           isOptional: item.is_optional,
         })),
         milestones: milestoneAdjustments.map((m) => ({
@@ -295,9 +333,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   // RTL section header component for consistency
   const SectionHeader = ({ icon: Icon, children, className = "" }: { icon: any; children: React.ReactNode; className?: string }) => (
-    <h4 className={`flex items-center gap-2 font-semibold w-full justify-end text-right ${className}`}>
+    <h4 className={`flex items-center gap-2 font-semibold w-full justify-end text-right text-sm ${className}`}>
       {children}
-      <Icon className="w-4 h-4" />
+      <Icon className="w-4 h-4 text-primary" />
     </h4>
   );
 
@@ -474,9 +512,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
                 {/* Submitted For */}
                 {rfpContext && (rfpContext.advisor_type || rfpContext.request_title) && (
-                  <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                  <Card>
                     <CardContent className="p-3">
-                      <SectionHeader icon={Target} className="mb-1.5 text-xs text-blue-700 dark:text-blue-400">הגשה עבור</SectionHeader>
+                      <SectionHeader icon={Target} className="mb-1.5 text-xs">הגשה עבור</SectionHeader>
                       <div className="space-y-1 text-xs text-right">
                         {rfpContext.advisor_type && <p><span className="font-medium">סוג יועץ:</span> {rfpContext.advisor_type}</p>}
                         {rfpContext.request_title && <p><span className="font-medium">כותרת:</span> {rfpContext.request_title}</p>}
@@ -488,9 +526,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
                 {/* Consultant Response Section */}
                 {(consultantNotes || consultantFiles.length > 0) && (
-                  <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-800">
+                  <Card>
                     <CardContent className="p-3">
-                      <SectionHeader icon={MessageSquare} className="mb-2 text-xs text-orange-700 dark:text-orange-400">תגובת היועץ לבקשה</SectionHeader>
+                      <SectionHeader icon={MessageSquare} className="mb-2 text-xs">תגובת היועץ לבקשה</SectionHeader>
                       {consultantNotes && (
                         <p className="text-sm whitespace-pre-wrap text-right mb-2">{consultantNotes}</p>
                       )}
@@ -498,9 +536,24 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                         <div className="space-y-1.5">
                           <p className="text-xs text-muted-foreground text-right">קבצים שצורפו:</p>
                           {consultantFiles.map((file, i) => (
-                            <div key={i} className="flex items-center gap-2 justify-end text-sm bg-background p-2 rounded border">
-                              <span className="truncate max-w-[200px]">{file.name}</span>
-                              <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div key={i} className="flex items-center gap-2 justify-between text-sm bg-muted/30 p-2 rounded border" dir="rtl">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate">{file.name}</span>
+                              </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 flex-shrink-0" 
+                                    onClick={() => handleDownloadConsultantFile(file)}
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>הורדה</TooltipContent>
+                              </Tooltip>
                             </div>
                           ))}
                         </div>
@@ -509,10 +562,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   </Card>
                 )}
 
-                {/* Key Metrics - Removed Timeline and reduced to 2 cards */}
+                {/* Key Metrics */}
                 <div className="grid grid-cols-2 gap-2">
-                  <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-green-600" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
                 </div>
 
                 {/* Fee Rows Display */}
@@ -526,10 +579,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
                 {/* Totals Summary */}
                 {feeLineItems.length > 0 && (
-                  <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800">
+                  <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="p-3">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-green-700 dark:text-green-400">{formatCurrency(mandatoryTotal)}</span>
+                        <span className="font-bold text-primary">{formatCurrency(mandatoryTotal)}</span>
                         <span className="text-muted-foreground">סה״כ חובה:</span>
                       </div>
                       {optionalTotal > 0 && (
@@ -560,7 +613,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               <TabsContent value="services" className="p-4 space-y-3 m-0">
                 {/* Selected Services */}
                 <div className="space-y-1.5">
-                  <SectionHeader icon={ListChecks} className="text-xs text-blue-600">שירותים נבחרים</SectionHeader>
+                  <SectionHeader icon={ListChecks} className="text-xs">שירותים נבחרים</SectionHeader>
                   {selectedServices.length > 0 ? (
                     <Card>
                       <CardContent className="p-3">
@@ -575,7 +628,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                             return (
                               <li key={i} className="flex items-center gap-2 justify-end text-sm">
                                 <span>{displayName}</span>
-                                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
                               </li>
                             );
                           })}
@@ -697,7 +750,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
                 {/* Payment Terms Text */}
                 <div className="space-y-1.5">
-                  <SectionHeader icon={Banknote} className="text-xs text-green-600">תנאי תשלום</SectionHeader>
+                  <SectionHeader icon={Banknote} className="text-xs">תנאי תשלום</SectionHeader>
                   <Card>
                     <CardContent className="p-3 text-right space-y-2">
                       {entrepreneurPaymentTerms?.payment_term_type && (
@@ -736,7 +789,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
                 {/* Assumptions */}
                 <div className="space-y-1.5">
-                  <SectionHeader icon={FileCheck} className="text-xs text-blue-600">הנחות יסוד</SectionHeader>
+                  <SectionHeader icon={FileCheck} className="text-xs">הנחות יסוד</SectionHeader>
                   <Card><CardContent className="p-3 text-right"><p className="text-xs whitespace-pre-wrap">{conditions.assumptions || <span className="text-muted-foreground">לא צוינו הנחות יסוד</span>}</p></CardContent></Card>
                 </div>
 
