@@ -68,7 +68,7 @@ export const ProjectDetail = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState('proposals');
-
+  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
 
   // Check for edit mode and tab from URL params
   useEffect(() => {
@@ -340,8 +340,6 @@ export const ProjectDetail = () => {
     if (proposals.length === 0) return null;
     return Math.min(...proposals.map(p => p.timeline_days));
   };
-
-  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
 
   const handleCompareByType = (typeProposals: any[], vendorType: string) => {
     const submittedProposals = typeProposals.filter(
