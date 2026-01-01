@@ -520,12 +520,11 @@ const RFPDetails = () => {
         setFeeItems(feeData);
       }
 
-      // Check for existing proposal for this project + advisor
+      // Check for existing proposal for this specific invite (not project-wide)
       const { data: proposalData } = await supabase
         .from('proposals')
         .select('id, status')
-        .eq('project_id', invite.rfps.projects.id)
-        .eq('advisor_id', advisor.id)
+        .eq('rfp_invite_id', invite.id)
         .not('status', 'eq', 'withdrawn')
         .maybeSingle();
 
