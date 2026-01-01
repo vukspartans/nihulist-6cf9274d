@@ -729,7 +729,7 @@ const SubmitProposal = () => {
       conditions,
       uploadedFiles: files,
       signature,
-      declarationText: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה",
+      declarationText: "אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד וכי חתימתי מחייבת את היועץ/המשרד. ההצעה תקפה למשך 90 יום משליחת ההצעה.",
       
       // Phase 3.6: Structured fee data
       feeLineItems: hasFeeItems ? [
@@ -1303,7 +1303,7 @@ const SubmitProposal = () => {
                       onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)} 
                     />
                     <Label htmlFor="declaration" className="text-sm cursor-pointer">
-                      אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד ולהגיש הצעה מחייבת לפרויקט זה. ההצעה תקפה למשך 90 יום מהיום.
+                      אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד וכי חתימתי מחייבת את היועץ/המשרד. ההצעה תקפה למשך 90 יום משליחת ההצעה.
                     </Label>
                   </div>
                 </CardContent>
