@@ -187,7 +187,9 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                               <TableCell className="text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <Send className="h-3.5 w-3.5" />
-                                  {format(new Date(invite.createdAt), 'dd/MM/yyyy', { locale: he })}
+                                  {invite.createdAt 
+                                    ? format(new Date(invite.createdAt), 'dd/MM/yyyy', { locale: he })
+                                    : '-'}
                                 </div>
                               </TableCell>
                               <TableCell>
