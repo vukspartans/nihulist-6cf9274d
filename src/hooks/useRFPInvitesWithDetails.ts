@@ -12,6 +12,7 @@ export interface AdvisorInviteDetail {
   declineReason?: string;
   email: string;
   deadlineAt?: string;
+  createdAt: string;
 }
 
 export interface RFPWithInvites {
@@ -116,6 +117,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             declineReason: invite.decline_reason,
             email: invite.email,
             deadlineAt: invite.deadline_at,
+            createdAt: invite.created_at,
           };
         });
 
