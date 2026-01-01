@@ -58,7 +58,7 @@ interface ProposalDetailDialogProps {
     fee_line_items?: FeeLineItem[]; milestone_adjustments?: MilestoneAdjustment[];
     selected_services?: any[]; services_notes?: string;
     consultant_request_notes?: string;
-    consultant_request_files?: Array<{ name: string; path: string; size?: number }>;
+    consultant_request_files?: Array<{ name: string; path?: string; url?: string; size?: number }>;
     rfp_invite_id?: string;
   };
   projectId?: string;
@@ -193,8 +193,16 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     const urls: Record<string, string> = {};
     for (const file of consultantFiles) {
       try {
-        const fileName = file.path?.split('/').pop() || file.name;
-        const filePath = `${proposal.id}/request-response/${fileName}`;
+        // Use the stored url path directly if available (contains actual storage path)
+        let filePath: string;
+        if (file.url) {
+          // The url field contains the actual storage path - strip any bucket prefix if present
+          filePath = file.url.replace(/^.*\/proposal-files\//, '');
+        } else {
+          // Fallback: construct path from file info (for legacy data)
+          const fileName = file.path?.split('/').pop() || file.name;
+          filePath = `${proposal.id}/request-response/${fileName}`;
+        }
         const { data } = await supabase.storage.from('proposal-files').createSignedUrl(filePath, 3600);
         if (data?.signedUrl) urls[file.name] = data.signedUrl;
       } catch {}
