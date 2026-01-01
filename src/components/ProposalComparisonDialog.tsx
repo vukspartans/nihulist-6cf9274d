@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle, ChevronDown, ChevronUp, FileIcon, ExternalLink } from 'lucide-react';
 import { ProposalApprovalDialog } from './ProposalApprovalDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useProposalEvaluation } from '@/hooks/useProposalEvaluation';
@@ -16,6 +17,31 @@ import { VersionBadge, RejectProposalDialog, NegotiationDialog, BulkNegotiationD
 import { useNegotiation } from '@/hooks/useNegotiation';
 import { useLineItems } from '@/hooks/useLineItems';
 import { WhyRecommendedPanel } from './WhyRecommendedPanel';
+
+interface FeeLineItem {
+  item_id?: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  is_optional?: boolean;
+  comment?: string;
+  is_entrepreneur_defined?: boolean;
+}
+
+interface MilestoneAdjustment {
+  description: string;
+  consultant_percentage: number;
+  entrepreneur_percentage: number;
+  is_entrepreneur_defined?: boolean;
+}
+
+interface ProposalFile {
+  name: string;
+  url: string;
+  type?: string;
+  size?: number;
+}
 
 interface Proposal {
   id: string;
@@ -34,6 +60,13 @@ interface Proposal {
   current_version?: number;
   has_active_negotiation?: boolean;
   conditions_json?: any;
+  fee_line_items?: FeeLineItem[];
+  selected_services?: string[];
+  milestone_adjustments?: MilestoneAdjustment[];
+  consultant_request_notes?: string;
+  services_notes?: string;
+  files?: ProposalFile[];
+  scope_text?: string;
 }
 
 interface ProposalComparisonDialogProps {
@@ -64,6 +97,7 @@ export const ProposalComparisonDialog = ({
   const [evaluationProgress, setEvaluationProgress] = useState<number>(0);
   const [selectedProposalForWhy, setSelectedProposalForWhy] = useState<Proposal | null>(null);
   const [whyRecommendedOpen, setWhyRecommendedOpen] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // Negotiation state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -101,7 +135,7 @@ export const ProposalComparisonDialog = ({
         .from('projects')
         .select('name')
         .eq('id', projectId)
-        .single();
+        .maybeSingle();
       
       if (!error && data) {
         setProjectName(data.name || 'Project');
@@ -116,13 +150,64 @@ export const ProposalComparisonDialog = ({
     try {
       const { data, error } = await supabase
         .from('proposals')
-        .select('*, evaluation_score, evaluation_rank, evaluation_result, evaluation_status, current_version, has_active_negotiation, conditions_json')
+        .select(`
+          id,
+          project_id,
+          advisor_id,
+          supplier_name,
+          price,
+          timeline_days,
+          terms,
+          submitted_at,
+          status,
+          evaluation_score,
+          evaluation_rank,
+          evaluation_result,
+          evaluation_status,
+          current_version,
+          has_active_negotiation,
+          conditions_json,
+          fee_line_items,
+          selected_services,
+          milestone_adjustments,
+          consultant_request_notes,
+          services_notes,
+          files,
+          scope_text
+        `)
         .in('id', proposalIds);
 
       if (error) throw error;
       
+      // Map data to properly typed proposals
+      const mappedData: Proposal[] = (data || []).map(p => ({
+        id: p.id,
+        project_id: p.project_id,
+        advisor_id: p.advisor_id,
+        supplier_name: p.supplier_name,
+        price: p.price,
+        timeline_days: p.timeline_days,
+        terms: p.terms,
+        submitted_at: p.submitted_at,
+        status: p.status,
+        evaluation_score: p.evaluation_score,
+        evaluation_rank: p.evaluation_rank,
+        evaluation_result: p.evaluation_result,
+        evaluation_status: p.evaluation_status,
+        current_version: p.current_version,
+        has_active_negotiation: p.has_active_negotiation,
+        conditions_json: p.conditions_json,
+        fee_line_items: (p.fee_line_items as unknown as FeeLineItem[]) || [],
+        selected_services: (p.selected_services as unknown as string[]) || [],
+        milestone_adjustments: (p.milestone_adjustments as unknown as MilestoneAdjustment[]) || [],
+        consultant_request_notes: p.consultant_request_notes,
+        services_notes: p.services_notes,
+        files: (p.files as unknown as ProposalFile[]) || [],
+        scope_text: p.scope_text,
+      }));
+
       // Sort by evaluation rank if available, otherwise by price
-      const sorted = (data || []).sort((a, b) => {
+      const sorted = mappedData.sort((a, b) => {
         if (a.evaluation_rank && b.evaluation_rank) {
           return a.evaluation_rank - b.evaluation_rank;
         }
@@ -140,7 +225,6 @@ export const ProposalComparisonDialog = ({
   const handleEvaluate = async () => {
     setEvaluationProgress(0);
     
-    // Simulate progress (actual progress would come from streaming response in future)
     const progressInterval = setInterval(() => {
       setEvaluationProgress(prev => Math.min(prev + 10, 90));
     }, 500);
@@ -152,8 +236,7 @@ export const ProposalComparisonDialog = ({
       
       if (result) {
         setEvaluationResult(result);
-        await fetchProposals(); // Refresh to get updated evaluation data
-        // Set default selected proposal to rank #1 after refresh
+        await fetchProposals();
         setTimeout(() => {
           const topRanked = proposals.find(p => p.evaluation_rank === 1);
           if (topRanked) {
@@ -180,6 +263,18 @@ export const ProposalComparisonDialog = ({
     exportToPDF(proposals, projectName || 'Project');
   };
 
+  // Calculate totals for a proposal
+  const calculateTotals = (proposal: Proposal) => {
+    const items = proposal.fee_line_items || [];
+    const mandatory = items
+      .filter(item => !item.is_optional)
+      .reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0);
+    const optional = items
+      .filter(item => item.is_optional)
+      .reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0);
+    return { mandatory, optional, total: mandatory + optional };
+  };
+
   const sortedProposals = [...proposals].sort((a, b) => {
     if (sortBy === 'score' && a.evaluation_rank && b.evaluation_rank) {
       return a.evaluation_rank - b.evaluation_rank;
@@ -195,7 +290,6 @@ export const ProposalComparisonDialog = ({
 
   const bestPrice = proposals.length > 0 ? Math.min(...proposals.map(p => p.price)) : 0;
   const bestTimeline = proposals.length > 0 ? Math.min(...proposals.map(p => p.timeline_days)) : 0;
-  const avgPrice = proposals.length > 0 ? proposals.reduce((sum, p) => sum + p.price, 0) / proposals.length : 0;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
@@ -203,6 +297,32 @@ export const ProposalComparisonDialog = ({
       currency: 'ILS',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatUnit = (unit: string) => {
+    const units: Record<string, string> = {
+      'lump_sum': 'פאושל',
+      'hour': 'שעה',
+      'day': 'יום',
+      'month': 'חודש',
+      'sqm': 'מ"ר',
+      'unit': 'יחידה',
+      'visit': 'ביקור',
+      'percent': '%',
+    };
+    return units[unit] || unit;
+  };
+
+  const toggleRowExpand = (proposalId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(proposalId)) {
+        next.delete(proposalId);
+      } else {
+        next.add(proposalId);
+      }
+      return next;
+    });
   };
 
   const handleApprove = (proposal: Proposal) => {
@@ -257,16 +377,188 @@ export const ProposalComparisonDialog = ({
 
   const selectedProposals = proposals.filter(p => selectedProposalIds.has(p.id));
 
+  // Render expandable fee items section
+  const renderFeeItemsSection = (proposal: Proposal) => {
+    const items = proposal.fee_line_items || [];
+    const mandatoryItems = items.filter(item => !item.is_optional);
+    const optionalItems = items.filter(item => item.is_optional);
+    const totals = calculateTotals(proposal);
+
+    if (items.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground text-right py-2">
+          לא הוזנו פריטי שכר טרחה מפורטים
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Mandatory Items */}
+        {mandatoryItems.length > 0 && (
+          <div>
+            <h4 className="font-medium text-sm mb-2 text-right">פריטים חובה</h4>
+            <Table dir="rtl">
+              <TableHeader>
+                <TableRow className="h-8 bg-muted/30">
+                  <TableHead className="text-right text-xs py-1">תיאור</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-20">יחידה</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-16">כמות</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-24">מחיר יחידה</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-24">סה"כ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mandatoryItems.map((item, idx) => (
+                  <TableRow key={idx} className="h-8">
+                    <TableCell className="text-right text-xs py-1">
+                      <div>
+                        {item.description}
+                        {item.comment && (
+                          <div className="text-muted-foreground text-xs mt-0.5">{item.comment}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-xs py-1">{formatUnit(item.unit)}</TableCell>
+                    <TableCell className="text-right text-xs py-1">{item.quantity}</TableCell>
+                    <TableCell className="text-right text-xs py-1">{formatCurrency(item.unit_price)}</TableCell>
+                    <TableCell className="text-right text-xs py-1 font-medium">
+                      {formatCurrency((item.unit_price || 0) * (item.quantity || 1))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 h-8">
+                  <TableCell colSpan={4} className="text-right text-xs py-1 font-medium">סה"כ חובה</TableCell>
+                  <TableCell className="text-right text-xs py-1 font-bold">{formatCurrency(totals.mandatory)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {/* Optional Items */}
+        {optionalItems.length > 0 && (
+          <div>
+            <h4 className="font-medium text-sm mb-2 text-right">פריטים אופציונליים</h4>
+            <Table dir="rtl">
+              <TableHeader>
+                <TableRow className="h-8 bg-muted/30">
+                  <TableHead className="text-right text-xs py-1">תיאור</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-20">יחידה</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-16">כמות</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-24">מחיר יחידה</TableHead>
+                  <TableHead className="text-right text-xs py-1 w-24">סה"כ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {optionalItems.map((item, idx) => (
+                  <TableRow key={idx} className="h-8">
+                    <TableCell className="text-right text-xs py-1">
+                      <div>
+                        {item.description}
+                        {item.comment && (
+                          <div className="text-muted-foreground text-xs mt-0.5">{item.comment}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-xs py-1">{formatUnit(item.unit)}</TableCell>
+                    <TableCell className="text-right text-xs py-1">{item.quantity}</TableCell>
+                    <TableCell className="text-right text-xs py-1">{formatCurrency(item.unit_price)}</TableCell>
+                    <TableCell className="text-right text-xs py-1 font-medium">
+                      {formatCurrency((item.unit_price || 0) * (item.quantity || 1))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 h-8">
+                  <TableCell colSpan={4} className="text-right text-xs py-1 font-medium">סה"כ אופציונלי</TableCell>
+                  <TableCell className="text-right text-xs py-1 font-bold">{formatCurrency(totals.optional)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render milestones section
+  const renderMilestonesSection = (proposal: Proposal) => {
+    const milestones = proposal.milestone_adjustments || [];
+    const totals = calculateTotals(proposal);
+    
+    if (milestones.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground text-right py-2">
+          לא הוגדרו אבני דרך לתשלום
+        </div>
+      );
+    }
+
+    return (
+      <Table dir="rtl">
+        <TableHeader>
+          <TableRow className="h-8 bg-muted/30">
+            <TableHead className="text-right text-xs py-1">אבן דרך</TableHead>
+            <TableHead className="text-right text-xs py-1 w-24">אחוז</TableHead>
+            <TableHead className="text-right text-xs py-1 w-28">סכום משוער</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {milestones.map((milestone, idx) => (
+            <TableRow key={idx} className="h-8">
+              <TableCell className="text-right text-xs py-1">{milestone.description}</TableCell>
+              <TableCell className="text-right text-xs py-1">{milestone.consultant_percentage}%</TableCell>
+              <TableCell className="text-right text-xs py-1">
+                {formatCurrency((totals.mandatory * milestone.consultant_percentage) / 100)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  // Render files section
+  const renderFilesSection = (proposal: Proposal) => {
+    const files = proposal.files || [];
+    
+    if (files.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground text-right py-2">
+          לא צורפו קבצים
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2 justify-end">
+        {files.map((file, idx) => (
+          <a
+            key={idx}
+            href={file.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-md text-xs transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span>{file.name}</span>
+            <FileIcon className="w-3 h-3 text-muted-foreground" />
+          </a>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
-        <DialogHeader className="p-6 pb-4 flex-shrink-0">
-          <div className="flex items-center justify-between flex-wrap gap-4 flex-row-reverse">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0 border-b">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <DialogTitle className="flex items-center gap-2 text-right">
               <Award className="w-5 h-5" />
               השוואת הצעות מחיר - {advisorType}
             </DialogTitle>
-            <div className="flex items-center gap-2 flex-wrap flex-row-reverse justify-end">
+            <div className="flex items-center gap-2 flex-wrap">
               {proposals.some(p => p.evaluation_rank || p.evaluation_score) && (
                 <>
                   <Button
@@ -281,8 +573,8 @@ export const ProposalComparisonDialog = ({
                     size="sm"
                     className="flex items-center gap-2"
                   >
-                    <HelpCircle className="w-4 h-4" />
                     למה מומלץ?
+                    <HelpCircle className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={handleExportExcel}
@@ -290,8 +582,8 @@ export const ProposalComparisonDialog = ({
                     size="sm"
                     className="flex items-center gap-2"
                   >
-                    <Download className="w-4 h-4" />
                     Excel
+                    <Download className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={handleExportPDF}
@@ -299,8 +591,8 @@ export const ProposalComparisonDialog = ({
                     size="sm"
                     className="flex items-center gap-2"
                   >
-                    <FileText className="w-4 h-4" />
                     PDF
+                    <FileText className="w-4 h-4" />
                   </Button>
                 </>
               )}
@@ -309,71 +601,69 @@ export const ProposalComparisonDialog = ({
                 disabled={evaluationLoading || proposals.length < 2}
                 className="flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
                 {evaluationLoading ? 'מעריך...' : 'הערך עם AI'}
+                <Sparkles className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 pb-6" style={{ maxHeight: 'calc(90vh - 180px)' }}>
-        {/* Progressive Loading Indicator */}
-        {evaluationLoading && evaluationProgress > 0 && (
-          <div className="mb-4" dir="rtl">
-            <div className="flex items-center justify-between text-sm mb-2 flex-row-reverse">
-              <span className="text-muted-foreground">{evaluationProgress}%</span>
-              <span className="text-muted-foreground">מעריך הצעות...</span>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300 absolute right-0"
-                style={{ width: `${evaluationProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {evaluationResult && (
-          <Alert className="mb-4">
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              <div>
-                ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
+        <div className="overflow-y-auto flex-1 px-6 pb-6">
+          {/* Progressive Loading Indicator */}
+          {evaluationLoading && evaluationProgress > 0 && (
+            <div className="mb-4 mt-4" dir="rtl">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">מעריך הצעות...</span>
+                <span className="text-muted-foreground">{evaluationProgress}%</span>
               </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Bulk Actions Bar */}
-        {selectedProposalIds.size > 0 && (
-          <Alert className="mb-4 flex items-center justify-between">
-            <AlertDescription className="flex items-center gap-2">
-              <span>נבחרו {selectedProposalIds.size} הצעות</span>
-            </AlertDescription>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleBulkNegotiationClick}
-                disabled={selectedProposalIds.size < 1}
-              >
-                <RefreshCw className="w-4 h-4 ms-1" />
-                בקש הצעות מחודשות ({selectedProposalIds.size})
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedProposalIds(new Set())}
-              >
-                נקה בחירה
-              </Button>
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300 absolute right-0"
+                  style={{ width: `${evaluationProgress}%` }}
+                />
+              </div>
             </div>
-          </Alert>
-        )}
+          )}
 
-        {/* Table Section */}
-        <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4 flex-wrap flex-row-reverse justify-end" dir="rtl">
+          {evaluationResult && (
+            <Alert className="mb-4 mt-4">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription className="text-right">
+                ההערכה הושלמה. נמצאו {evaluationResult.ranked_proposals.length} הצעות מדורגות.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Bulk Actions Bar */}
+          {selectedProposalIds.size > 0 && (
+            <Alert className="mb-4 mt-4 flex items-center justify-between">
+              <AlertDescription className="flex items-center gap-2">
+                <span>נבחרו {selectedProposalIds.size} הצעות</span>
+              </AlertDescription>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBulkNegotiationClick}
+                  disabled={selectedProposalIds.size < 1}
+                >
+                  בקש הצעות מחודשות ({selectedProposalIds.size})
+                  <RefreshCw className="w-4 h-4 me-1" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedProposalIds(new Set())}
+                >
+                  נקה בחירה
+                </Button>
+              </div>
+            </Alert>
+          )}
+
+          {/* Table Section */}
+          <div className="space-y-4 mt-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap" dir="rtl">
               <span className="text-sm text-muted-foreground">מיין לפי:</span>
               <Button
                 variant={sortBy === 'score' ? 'default' : 'outline'}
@@ -382,8 +672,8 @@ export const ProposalComparisonDialog = ({
                 disabled={!proposals.some(p => p.evaluation_rank)}
                 className="flex items-center gap-1.5"
               >
-                <Award className="w-3 h-3" />
                 דירוג AI
+                <Award className="w-3 h-3" />
               </Button>
               <Button
                 variant={sortBy === 'price' ? 'default' : 'outline'}
@@ -401,274 +691,332 @@ export const ProposalComparisonDialog = ({
               </Button>
             </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">טוען הצעות...</p>
-          </div>
-        ) : sortedProposals.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">לא נמצאו הצעות מחיר</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <TooltipProvider>
-            <Table dir="rtl">
-              <TableHeader>
-                <TableRow className="h-10">
-                  <TableHead className="text-center text-xs py-2 w-10">
-                    <Checkbox
-                      checked={selectedProposalIds.size > 0 && selectedProposalIds.size === sortedProposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted').length}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead className="text-right text-xs py-2">דירוג</TableHead>
-                  <TableHead className="text-right text-xs py-2">ספק</TableHead>
-                  <TableHead className="text-right text-xs py-2">ציון AI</TableHead>
-                  <TableHead className="text-right text-xs py-2">מחיר</TableHead>
-                  <TableHead className="text-right text-xs py-2">זמן ביצוע</TableHead>
-                  <TableHead className="text-right text-xs py-2">סטטוס</TableHead>
-                  <TableHead className="text-right text-xs py-2">פעולות</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedProposals.map((proposal) => {
-                  const evalData = proposal.evaluation_result;
-                  const isBest = proposal.evaluation_rank === 1;
-                  const recommendationLevel = evalData?.recommendation_level;
-                  const canSelect = proposal.status === 'submitted' || proposal.status === 'resubmitted';
-                  
-                  return (
-                    <TableRow 
-                      key={proposal.id}
-                      className={`${isBest ? 'bg-green-50 dark:bg-green-950/20' : ''} ${selectedProposalIds.has(proposal.id) ? 'bg-primary/5' : ''} h-auto`}
-                    >
-                      <TableCell className="text-center py-2">
-                        {canSelect && (
-                          <Checkbox
-                            checked={selectedProposalIds.has(proposal.id)}
-                            onCheckedChange={() => toggleProposalSelection(proposal.id)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex justify-end items-center gap-1.5">
-                          {proposal.evaluation_rank ? (
-                            <div className="flex items-center gap-1.5" dir="rtl">
-                              <Badge 
-                                variant={isBest ? 'default' : 'secondary'}
-                                className={`${isBest ? 'bg-green-600' : ''} text-xs px-1.5 py-0.5`}
-                              >
-                                #{proposal.evaluation_rank}
-                              </Badge>
-                              {isBest && (
-                                <Award className="w-3 h-3 text-green-600 ml-0.5" />
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">טוען הצעות...</p>
+              </div>
+            ) : sortedProposals.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">לא נמצאו הצעות מחיר</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <TooltipProvider>
+                  {sortedProposals.map((proposal) => {
+                    const evalData = proposal.evaluation_result;
+                    const isBest = proposal.evaluation_rank === 1;
+                    const recommendationLevel = evalData?.recommendation_level;
+                    const canSelect = proposal.status === 'submitted' || proposal.status === 'resubmitted';
+                    const isExpanded = expandedRows.has(proposal.id);
+                    const totals = calculateTotals(proposal);
+                    const hasFeeItems = (proposal.fee_line_items || []).length > 0;
+                    
+                    return (
+                      <div 
+                        key={proposal.id}
+                        className={`border rounded-lg overflow-hidden ${isBest ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20' : 'border-border'} ${selectedProposalIds.has(proposal.id) ? 'ring-2 ring-primary/30' : ''}`}
+                      >
+                        {/* Main Row */}
+                        <div 
+                          className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                          onClick={() => toggleRowExpand(proposal.id)}
+                        >
+                          <div className="flex items-center gap-4 justify-between" dir="rtl">
+                            {/* Right side - Selection & Info */}
+                            <div className="flex items-center gap-4 flex-1">
+                              {canSelect && (
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    checked={selectedProposalIds.has(proposal.id)}
+                                    onCheckedChange={() => toggleProposalSelection(proposal.id)}
+                                  />
+                                </div>
                               )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">-</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium text-right py-2" dir="rtl">
-                        <div className="flex flex-col items-end">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-right">{proposal.supplier_name}</span>
-                            {(proposal.current_version && proposal.current_version > 1) && (
-                              <VersionBadge 
-                                currentVersion={proposal.current_version} 
-                                hasActiveNegotiation={proposal.has_active_negotiation}
-                              />
-                            )}
-                          </div>
-                          {recommendationLevel && (
-                            <div className="text-xs text-muted-foreground mt-0.5 text-right" dir="rtl">
-                              {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
-                              {recommendationLevel === 'Recommended' && '✓ מומלץ'}
-                              {recommendationLevel === 'Review Required' && '⚠ דורש בדיקה'}
-                              {recommendationLevel === 'Not Recommended' && '✗ לא מומלץ'}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {proposal.evaluation_score != null && (
-                          <div className="flex items-center gap-2" dir="rtl">
-                            <span className={`font-bold text-lg ${
-                              proposal.evaluation_score >= 80 ? 'text-green-600' :
-                              proposal.evaluation_score >= 60 ? 'text-yellow-600' :
-                              'text-red-600'
-                            }`}>
-                              {proposal.evaluation_score}
-                            </span>
-                            <span className="text-xs text-muted-foreground">/100</span>
-                          </div>
-                        )}
-                        {evalData?.flags?.knockout_triggered && (
-                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                            <div className="flex items-start gap-2" dir="rtl">
-                              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                              <div className="flex-1">
-                                <div className="font-semibold text-red-900 dark:text-red-100 text-sm mb-1">
-                                  נפסל מהערכה
-                                </div>
-                                <div className="text-xs text-red-700 dark:text-red-300">
-                                  {evalData.flags.knockout_reason ? (
-                                    <span>{evalData.flags.knockout_reason}</span>
-                                  ) : (
-                                    <span>ההצעה לא עומדת בדרישות המינימום</span>
-                                  )}
-                                </div>
-                                {evalData.flags.red_flags && evalData.flags.red_flags.length > 0 && (
-                                  <div className="mt-1 text-xs text-red-600 dark:text-red-400">
-                                    <div className="font-medium mb-0.5">דגלים אדומים:</div>
-                                    <ul className="list-disc list-inside space-y-0.5">
-                                      {evalData.flags.red_flags.slice(0, 3).map((flag: string, idx: number) => (
-                                        <li key={idx}>{flag}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
+                              
+                              {/* Rank */}
+                              <div className="flex items-center gap-1.5">
+                                {proposal.evaluation_rank ? (
+                                  <>
+                                    <Badge 
+                                      variant={isBest ? 'default' : 'secondary'}
+                                      className={`${isBest ? 'bg-green-600' : ''} text-xs px-1.5 py-0.5`}
+                                    >
+                                      #{proposal.evaluation_rank}
+                                    </Badge>
+                                    {isBest && <Award className="w-4 h-4 text-green-600" />}
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">-</span>
                                 )}
                               </div>
+
+                              {/* Supplier Name */}
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">{proposal.supplier_name}</span>
+                                  {(proposal.current_version && proposal.current_version > 1) && (
+                                    <VersionBadge 
+                                      currentVersion={proposal.current_version} 
+                                      hasActiveNegotiation={proposal.has_active_negotiation}
+                                    />
+                                  )}
+                                </div>
+                                {recommendationLevel && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
+                                    {recommendationLevel === 'Recommended' && '✓ מומלץ'}
+                                    {recommendationLevel === 'Review Required' && '⚠ דורש בדיקה'}
+                                    {recommendationLevel === 'Not Recommended' && '✗ לא מומלץ'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* AI Score */}
+                              {proposal.evaluation_score != null && (
+                                <div className="flex items-center gap-1">
+                                  <span className={`font-bold text-lg ${
+                                    proposal.evaluation_score >= 80 ? 'text-green-600' :
+                                    proposal.evaluation_score >= 60 ? 'text-yellow-600' :
+                                    'text-red-600'
+                                  }`}>
+                                    {proposal.evaluation_score}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">/100</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Center - Price Info */}
+                            <div className="flex items-center gap-6">
+                              {hasFeeItems ? (
+                                <>
+                                  <div className="text-center">
+                                    <div className="text-xs text-muted-foreground">סה"כ חובה</div>
+                                    <div className={`font-bold ${totals.mandatory === Math.min(...sortedProposals.map(p => calculateTotals(p).mandatory)) ? 'text-green-600' : ''}`}>
+                                      {formatCurrency(totals.mandatory)}
+                                    </div>
+                                  </div>
+                                  {totals.optional > 0 && (
+                                    <div className="text-center">
+                                      <div className="text-xs text-muted-foreground">אופציונלי</div>
+                                      <div className="font-medium text-muted-foreground">
+                                        {formatCurrency(totals.optional)}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="text-center">
+                                  <div className="text-xs text-muted-foreground">מחיר</div>
+                                  <div className={`font-bold ${proposal.price === bestPrice ? 'text-green-600' : ''}`}>
+                                    {formatCurrency(proposal.price)}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="text-center">
+                                <div className="text-xs text-muted-foreground">זמן ביצוע</div>
+                                <div className={proposal.timeline_days === bestTimeline ? 'font-bold text-blue-600' : ''}>
+                                  {proposal.timeline_days} ימים
+                                </div>
+                              </div>
+
+                              {/* Status */}
+                              <Badge 
+                                variant={
+                                  proposal.status === 'accepted' ? 'default' : 
+                                  proposal.status === 'rejected' ? 'destructive' : 
+                                  proposal.status === 'resubmitted' ? 'secondary' :
+                                  'secondary'
+                                }
+                                className="text-xs"
+                              >
+                                {proposal.status === 'submitted' && 'ממתין'}
+                                {proposal.status === 'resubmitted' && 'עודכן'}
+                                {proposal.status === 'accepted' && 'אושר'}
+                                {proposal.status === 'rejected' && 'נדחה'}
+                                {proposal.status === 'negotiation_requested' && 'בהמתנה לעדכון'}
+                              </Badge>
+                            </div>
+
+                            {/* Left side - Actions */}
+                            <div className="flex items-center gap-2">
+                              {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
+                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleApprove(proposal)}
+                                        disabled={actionLoading}
+                                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>אשר הצעה</TooltipContent>
+                                  </Tooltip>
+                                  {(proposal.evaluation_rank || proposal.evaluation_score != null) && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setSelectedProposalForWhy(proposal);
+                                            setWhyRecommendedOpen(true);
+                                          }}
+                                          className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                        >
+                                          <HelpCircle className="w-4 h-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>למה מומלץ?</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleNegotiationClick(proposal)}
+                                        disabled={actionLoading || proposal.has_active_negotiation}
+                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>בקש הצעה מחודשת</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleRejectClick(proposal)}
+                                        disabled={actionLoading || rejectLoading}
+                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>דחה הצעה</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              )}
+
+                              {/* Expand/Collapse Button */}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </Button>
                             </div>
                           </div>
-                        )}
-                        {/* Show red flags even if not knocked out */}
-                        {evalData?.flags?.red_flags && evalData.flags.red_flags.length > 0 && !evalData?.flags?.knockout_triggered && (
-                          <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
-                            <div className="flex items-start gap-2" dir="rtl">
-                              <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                              <div className="flex-1">
-                                <div className="font-semibold text-orange-900 dark:text-orange-100 text-sm mb-1">
-                                  דגלים אדומים
+
+                          {/* Red Flags / Knockout Warning */}
+                          {evalData?.flags?.knockout_triggered && (
+                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                              <div className="flex items-start gap-2" dir="rtl">
+                                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="font-semibold text-red-900 dark:text-red-100 text-sm mb-1">נפסל מהערכה</div>
+                                  <div className="text-xs text-red-700 dark:text-red-300">
+                                    {evalData.flags.knockout_reason || 'ההצעה לא עומדת בדרישות המינימום'}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-orange-800 dark:text-orange-200 mb-2">
-                                  זוהו בעיות פוטנציאליות או סיכונים בהצעה זו שכדאי לבדוק לפני קבלת החלטה
-                                </div>
-                                <ul className="list-disc list-inside space-y-0.5 text-xs text-orange-700 dark:text-orange-300">
-                                  {evalData.flags.red_flags.slice(0, 5).map((flag: string, idx: number) => (
-                                    <li key={idx}>{flag}</li>
-                                  ))}
-                                </ul>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2" dir="rtl">
-                          <span className={proposal.price === bestPrice ? 'text-green-600 font-bold' : ''}>
-                            {formatCurrency(proposal.price)}
-                          </span>
-                          {proposal.price === bestPrice && !proposal.evaluation_rank && (
-                            <Badge variant="default" className="bg-green-600">
-                              <TrendingUp className="w-3 h-3 mr-1" />
-                              מחיר הכי טוב
-                            </Badge>
+                          )}
+                          
+                          {evalData?.flags?.red_flags && evalData.flags.red_flags.length > 0 && !evalData?.flags?.knockout_triggered && (
+                            <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                              <div className="flex items-start gap-2" dir="rtl">
+                                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="font-semibold text-orange-900 dark:text-orange-100 text-sm mb-1">דגלים אדומים</div>
+                                  <ul className="list-disc list-inside space-y-0.5 text-xs text-orange-700 dark:text-orange-300">
+                                    {evalData.flags.red_flags.slice(0, 3).map((flag: string, idx: number) => (
+                                      <li key={idx}>{flag}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2" dir="rtl">
-                          <span className={proposal.timeline_days === bestTimeline ? 'text-blue-600 font-bold' : ''}>
-                            {proposal.timeline_days}{' '}ימים
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        <div className="flex justify-end items-center gap-1.5">
-                          <Badge 
-                            variant={
-                              proposal.status === 'accepted' ? 'default' : 
-                              proposal.status === 'rejected' ? 'destructive' : 
-                              proposal.status === 'resubmitted' ? 'secondary' :
-                              'secondary'
-                            }
-                            className="text-xs px-1.5 py-0.5"
-                          >
-                            {proposal.status === 'submitted' && 'ממתין'}
-                            {proposal.status === 'resubmitted' && 'עודכן'}
-                            {proposal.status === 'accepted' && 'אושר'}
-                            {proposal.status === 'rejected' && 'נדחה'}
-                            {proposal.status === 'negotiation_requested' && 'בהמתנה לעדכון'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right py-2" dir="rtl">
-                        {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
-                          <div className="flex gap-1 justify-end" dir="rtl">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleApprove(proposal)}
-                                  disabled={actionLoading}
-                                  className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>אשר הצעה</TooltipContent>
-                            </Tooltip>
-                            {(proposal.evaluation_rank || proposal.evaluation_score != null) && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setSelectedProposalForWhy(proposal);
-                                      setWhyRecommendedOpen(true);
-                                    }}
-                                    className="h-7 w-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                  >
-                                    <HelpCircle className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>למה מומלץ?</TooltipContent>
-                              </Tooltip>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="border-t bg-muted/20 p-4 space-y-6" dir="rtl">
+                            {/* Fee Items Section */}
+                            <div>
+                              <h3 className="font-semibold mb-3 text-right flex items-center gap-2">
+                                <span>פירוט שכר טרחה</span>
+                              </h3>
+                              {renderFeeItemsSection(proposal)}
+                            </div>
+
+                            {/* Payment Milestones */}
+                            {(proposal.milestone_adjustments || []).length > 0 && (
+                              <div>
+                                <h3 className="font-semibold mb-3 text-right flex items-center gap-2">
+                                  <span>אבני דרך לתשלום</span>
+                                </h3>
+                                {renderMilestonesSection(proposal)}
+                              </div>
                             )}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleNegotiationClick(proposal)}
-                                  disabled={actionLoading || proposal.has_active_negotiation}
-                                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <MessageSquare className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>בקש הצעה מחודשת</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleRejectClick(proposal)}
-                                  disabled={actionLoading || rejectLoading}
-                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>דחה הצעה</TooltipContent>
-                            </Tooltip>
+
+                            {/* Consultant Notes */}
+                            {proposal.consultant_request_notes && (
+                              <div>
+                                <h3 className="font-semibold mb-2 text-right">הערות היועץ</h3>
+                                <div className="text-sm text-muted-foreground bg-background p-3 rounded-md border text-right whitespace-pre-wrap">
+                                  {proposal.consultant_request_notes}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Scope Text */}
+                            {proposal.scope_text && (
+                              <div>
+                                <h3 className="font-semibold mb-2 text-right">היקף העבודה</h3>
+                                <div className="text-sm text-muted-foreground bg-background p-3 rounded-md border text-right whitespace-pre-wrap">
+                                  {proposal.scope_text}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Terms */}
+                            {proposal.terms && (
+                              <div>
+                                <h3 className="font-semibold mb-2 text-right">תנאים</h3>
+                                <div className="text-sm text-muted-foreground bg-background p-3 rounded-md border text-right whitespace-pre-wrap">
+                                  {proposal.terms}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Files */}
+                            {(proposal.files || []).length > 0 && (
+                              <div>
+                                <h3 className="font-semibold mb-2 text-right">קבצים מצורפים</h3>
+                                {renderFilesSection(proposal)}
+                              </div>
+                            )}
                           </div>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </TooltipProvider>
+                      </div>
+                    );
+                  })}
+                </TooltipProvider>
+              </div>
+            )}
           </div>
-        )}
-        </div>
         </div>
       </DialogContent>
 
