@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNegotiation } from '@/hooks/useNegotiation';
@@ -15,9 +16,10 @@ import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import {
-  Home, List, FileText, Clock, Calendar, Download,
+  Home, List, FileText, Calendar, Download,
   CheckCircle, XCircle, AlertCircle, Eye, Loader2, MapPin, Building2,
-  FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins, MessageSquare
+  FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins, MessageSquare,
+  ClipboardList, Package, Plus
 } from 'lucide-react';
 
 // Reusable section header component
@@ -34,9 +36,29 @@ const SectionHeader = ({ icon: Icon, children, className = "" }: {
 
 interface UploadedFile {
   name: string;
-  url: string;
-  size: number;
-  type: string;
+  url?: string;
+  path?: string;
+  size?: number;
+  type?: string;
+}
+
+interface FeeLineItem {
+  item_id?: string;
+  description: string;
+  unit?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  comment?: string;
+  is_optional?: boolean;
+  is_entrepreneur_defined?: boolean;
+}
+
+interface MilestoneAdjustment {
+  description: string;
+  entrepreneur_percentage: number;
+  consultant_percentage: number;
+  is_entrepreneur_defined?: boolean;
 }
 
 interface AdvisorProposalViewDialogProps {
@@ -75,6 +97,13 @@ interface ProposalData {
     type: string;
     location: string;
   };
+  // Structured data columns
+  fee_line_items?: FeeLineItem[];
+  selected_services?: any[];
+  milestone_adjustments?: MilestoneAdjustment[];
+  consultant_request_notes?: string;
+  consultant_request_files?: UploadedFile[];
+  services_notes?: string;
 }
 
 export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: AdvisorProposalViewDialogProps) {
@@ -109,6 +138,8 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
         .select(`
           id, price, timeline_days, currency, scope_text, conditions_json,
           files, signature_blob, signature_meta_json, status, submitted_at,
+          fee_line_items, selected_services, milestone_adjustments,
+          consultant_request_notes, consultant_request_files, services_notes,
           projects!proposals_project_id_fkey (id, name, type, location)
         `)
         .eq('id', proposalId)
@@ -121,11 +152,22 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
         files: (data.files as unknown as UploadedFile[]) || [],
         conditions_json: data.conditions_json as ProposalData['conditions_json'],
         signature_meta_json: data.signature_meta_json as ProposalData['signature_meta_json'],
+        fee_line_items: (data.fee_line_items as unknown as FeeLineItem[]) || [],
+        selected_services: (data.selected_services as unknown as any[]) || [],
+        milestone_adjustments: (data.milestone_adjustments as unknown as MilestoneAdjustment[]) || [],
+        consultant_request_notes: data.consultant_request_notes as string,
+        consultant_request_files: (data.consultant_request_files as unknown as UploadedFile[]) || [],
+        services_notes: data.services_notes as string,
       };
       setProposal(proposalData);
 
-      if (proposalData.files && proposalData.files.length > 0) {
-        await loadSignedUrls(proposalData.files);
+      // Combine all files for URL loading
+      const allFiles = [
+        ...(proposalData.files || []),
+        ...(proposalData.consultant_request_files || [])
+      ];
+      if (allFiles.length > 0) {
+        await loadSignedUrls(allFiles);
       }
     } catch (error) {
       console.error('Error fetching proposal:', error);
@@ -144,9 +186,12 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     const urls: Record<string, string> = {};
     for (const file of files) {
       try {
-        const filePath = file.url.replace(/^.*\/proposal-files\//, '');
-        const { data } = await supabase.storage.from('proposal-files').createSignedUrl(filePath, 3600);
-        if (data?.signedUrl) urls[file.name] = data.signedUrl;
+        const fileUrl = file.url || file.path || '';
+        const filePath = fileUrl.replace(/^.*\/proposal-files\//, '');
+        if (filePath) {
+          const { data } = await supabase.storage.from('proposal-files').createSignedUrl(filePath, 3600);
+          if (data?.signedUrl) urls[file.name] = data.signedUrl;
+        }
       } catch {}
     }
     setFileUrls(urls);
@@ -198,11 +243,11 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     }
   };
 
-  const handleDownloadAll = async () => {
-    if (!proposal?.files || proposal.files.length === 0) return;
+  const handleDownloadAll = async (files: UploadedFile[]) => {
+    if (files.length === 0) return;
     try {
       const zip = new JSZip();
-      for (const file of proposal.files) {
+      for (const file of files) {
         const url = fileUrls[file.name];
         if (url) {
           const res = await fetch(url);
@@ -255,17 +300,32 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     return cfg[status] || cfg.draft;
   };
 
+  // Calculated values
   const conditions = proposal?.conditions_json || {};
   const files = proposal?.files || [];
+  const consultantFiles = proposal?.consultant_request_files || [];
+  const allFiles = [...files, ...consultantFiles];
+  const feeLineItems = proposal?.fee_line_items || [];
+  const mandatoryItems = feeLineItems.filter(item => !item.is_optional);
+  const optionalItems = feeLineItems.filter(item => item.is_optional);
+  const mandatoryTotal = mandatoryItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  const optionalTotal = optionalItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  const selectedServices = proposal?.selected_services || [];
+  const milestoneAdjustments = proposal?.milestone_adjustments || [];
+  
   const hasConditions = conditions.payment_terms || conditions.payment_term_type || 
     (conditions.milestones && conditions.milestones.length > 0) || 
+    milestoneAdjustments.length > 0 ||
     conditions.assumptions || conditions.exclusions || 
     conditions.validity_days || conditions.notes;
+
+  const hasPricingData = feeLineItems.length > 0;
+  const hasServicesData = selectedServices.length > 0 || proposal?.services_notes;
 
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-3xl" dir="rtl">
           <div className="flex items-center justify-center p-6">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
@@ -277,7 +337,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   if (!proposal) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-3xl" dir="rtl">
           <div className="text-center p-6 text-muted-foreground text-sm">
             לא נמצאה הצעה
           </div>
@@ -289,10 +349,48 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const statusConfig = getStatusConfig(proposal.status);
   const StatusIcon = statusConfig.icon;
 
+  // File rendering component
+  const renderFileItem = (file: UploadedFile, idx: number) => {
+    const FileIcon = getFileIcon(file.name);
+    return (
+      <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded-md">
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewFile(file)} disabled={loadingUrls}>
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>צפייה</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(file)} disabled={loadingUrls}>
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>הורדה</TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+          <div className="text-right min-w-0">
+            <p className="text-xs font-medium truncate">{file.name}</p>
+            {file.size && (
+              <p className="text-[10px] text-muted-foreground">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            )}
+          </div>
+          <FileIcon className="h-6 w-6 text-muted-foreground shrink-0" />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0" dir="rtl">
           {/* Header */}
           <DialogHeader className="p-3 pb-2 border-b">
             <div className="flex items-center justify-between gap-2">
@@ -340,22 +438,27 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                 <Home className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">ראשי</span>
               </TabsTrigger>
+              <TabsTrigger value="pricing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
+                <Banknote className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">תמחור</span>
+                {hasPricingData && <Badge variant="secondary" className="text-[10px] px-1 h-4">{feeLineItems.length}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="services" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
+                <ClipboardList className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">שירותים</span>
+              </TabsTrigger>
               <TabsTrigger value="conditions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
                 <List className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">תנאים</span>
-              </TabsTrigger>
-              <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1 text-xs px-2 py-1">
-                <FileText className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">קבצים</span>
-                {files.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 h-4">{files.length}</Badge>}
+                <span className="hidden sm:inline">תנאים וקבצים</span>
+                {allFiles.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 h-4">{allFiles.length}</Badge>}
               </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="h-[calc(90vh-160px)]">
-              {/* Tab 1: Main Details + Signature */}
+              {/* Tab 1: Main - Key metrics + Consultant Response + Signature */}
               <TabsContent value="main" className="p-3 space-y-3 m-0">
-                {/* Compact Key Metrics Row */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Key Metrics Row - 2 columns, no לו״ז */}
+                <div className="grid grid-cols-2 gap-2">
                   <Card className="bg-muted/30">
                     <CardContent className="p-2 text-center">
                       <Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" />
@@ -363,35 +466,36 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                       <p className="font-bold text-xs">{formatDate(proposal.submitted_at)}</p>
                     </CardContent>
                   </Card>
-                  <Card className="bg-muted/30">
-                    <CardContent className="p-2 text-center">
-                      <Clock className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-                      <p className="text-[10px] text-muted-foreground">לו״ז</p>
-                      <p className="font-bold text-xs">{proposal.timeline_days} ימים</p>
-                    </CardContent>
-                  </Card>
                   <Card className="bg-green-50 border-green-200">
                     <CardContent className="p-2 text-center">
                       <Banknote className="w-4 h-4 mx-auto mb-1 text-green-600" />
-                      <p className="text-[10px] text-muted-foreground">מחיר</p>
+                      <p className="text-[10px] text-muted-foreground">סה״כ מחיר</p>
                       <p className="font-bold text-xs text-green-700">{formatCurrency(proposal.price)}</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Scope of Work */}
-                <Card>
-                  <CardContent className="p-3">
-                    <SectionHeader icon={Building2}>היקף העבודה</SectionHeader>
-                    {proposal.scope_text ? (
+                {proposal.scope_text && (
+                  <Card>
+                    <CardContent className="p-3">
+                      <SectionHeader icon={Building2}>היקף העבודה</SectionHeader>
                       <p className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">{proposal.scope_text}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground text-right mt-2">לא צוין</p>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
 
-                {/* Signature (merged into main tab) */}
+                {/* Consultant Response Notes */}
+                {proposal.consultant_request_notes && (
+                  <Card className="border-blue-200 bg-blue-50/50">
+                    <CardContent className="p-3">
+                      <SectionHeader icon={MessageSquare} className="text-blue-700">הערות לבקשה</SectionHeader>
+                      <p className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">{proposal.consultant_request_notes}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Signature */}
                 {proposal.signature_blob && (
                   <Card>
                     <CardContent className="p-3">
@@ -420,16 +524,167 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                 )}
               </TabsContent>
 
-              {/* Tab 2: Consolidated Conditions */}
-              <TabsContent value="conditions" className="p-3 m-0">
-                {!hasConditions ? (
+              {/* Tab 2: Pricing - Fee breakdown table */}
+              <TabsContent value="pricing" className="p-3 space-y-3 m-0">
+                {!hasPricingData ? (
                   <Card>
                     <CardContent className="p-4 text-center text-muted-foreground text-xs">
-                      <List className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                      לא צוינו תנאים להצעה זו
+                      <Banknote className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      לא הוזנו פריטי תמחור
                     </CardContent>
                   </Card>
                 ) : (
+                  <>
+                    {/* Mandatory Items */}
+                    {mandatoryItems.length > 0 && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={Package}>פריטים חובה</SectionHeader>
+                          <div className="mt-2 overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-right text-xs">תיאור</TableHead>
+                                  <TableHead className="text-right text-xs w-16">כמות</TableHead>
+                                  <TableHead className="text-right text-xs w-20">יחידה</TableHead>
+                                  <TableHead className="text-right text-xs w-24">מחיר יח׳</TableHead>
+                                  <TableHead className="text-right text-xs w-24">סה״כ</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {mandatoryItems.map((item, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="text-xs">
+                                      {item.description}
+                                      {item.comment && (
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-xs">{item.quantity || 1}</TableCell>
+                                    <TableCell className="text-xs">{item.unit || '-'}</TableCell>
+                                    <TableCell className="text-xs">{formatCurrency(item.unit_price || 0)}</TableCell>
+                                    <TableCell className="text-xs font-medium">{formatCurrency(item.total || 0)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                              <TableFooter>
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-xs font-bold text-right">סה״כ פריטי חובה</TableCell>
+                                  <TableCell className="text-xs font-bold">{formatCurrency(mandatoryTotal)}</TableCell>
+                                </TableRow>
+                              </TableFooter>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Optional Items */}
+                    {optionalItems.length > 0 && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={Plus}>פריטים אופציונליים</SectionHeader>
+                          <div className="mt-2 overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-right text-xs">תיאור</TableHead>
+                                  <TableHead className="text-right text-xs w-16">כמות</TableHead>
+                                  <TableHead className="text-right text-xs w-20">יחידה</TableHead>
+                                  <TableHead className="text-right text-xs w-24">מחיר יח׳</TableHead>
+                                  <TableHead className="text-right text-xs w-24">סה״כ</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {optionalItems.map((item, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="text-xs">
+                                      {item.description}
+                                      {item.comment && (
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.comment}</p>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-xs">{item.quantity || 1}</TableCell>
+                                    <TableCell className="text-xs">{item.unit || '-'}</TableCell>
+                                    <TableCell className="text-xs">{formatCurrency(item.unit_price || 0)}</TableCell>
+                                    <TableCell className="text-xs font-medium">{formatCurrency(item.total || 0)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                              <TableFooter>
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-xs font-bold text-right">סה״כ אופציונלי</TableCell>
+                                  <TableCell className="text-xs font-bold">{formatCurrency(optionalTotal)}</TableCell>
+                                </TableRow>
+                              </TableFooter>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Grand Total */}
+                    <Card className="bg-green-50 border-green-200">
+                      <CardContent className="p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold text-green-700">{formatCurrency(proposal.price)}</span>
+                          <span className="text-xs font-semibold">סה״כ הצעה</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </TabsContent>
+
+              {/* Tab 3: Services */}
+              <TabsContent value="services" className="p-3 space-y-3 m-0">
+                {!hasServicesData ? (
+                  <Card>
+                    <CardContent className="p-4 text-center text-muted-foreground text-xs">
+                      <ClipboardList className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      לא נבחרו שירותים
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {/* Selected Services */}
+                    {selectedServices.length > 0 && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={ClipboardList}>שירותים שנבחרו</SectionHeader>
+                          <div className="mt-2 space-y-1">
+                            {selectedServices.map((service: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2 p-1.5 bg-muted/50 rounded text-xs">
+                                <CheckCircle className="h-3 w-3 text-green-600 shrink-0" />
+                                <span className="text-right">
+                                  {typeof service === 'string' ? service : service.name || service.title || JSON.stringify(service)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Services Notes */}
+                    {proposal.services_notes && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={FileText}>הערות לשירותים</SectionHeader>
+                          <p className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">
+                            {proposal.services_notes}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </TabsContent>
+
+              {/* Tab 4: Conditions & Files */}
+              <TabsContent value="conditions" className="p-3 space-y-3 m-0">
+                {/* Conditions Section */}
+                {hasConditions && (
                   <Card>
                     <CardContent className="p-3 space-y-3">
                       {/* Payment Terms */}
@@ -442,16 +697,41 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                         </div>
                       )}
 
-                      {/* Milestones */}
+                      {/* Milestones from conditions */}
                       {conditions.milestones && conditions.milestones.length > 0 && (
                         <>
                           {(conditions.payment_terms || conditions.payment_term_type) && <Separator />}
                           <div>
-                            <SectionHeader icon={Coins}>אבני דרך</SectionHeader>
+                            <SectionHeader icon={Coins}>אבני דרך (תשלומים)</SectionHeader>
                             <div className="space-y-1 mt-1">
                               {conditions.milestones.map((m, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-xs p-1.5 bg-muted/50 rounded">
                                   <Badge variant="outline" className="text-[10px] px-1.5">{m.percentage}%</Badge>
+                                  <span className="text-right flex-1 mr-2">{m.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Milestone Adjustments (consultant's adjustments) */}
+                      {milestoneAdjustments.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <SectionHeader icon={Coins}>התאמות אבני דרך</SectionHeader>
+                            <div className="space-y-1 mt-1">
+                              {milestoneAdjustments.map((m, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs p-1.5 bg-muted/50 rounded">
+                                  <div className="flex gap-2">
+                                    <Badge variant="outline" className="text-[10px] px-1.5">
+                                      יזם: {m.entrepreneur_percentage}%
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5">
+                                      יועץ: {m.consultant_percentage}%
+                                    </Badge>
+                                  </div>
                                   <span className="text-right flex-1 mr-2">{m.description}</span>
                                 </div>
                               ))}
@@ -506,63 +786,45 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                     </CardContent>
                   </Card>
                 )}
-              </TabsContent>
 
-              {/* Tab 3: Files */}
-              <TabsContent value="files" className="p-3 space-y-2 m-0">
-                {files.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-4 text-center text-muted-foreground text-xs">
-                      <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                      לא צורפו קבצים
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {files.length > 1 && (
-                      <Button variant="outline" size="sm" onClick={handleDownloadAll} className="w-full text-xs h-8">
-                        <FolderDown className="h-3.5 w-3.5 me-1.5" />
-                        הורד הכל ({files.length})
-                      </Button>
-                    )}
-                    <div className="space-y-1.5">
-                      {files.map((file, idx) => {
-                        const FileIcon = getFileIcon(file.name);
-                        return (
-                          <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded-md">
-                            <div className="flex items-center gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewFile(file)} disabled={loadingUrls}>
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>צפייה</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(file)} disabled={loadingUrls}>
-                                    <Download className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>הורדה</TooltipContent>
-                              </Tooltip>
-                            </div>
-                            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-                              <div className="text-right min-w-0">
-                                <p className="text-xs font-medium truncate">{file.name}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                              <FileIcon className="h-6 w-6 text-muted-foreground shrink-0" />
-                            </div>
+                {/* Files Section */}
+                <Card>
+                  <CardContent className="p-3">
+                    <SectionHeader icon={FileText}>קבצים מצורפים</SectionHeader>
+                    
+                    {allFiles.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center mt-3">לא צורפו קבצים</p>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {allFiles.length > 1 && (
+                          <Button variant="outline" size="sm" onClick={() => handleDownloadAll(allFiles)} className="w-full text-xs h-8">
+                            <FolderDown className="h-3.5 w-3.5 me-1.5" />
+                            הורד הכל ({allFiles.length})
+                          </Button>
+                        )}
+                        
+                        {/* Proposal Files */}
+                        {files.length > 0 && (
+                          <div className="space-y-1.5">
+                            {consultantFiles.length > 0 && (
+                              <p className="text-[10px] text-muted-foreground font-medium">קבצי הצעה:</p>
+                            )}
+                            {files.map((file, idx) => renderFileItem(file, idx))}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
+                        )}
+
+                        {/* Consultant Response Files */}
+                        {consultantFiles.length > 0 && (
+                          <div className="space-y-1.5">
+                            {files.length > 0 && <Separator />}
+                            <p className="text-[10px] text-muted-foreground font-medium">קבצי תגובה לבקשה:</p>
+                            {consultantFiles.map((file, idx) => renderFileItem(file, idx + files.length))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             </ScrollArea>
           </Tabs>
