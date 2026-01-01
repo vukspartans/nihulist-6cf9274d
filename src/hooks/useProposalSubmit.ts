@@ -207,7 +207,8 @@ export const useProposalSubmit = () => {
         user_agent: userAgent,
         timestamp: data.signature.timestamp,
         content_hash: contentHash,
-        vector_points: data.signature.vector.reduce((sum, stroke) => sum + stroke.length, 0)
+        vector_points: data.signature.vector.reduce((sum, stroke) => sum + stroke.length, 0),
+        stampImage: data.signature.stampImage || undefined,
       };
 
       // CRITICAL: Require inviteId for proper proposal-to-invite linking

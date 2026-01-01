@@ -138,6 +138,8 @@ export const ProjectDetail = () => {
           scope_text,
           files,
           signature_blob,
+          signature_meta_json,
+          rfp_invite_id,
           fee_line_items,
           current_version,
           has_active_negotiation,
