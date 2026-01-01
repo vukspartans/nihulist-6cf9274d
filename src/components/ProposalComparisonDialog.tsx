@@ -196,7 +196,7 @@ export const ProposalComparisonDialog = ({
           services_notes,
           files,
           scope_text,
-          advisor:advisors!advisor_id (
+          advisor:advisors!proposals_advisor_id_fkey (
             company_name,
             location,
             rating,
