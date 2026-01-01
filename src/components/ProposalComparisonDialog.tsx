@@ -43,6 +43,26 @@ interface ProposalFile {
   size?: number;
 }
 
+interface AdvisorProfile {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+interface AdvisorInfo {
+  company_name: string | null;
+  location: string | null;
+  rating: number | null;
+  founding_year: number | null;
+  office_size: string | null;
+  user_id: string;
+}
+
+interface RFPInviteInfo {
+  advisor_type: string | null;
+  request_title: string | null;
+}
+
 interface Proposal {
   id: string;
   project_id: string;
@@ -67,6 +87,8 @@ interface Proposal {
   services_notes?: string;
   files?: ProposalFile[];
   scope_text?: string;
+  advisor?: AdvisorInfo & { profile?: AdvisorProfile };
+  rfp_invite?: RFPInviteInfo;
 }
 
 interface ProposalComparisonDialogProps {
@@ -173,38 +195,77 @@ export const ProposalComparisonDialog = ({
           consultant_request_notes,
           services_notes,
           files,
-          scope_text
+          scope_text,
+          advisor:advisors!advisor_id (
+            company_name,
+            location,
+            rating,
+            founding_year,
+            office_size,
+            user_id
+          ),
+          rfp_invite:rfp_invites!rfp_invite_id (
+            advisor_type,
+            request_title
+          )
         `)
         .in('id', proposalIds);
 
       if (error) throw error;
+
+      // Fetch profiles for advisors
+      const advisorUserIds = (data || [])
+        .map(p => (p.advisor as any)?.user_id)
+        .filter(Boolean);
+      
+      let profilesMap: Record<string, AdvisorProfile> = {};
+      if (advisorUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, name, phone, email')
+          .in('user_id', advisorUserIds);
+        
+        if (profiles) {
+          profilesMap = profiles.reduce((acc, p) => {
+            acc[p.user_id] = { name: p.name, phone: p.phone, email: p.email };
+            return acc;
+          }, {} as Record<string, AdvisorProfile>);
+        }
+      }
       
       // Map data to properly typed proposals
-      const mappedData: Proposal[] = (data || []).map(p => ({
-        id: p.id,
-        project_id: p.project_id,
-        advisor_id: p.advisor_id,
-        supplier_name: p.supplier_name,
-        price: p.price,
-        timeline_days: p.timeline_days,
-        terms: p.terms,
-        submitted_at: p.submitted_at,
-        status: p.status,
-        evaluation_score: p.evaluation_score,
-        evaluation_rank: p.evaluation_rank,
-        evaluation_result: p.evaluation_result,
-        evaluation_status: p.evaluation_status,
-        current_version: p.current_version,
-        has_active_negotiation: p.has_active_negotiation,
-        conditions_json: p.conditions_json,
-        fee_line_items: (p.fee_line_items as unknown as FeeLineItem[]) || [],
-        selected_services: (p.selected_services as unknown as string[]) || [],
-        milestone_adjustments: (p.milestone_adjustments as unknown as MilestoneAdjustment[]) || [],
-        consultant_request_notes: p.consultant_request_notes,
-        services_notes: p.services_notes,
-        files: (p.files as unknown as ProposalFile[]) || [],
-        scope_text: p.scope_text,
-      }));
+      const mappedData: Proposal[] = (data || []).map(p => {
+        const advisorData = p.advisor as any;
+        const profile = advisorData?.user_id ? profilesMap[advisorData.user_id] : undefined;
+        
+        return {
+          id: p.id,
+          project_id: p.project_id,
+          advisor_id: p.advisor_id,
+          supplier_name: p.supplier_name,
+          price: p.price,
+          timeline_days: p.timeline_days,
+          terms: p.terms,
+          submitted_at: p.submitted_at,
+          status: p.status,
+          evaluation_score: p.evaluation_score,
+          evaluation_rank: p.evaluation_rank,
+          evaluation_result: p.evaluation_result,
+          evaluation_status: p.evaluation_status,
+          current_version: p.current_version,
+          has_active_negotiation: p.has_active_negotiation,
+          conditions_json: p.conditions_json,
+          fee_line_items: (p.fee_line_items as unknown as FeeLineItem[]) || [],
+          selected_services: (p.selected_services as unknown as string[]) || [],
+          milestone_adjustments: (p.milestone_adjustments as unknown as MilestoneAdjustment[]) || [],
+          consultant_request_notes: p.consultant_request_notes,
+          services_notes: p.services_notes,
+          files: (p.files as unknown as ProposalFile[]) || [],
+          scope_text: p.scope_text,
+          advisor: advisorData ? { ...advisorData, profile } : undefined,
+          rfp_invite: p.rfp_invite as RFPInviteInfo | undefined,
+        };
+      });
 
       // Sort by evaluation rank if available, otherwise by price
       const sorted = mappedData.sort((a, b) => {
@@ -558,7 +619,7 @@ export const ProposalComparisonDialog = ({
               <Award className="w-5 h-5" />
               השוואת הצעות מחיר - {advisorType}
             </DialogTitle>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap flex-row-reverse">
               {proposals.some(p => p.evaluation_rank || p.evaluation_score) && (
                 <>
                   <Button
@@ -751,10 +812,12 @@ export const ProposalComparisonDialog = ({
                                 )}
                               </div>
 
-                              {/* Supplier Name */}
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-medium">{proposal.supplier_name}</span>
+                              {/* Supplier/Company Info */}
+                              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-base truncate">
+                                    {proposal.advisor?.company_name || proposal.supplier_name || 'ללא שם'}
+                                  </span>
                                   {(proposal.current_version && proposal.current_version > 1) && (
                                     <VersionBadge 
                                       currentVersion={proposal.current_version} 
@@ -762,6 +825,16 @@ export const ProposalComparisonDialog = ({
                                     />
                                   )}
                                 </div>
+                                {proposal.advisor?.profile?.name && (
+                                  <span className="text-sm text-muted-foreground">
+                                    איש קשר: {proposal.advisor.profile.name}
+                                  </span>
+                                )}
+                                {proposal.advisor?.location && (
+                                  <span className="text-xs text-muted-foreground">
+                                    📍 {proposal.advisor.location}
+                                  </span>
+                                )}
                                 {recommendationLevel && (
                                   <span className="text-xs text-muted-foreground">
                                     {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
@@ -841,9 +914,9 @@ export const ProposalComparisonDialog = ({
                             </div>
 
                             {/* Left side - Actions */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-row-reverse">
                               {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
-                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex gap-1 flex-row-reverse" onClick={(e) => e.stopPropagation()}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button
@@ -953,6 +1026,64 @@ export const ProposalComparisonDialog = ({
                         {/* Expanded Details */}
                         {isExpanded && (
                           <div className="border-t bg-muted/20 p-4 space-y-6" dir="rtl">
+                            {/* Advisor Details Section */}
+                            {proposal.advisor && (
+                              <div>
+                                <h3 className="font-semibold mb-3 text-right">פרטי הספק</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-background p-4 rounded-md border">
+                                  <div className="text-right">
+                                    <div className="text-muted-foreground text-xs mb-1">שם החברה</div>
+                                    <div className="font-medium">{proposal.advisor.company_name || '-'}</div>
+                                  </div>
+                                  {proposal.advisor.profile?.name && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">איש קשר</div>
+                                      <div>{proposal.advisor.profile.name}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.profile?.phone && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">טלפון</div>
+                                      <div dir="ltr" className="text-left">{proposal.advisor.profile.phone}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.profile?.email && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">אימייל</div>
+                                      <div dir="ltr" className="text-left break-all text-xs">{proposal.advisor.profile.email}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.location && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">מיקום</div>
+                                      <div>{proposal.advisor.location}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.founding_year && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">שנת הקמה</div>
+                                      <div>{proposal.advisor.founding_year}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.office_size && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">גודל המשרד</div>
+                                      <div>{proposal.advisor.office_size}</div>
+                                    </div>
+                                  )}
+                                  {proposal.advisor.rating != null && proposal.advisor.rating > 0 && (
+                                    <div className="text-right">
+                                      <div className="text-muted-foreground text-xs mb-1">דירוג</div>
+                                      <div className="flex items-center gap-1">
+                                        <span>⭐</span>
+                                        <span>{proposal.advisor.rating.toFixed(1)}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Fee Items Section */}
                             <div>
                               <h3 className="font-semibold mb-3 text-right flex items-center gap-2">
