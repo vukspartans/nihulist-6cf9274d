@@ -173,6 +173,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                           <TableRow>
                             <TableHead className="text-right">שם יועץ</TableHead>
                             <TableHead className="text-right">תחום</TableHead>
+                            <TableHead className="text-right">תאריך שליחה</TableHead>
                             <TableHead className="text-right">סטטוס</TableHead>
                             <TableHead className="text-right">תאריך יעד</TableHead>
                             <TableHead className="text-right">פעולות</TableHead>
@@ -183,10 +184,21 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                             <TableRow key={invite.inviteId}>
                               <TableCell className="font-medium">{invite.advisorName}</TableCell>
                               <TableCell>{invite.advisorType}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Send className="h-3.5 w-3.5" />
+                                  {format(new Date(invite.createdAt), 'dd/MM/yyyy', { locale: he })}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <Badge 
                                   variant={getStatusVariant(invite.status)}
-                                  className="gap-1"
+                                  className={`gap-1 ${
+                                    invite.status === 'submitted' ? 'bg-green-100 text-green-800 border-green-300' :
+                                    invite.status === 'declined' || invite.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
+                                    invite.status === 'opened' || invite.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                    ''
+                                  }`}
                                 >
                                   {getStatusIcon(invite.status)}
                                   {translateStatus(invite.status)}
