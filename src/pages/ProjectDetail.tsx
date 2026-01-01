@@ -341,10 +341,15 @@ export const ProjectDetail = () => {
     return Math.min(...proposals.map(p => p.timeline_days));
   };
 
-  const handleCompareProposals = () => {
-    const submittedProposals = proposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted');
+  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
+
+  const handleCompareByType = (typeProposals: any[], vendorType: string) => {
+    const submittedProposals = typeProposals.filter(
+      (p: any) => p.status === 'submitted' || p.status === 'resubmitted'
+    );
     if (submittedProposals.length > 0) {
-      setSelectedProposalIds(submittedProposals.map(p => p.id));
+      setSelectedProposalIds(submittedProposals.map((p: any) => p.id));
+      setSelectedAdvisorType(vendorType);
       setComparisonDialogOpen(true);
     }
   };
@@ -511,29 +516,19 @@ export const ProjectDetail = () => {
         <TabsContent value="received">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  הצעות שהתקבלו
-                  {proposals.length > 0 && (
-                    <Badge variant="secondary">{proposals.length}</Badge>
-                  )}
-                </CardTitle>
-                {proposals.filter(p => p.status === 'submitted' || p.status === 'resubmitted').length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={handleCompareProposals}
-                  >
-                    <Eye className="w-4 h-4 ml-2" />
-                    השווה הצעות
-                  </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                הצעות שהתקבלו
+                {proposals.length > 0 && (
+                  <Badge variant="secondary">{proposals.length}</Badge>
                 )}
-              </div>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ProposalComparisonTable
                 proposals={proposals}
                 onViewProposal={handleViewProposal}
+                onCompareByType={handleCompareByType}
                 loading={proposalsLoading}
               />
             </CardContent>
@@ -588,7 +583,7 @@ export const ProjectDetail = () => {
         open={comparisonDialogOpen}
         onOpenChange={setComparisonDialogOpen}
         proposalIds={selectedProposalIds}
-        advisorType={project.type || 'כללי'}
+        advisorType={selectedAdvisorType || project.type || 'כללי'}
         projectId={project.id}
       />
 
