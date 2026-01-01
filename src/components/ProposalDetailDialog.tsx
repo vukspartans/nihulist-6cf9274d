@@ -59,6 +59,7 @@ interface ProposalDetailDialogProps {
     selected_services?: any[]; services_notes?: string;
     consultant_request_notes?: string;
     consultant_request_files?: Array<{ name: string; path: string; size?: number }>;
+    rfp_invite_id?: string;
   };
   projectId?: string;
   projectName?: string;
@@ -78,6 +79,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [fileSummaries, setFileSummaries] = useState<Record<string, string>>(proposal.file_summaries || {});
   const [generatingFileSummary, setGeneratingFileSummary] = useState<string | null>(null);
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
+  const [entrepreneurPaymentTerms, setEntrepreneurPaymentTerms] = useState<{
+    payment_term_type?: string;
+    payment_due_days?: number;
+    advance_percent?: number;
+    notes?: string;
+    milestone_payments?: Array<{description: string; percentage: number; trigger?: string}>;
+  } | null>(null);
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
@@ -140,6 +148,25 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     
     fetchServiceNames();
   }, [open, selectedServices]);
+
+  // Fetch entrepreneur's payment terms from rfp_invites
+  useEffect(() => {
+    const fetchPaymentTerms = async () => {
+      if (!open || !proposal.rfp_invite_id) return;
+      
+      const { data: inviteData } = await supabase
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', proposal.rfp_invite_id)
+        .maybeSingle();
+      
+      if (inviteData?.payment_terms) {
+        setEntrepreneurPaymentTerms(inviteData.payment_terms as any);
+      }
+    };
+    
+    fetchPaymentTerms();
+  }, [open, proposal.rfp_invite_id]);
 
   const markProposalAsSeen = async () => {
     try { await supabase.from('proposals').update({ seen_by_entrepreneur_at: new Date().toISOString() }).eq('id', proposal.id); } catch {}
@@ -671,7 +698,40 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {/* Payment Terms Text */}
                 <div className="space-y-1.5">
                   <SectionHeader icon={Banknote} className="text-xs text-green-600">תנאי תשלום</SectionHeader>
-                  <Card><CardContent className="p-3 text-right"><p className="text-xs">{conditions.payment_terms || <span className="text-muted-foreground">לא צוינו תנאי תשלום</span>}</p></CardContent></Card>
+                  <Card>
+                    <CardContent className="p-3 text-right space-y-2">
+                      {entrepreneurPaymentTerms?.payment_term_type && (
+                        <p className="text-xs">
+                          <span className="font-medium">תנאי תשלום: </span>
+                          {entrepreneurPaymentTerms.payment_term_type === 'net_30' && 'שוטף + 30'}
+                          {entrepreneurPaymentTerms.payment_term_type === 'net_60' && 'שוטף + 60'}
+                          {entrepreneurPaymentTerms.payment_term_type === 'net_90' && 'שוטף + 90'}
+                          {entrepreneurPaymentTerms.payment_term_type === 'current' && 'שוטף'}
+                          {entrepreneurPaymentTerms.payment_term_type === 'upon_completion' && 'בסיום העבודה'}
+                          {entrepreneurPaymentTerms.payment_term_type === 'milestone' && 'לפי אבני דרך'}
+                          {!['net_30', 'net_60', 'net_90', 'current', 'upon_completion', 'milestone'].includes(entrepreneurPaymentTerms.payment_term_type) && entrepreneurPaymentTerms.payment_term_type}
+                        </p>
+                      )}
+                      {entrepreneurPaymentTerms?.advance_percent && entrepreneurPaymentTerms.advance_percent > 0 && (
+                        <p className="text-xs">
+                          <span className="font-medium">מקדמה: </span>
+                          {entrepreneurPaymentTerms.advance_percent}%
+                        </p>
+                      )}
+                      {entrepreneurPaymentTerms?.notes && (
+                        <p className="text-xs">
+                          <span className="font-medium">הערות: </span>
+                          {entrepreneurPaymentTerms.notes}
+                        </p>
+                      )}
+                      {conditions.payment_terms && (
+                        <p className="text-xs whitespace-pre-wrap">{conditions.payment_terms}</p>
+                      )}
+                      {!entrepreneurPaymentTerms && !conditions.payment_terms && (
+                        <span className="text-muted-foreground text-xs">לא צוינו תנאי תשלום</span>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Assumptions */}
