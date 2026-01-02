@@ -117,7 +117,16 @@ export const RequestEditorDialog = ({
     }
   }, [isContentAIGenerated]);
 
-  // Parse markdown-like content for formatted preview
+  // Safe text rendering with bold support (XSS-safe using React components)
+  const renderTextWithBold = (text: string): React.ReactNode => {
+    // Split by **bold** pattern and alternate between text and bold
+    const parts = text.split(/\*\*(.+?)\*\*/g);
+    return parts.map((part, i) => 
+      i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+    );
+  };
+
+  // Parse markdown-like content for formatted preview (XSS-safe)
   const renderFormattedContent = (content: string) => {
     const lines = content.split('\n');
     return lines.map((line, index) => {
@@ -127,16 +136,13 @@ export const RequestEditorDialog = ({
         return <h4 key={index} className="font-bold text-base mt-3 mb-1">{text}</h4>;
       }
       
-      // Inline bold
-      const processedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      
       // Bullet points
       if (line.match(/^[-•]\s/)) {
         const text = line.replace(/^[-•]\s/, '');
         return (
           <div key={index} className="flex gap-2 mr-2 my-0.5" dir="rtl">
             <span className="text-primary">•</span>
-            <span dangerouslySetInnerHTML={{ __html: text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+            <span>{renderTextWithBold(text)}</span>
           </div>
         );
       }
@@ -148,7 +154,7 @@ export const RequestEditorDialog = ({
         return (
           <div key={index} className="flex gap-2 mr-2 my-0.5" dir="rtl">
             <span className="text-primary font-medium">{num}.</span>
-            <span dangerouslySetInnerHTML={{ __html: text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+            <span>{renderTextWithBold(text)}</span>
           </div>
         );
       }
@@ -160,7 +166,7 @@ export const RequestEditorDialog = ({
       
       // Regular text
       return (
-        <p key={index} className="my-0.5" dangerouslySetInnerHTML={{ __html: processedLine }} />
+        <p key={index} className="my-0.5">{renderTextWithBold(line)}</p>
       );
     });
   };
