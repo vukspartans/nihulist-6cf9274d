@@ -118,7 +118,7 @@ export const useRFPDraft = (projectId: string) => {
 
   const parsePaymentTerms = (data: Json): PaymentTerms => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      return { advance_percent: 20, payment_due_days: 30 };
+      return { milestone_payments: [], payment_term_type: 'net_30' };
     }
     const obj = data as Record<string, unknown>;
     const milestones = Array.isArray(obj.milestone_payments)
@@ -133,7 +133,9 @@ export const useRFPDraft = (projectId: string) => {
       : undefined;
 
     return {
-      advance_percent: obj.advance_percent != null ? Number(obj.advance_percent) : undefined,
+      advance_percent: obj.advance_percent != null && Number(obj.advance_percent) > 0 
+        ? Number(obj.advance_percent) 
+        : undefined,
       milestone_payments: milestones,
       payment_term_type: obj.payment_term_type as PaymentTerms['payment_term_type'],
       payment_due_days: obj.payment_due_days != null ? Number(obj.payment_due_days) : undefined,
