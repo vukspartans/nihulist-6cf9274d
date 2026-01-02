@@ -67,9 +67,8 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
   
   // Payment terms
   paymentTerms: {
-    advance_percent: 20,
     milestone_payments: [],
-    payment_due_days: 30,
+    payment_term_type: 'net_30',
     notes: ''
   }
 });
@@ -1086,7 +1085,7 @@ export const RequestEditorDialog = ({
               {/* Payment Tab */}
               <TabsContent value="payment" className="mt-0" dir="rtl">
                 <PaymentTermsTab
-                  paymentTerms={formData.paymentTerms || { advance_percent: 20, payment_due_days: 30 }}
+                  paymentTerms={formData.paymentTerms || { milestone_payments: [], payment_term_type: 'net_30' }}
                   onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
                 />
               </TabsContent>
