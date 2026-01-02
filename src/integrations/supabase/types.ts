@@ -2548,6 +2548,8 @@ export type Database = {
         }
         Returns: Json
       }
+      use_magic_link: { Args: { p_token: string }; Returns: Json }
+      validate_magic_link: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "entrepreneur" | "advisor" | "supplier"
