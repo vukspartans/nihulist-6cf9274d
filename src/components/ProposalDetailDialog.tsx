@@ -20,7 +20,7 @@ import { he } from 'date-fns/locale';
 import { 
   FileText, Banknote, Clock, Download, CheckCircle, XCircle, AlertCircle, Calendar,
   Eye, Sparkles, RefreshCw, Loader2, Building2, MapPin, Star, Globe, Linkedin,
-  Users, Target, FolderDown, DollarSign, Briefcase, FileCheck, Scale, FileImage, 
+  Users, Target, FolderDown, Briefcase, FileCheck, Scale, FileImage, 
   FileSpreadsheet, File, Printer, CalendarCheck, MessageSquare, ListChecks, CreditCard
 } from 'lucide-react';
 
@@ -350,7 +350,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   // Fee table component with RTL support and proper calculations
   const FeeTable = ({ items, title, showOptionalBadge = false }: { items: FeeLineItem[]; title: string; showOptionalBadge?: boolean }) => (
     <div className="space-y-1.5">
-      <SectionHeader icon={DollarSign} className="text-xs">{title}</SectionHeader>
+      <SectionHeader icon={Banknote} className="text-xs">{title}</SectionHeader>
       <Card>
         <CardContent className="p-0">
           {/* Desktop table view */}
@@ -573,7 +573,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {/* Key Metrics */}
                 <div className="grid grid-cols-2 gap-2">
                   <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><DollarSign className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
                 </div>
 
                 {/* Fee Rows Display */}
