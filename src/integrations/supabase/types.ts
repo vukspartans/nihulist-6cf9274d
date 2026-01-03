@@ -1720,6 +1720,7 @@ export type Database = {
           opened_at: string | null
           payment_terms: Json | null
           personalized_body_html: string | null
+          reminder_stage: number | null
           request_content: string | null
           request_files: Json | null
           request_title: string | null
@@ -1749,6 +1750,7 @@ export type Database = {
           opened_at?: string | null
           payment_terms?: Json | null
           personalized_body_html?: string | null
+          reminder_stage?: number | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
@@ -1778,6 +1780,7 @@ export type Database = {
           opened_at?: string | null
           payment_terms?: Json | null
           personalized_body_html?: string | null
+          reminder_stage?: number | null
           request_content?: string | null
           request_files?: Json | null
           request_title?: string | null
