@@ -8,12 +8,17 @@ const EmailVerified = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
+  // Read role from URL params to redirect to the correct login page
+  const urlParams = new URLSearchParams(window.location.search);
+  const userType = urlParams.get('type') || 'entrepreneur';
+  const loginType = userType === 'advisor' ? 'advisor' : 'entrepreneur';
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          navigate("/auth?mode=login");
+          navigate(`/auth?mode=login&type=${loginType}`);
           return 0;
         }
         return prev - 1;
@@ -21,7 +26,7 @@ const EmailVerified = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigate]);
+  }, [navigate, loginType]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30 flex items-center justify-center p-4" dir="rtl">
@@ -44,7 +49,7 @@ const EmailVerified = () => {
           </p>
           
           <Button 
-            onClick={() => navigate("/auth?mode=login")}
+            onClick={() => navigate(`/auth?mode=login&type=${loginType}`)}
             variant="premium"
             size="lg"
             className="w-full"

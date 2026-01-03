@@ -260,7 +260,7 @@ const Auth = () => {
         });
       } else {
         // Signup - step 2
-        const redirectUrl = `${PRODUCTION_URL}/auth/verified`;
+        const redirectUrl = `${PRODUCTION_URL}/auth/verified?type=${formData.role}`;
         
         const { error } = await supabase.auth.signUp({
           email: formData.email,
@@ -374,7 +374,7 @@ const Auth = () => {
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${PRODUCTION_URL}/auth/verified`
+          emailRedirectTo: `${PRODUCTION_URL}/auth/verified?type=${formData.role || 'entrepreneur'}`
         }
       });
 
