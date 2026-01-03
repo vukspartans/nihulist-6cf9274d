@@ -4,12 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2 } from 'lucide-react';
 import { useRFPInvitesWithDetails } from '@/hooks/useRFPInvitesWithDetails';
-import { ProposalComparisonDialog } from './ProposalComparisonDialog';
+import { ProposalDetailDialog } from './ProposalDetailDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface SentRFPsTabProps {
   projectId: string;
@@ -17,9 +19,9 @@ interface SentRFPsTabProps {
 
 export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   const { data: rfpsWithInvites, isLoading, error } = useRFPInvitesWithDetails(projectId);
-  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
-  const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
-  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
+  const [selectedProposal, setSelectedProposal] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [loadingProposalId, setLoadingProposalId] = useState<string | null>(null);
 
   // Helper function to translate status to Hebrew
   const translateStatus = (status: string): string => {
@@ -69,10 +71,34 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     }
   };
 
-  const handleCompareProposals = (proposalIds: string[], advisorType: string) => {
-    setSelectedProposalIds(proposalIds);
-    setSelectedAdvisorType(advisorType);
-    setComparisonDialogOpen(true);
+  const handleViewProposal = async (proposalId: string) => {
+    setLoadingProposalId(proposalId);
+    try {
+      const { data: proposalData, error: fetchError } = await supabase
+        .from('proposals')
+        .select(`
+          *,
+          advisors:advisor_id (
+            id, company_name, logo_url, expertise, rating, 
+            location, founding_year, office_size, website, linkedin_url
+          ),
+          rfp_invite:rfp_invite_id (
+            advisor_type, request_title, deadline_at
+          )
+        `)
+        .eq('id', proposalId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      setSelectedProposal(proposalData);
+      setDetailDialogOpen(true);
+    } catch (err) {
+      console.error('Error fetching proposal:', err);
+      toast.error('שגיאה בטעינת ההצעה');
+    } finally {
+      setLoadingProposalId(null);
+    }
   };
 
   if (isLoading) {
@@ -217,10 +243,15 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleCompareProposals([invite.proposalId!], invite.advisorType)}
+                                    onClick={() => handleViewProposal(invite.proposalId!)}
                                     className="gap-2"
+                                    disabled={loadingProposalId === invite.proposalId}
                                   >
-                                    <Eye className="h-4 w-4" />
+                                    {loadingProposalId === invite.proposalId ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
                                     צפה בהצעה
                                   </Button>
                                 )}
@@ -243,13 +274,17 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         </CardContent>
       </Card>
 
-      <ProposalComparisonDialog
-        open={comparisonDialogOpen}
-        onOpenChange={setComparisonDialogOpen}
-        proposalIds={selectedProposalIds}
-        advisorType={selectedAdvisorType}
-        projectId={projectId}
-      />
+      {selectedProposal && (
+        <ProposalDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={(open) => {
+            setDetailDialogOpen(open);
+            if (!open) setSelectedProposal(null);
+          }}
+          proposal={selectedProposal}
+          projectId={projectId}
+        />
+      )}
     </div>
   );
 };
