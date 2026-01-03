@@ -85,16 +85,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get RFP details
+    // Get RFP details with sender organization
     const { data: rfp, error: rfpError } = await supabase
       .from('rfps')
       .select(`
         id,
         project_id,
+        sent_by,
         projects (
           name,
           type,
-          location
+          location,
+          owner_id
         )
       `)
       .eq('id', rfp_id)
@@ -105,7 +107,29 @@ serve(async (req) => {
       throw new Error('RFP not found')
     }
 
-    const project = rfp.projects as unknown as Project
+    const project = rfp.projects as unknown as Project & { owner_id: string }
+
+    // Get sender's organization name
+    let senderOrganizationName = ''
+    const { data: senderProfile } = await supabase
+      .from('profiles')
+      .select('name, organization_id')
+      .eq('user_id', project.owner_id)
+      .single()
+
+    if (senderProfile?.organization_id) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', senderProfile.organization_id)
+        .single()
+      
+      senderOrganizationName = company?.name || senderProfile?.name || 'המזמין'
+    } else {
+      senderOrganizationName = senderProfile?.name || 'המזמין'
+    }
+
+    console.log('[send-rfp-email] Sender organization:', senderOrganizationName)
 
     // Get all invites for this RFP
     const { data: invites, error: invitesError } = await supabase
@@ -201,6 +225,7 @@ serve(async (req) => {
             projectType: project.type,
             projectLocation: project.location,
             deadlineDate,
+            senderOrganizationName,
             requestTitle: invite.request_title || undefined,
             requestContent: invite.request_content || undefined,
             requestFiles: requestFiles || undefined,

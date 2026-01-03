@@ -14,6 +14,7 @@ interface RFPInvitationEmailProps {
   projectType: string
   projectLocation: string
   deadlineDate: string
+  senderOrganizationName: string
   requestTitle?: string
   requestContent?: string
   requestFiles?: Array<{ name: string; url: string }>
@@ -27,6 +28,7 @@ export const RFPInvitationEmail = ({
   projectType,
   projectLocation,
   deadlineDate,
+  senderOrganizationName,
   requestTitle,
   requestContent,
   requestFiles,
@@ -39,7 +41,7 @@ export const RFPInvitationEmail = ({
       </Text>
       
       <Text style={text}>
-        נשמח לקבל ממכם הצעת מחיר לפרויקט <strong>{projectName}</strong> ({projectType}, {projectLocation}).
+        נשמח לקבל ממכם הצעת מחיר מטעם <strong>{senderOrganizationName}</strong> לפרויקט <strong>{projectName}</strong> ({projectType}, {projectLocation}).
       </Text>
       
       <Text style={text}>
