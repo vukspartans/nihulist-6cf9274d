@@ -78,7 +78,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         .from('proposals')
         .select(`
           *,
-          advisors:advisor_id (
+          advisors:advisor_id!fk_proposals_advisor (
             id, company_name, logo_url, expertise, rating, 
             location, founding_year, office_size, website, linkedin_url
           ),
