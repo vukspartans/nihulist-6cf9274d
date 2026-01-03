@@ -433,17 +433,28 @@ const RFPDetails = () => {
         return;
       }
 
-      // Fetch entrepreneur name
+      // Fetch entrepreneur organization name (with fallback to profile name)
       let entrepreneurName = 'יזם';
       if (invite.rfps?.projects?.owner_id) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('name')
+          .select('name, organization_id')
           .eq('user_id', invite.rfps.projects.owner_id)
           .maybeSingle();
         
-        if (profile?.name) {
-          entrepreneurName = profile.name;
+        if (profile) {
+          if (profile.organization_id) {
+            // Fetch organization name
+            const { data: company } = await supabase
+              .from('companies')
+              .select('name')
+              .eq('id', profile.organization_id)
+              .maybeSingle();
+            
+            entrepreneurName = company?.name || profile.name || 'יזם';
+          } else {
+            entrepreneurName = profile.name || 'יזם';
+          }
         }
       }
 

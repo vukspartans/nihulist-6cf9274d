@@ -279,18 +279,42 @@ const AdvisorDashboard = () => {
             }
             console.debug('[AdvisorDashboard] ✅ Fetched projects:', projectsData?.length || 0);
             
-            // Fetch entrepreneur names
+            // Fetch entrepreneur organization names (with fallback to profile name)
             let entrepreneurNames: Record<string, string> = {};
             if (projectsData && projectsData.length > 0) {
               const ownerIds = [...new Set(projectsData.map(p => p.owner_id))];
               const { data: profiles } = await supabase
                 .from('profiles')
-                .select('user_id, name')
+                .select('user_id, name, organization_id')
                 .in('user_id', ownerIds);
               
               if (profiles) {
+                // Get organization IDs that exist
+                const orgIds = profiles
+                  .filter(p => p.organization_id)
+                  .map(p => p.organization_id) as string[];
+                
+                // Fetch company names if there are any organization_ids
+                let companyNames: Record<string, string> = {};
+                if (orgIds.length > 0) {
+                  const { data: companies } = await supabase
+                    .from('companies')
+                    .select('id, name')
+                    .in('id', orgIds);
+                  
+                  if (companies) {
+                    companyNames = Object.fromEntries(
+                      companies.map(c => [c.id, c.name])
+                    );
+                  }
+                }
+                
+                // Map user_id to organization name (or fallback to profile name)
                 entrepreneurNames = Object.fromEntries(
-                  profiles.map(p => [p.user_id, p.name || 'יזם'])
+                  profiles.map(p => [
+                    p.user_id, 
+                    (p.organization_id && companyNames[p.organization_id]) || p.name || 'יזם'
+                  ])
                 );
               }
             }
