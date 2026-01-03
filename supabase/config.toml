@@ -39,7 +39,5 @@ verify_jwt = true
 [functions.system-health-check]
 verify_jwt = true
 
-# Cron jobs are configured in Supabase Dashboard, not in config.toml
-# To set up cron jobs, go to: Dashboard → Database → Cron Jobs
-# - expire-old-rfps: "0 * * * *" (Every hour)
-# - send-deadline-reminders: "0 9 * * *" (Daily at 9 AM)
+[functions.rfp-reminder-scheduler]
+verify_jwt = false
