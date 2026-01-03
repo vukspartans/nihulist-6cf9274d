@@ -483,6 +483,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">פרטים</TabsTrigger>
               <TabsTrigger value="services" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">שירותים</TabsTrigger>
               <TabsTrigger value="payment" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">תנאי תשלום</TabsTrigger>
+              <TabsTrigger value="ai" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                <Sparkles className="w-3.5 h-3.5 me-1" />
+                ניתוח AI
+              </TabsTrigger>
               <TabsTrigger value="signature" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">חתימה</TabsTrigger>
             </TabsList>
 
@@ -588,33 +592,69 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {/* Totals Summary */}
                 {feeLineItems.length > 0 && (
                   <Card className="border-primary/30 bg-primary/5">
-                    <CardContent className="p-3">
+                    <CardContent className="p-3 space-y-1" dir="rtl">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-primary">{formatCurrency(mandatoryTotal)}</span>
                         <span className="text-muted-foreground">סה״כ חובה:</span>
+                        <span className="font-bold text-primary">{formatCurrency(mandatoryTotal)}</span>
                       </div>
                       {optionalTotal > 0 && (
-                        <div className="flex justify-between items-center text-sm mt-1">
-                          <span className="font-medium text-muted-foreground">{formatCurrency(optionalTotal)}</span>
+                        <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">סה״כ אופציונלי:</span>
+                          <span className="font-medium text-muted-foreground">{formatCurrency(optionalTotal)}</span>
                         </div>
                       )}
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
 
-                {/* AI Analysis */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Button variant="outline" size="sm" onClick={() => generateAiAnalysis(!!aiAnalysis)} disabled={isGeneratingAi}>
-                      {isGeneratingAi ? <>מנתח...<Loader2 className="w-3 h-3 animate-spin ms-1" /></> : aiAnalysis ? <>רענן<RefreshCw className="w-3 h-3 ms-1" /></> : <>ייצר ניתוח<Sparkles className="w-3 h-3 ms-1" /></>}
-                    </Button>
-                    <SectionHeader icon={Sparkles} className="text-xs text-primary">ניתוח AI</SectionHeader>
-                  </div>
-                  {isGeneratingAi && <Card><CardContent className="p-3 flex items-center justify-center gap-2 text-muted-foreground text-xs">מייצר ניתוח AI...<Loader2 className="w-3 h-3 animate-spin" /></CardContent></Card>}
-                  {aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-3 text-right"><AIAnalysisDisplay content={aiAnalysis} /></CardContent></Card>}
-                  {!aiAnalysis && !isGeneratingAi && <Card><CardContent className="p-3 text-center text-muted-foreground text-xs">לחץ על "ייצר ניתוח" לקבלת ניתוח AI של ההצעה</CardContent></Card>}
-                </div>
+              {/* AI Analysis Tab */}
+              <TabsContent value="ai" className="p-4 space-y-4 m-0">
+                <Card className="border-primary/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-4" dir="rtl">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        <h3 className="font-semibold text-base">ניתוח AI של ההצעה</h3>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateAiAnalysis(!!aiAnalysis)} 
+                        disabled={isGeneratingAi}
+                      >
+                        {isGeneratingAi ? (
+                          <>מנתח...<Loader2 className="w-3 h-3 animate-spin ms-1" /></>
+                        ) : aiAnalysis ? (
+                          <>רענן ניתוח<RefreshCw className="w-3 h-3 ms-1" /></>
+                        ) : (
+                          <>ייצר ניתוח<Sparkles className="w-3 h-3 ms-1" /></>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {isGeneratingAi && (
+                      <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>מייצר ניתוח AI מקיף...</span>
+                      </div>
+                    )}
+                    
+                    {aiAnalysis && !isGeneratingAi && (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <AIAnalysisDisplay content={aiAnalysis} className="text-sm" />
+                      </div>
+                    )}
+                    
+                    {!aiAnalysis && !isGeneratingAi && (
+                      <div className="text-center py-8 text-muted-foreground" dir="rtl">
+                        <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">לחץ על "ייצר ניתוח" לקבלת ניתוח AI מקיף של ההצעה</p>
+                        <p className="text-xs mt-1">הניתוח יכלול הערכת מחיר, זמנים, וחוזקות/חולשות</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* Services Tab */}

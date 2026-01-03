@@ -7,11 +7,12 @@ interface AIAnalysisDisplayProps {
 
 /**
  * Renders AI analysis content with proper RTL markdown-like formatting:
- * - Headers (###) as bold sections
- * - Bullet points (• or -) as styled lists
+ * - Headers (###) as bold sections with subtle backgrounds
+ * - Bullet points (• or -) as styled lists with proper spacing
  * - Emoji headers highlighted
  * - Recommendation badges color-coded (🟢/🟡/🔴)
  * - Warning sections styled differently
+ * - Clean visual hierarchy with section dividers
  */
 export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps) => {
   if (!content) return null;
@@ -24,11 +25,11 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
   const flushList = () => {
     if (currentList.length > 0) {
       elements.push(
-        <ul key={`list-${listKey++}`} className="space-y-1 my-2" dir="rtl">
+        <ul key={`list-${listKey++}`} className="space-y-2 my-3 pr-1" dir="rtl">
           {currentList.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-2 text-right">
-              <span className="text-primary mt-1 text-xs flex-shrink-0">●</span>
-              <span className="flex-1">{item}</span>
+            <li key={idx} className="flex items-start gap-3 text-right">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+              <span className="flex-1 leading-relaxed">{item}</span>
             </li>
           ))}
         </ul>
@@ -38,9 +39,9 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
   };
 
   const getRecommendationStyle = (line: string) => {
-    if (line.includes('🟢')) return 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200';
-    if (line.includes('🟡')) return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200';
-    if (line.includes('🔴')) return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200';
+    if (line.includes('🟢')) return 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200';
+    if (line.includes('🟡')) return 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+    if (line.includes('🔴')) return 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200';
     return '';
   };
 
@@ -53,14 +54,16 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       return;
     }
 
-    // Handle headers (### or **)
+    // Handle headers (### or ##)
     if (trimmedLine.startsWith('###') || trimmedLine.startsWith('##')) {
       flushList();
       const headerText = trimmedLine.replace(/^#{2,3}\s*/, '').replace(/\*\*/g, '');
       elements.push(
-        <h4 key={`h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
-          {headerText}
-        </h4>
+        <div key={`h-${index}`} className="bg-muted/60 rounded-md px-3 py-2 mt-4 mb-2 first:mt-0" dir="rtl">
+          <h4 className="font-semibold text-sm text-right text-foreground">
+            {headerText}
+          </h4>
+        </div>
       );
       return;
     }
@@ -70,9 +73,11 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       flushList();
       const headerText = trimmedLine.replace(/\*\*/g, '');
       elements.push(
-        <h4 key={`h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
-          {headerText}
-        </h4>
+        <div key={`h-${index}`} className="bg-muted/60 rounded-md px-3 py-2 mt-4 mb-2 first:mt-0" dir="rtl">
+          <h4 className="font-semibold text-sm text-right text-foreground">
+            {headerText}
+          </h4>
+        </div>
       );
       return;
     }
@@ -89,11 +94,11 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
       flushList();
       const [num, ...rest] = trimmedLine.split(/\.\s/);
       elements.push(
-        <div key={`num-${index}`} className="flex items-start gap-2 my-1 text-right" dir="rtl">
-          <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0">
+        <div key={`num-${index}`} className="flex items-start gap-3 my-2 text-right" dir="rtl">
+          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold flex-shrink-0">
             {num}
           </span>
-          <span className="flex-1">{rest.join('. ')}</span>
+          <span className="flex-1 leading-relaxed pt-0.5">{rest.join('. ')}</span>
         </div>
       );
       return;
@@ -107,7 +112,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
         <div 
           key={`rec-${index}`} 
           className={cn(
-            "p-2.5 rounded-lg border my-2 text-right text-sm font-medium",
+            "px-4 py-3 rounded-lg border my-3 text-right font-medium shadow-sm",
             recommendationStyle
           )}
           dir="rtl"
@@ -122,7 +127,11 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     if (trimmedLine.includes('⚠️')) {
       flushList();
       elements.push(
-        <div key={`warn-${index}`} className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-2.5 rounded-lg my-2 text-right text-sm text-orange-800 dark:text-orange-200" dir="rtl">
+        <div 
+          key={`warn-${index}`} 
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 rounded-lg my-3 text-right text-amber-800 dark:text-amber-200" 
+          dir="rtl"
+        >
           {trimmedLine}
         </div>
       );
@@ -133,7 +142,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     if (trimmedLine.startsWith('📋') || trimmedLine.startsWith('⏱️')) {
       flushList();
       elements.push(
-        <p key={`meta-${index}`} className="text-xs text-muted-foreground mt-3 pt-2 border-t text-right" dir="rtl">
+        <p key={`meta-${index}`} className="text-xs text-muted-foreground mt-4 pt-3 border-t text-right" dir="rtl">
           {trimmedLine}
         </p>
       );
@@ -141,12 +150,14 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     }
 
     // Handle header-like lines with emojis (📄, 🔍, etc.)
-    if (/^[📋📄🔍📐⚖️👥✅💡💰📅🔑⚠️]/.test(trimmedLine)) {
+    if (/^[📋📄🔍📐⚖️👥✅💡💰📅🔑⚠️🎯📊💼🏆]/.test(trimmedLine)) {
       flushList();
       elements.push(
-        <h4 key={`emoji-h-${index}`} className="font-semibold text-sm mt-3 mb-1.5 text-right" dir="rtl">
-          {trimmedLine}
-        </h4>
+        <div key={`emoji-h-${index}`} className="bg-muted/60 rounded-md px-3 py-2 mt-4 mb-2 first:mt-0" dir="rtl">
+          <h4 className="font-semibold text-sm text-right text-foreground">
+            {trimmedLine}
+          </h4>
+        </div>
       );
       return;
     }
@@ -154,7 +165,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
     // Regular paragraph
     flushList();
     elements.push(
-      <p key={`p-${index}`} className="text-right text-sm leading-relaxed my-1" dir="rtl">
+      <p key={`p-${index}`} className="text-right leading-relaxed my-2 text-muted-foreground" dir="rtl">
         {trimmedLine}
       </p>
     );
@@ -164,7 +175,7 @@ export const AIAnalysisDisplay = ({ content, className }: AIAnalysisDisplayProps
   flushList();
 
   return (
-    <div className={cn("space-y-0.5", className)} dir="rtl">
+    <div className={cn("space-y-1", className)} dir="rtl">
       {elements}
     </div>
   );
