@@ -123,7 +123,8 @@ export const ProjectDetail = () => {
     if (!id) return;
     setProposalsLoading(true);
     try {
-      // First fetch proposals with advisor data - include all consultant submission fields
+      // Fetch proposals with advisor AND rfp_invite data in a single query
+      // Uses rfp_invite_id directly to ensure correct advisor_type per proposal
       const { data: proposalsData, error: proposalsError } = await supabase
         .from('proposals')
         .select(`
@@ -164,6 +165,11 @@ export const ProjectDetail = () => {
             office_size,
             website,
             linkedin_url
+          ),
+          rfp_invite:rfp_invite_id (
+            advisor_type,
+            request_title,
+            deadline_at
           )
         `)
         .eq('project_id', id)
@@ -171,35 +177,7 @@ export const ProjectDetail = () => {
 
       if (proposalsError) throw proposalsError;
 
-      // Fetch RFP invite context for each proposal
-      const proposalsWithContext = await Promise.all(
-        (proposalsData || []).map(async (proposal) => {
-          // Get the RFP invite for this advisor
-          const { data: inviteData } = await supabase
-            .from('rfp_invites')
-            .select('advisor_type, request_title, deadline_at')
-            .eq('advisor_id', proposal.advisor_id)
-            .eq('rfp_id', (
-              await supabase
-                .from('rfps')
-                .select('id')
-                .eq('project_id', id)
-                .order('sent_at', { ascending: false })
-                .limit(1)
-                .single()
-            ).data?.id || '')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          return {
-            ...proposal,
-            rfp_invite: inviteData || undefined
-          };
-        })
-      );
-
-      setProposals(proposalsWithContext);
+      setProposals(proposalsData || []);
     } catch (error) {
       console.error('Error fetching proposals:', error);
     } finally {
