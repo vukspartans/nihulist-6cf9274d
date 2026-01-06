@@ -407,7 +407,8 @@ function buildUserContent(
 async function callOpenAI(
   systemInstruction: string,
   userContent: string,
-  apiKey: string
+  apiKey: string,
+  vendorNameMap: Map<string, string>
 ): Promise<EvaluationResult> {
   // Model selection for batch processing (fastest to slowest):
   // - gpt-3.5-turbo: FASTEST (~10-15s for 5 proposals), lower quality
@@ -485,6 +486,18 @@ async function callOpenAI(
     throw new Error(`Invalid JSON response from AI: ${error.message}`);
   }
 
+  // Inject vendor_name from our source data (AI may return empty strings)
+  if (parsed.ranked_proposals && Array.isArray(parsed.ranked_proposals)) {
+    for (const proposal of parsed.ranked_proposals) {
+      const vendorName = vendorNameMap.get(proposal.proposal_id);
+      if (vendorName) {
+        proposal.vendor_name = vendorName;
+      } else if (!proposal.vendor_name || proposal.vendor_name.trim() === '') {
+        proposal.vendor_name = 'Unknown Vendor';
+      }
+    }
+  }
+
   // Validate with Zod
   const validated = EvaluationResultSchema.parse(parsed);
   return validated;
@@ -497,7 +510,8 @@ async function callOpenAI(
 async function callGoogleAIStudio(
   systemInstruction: string,
   userContent: string,
-  apiKey: string
+  apiKey: string,
+  vendorNameMap: Map<string, string>
 ): Promise<EvaluationResult> {
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002';
   
@@ -577,6 +591,18 @@ async function callGoogleAIStudio(
   } catch (error) {
     console.error('[Evaluate] Invalid JSON:', cleanedJson.substring(0, 500));
     throw new Error(`Invalid JSON response from AI: ${error.message}`);
+  }
+
+  // Inject vendor_name from our source data (AI may return empty strings)
+  if (parsed.ranked_proposals && Array.isArray(parsed.ranked_proposals)) {
+    for (const proposal of parsed.ranked_proposals) {
+      const vendorName = vendorNameMap.get(proposal.proposal_id);
+      if (vendorName) {
+        proposal.vendor_name = vendorName;
+      } else if (!proposal.vendor_name || proposal.vendor_name.trim() === '') {
+        proposal.vendor_name = 'Unknown Vendor';
+      }
+    }
   }
 
   const validated = EvaluationResultSchema.parse(parsed);
@@ -940,13 +966,19 @@ serve(async (req) => {
 
     console.log('[Evaluate] Calling AI with', proposals.length, 'proposals');
 
+    // Build vendor name map for injecting into AI response
+    const vendorNameMap = new Map<string, string>();
+    for (const p of proposalData) {
+      vendorNameMap.set(p.proposal_id, p.vendor_name || p.company_name || 'Unknown Vendor');
+    }
+
     const startTime = Date.now();
     
     // Call appropriate AI provider
     const evaluationResult = await Promise.race([
       aiProvider === 'openai' 
-        ? callOpenAI(SYSTEM_INSTRUCTION, userContent, apiKey)
-        : callGoogleAIStudio(SYSTEM_INSTRUCTION, userContent, apiKey),
+        ? callOpenAI(SYSTEM_INSTRUCTION, userContent, apiKey, vendorNameMap)
+        : callGoogleAIStudio(SYSTEM_INSTRUCTION, userContent, apiKey, vendorNameMap),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Evaluation timeout')), EVALUATION_TIMEOUT_MS)
       ),
