@@ -108,7 +108,7 @@ export const ProposalComparisonDialog = ({
 }: ProposalComparisonDialogProps) => {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sortBy, setSortBy] = useState<'price' | 'timeline' | 'score'>('score');
+  const [sortBy, setSortBy] = useState<'price' | 'score'>('score');
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [selectedProposalIds, setSelectedProposalIds] = useState<Set<string>>(new Set());
@@ -343,14 +343,10 @@ export const ProposalComparisonDialog = ({
     if (sortBy === 'price') {
       return a.price - b.price;
     }
-    if (sortBy === 'timeline') {
-      return a.timeline_days - b.timeline_days;
-    }
     return 0;
   });
 
   const bestPrice = proposals.length > 0 ? Math.min(...proposals.map(p => p.price)) : 0;
-  const bestTimeline = proposals.length > 0 ? Math.min(...proposals.map(p => p.timeline_days)) : 0;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
@@ -735,13 +731,6 @@ export const ProposalComparisonDialog = ({
               >
                 מחיר
               </Button>
-              <Button
-                variant={sortBy === 'timeline' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortBy('timeline')}
-              >
-                זמן ביצוע
-              </Button>
             </div>
 
             {loading ? (
@@ -880,12 +869,6 @@ export const ProposalComparisonDialog = ({
                                 </div>
                               )}
                               
-                              <div className="text-center">
-                                <div className="text-xs text-muted-foreground">זמן ביצוע</div>
-                                <div className={proposal.timeline_days === bestTimeline ? 'font-bold text-blue-600' : ''}>
-                                  {proposal.timeline_days} ימים
-                                </div>
-                              </div>
 
                               {/* Status */}
                               <Badge 
@@ -998,21 +981,37 @@ export const ProposalComparisonDialog = ({
                             </div>
                           )}
                           
-                          {evalData?.flags?.red_flags && evalData.flags.red_flags.length > 0 && !evalData?.flags?.knockout_triggered && (
-                            <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
-                              <div className="flex items-start gap-2" dir="rtl">
-                                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <div className="font-semibold text-orange-900 dark:text-orange-100 text-sm mb-1">דגלים אדומים</div>
-                                  <ul className="list-disc list-inside space-y-0.5 text-xs text-orange-700 dark:text-orange-300">
-                                    {evalData.flags.red_flags.slice(0, 3).map((flag: string, idx: number) => (
-                                      <li key={idx}>{flag}</li>
-                                    ))}
-                                  </ul>
+                          {(() => {
+                            // Filter out generic data quality notes that aren't true red flags
+                            const meaningfulRedFlags = (evalData?.flags?.red_flags || []).filter((flag: string) => {
+                              const genericPhrases = [
+                                'no detailed scope', 'scope not defined', 'missing scope',
+                                'lack of scope', 'incomplete data', 'missing data', 'no scope provided',
+                                'scope not provided', 'limited scope', 'scope unclear'
+                              ];
+                              return !genericPhrases.some(phrase => 
+                                flag.toLowerCase().includes(phrase.toLowerCase())
+                              );
+                            });
+                            
+                            if (meaningfulRedFlags.length === 0 || evalData?.flags?.knockout_triggered) return null;
+                            
+                            return (
+                              <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                                <div className="flex items-start gap-2" dir="rtl">
+                                  <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-orange-900 dark:text-orange-100 text-sm mb-1">דגלים אדומים</div>
+                                    <ul className="list-disc list-inside space-y-0.5 text-xs text-orange-700 dark:text-orange-300">
+                                      {meaningfulRedFlags.slice(0, 3).map((flag: string, idx: number) => (
+                                        <li key={idx}>{flag}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
 
                         {/* Expanded Details */}
