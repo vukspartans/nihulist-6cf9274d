@@ -669,7 +669,7 @@ export const ProposalComparisonDialog = ({
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 px-6 pb-6">
+        <div className="overflow-y-auto flex-1 min-h-0 px-6 pb-6">
           {/* Progressive Loading Indicator */}
           {evaluationLoading && evaluationProgress > 0 && (
             <div className="mb-4 mt-4" dir="rtl">
@@ -1025,7 +1025,7 @@ export const ProposalComparisonDialog = ({
 
                         {/* Expanded Details */}
                         {isExpanded && (
-                          <div className="border-t bg-muted/20 p-4 space-y-6" dir="rtl">
+                          <div className="border-t bg-muted/20 p-4 space-y-6 max-h-[50vh] overflow-y-auto" dir="rtl">
                             {/* Advisor Details Section */}
                             {proposal.advisor && (
                               <div>
