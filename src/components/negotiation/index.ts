@@ -4,3 +4,6 @@ export { LineItemEditor } from "./LineItemEditor";
 export { NegotiationDialog } from "./NegotiationDialog";
 export { BulkNegotiationDialog } from "./BulkNegotiationDialog";
 export { NegotiationResponseView } from "./NegotiationResponseView";
+export { VersionComparisonView } from "./VersionComparisonView";
+export { NegotiationTimeline } from "./NegotiationTimeline";
+export { AdvisorProfileModal } from "./AdvisorProfileModal";
