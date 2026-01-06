@@ -119,7 +119,7 @@ export const ProposalComparisonDialog = ({
   const [evaluationProgress, setEvaluationProgress] = useState<number>(0);
   const [selectedProposalForWhy, setSelectedProposalForWhy] = useState<Proposal | null>(null);
   const [whyRecommendedOpen, setWhyRecommendedOpen] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   
   // Negotiation state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -375,15 +375,7 @@ export const ProposalComparisonDialog = ({
   };
 
   const toggleRowExpand = (proposalId: string) => {
-    setExpandedRows(prev => {
-      const next = new Set(prev);
-      if (next.has(proposalId)) {
-        next.delete(proposalId);
-      } else {
-        next.add(proposalId);
-      }
-      return next;
-    });
+    setExpandedRowId(prev => prev === proposalId ? null : proposalId);
   };
 
   const handleApprove = (proposal: Proposal) => {
@@ -612,7 +604,7 @@ export const ProposalComparisonDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
+      <DialogContent className="max-w-6xl h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
         <DialogHeader className="p-6 pb-4 flex-shrink-0 border-b">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <DialogTitle className="flex items-center gap-2 text-right">
@@ -769,7 +761,7 @@ export const ProposalComparisonDialog = ({
                     const isBest = proposal.evaluation_rank === 1;
                     const recommendationLevel = evalData?.recommendation_level;
                     const canSelect = proposal.status === 'submitted' || proposal.status === 'resubmitted';
-                    const isExpanded = expandedRows.has(proposal.id);
+                    const isExpanded = expandedRowId === proposal.id;
                     const totals = calculateTotals(proposal);
                     const hasFeeItems = (proposal.fee_line_items || []).length > 0;
                     
