@@ -263,6 +263,24 @@ JSON Schema:
   ]
 }
 
+## LANGUAGE REQUIREMENTS
+
+ALL output text MUST be in **simple, clear Hebrew**. This includes:
+- All analysis text (requirements_alignment, price_assessment, fee_structure_assessment, payment_terms_assessment, etc.)
+- All strengths and weaknesses arrays
+- All red_flags and green_flags arrays
+- All comparative_notes
+- knockout_reason if applicable
+- market_context in batch_summary
+
+The ONLY exceptions (keep in English for system compatibility):
+- recommendation_level enum values: "Highly Recommended", "Recommended", "Review Required", "Not Recommended"
+- project_type_detected: "STANDARD", "LARGE_SCALE"
+- evaluation_mode: "SINGLE", "BATCH"
+
+Write in clear, professional Hebrew that Israeli entrepreneurs can easily understand.
+Avoid technical jargon. Use everyday business language.
+
 ## CRITICAL RULES
 
 1. **Project Understanding First**: Always analyze project context and RFP requirements before proposals
@@ -272,7 +290,8 @@ JSON Schema:
 5. **Missing Data**: Explicitly handle missing data, don't assume defaults
 6. **Single Proposal**: Provide full analysis even without comparison
 7. **Market Context**: Consider Israeli construction market realities
-8. **Output**: ONLY valid JSON, no markdown formatting
+8. **Hebrew Output**: ALL text content must be in clear, simple Hebrew
+9. **Output**: ONLY valid JSON, no markdown formatting
 
 CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanations.
 `;

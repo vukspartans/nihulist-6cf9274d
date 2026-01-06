@@ -16,6 +16,29 @@ interface WhyRecommendedPanelProps {
   } | null;
 }
 
+// Hebrew translations for recommendation levels
+const recommendationTranslations: Record<string, string> = {
+  'Highly Recommended': 'מומלץ ביותר',
+  'Recommended': 'מומלץ',
+  'Review Required': 'נדרשת בחינה',
+  'Not Recommended': 'לא מומלץ',
+};
+
+const getRecommendationBadgeColor = (level: string) => {
+  switch (level) {
+    case 'Highly Recommended':
+      return 'bg-green-600';
+    case 'Recommended':
+      return 'bg-blue-600';
+    case 'Review Required':
+      return 'bg-yellow-600';
+    case 'Not Recommended':
+      return 'bg-red-600';
+    default:
+      return 'bg-gray-600';
+  }
+};
+
 export const WhyRecommendedPanel = ({ open, onOpenChange, proposal }: WhyRecommendedPanelProps) => {
   if (!open || !proposal) return null;
 
@@ -29,7 +52,6 @@ export const WhyRecommendedPanel = ({ open, onOpenChange, proposal }: WhyRecomme
 
   // Extract quotes from scope_text and terms
   const extractQuotes = () => {
-    const quotes: string[] = [];
     const text = `${proposal.scope_text || ''} ${proposal.terms || ''}`;
     
     if (!text.trim()) {
@@ -53,31 +75,16 @@ export const WhyRecommendedPanel = ({ open, onOpenChange, proposal }: WhyRecomme
   const topRisks = [...weaknesses, ...redFlags].slice(0, 2);
   const confidencePercent = Math.round(dataCompleteness * 100);
 
-  const getRecommendationBadgeColor = () => {
-    switch (recommendationLevel) {
-      case 'Highly Recommended':
-        return 'bg-green-600';
-      case 'Recommended':
-        return 'bg-blue-600';
-      case 'Review Required':
-        return 'bg-yellow-600';
-      case 'Not Recommended':
-        return 'bg-red-600';
-      default:
-        return 'bg-gray-600';
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex" dir="rtl">
+    <div className="fixed inset-0 z-[60] flex" dir="rtl">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50" 
+        className="fixed inset-0 bg-black/50 z-[55]" 
         onClick={() => onOpenChange(false)}
       />
       
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-xl flex flex-col animate-in slide-in-from-right duration-300 z-[60]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -103,8 +110,8 @@ export const WhyRecommendedPanel = ({ open, onOpenChange, proposal }: WhyRecomme
             {/* Recommendation Level */}
             <div className="p-4 bg-muted rounded-lg">
               <div className="text-sm text-muted-foreground mb-2">רמת המלצה</div>
-              <Badge className={getRecommendationBadgeColor()}>
-                {recommendationLevel}
+              <Badge className={getRecommendationBadgeColor(recommendationLevel)}>
+                {recommendationTranslations[recommendationLevel] || recommendationLevel}
               </Badge>
             </div>
 
@@ -201,4 +208,3 @@ export const WhyRecommendedPanel = ({ open, onOpenChange, proposal }: WhyRecomme
     </div>
   );
 };
-
