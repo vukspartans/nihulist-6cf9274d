@@ -431,11 +431,11 @@ export const NegotiationContext = ({
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50">
                         <tr>
-                          <th className="px-3 py-2 text-right">תיאור</th>
-                          <th className="px-3 py-2 text-center">יחידה</th>
-                          <th className="px-3 py-2 text-center">כמות</th>
-                          <th className="px-3 py-2 text-left">מחיר יח'</th>
-                          <th className="px-3 py-2 text-left">סה"כ</th>
+                        <th className="px-3 py-2 text-start">תיאור</th>
+                        <th className="px-3 py-2 text-center">יחידה</th>
+                        <th className="px-3 py-2 text-center">כמות</th>
+                        <th className="px-3 py-2 text-start">מחיר יח'</th>
+                        <th className="px-3 py-2 text-start">סה"כ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -443,7 +443,7 @@ export const NegotiationContext = ({
                           const total = (item.unit_price || 0) * (item.quantity || 1);
                           return (
                             <tr key={idx} className={cn("border-t", item.is_optional && "bg-muted/20")}>
-                              <td className="px-3 py-2">
+                              <td className="px-3 py-2 text-start">
                                 {item.description}
                                 {item.is_optional && (
                                   <Badge variant="outline" className="mr-2 text-xs">אופציונלי</Badge>
@@ -451,16 +451,16 @@ export const NegotiationContext = ({
                               </td>
                               <td className="px-3 py-2 text-center">{getUnitLabel(item.unit)}</td>
                               <td className="px-3 py-2 text-center">{item.quantity}</td>
-                              <td className="px-3 py-2 text-left">{formatCurrency(item.unit_price || 0)}</td>
-                              <td className="px-3 py-2 text-left font-medium">{formatCurrency(total)}</td>
+                              <td className="px-3 py-2 text-start font-mono">{formatCurrency(item.unit_price || 0)}</td>
+                              <td className="px-3 py-2 text-start font-mono font-medium">{formatCurrency(total)}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                       <tfoot className="bg-muted/30">
                         <tr>
-                          <td colSpan={4} className="px-3 py-2 text-left font-medium">סה"כ הצעה</td>
-                          <td className="px-3 py-2 text-left font-bold">{formatCurrency(proposalContext.totalPrice)}</td>
+                          <td colSpan={4} className="px-3 py-2 text-start font-medium">סה"כ הצעה</td>
+                          <td className="px-3 py-2 text-start font-bold">{formatCurrency(proposalContext.totalPrice)}</td>
                         </tr>
                       </tfoot>
                     </table>
