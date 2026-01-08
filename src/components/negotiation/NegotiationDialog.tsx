@@ -12,12 +12,19 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { LineItemEditor } from "./LineItemEditor";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useNegotiation } from "@/hooks/useNegotiation";
-import { useLineItems } from "@/hooks/useLineItems";
 import { useProposalVersions } from "@/hooks/useProposalVersions";
-import type { LineItemAdjustment, NegotiationCommentInput, CommentType } from "@/types/negotiation";
-import { RefreshCw, FileText, ClipboardList, Calendar, CreditCard, MessageSquare, AlertTriangle, Upload, X, File, ExternalLink } from "lucide-react";
+import { NegotiationContext } from "./NegotiationContext";
+import { EnhancedLineItemTable } from "./EnhancedLineItemTable";
+import type { NegotiationCommentInput, CommentType } from "@/types/negotiation";
+import { 
+  RefreshCw, FileText, ClipboardList, Calendar, CreditCard, 
+  MessageSquare, AlertTriangle, Upload, X, File, ExternalLink,
+  Eye, Package, ChevronDown, ChevronUp
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
@@ -31,8 +38,29 @@ interface NegotiationDialogProps {
     supplier_name: string;
     project_id: string;
     current_version?: number;
+    advisor_id?: string;
   };
   onSuccess?: () => void;
+}
+
+interface FeeLineItem {
+  id?: string;
+  item_number?: number;
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total?: number;
+  is_optional: boolean;
+  comment?: string;
+  charge_type?: string;
+}
+
+interface LineItemAdjustment {
+  line_item_id: string;
+  target_price: number;
+  initiator_note?: string;
+  new_quantity?: number;
 }
 
 const commentTypes: { type: CommentType; label: string; icon: React.ReactNode }[] = [
@@ -55,7 +83,7 @@ export const NegotiationDialog = ({
   proposal,
   onSuccess,
 }: NegotiationDialogProps) => {
-  const [activeTab, setActiveTab] = useState("items");
+  const [activeTab, setActiveTab] = useState("overview");
   const [adjustments, setAdjustments] = useState<LineItemAdjustment[]>([]);
   const [globalComment, setGlobalComment] = useState("");
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
@@ -69,12 +97,62 @@ export const NegotiationDialog = ({
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingExistingFiles, setLoadingExistingFiles] = useState(false);
+  const [feeLineItems, setFeeLineItems] = useState<FeeLineItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [showContext, setShowContext] = useState(true);
 
   const { createNegotiationSession, cancelNegotiation, loading } = useNegotiation();
-  const { lineItems, loading: lineItemsLoading } = useLineItems(proposal.id);
   const { getLatestVersion } = useProposalVersions(proposal.id);
 
   const latestVersion = getLatestVersion();
+
+  // Load proposal fee items
+  useEffect(() => {
+    const loadProposalData = async () => {
+      if (!open || !proposal.id) return;
+
+      setLoadingItems(true);
+      try {
+        const { data: proposalData } = await supabase
+          .from("proposals")
+          .select("fee_line_items, milestone_adjustments, consultant_request_notes")
+          .eq("id", proposal.id)
+          .single();
+
+        if (proposalData?.fee_line_items) {
+          const items = Array.isArray(proposalData.fee_line_items)
+            ? (proposalData.fee_line_items as unknown as FeeLineItem[])
+            : [];
+          setFeeLineItems(items);
+        } else {
+          // Fall back to proposal_line_items table
+          const { data: lineItems } = await supabase
+            .from("proposal_line_items")
+            .select("*")
+            .eq("proposal_id", proposal.id)
+            .order("display_order", { ascending: true });
+
+          if (lineItems) {
+            setFeeLineItems(lineItems.map(item => ({
+              id: item.id,
+              description: item.name,
+              unit: "lump_sum",
+              quantity: item.quantity || 1,
+              unit_price: item.unit_price,
+              total: item.total,
+              is_optional: item.is_optional || false,
+            })));
+          }
+        }
+      } catch (error) {
+        console.error("[NegotiationDialog] Error loading proposal data:", error);
+      } finally {
+        setLoadingItems(false);
+      }
+    };
+
+    loadProposalData();
+  }, [open, proposal.id]);
 
   // Prefetch existing files when dialog opens
   useEffect(() => {
@@ -100,7 +178,7 @@ export const NegotiationDialog = ({
             const storagePath = `${proposal.id}/${file.name}`;
             const { data: signedUrlData } = await supabase.storage
               .from('negotiation-files')
-              .createSignedUrl(storagePath, 3600); // 1 hour expiry
+              .createSignedUrl(storagePath, 3600);
             
             if (signedUrlData?.signedUrl) {
               filesWithUrls.push({
@@ -129,7 +207,6 @@ export const NegotiationDialog = ({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
 
-    // Check auth before upload
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !sessionData.session) {
@@ -156,7 +233,6 @@ export const NegotiationDialog = ({
           continue;
         }
         
-        // Use signed URL since bucket is private
         const { data: signedUrlData } = await supabase.storage
           .from('negotiation-files')
           .createSignedUrl(storagePath, 3600);
@@ -178,7 +254,7 @@ export const NegotiationDialog = ({
       toast.success(`${newFiles.length} קבצים הועלו בהצלחה`);
     }
     setUploading(false);
-  }, [proposal.id, proposal.project_id]);
+  }, [proposal.id]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -190,7 +266,7 @@ export const NegotiationDialog = ({
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024,
   });
 
   const removeFile = (index: number) => {
@@ -214,18 +290,15 @@ export const NegotiationDialog = ({
 
   const calculateTargetTotal = (): number => {
     let total = 0;
-    lineItems.forEach((item) => {
-      const adj = adjustments.find((a) => a.line_item_id === item.id);
+    feeLineItems.forEach((item) => {
+      const itemId = item.id || `item-${item.item_number}`;
+      const itemTotal = item.total || (item.unit_price * item.quantity);
+      const adj = adjustments.find((a) => a.line_item_id === itemId);
+      
       if (adj) {
-        if (adj.adjustment_type === "price_change") {
-          total += adj.adjustment_value;
-        } else if (adj.adjustment_type === "flat_discount") {
-          total += item.total - adj.adjustment_value;
-        } else if (adj.adjustment_type === "percentage_discount") {
-          total += item.total * (1 - adj.adjustment_value / 100);
-        }
+        total += adj.target_price;
       } else if (!item.is_optional) {
-        total += item.total;
+        total += itemTotal;
       }
     });
     return total;
@@ -234,7 +307,6 @@ export const NegotiationDialog = ({
   const handleSubmit = async () => {
     let versionId = latestVersion?.id;
     
-    // If no version exists, create one from the proposal data
     if (!versionId) {
       const { data: proposalData } = await supabase
         .from("proposals")
@@ -276,7 +348,6 @@ export const NegotiationDialog = ({
         content: content.trim(),
       }));
 
-    // Add file references to the document comment if files were uploaded
     if (uploadedFiles.length > 0) {
       const filesList = uploadedFiles.map(f => `- ${f.name}`).join('\n');
       const existingDocComment = negotiationComments.find(c => c.comment_type === 'document');
@@ -290,18 +361,25 @@ export const NegotiationDialog = ({
       }
     }
 
+    // Convert adjustments to the expected format
+    const lineItemAdjustments = adjustments.map(adj => ({
+      line_item_id: adj.line_item_id,
+      adjustment_type: "price_change" as const,
+      adjustment_value: adj.target_price,
+      initiator_note: adj.initiator_note,
+    }));
+
     const result = await createNegotiationSession({
       project_id: proposal.project_id,
       proposal_id: proposal.id,
       negotiated_version_id: versionId,
       target_total: calculateTargetTotal(),
       global_comment: globalComment || undefined,
-      line_item_adjustments: adjustments.length > 0 ? adjustments : undefined,
+      line_item_adjustments: lineItemAdjustments.length > 0 ? lineItemAdjustments : undefined,
       comments: negotiationComments.length > 0 ? negotiationComments : undefined,
       files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
     });
 
-    // Handle existing session response
     if (result && 'existingSession' in result) {
       setExistingSessionId(result.sessionId);
       return;
@@ -319,7 +397,6 @@ export const NegotiationDialog = ({
     const cancelled = await cancelNegotiation(existingSessionId);
     if (cancelled) {
       setExistingSessionId(null);
-      // Retry submission after cancellation
       await handleSubmit();
     }
   };
@@ -329,6 +406,7 @@ export const NegotiationDialog = ({
     setGlobalComment("");
     setExistingSessionId(null);
     setUploadedFiles([]);
+    setFeeLineItems([]);
     setComments({
       document: "",
       scope: "",
@@ -348,7 +426,7 @@ export const NegotiationDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        className="max-w-5xl max-h-[90vh] overflow-y-auto"
         dir="rtl"
       >
         <DialogHeader>
@@ -357,7 +435,7 @@ export const NegotiationDialog = ({
             <RefreshCw className="h-5 w-5 text-amber-600" />
           </DialogTitle>
           <DialogDescription>
-            ערוך את הפריטים והוסף הערות לבקשת עדכון ההצעה
+            סקור את ההצעה והגדר את הבקשות לעדכון
           </DialogDescription>
         </DialogHeader>
 
@@ -398,176 +476,282 @@ export const NegotiationDialog = ({
         ) : (
           <>
             <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="items">פריטים</TabsTrigger>
-                <TabsTrigger value="comments">הערות וקבצים</TabsTrigger>
-                <TabsTrigger value="summary">סיכום</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview" className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  סקירה
+                </TabsTrigger>
+                <TabsTrigger value="items" className="flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  פריטים
+                </TabsTrigger>
+                <TabsTrigger value="comments" className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  הערות וקבצים
+                </TabsTrigger>
+                <TabsTrigger value="summary" className="flex items-center gap-1">
+                  <ClipboardList className="h-4 w-4" />
+                  סיכום
+                </TabsTrigger>
               </TabsList>
 
-          <TabsContent value="items" className="mt-4">
-            {lineItemsLoading ? (
-              <div className="flex justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : lineItems.length > 0 ? (
-              <LineItemEditor
-                lineItems={lineItems}
-                adjustments={adjustments}
-                onAdjustmentChange={setAdjustments}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>אין פריטים מפורטים בהצעה זו</p>
-                <p className="text-sm mt-1">
-                  ניתן להוסיף הערות כלליות בלשונית "הערות"
-                </p>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="comments" className="mt-4 space-y-4">
-            {/* File Upload Section */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                העלאת קבצים
-              </Label>
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
-                }`}
-              >
-                <input {...getInputProps()} />
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>מעלה...</span>
-                  </div>
-                ) : isDragActive ? (
-                  <p className="text-primary">שחרר את הקבצים כאן...</p>
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    גרור קבצים לכאן או לחץ לבחירה (PDF, תמונות, Word, Excel)
-                  </p>
-                )}
-              </div>
-
-              {/* Uploaded files list */}
-              {loadingExistingFiles ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>טוען קבצים קיימים...</span>
-                </div>
-              ) : uploadedFiles.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+              {/* Overview Tab - RFP & Proposal Context */}
+              <TabsContent value="overview" className="mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">מידע על הבקשה וההצעה</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowContext(!showContext)}
                     >
-                      <div className="flex items-center gap-2">
-                        <File className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={file.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          {file.name}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                        {file.size > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            ({formatFileSize(file.size)})
-                          </span>
-                        )}
+                      {showContext ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 me-1" />
+                          הסתר
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 me-1" />
+                          הצג
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {showContext && (
+                    <NegotiationContext
+                      proposalId={proposal.id}
+                      advisorId={proposal.advisor_id}
+                      projectId={proposal.project_id}
+                      showRFPContext={true}
+                      showProposalContext={true}
+                    />
+                  )}
+
+                  {/* Quick Summary Card */}
+                  <Card className="bg-muted/30">
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <p className="text-sm text-muted-foreground">מחיר הצעה</p>
+                          <p className="text-xl font-bold">{formatCurrency(proposal.price)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">פריטים</p>
+                          <p className="text-xl font-bold">{feeLineItems.length}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">גרסה</p>
+                          <p className="text-xl font-bold">{proposal.current_version || 1}</p>
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* Items Tab - Enhanced Fee Items Table */}
+              <TabsContent value="items" className="mt-4">
+                {loadingItems ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : feeLineItems.length > 0 ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      סמן את הפריטים שברצונך לבקש עדכון עבורם והגדר את המחיר היעד
+                    </p>
+                    <EnhancedLineItemTable
+                      items={feeLineItems}
+                      adjustments={adjustments}
+                      onAdjustmentChange={setAdjustments}
+                      mode="entrepreneur"
+                      showOptionalItems={true}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>אין פריטים מפורטים בהצעה זו</p>
+                    <p className="text-sm mt-1">
+                      ניתן להוסיף הערות כלליות בלשונית "הערות וקבצים"
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Comments Tab */}
+              <TabsContent value="comments" className="mt-4 space-y-4">
+                {/* File Upload Section */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    העלאת קבצים
+                  </Label>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                      isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    {uploading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>מעלה...</span>
+                      </div>
+                    ) : isDragActive ? (
+                      <p className="text-primary">שחרר את הקבצים כאן...</p>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">
+                        גרור קבצים לכאן או לחץ לבחירה (PDF, תמונות, Word, Excel)
+                      </p>
+                    )}
+                  </div>
+
+                  {loadingExistingFiles ? (
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>טוען קבצים קיימים...</span>
+                    </div>
+                  ) : uploadedFiles.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <File className="h-4 w-4 text-muted-foreground" />
+                            <a 
+                              href={file.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline flex items-center gap-1"
+                            >
+                              {file.name}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                            {file.size > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                ({formatFileSize(file.size)})
+                              </span>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Comment types */}
+                <div className="grid grid-cols-2 gap-4">
+                  {commentTypes.map(({ type, label, icon }) => (
+                    <div key={type} className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        {icon}
+                        {label}
+                      </Label>
+                      <Textarea
+                        placeholder={`הערות לגבי ${label}...`}
+                        value={comments[type]}
+                        onChange={(e) =>
+                          setComments({ ...comments, [type]: e.target.value })
+                        }
+                        className="min-h-[60px]"
+                      />
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </TabsContent>
 
-            {/* Comment types */}
-            {commentTypes.map(({ type, label, icon }) => (
-              <div key={type} className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  {label}
-                  {icon}
-                </Label>
-                <Textarea
-                  placeholder={`הערות לגבי ${label}...`}
-                  value={comments[type]}
-                  onChange={(e) =>
-                    setComments({ ...comments, [type]: e.target.value })
-                  }
-                  className="min-h-[60px]"
-                />
-              </div>
-            ))}
-          </TabsContent>
+              {/* Summary Tab */}
+              <TabsContent value="summary" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">סיכום הבקשה</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4 text-center p-4 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">מחיר מקורי</p>
+                        <p className="text-xl font-bold">{formatCurrency(proposal.price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">מחיר יעד</p>
+                        <p className="text-xl font-bold text-green-600">{formatCurrency(targetTotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">הפחתה</p>
+                        <p className="text-xl font-bold text-red-600">
+                          {reductionPercent > 0 ? `↓ ${reductionPercent}%` : "-"}
+                        </p>
+                      </div>
+                    </div>
 
-          <TabsContent value="summary" className="mt-4 space-y-4">
-            <div className="bg-muted p-4 rounded-lg space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">מחיר מקורי:</span>
-                <span className="font-medium">
-                  {formatCurrency(proposal.price)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">מחיר יעד:</span>
-                <span className="font-bold text-green-600">
-                  {formatCurrency(targetTotal)}
-                </span>
-              </div>
-              {reductionPercent > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">הפחתה:</span>
-                  <span className="text-red-600 font-medium">
-                    ↓ {reductionPercent}%
-                  </span>
-                </div>
-              )}
-            </div>
+                    {adjustments.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">פריטים שנבחרו לעדכון:</p>
+                        <div className="space-y-1">
+                          {adjustments.map((adj, idx) => {
+                            const item = feeLineItems.find(
+                              i => (i.id || `item-${i.item_number}`) === adj.line_item_id
+                            );
+                            return (
+                              <div key={idx} className="flex justify-between text-sm bg-muted/30 px-3 py-2 rounded">
+                                <span>{item?.description || adj.line_item_id}</span>
+                                <span className="font-medium text-amber-600">
+                                  {formatCurrency(adj.target_price)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
-            {/* Uploaded files summary */}
-            {uploadedFiles.length > 0 && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <Label className="text-sm text-muted-foreground mb-2 block">קבצים מצורפים ({uploadedFiles.length})</Label>
-                <ul className="text-sm space-y-1">
-                  {uploadedFiles.map((file, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <File className="h-3 w-3 text-muted-foreground" />
-                      {file.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                    {uploadedFiles.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">קבצים מצורפים ({uploadedFiles.length}):</p>
+                        <ul className="text-sm space-y-1">
+                          {uploadedFiles.map((file, index) => (
+                            <li key={index} className="flex items-center gap-2 text-muted-foreground">
+                              <File className="h-3 w-3" />
+                              {file.name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                הערה כללית
-                <MessageSquare className="h-4 w-4" />
-              </Label>
-              <Textarea
-                placeholder="הודעה כללית ליועץ..."
-                value={globalComment}
-                onChange={(e) => setGlobalComment(e.target.value)}
-                className="min-h-[80px]"
-              />
-            </div>
-          </TabsContent>
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        הודעה כללית ליועץ
+                      </Label>
+                      <Textarea
+                        placeholder="הודעה כללית ליועץ..."
+                        value={globalComment}
+                        onChange={(e) => setGlobalComment(e.target.value)}
+                        className="min-h-[80px]"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
 
             <DialogFooter className="gap-2 mt-4">
