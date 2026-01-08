@@ -22,6 +22,13 @@ interface NegotiationCommentInput {
   entity_reference?: string;
 }
 
+interface UploadedFile {
+  name: string;
+  url: string;
+  size: number;
+  storagePath?: string;
+}
+
 interface RequestBody {
   project_id: string;
   proposal_id: string;
@@ -32,6 +39,7 @@ interface RequestBody {
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
   comments?: NegotiationCommentInput[];
+  files?: UploadedFile[];
 }
 
 serve(async (req) => {
@@ -79,6 +87,7 @@ serve(async (req) => {
       global_comment,
       line_item_adjustments,
       comments,
+      files,
     } = body;
 
     // Validate required fields
@@ -179,6 +188,7 @@ serve(async (req) => {
         target_reduction_percent,
         global_comment,
         initiator_message: global_comment,
+        files: files || [],
       })
       .select()
       .single();

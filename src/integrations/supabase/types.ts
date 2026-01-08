@@ -667,6 +667,7 @@ export type Database = {
           consultant_advisor_id: string
           consultant_response_message: string | null
           created_at: string
+          files: Json | null
           global_comment: string | null
           id: string
           initiator_id: string
@@ -686,6 +687,7 @@ export type Database = {
           consultant_advisor_id: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id: string
@@ -705,6 +707,7 @@ export type Database = {
           consultant_advisor_id?: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id?: string
