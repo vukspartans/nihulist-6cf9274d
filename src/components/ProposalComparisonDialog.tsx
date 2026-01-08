@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle, ChevronDown, ChevronUp, FileIcon, ExternalLink } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle, ChevronDown, ChevronUp, FileIcon, ExternalLink, Eye, EyeOff, Building2 } from 'lucide-react';
 import { ProposalApprovalDialog } from './ProposalApprovalDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useProposalEvaluation } from '@/hooks/useProposalEvaluation';
@@ -56,6 +56,7 @@ interface AdvisorInfo {
   founding_year: number | null;
   office_size: string | null;
   user_id: string;
+  logo_url?: string | null;
 }
 
 interface RFPInviteInfo {
@@ -120,6 +121,7 @@ export const ProposalComparisonDialog = ({
   const [selectedProposalForWhy, setSelectedProposalForWhy] = useState<Proposal | null>(null);
   const [whyRecommendedOpen, setWhyRecommendedOpen] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [showOptionalItems, setShowOptionalItems] = useState(false);
   
   // Negotiation state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -202,7 +204,8 @@ export const ProposalComparisonDialog = ({
             rating,
             founding_year,
             office_size,
-            user_id
+            user_id,
+            logo_url
           ),
           rfp_invite:rfp_invites!rfp_invite_id (
             advisor_type,
@@ -485,8 +488,8 @@ export const ProposalComparisonDialog = ({
           </div>
         )}
 
-        {/* Optional Items */}
-        {optionalItems.length > 0 && (
+        {/* Optional Items - Only show if toggle is enabled */}
+        {showOptionalItems && optionalItems.length > 0 && (
           <div>
             <h4 className="font-medium text-sm mb-2 text-right">פריטים אופציונליים</h4>
             <Table dir="rtl">
@@ -712,24 +715,46 @@ export const ProposalComparisonDialog = ({
 
           {/* Table Section */}
           <div className="space-y-4 mt-4">
-            <div className="flex items-center gap-2 mb-4 flex-wrap" dir="rtl">
-              <span className="text-sm text-muted-foreground">מיין לפי:</span>
+            <div className="flex items-center gap-2 mb-4 flex-wrap justify-between" dir="rtl">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">מיין לפי:</span>
+                <Button
+                  variant={sortBy === 'score' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('score')}
+                  disabled={!proposals.some(p => p.evaluation_rank)}
+                  className="flex items-center gap-1.5"
+                >
+                  דירוג AI
+                  <Award className="w-3 h-3" />
+                </Button>
+                <Button
+                  variant={sortBy === 'price' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('price')}
+                >
+                  מחיר
+                </Button>
+              </div>
+              
+              {/* Show/Hide Optional Items Toggle */}
               <Button
-                variant={sortBy === 'score' ? 'default' : 'outline'}
+                variant="outline"
                 size="sm"
-                onClick={() => setSortBy('score')}
-                disabled={!proposals.some(p => p.evaluation_rank)}
+                onClick={() => setShowOptionalItems(!showOptionalItems)}
                 className="flex items-center gap-1.5"
               >
-                דירוג AI
-                <Award className="w-3 h-3" />
-              </Button>
-              <Button
-                variant={sortBy === 'price' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortBy('price')}
-              >
-                מחיר
+                {showOptionalItems ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5" />
+                    הסתר אופציונליים
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5" />
+                    הצג אופציונליים
+                  </>
+                )}
               </Button>
             </div>
 
@@ -793,37 +818,54 @@ export const ProposalComparisonDialog = ({
                                 )}
                               </div>
 
-                              {/* Supplier/Company Info */}
-                              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-base truncate">
-                                    {proposal.advisor?.company_name || proposal.supplier_name || 'ללא שם'}
-                                  </span>
-                                  {(proposal.current_version && proposal.current_version > 1) && (
-                                    <VersionBadge 
-                                      currentVersion={proposal.current_version} 
-                                      hasActiveNegotiation={proposal.has_active_negotiation}
+                              {/* Supplier/Company Info with Logo */}
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                {/* Advisor Logo */}
+                                <div className="flex-shrink-0">
+                                  {proposal.advisor?.logo_url ? (
+                                    <img 
+                                      src={proposal.advisor.logo_url} 
+                                      alt={proposal.advisor.company_name || ''} 
+                                      className="w-10 h-10 rounded-lg object-cover border"
                                     />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center border">
+                                      <Building2 className="w-5 h-5 text-muted-foreground" />
+                                    </div>
                                   )}
                                 </div>
-                                {proposal.advisor?.profile?.name && (
-                                  <span className="text-sm text-muted-foreground">
-                                    איש קשר: {proposal.advisor.profile.name}
-                                  </span>
-                                )}
-                                {proposal.advisor?.location && (
-                                  <span className="text-xs text-muted-foreground">
-                                    📍 {proposal.advisor.location}
-                                  </span>
-                                )}
-                                {recommendationLevel && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
-                                    {recommendationLevel === 'Recommended' && '✓ מומלץ'}
-                                    {recommendationLevel === 'Review Required' && '⚠ דורש בדיקה'}
-                                    {recommendationLevel === 'Not Recommended' && '✗ לא מומלץ'}
-                                  </span>
-                                )}
+                                
+                                <div className="flex flex-col gap-0.5 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-base truncate">
+                                      {proposal.advisor?.company_name || proposal.supplier_name || 'ללא שם'}
+                                    </span>
+                                    {(proposal.current_version && proposal.current_version > 1) && (
+                                      <VersionBadge 
+                                        currentVersion={proposal.current_version} 
+                                        hasActiveNegotiation={proposal.has_active_negotiation}
+                                      />
+                                    )}
+                                  </div>
+                                  {proposal.advisor?.profile?.name && (
+                                    <span className="text-sm text-muted-foreground">
+                                      איש קשר: {proposal.advisor.profile.name}
+                                    </span>
+                                  )}
+                                  {proposal.advisor?.location && (
+                                    <span className="text-xs text-muted-foreground">
+                                      📍 {proposal.advisor.location}
+                                    </span>
+                                  )}
+                                  {recommendationLevel && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {recommendationLevel === 'Highly Recommended' && '⭐ מומלץ מאוד'}
+                                      {recommendationLevel === 'Recommended' && '✓ מומלץ'}
+                                      {recommendationLevel === 'Review Required' && '⚠ דורש בדיקה'}
+                                      {recommendationLevel === 'Not Recommended' && '✗ לא מומלץ'}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               {/* AI Score */}
@@ -851,7 +893,7 @@ export const ProposalComparisonDialog = ({
                                       {formatCurrency(totals.mandatory)}
                                     </div>
                                   </div>
-                                  {totals.optional > 0 && (
+                                  {showOptionalItems && totals.optional > 0 && (
                                     <div className="text-center">
                                       <div className="text-xs text-muted-foreground">אופציונלי</div>
                                       <div className="font-medium text-muted-foreground">
@@ -1188,6 +1230,8 @@ export const ProposalComparisonDialog = ({
           price: p.price,
           supplier_name: p.supplier_name,
           project_id: p.project_id,
+          current_version: p.current_version,
+          has_active_negotiation: p.has_active_negotiation,
         }))}
         onSuccess={() => {
           setBulkNegotiationDialogOpen(false);
