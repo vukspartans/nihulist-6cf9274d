@@ -334,9 +334,13 @@ export const EnhancedLineItemTable = ({
                     <TableCell className="text-start">
                       {mode === 'entrepreneur' && isSelected ? (
                         <Input
-                          type="number"
-                          value={adjustment?.target_price || itemTotal}
-                          onChange={(e) => handleTargetPriceChange(itemId, parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="numeric"
+                          value={(adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')}
+                          onChange={(e) => {
+                            const rawValue = e.target.value.replace(/,/g, '');
+                            handleTargetPriceChange(itemId, parseFloat(rawValue) || 0);
+                          }}
                           className="w-24"
                           dir="ltr"
                         />
@@ -352,9 +356,13 @@ export const EnhancedLineItemTable = ({
                   {showNewOfferColumn && (
                     <TableCell className="text-start">
                       <Input
-                        type="number"
-                        value={response?.consultant_price ?? adjustment?.target_price ?? itemTotal}
-                        onChange={(e) => handleConsultantPriceChange(itemId, parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="numeric"
+                        value={(response?.consultant_price ?? adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')}
+                        onChange={(e) => {
+                          const rawValue = e.target.value.replace(/,/g, '');
+                          handleConsultantPriceChange(itemId, parseFloat(rawValue) || 0);
+                        }}
                         className="w-24"
                         dir="ltr"
                       />
