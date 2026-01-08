@@ -715,8 +715,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <div className="space-y-1.5">
                     <SectionHeader icon={FileText} className="text-xs">פירוט שירותים מבוקשים</SectionHeader>
                     <Card>
-                      <CardContent className="p-3 text-right">
-                        <p className="text-sm whitespace-pre-wrap">{rfpServiceData.text}</p>
+                      <CardContent className="p-3" dir="rtl">
+                        <div className="text-sm whitespace-pre-wrap leading-relaxed text-right">
+                          {rfpServiceData.text}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>

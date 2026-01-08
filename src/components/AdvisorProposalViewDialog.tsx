@@ -808,11 +808,11 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
 
                     {rfpServiceData?.mode === 'free_text' && rfpServiceData.text && (
                       <Card>
-                        <CardContent className="p-3">
+                        <CardContent className="p-3" dir="rtl">
                           <SectionHeader icon={FileText}>פירוט שירותים מבוקשים</SectionHeader>
-                          <p className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">
+                          <div className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">
                             {rfpServiceData.text}
-                          </p>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
