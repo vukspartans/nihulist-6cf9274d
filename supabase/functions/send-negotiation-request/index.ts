@@ -29,6 +29,13 @@ interface UploadedFile {
   storagePath?: string;
 }
 
+interface MilestoneAdjustment {
+  milestone_id: string;
+  original_percentage: number;
+  target_percentage: number;
+  initiator_note?: string;
+}
+
 interface RequestBody {
   project_id: string;
   proposal_id: string;
@@ -38,6 +45,7 @@ interface RequestBody {
   global_comment?: string;
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
+  milestone_adjustments?: MilestoneAdjustment[];
   comments?: NegotiationCommentInput[];
   files?: UploadedFile[];
 }
@@ -86,6 +94,7 @@ serve(async (req) => {
       target_reduction_percent,
       global_comment,
       line_item_adjustments,
+      milestone_adjustments,
       comments,
       files,
     } = body;
@@ -189,6 +198,7 @@ serve(async (req) => {
         global_comment,
         initiator_message: global_comment,
         files: files || [],
+        milestone_adjustments: milestone_adjustments || [],
       })
       .select()
       .single();

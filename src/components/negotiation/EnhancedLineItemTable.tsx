@@ -127,17 +127,34 @@ export const EnhancedLineItemTable = ({
           a.line_item_id === itemId ? { ...a, target_price: price } : a
         )
       );
+    } else {
+      // Create new adjustment if it doesn't exist
+      onAdjustmentChange([
+        ...adjustments,
+        { line_item_id: itemId, target_price: price }
+      ]);
     }
   };
 
   const handleNoteChange = (itemId: string, note: string) => {
     if (!onAdjustmentChange) return;
     
-    onAdjustmentChange(
-      adjustments.map(a => 
-        a.line_item_id === itemId ? { ...a, initiator_note: note } : a
-      )
-    );
+    const existing = adjustments.find(a => a.line_item_id === itemId);
+    if (existing) {
+      onAdjustmentChange(
+        adjustments.map(a => 
+          a.line_item_id === itemId ? { ...a, initiator_note: note } : a
+        )
+      );
+    } else {
+      // Create new adjustment with note - get item's current total
+      const item = items.find(i => (i.id || `item-${i.item_number}`) === itemId);
+      const itemTotal = item ? (item.total || (item.unit_price * item.quantity)) : 0;
+      onAdjustmentChange([
+        ...adjustments,
+        { line_item_id: itemId, target_price: itemTotal, initiator_note: note }
+      ]);
+    }
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
@@ -147,13 +164,23 @@ export const EnhancedLineItemTable = ({
     if (!item) return;
     
     const newTotal = item.unit_price * quantity;
-    onAdjustmentChange(
-      adjustments.map(a => 
-        a.line_item_id === itemId 
-          ? { ...a, new_quantity: quantity, target_price: newTotal } 
-          : a
-      )
-    );
+    const existing = adjustments.find(a => a.line_item_id === itemId);
+    
+    if (existing) {
+      onAdjustmentChange(
+        adjustments.map(a => 
+          a.line_item_id === itemId 
+            ? { ...a, new_quantity: quantity, target_price: newTotal } 
+            : a
+        )
+      );
+    } else {
+      // Create new adjustment with quantity change
+      onAdjustmentChange([
+        ...adjustments,
+        { line_item_id: itemId, new_quantity: quantity, target_price: newTotal }
+      ]);
+    }
   };
 
   const handleConsultantPriceChange = (itemId: string, price: number) => {

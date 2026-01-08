@@ -672,6 +672,7 @@ export type Database = {
           id: string
           initiator_id: string
           initiator_message: string | null
+          milestone_adjustments: Json | null
           negotiated_version_id: string | null
           project_id: string
           proposal_id: string
@@ -692,6 +693,7 @@ export type Database = {
           id?: string
           initiator_id: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id: string
           proposal_id: string
@@ -712,6 +714,7 @@ export type Database = {
           id?: string
           initiator_id?: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id?: string
           proposal_id?: string
