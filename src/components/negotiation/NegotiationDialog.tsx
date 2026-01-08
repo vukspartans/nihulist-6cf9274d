@@ -288,6 +288,16 @@ export const NegotiationDialog = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Calculate the original total from all priced line items (mandatory + priced optional)
+  const calculateOriginalTotal = (): number => {
+    return feeLineItems.reduce((total, item) => {
+      const itemTotal = item.total || (item.unit_price * item.quantity);
+      // Include all items that have a price (mandatory or optional with price > 0)
+      return total + (itemTotal > 0 ? itemTotal : 0);
+    }, 0);
+  };
+
+  // Calculate target total based on adjustments + unchanged items
   const calculateTargetTotal = (): number => {
     let total = 0;
     feeLineItems.forEach((item) => {
@@ -296,10 +306,13 @@ export const NegotiationDialog = ({
       const adj = adjustments.find((a) => a.line_item_id === itemId);
       
       if (adj) {
+        // User made an adjustment - use their target price
         total += adj.target_price;
-      } else if (!item.is_optional) {
+      } else if (itemTotal > 0) {
+        // Include ALL items that have a price (mandatory or optional with price)
         total += itemTotal;
       }
+      // Items with 0 price (unfilled optional) are correctly excluded
     });
     return total;
   };
@@ -417,11 +430,13 @@ export const NegotiationDialog = ({
     onOpenChange(false);
   };
 
+  const originalTotal = calculateOriginalTotal();
   const targetTotal = calculateTargetTotal();
-  const reductionPercent =
-    proposal.price > 0
-      ? Math.round(((proposal.price - targetTotal) / proposal.price) * 100)
-      : 0;
+  // Only calculate reduction if there are actual adjustments
+  const hasAdjustments = adjustments.length > 0;
+  const reductionPercent = hasAdjustments && originalTotal > 0
+    ? Math.round(((originalTotal - targetTotal) / originalTotal) * 100)
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -687,7 +702,7 @@ export const NegotiationDialog = ({
                     <div className="grid grid-cols-3 gap-4 text-center p-4 bg-muted/30 rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">מחיר מקורי</p>
-                        <p className="text-xl font-bold">{formatCurrency(proposal.price)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(originalTotal)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">מחיר יעד</p>
@@ -696,7 +711,7 @@ export const NegotiationDialog = ({
                       <div>
                         <p className="text-sm text-muted-foreground">הפחתה</p>
                         <p className="text-xl font-bold text-red-600">
-                          {reductionPercent > 0 ? `↓ ${reductionPercent}%` : "-"}
+                          {hasAdjustments && reductionPercent > 0 ? `↓ ${reductionPercent}%` : "ללא שינוי"}
                         </p>
                       </div>
                     </div>

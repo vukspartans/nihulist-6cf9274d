@@ -183,14 +183,16 @@ export const EnhancedLineItemTable = ({
       const itemId = item.id || `item-${item.item_number}`;
       const itemTotal = item.total || (item.unit_price * item.quantity);
       
-      if (!item.is_optional || selectedItems.has(itemId)) {
+      // Include all items with a price > 0 in original total (mandatory + priced optional)
+      if (itemTotal > 0) {
         originalTotal += itemTotal;
       }
 
       const adjustment = adjustments.find(a => a.line_item_id === itemId);
       if (adjustment) {
         targetTotal += adjustment.target_price;
-      } else if (!item.is_optional || selectedItems.has(itemId)) {
+      } else if (itemTotal > 0) {
+        // Include all priced items that don't have adjustments
         targetTotal += itemTotal;
       }
 
@@ -199,13 +201,13 @@ export const EnhancedLineItemTable = ({
         newOfferTotal += response.consultant_price;
       } else if (adjustment) {
         newOfferTotal += adjustment.target_price;
-      } else if (!item.is_optional || selectedItems.has(itemId)) {
+      } else if (itemTotal > 0) {
         newOfferTotal += itemTotal;
       }
     });
 
     return { originalTotal, targetTotal, newOfferTotal };
-  }, [filteredItems, adjustments, consultantResponses, selectedItems]);
+  }, [filteredItems, adjustments, consultantResponses]);
 
   const reductionPercent = totals.originalTotal > 0
     ? Math.round(((totals.originalTotal - totals.targetTotal) / totals.originalTotal) * 100)
