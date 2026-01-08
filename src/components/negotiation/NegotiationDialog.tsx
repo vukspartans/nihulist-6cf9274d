@@ -19,11 +19,12 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useProposalVersions } from "@/hooks/useProposalVersions";
 import { NegotiationContext } from "./NegotiationContext";
 import { EnhancedLineItemTable } from "./EnhancedLineItemTable";
+import { MilestoneNegotiationTable, type MilestonePayment, type MilestoneAdjustment } from "./MilestoneNegotiationTable";
 import type { NegotiationCommentInput, CommentType } from "@/types/negotiation";
 import { 
   RefreshCw, FileText, ClipboardList, Calendar, CreditCard, 
   MessageSquare, AlertTriangle, Upload, X, File, ExternalLink,
-  Eye, Package, ChevronDown, ChevronUp
+  Eye, Package, ChevronDown, ChevronUp, Milestone
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
@@ -98,6 +99,8 @@ export const NegotiationDialog = ({
   const [uploading, setUploading] = useState(false);
   const [loadingExistingFiles, setLoadingExistingFiles] = useState(false);
   const [feeLineItems, setFeeLineItems] = useState<FeeLineItem[]>([]);
+  const [milestones, setMilestones] = useState<MilestonePayment[]>([]);
+  const [milestoneAdjustments, setMilestoneAdjustments] = useState<MilestoneAdjustment[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [showContext, setShowContext] = useState(true);
 
@@ -143,6 +146,14 @@ export const NegotiationDialog = ({
               is_optional: item.is_optional || false,
             })));
           }
+        }
+
+        // Load milestone data from proposal
+        if (proposalData?.milestone_adjustments) {
+          const ms = Array.isArray(proposalData.milestone_adjustments)
+            ? (proposalData.milestone_adjustments as unknown as MilestonePayment[])
+            : [];
+          setMilestones(ms);
         }
       } catch (error) {
         console.error("[NegotiationDialog] Error loading proposal data:", error);
@@ -389,6 +400,7 @@ export const NegotiationDialog = ({
       target_total: calculateTargetTotal(),
       global_comment: globalComment || undefined,
       line_item_adjustments: lineItemAdjustments.length > 0 ? lineItemAdjustments : undefined,
+      milestone_adjustments: milestoneAdjustments.length > 0 ? milestoneAdjustments : undefined,
       comments: negotiationComments.length > 0 ? negotiationComments : undefined,
       files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
     });
@@ -420,6 +432,8 @@ export const NegotiationDialog = ({
     setExistingSessionId(null);
     setUploadedFiles([]);
     setFeeLineItems([]);
+    setMilestones([]);
+    setMilestoneAdjustments([]);
     setComments({
       document: "",
       scope: "",
@@ -493,7 +507,7 @@ export const NegotiationDialog = ({
         ) : (
           <>
             <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="flex flex-col flex-1 min-h-0">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 shrink-0 mx-6 mt-4 w-[calc(100%-3rem)]">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 shrink-0 mx-6 mt-4 w-[calc(100%-3rem)]">
                 <TabsTrigger value="overview" className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
                   <span className="hidden sm:inline">סקירה</span>
@@ -501,6 +515,10 @@ export const NegotiationDialog = ({
                 <TabsTrigger value="items" className="flex items-center gap-1">
                   <Package className="h-4 w-4" />
                   <span className="hidden sm:inline">פריטים</span>
+                </TabsTrigger>
+                <TabsTrigger value="milestones" className="flex items-center gap-1">
+                  <Milestone className="h-4 w-4" />
+                  <span className="hidden sm:inline">אבני דרך</span>
                 </TabsTrigger>
                 <TabsTrigger value="comments" className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4" />
@@ -593,6 +611,28 @@ export const NegotiationDialog = ({
                       <p className="text-sm mt-1">
                         ניתן להוסיף הערות כלליות בלשונית "הערות וקבצים"
                       </p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Milestones Tab */}
+                <TabsContent value="milestones" className="mt-0">
+                  {milestones.length > 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        בחר אבני דרך שברצונך לבקש שינוי עבורן
+                      </p>
+                      <MilestoneNegotiationTable
+                        milestones={milestones}
+                        adjustments={milestoneAdjustments}
+                        onAdjustmentChange={setMilestoneAdjustments}
+                        proposalTotal={calculateOriginalTotal()}
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>אין אבני דרך מוגדרות בהצעה זו</p>
                     </div>
                   )}
                 </TabsContent>
