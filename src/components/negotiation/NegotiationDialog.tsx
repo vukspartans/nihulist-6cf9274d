@@ -148,11 +148,19 @@ export const NegotiationDialog = ({
           }
         }
 
-        // Load milestone data from proposal
+        // Load milestone data from proposal - map actual structure to expected interface
         if (proposalData?.milestone_adjustments) {
-          const ms = Array.isArray(proposalData.milestone_adjustments)
-            ? (proposalData.milestone_adjustments as unknown as MilestonePayment[])
+          const rawMilestones = Array.isArray(proposalData.milestone_adjustments)
+            ? proposalData.milestone_adjustments
             : [];
+          
+          const ms: MilestonePayment[] = rawMilestones.map((m: any) => ({
+            id: m.id || m.description,
+            name: m.description || m.name || '',
+            percentage: m.consultant_percentage ?? m.percentage ?? 0,
+            trigger: m.trigger,
+            description: m.description,
+          }));
           setMilestones(ms);
         }
       } catch (error) {
