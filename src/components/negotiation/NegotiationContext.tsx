@@ -29,9 +29,13 @@ interface FeeItem {
 }
 
 interface MilestonePayment {
+  id?: string;
   description: string;
-  percentage: number;
+  consultant_percentage?: number;
+  entrepreneur_percentage?: number;
+  percentage?: number;  // Keep for backwards compatibility
   trigger?: string;
+  is_entrepreneur_defined?: boolean;
 }
 
 interface PaymentTerms {
@@ -477,13 +481,32 @@ export const NegotiationContext = ({
                   </h4>
                   <div className="bg-muted/30 p-3 rounded-lg">
                     <ul className="space-y-2 text-sm">
-                      {proposalContext.milestoneAdjustments.map((milestone, idx) => (
-                        <li key={idx} className="flex justify-between">
-                          <span>{milestone.description}</span>
-                          <span className="font-medium">{milestone.percentage}%</span>
-                        </li>
-                      ))}
+                      {proposalContext.milestoneAdjustments.map((milestone, idx) => {
+                        const percentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
+                        const amount = (percentage / 100) * proposalContext.totalPrice;
+                        return (
+                          <li key={idx} className="flex justify-between items-center">
+                            <span>{milestone.description}</span>
+                            <div className="text-end">
+                              <span className="font-medium">{percentage}%</span>
+                              <span className="text-muted-foreground text-xs mr-2">
+                                ({formatCurrency(amount)})
+                              </span>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
+                    <Separator className="my-2" />
+                    <div className="flex justify-between font-medium">
+                      <span>סה"כ</span>
+                      <span>
+                        {proposalContext.milestoneAdjustments.reduce(
+                          (sum, m) => sum + (m.consultant_percentage ?? m.percentage ?? 0), 
+                          0
+                        )}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
