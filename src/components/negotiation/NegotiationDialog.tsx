@@ -425,79 +425,81 @@ export const NegotiationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="max-w-5xl max-h-[90vh] overflow-y-auto"
-        dir="rtl"
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            בקשת הצעה מחודשת - {proposal.supplier_name}
-            <RefreshCw className="h-5 w-5 text-amber-600" />
-          </DialogTitle>
-          <DialogDescription>
-            סקור את ההצעה והגדר את הבקשות לעדכון
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent
+          className="max-w-5xl w-[95vw] sm:w-auto h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden p-0"
+          dir="rtl"
+        >
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              בקשת הצעה מחודשת - {proposal.supplier_name}
+              <RefreshCw className="h-5 w-5 text-amber-600" />
+            </DialogTitle>
+            <DialogDescription>
+              סקור את ההצעה והגדר את הבקשות לעדכון
+            </DialogDescription>
+          </DialogHeader>
 
-        {existingSessionId ? (
-          <Alert variant="default" className="border-amber-500 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle>בקשת עדכון קיימת</AlertTitle>
-            <AlertDescription className="mt-2">
-              <p className="mb-3">קיימת כבר בקשת עדכון פעילה להצעה זו. ניתן לבטל אותה ולשלוח בקשה חדשה.</p>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClose}
-                  disabled={loading}
-                >
-                  סגור
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleCancelAndRetry}
-                  disabled={loading}
-                  className="bg-amber-600 hover:bg-amber-700"
-                >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                      מבטל...
-                    </>
-                  ) : (
-                    "בטל ושלח בקשה חדשה"
-                  )}
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
+          {existingSessionId ? (
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <Alert variant="default" className="border-amber-500 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle>בקשת עדכון קיימת</AlertTitle>
+                <AlertDescription className="mt-2">
+                  <p className="mb-3">קיימת כבר בקשת עדכון פעילה להצעה זו. ניתן לבטל אותה ולשלוח בקשה חדשה.</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClose}
+                      disabled={loading}
+                    >
+                      סגור
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleCancelAndRetry}
+                      disabled={loading}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      {loading ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                          מבטל...
+                        </>
+                      ) : (
+                        "בטל ושלח בקשה חדשה"
+                      )}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
         ) : (
           <>
-            <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-              <TabsList className="grid w-full grid-cols-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="flex flex-col flex-1 min-h-0">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 shrink-0 mx-6 mt-4 w-[calc(100%-3rem)]">
                 <TabsTrigger value="overview" className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
-                  סקירה
+                  <span className="hidden sm:inline">סקירה</span>
                 </TabsTrigger>
                 <TabsTrigger value="items" className="flex items-center gap-1">
                   <Package className="h-4 w-4" />
-                  פריטים
+                  <span className="hidden sm:inline">פריטים</span>
                 </TabsTrigger>
                 <TabsTrigger value="comments" className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4" />
-                  הערות וקבצים
+                  <span className="hidden sm:inline">הערות</span>
                 </TabsTrigger>
                 <TabsTrigger value="summary" className="flex items-center gap-1">
                   <ClipboardList className="h-4 w-4" />
-                  סיכום
+                  <span className="hidden sm:inline">סיכום</span>
                 </TabsTrigger>
               </TabsList>
 
-              {/* Overview Tab - RFP & Proposal Context */}
-              <TabsContent value="overview" className="mt-4">
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="mt-0 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">מידע על הבקשה וההצעה</h3>
                     <Button
@@ -548,41 +550,40 @@ export const NegotiationDialog = ({
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* Items Tab - Enhanced Fee Items Table */}
-              <TabsContent value="items" className="mt-4">
-                {loadingItems ? (
-                  <div className="flex justify-center py-8">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : feeLineItems.length > 0 ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      סמן את הפריטים שברצונך לבקש עדכון עבורם והגדר את המחיר היעד
-                    </p>
-                    <EnhancedLineItemTable
-                      items={feeLineItems}
-                      adjustments={adjustments}
-                      onAdjustmentChange={setAdjustments}
-                      mode="entrepreneur"
-                      showOptionalItems={true}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>אין פריטים מפורטים בהצעה זו</p>
-                    <p className="text-sm mt-1">
-                      ניתן להוסיף הערות כלליות בלשונית "הערות וקבצים"
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
+                {/* Items Tab */}
+                <TabsContent value="items" className="mt-0">
+                  {loadingItems ? (
+                    <div className="flex justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : feeLineItems.length > 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        סמן את הפריטים שברצונך לבקש עדכון עבורם והגדר את המחיר היעד
+                      </p>
+                      <EnhancedLineItemTable
+                        items={feeLineItems}
+                        adjustments={adjustments}
+                        onAdjustmentChange={setAdjustments}
+                        mode="entrepreneur"
+                        showOptionalItems={true}
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>אין פריטים מפורטים בהצעה זו</p>
+                      <p className="text-sm mt-1">
+                        ניתן להוסיף הערות כלליות בלשונית "הערות וקבצים"
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
 
-              {/* Comments Tab */}
-              <TabsContent value="comments" className="mt-4 space-y-4">
+                {/* Comments Tab */}
+                <TabsContent value="comments" className="mt-0 space-y-4">
                 {/* File Upload Section */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -674,10 +675,10 @@ export const NegotiationDialog = ({
                     </div>
                   ))}
                 </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* Summary Tab */}
-              <TabsContent value="summary" className="mt-4 space-y-4">
+                {/* Summary Tab */}
+                <TabsContent value="summary" className="mt-0 space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">סיכום הבקשה</CardTitle>
@@ -751,10 +752,11 @@ export const NegotiationDialog = ({
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+                </TabsContent>
+              </div>
             </Tabs>
 
-            <DialogFooter className="gap-2 mt-4">
+            <DialogFooter className="shrink-0 gap-2 px-6 py-4 border-t bg-background flex-row-reverse sm:flex-row">
               <Button onClick={handleSubmit} disabled={loading || uploading}>
                 {loading ? (
                   <>

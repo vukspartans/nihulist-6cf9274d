@@ -225,22 +225,22 @@ export const EnhancedLineItemTable = ({
           <TableHeader>
             <TableRow className="bg-muted/50">
               {showCheckbox && <TableHead className="w-10"></TableHead>}
-              <TableHead className="min-w-[150px]">תיאור</TableHead>
+              <TableHead className="min-w-[150px] text-start">תיאור</TableHead>
               <TableHead className="text-center w-20">יחידה</TableHead>
               <TableHead className="text-center w-20">כמות</TableHead>
-              <TableHead className="text-left w-24">מחיר יח'</TableHead>
-              <TableHead className="text-left w-24">סה"כ מקורי</TableHead>
+              <TableHead className="text-start w-24">מחיר יח'</TableHead>
+              <TableHead className="text-start w-24">סה"כ מקורי</TableHead>
               {showTargetColumn && (
-                <TableHead className="text-left w-28">יעד המזמין</TableHead>
+                <TableHead className="text-start w-28">יעד המזמין</TableHead>
               )}
               {showNewOfferColumn && (
-                <TableHead className="text-left w-28">הצעה חדשה</TableHead>
+                <TableHead className="text-start w-28">הצעה חדשה</TableHead>
               )}
               {showNotesColumn && (
-                <TableHead className="min-w-[120px]">הערות</TableHead>
+                <TableHead className="min-w-[120px] text-start">הערות</TableHead>
               )}
               {showEntrepreneurNotesColumn && (
-                <TableHead className="min-w-[120px]">הערות המזמין</TableHead>
+                <TableHead className="min-w-[120px] text-start">הערות המזמין</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -295,20 +295,21 @@ export const EnhancedLineItemTable = ({
                       <span>{item.quantity}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-left">
+                  <TableCell className="text-start">
                     {formatCurrency(item.unit_price)}
                   </TableCell>
-                  <TableCell className="text-left font-medium">
+                  <TableCell className="text-start font-medium">
                     {formatCurrency(itemTotal)}
                   </TableCell>
                   {showTargetColumn && (
-                    <TableCell className="text-left">
+                    <TableCell className="text-start">
                       {mode === 'entrepreneur' && isSelected ? (
                         <Input
                           type="number"
                           value={adjustment?.target_price || itemTotal}
                           onChange={(e) => handleTargetPriceChange(itemId, parseFloat(e.target.value) || 0)}
                           className="w-24"
+                          dir="ltr"
                         />
                       ) : adjustment ? (
                         <span className="text-amber-600 font-medium">
@@ -320,12 +321,13 @@ export const EnhancedLineItemTable = ({
                     </TableCell>
                   )}
                   {showNewOfferColumn && (
-                    <TableCell className="text-left">
+                    <TableCell className="text-start">
                       <Input
                         type="number"
                         value={response?.consultant_price ?? adjustment?.target_price ?? itemTotal}
                         onChange={(e) => handleConsultantPriceChange(itemId, parseFloat(e.target.value) || 0)}
                         className="w-24"
+                        dir="ltr"
                       />
                     </TableCell>
                   )}
@@ -355,14 +357,14 @@ export const EnhancedLineItemTable = ({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/30">
-              <TableCell colSpan={showCheckbox ? 5 : 4} className="text-left font-medium">
+              <TableCell colSpan={showCheckbox ? 5 : 4} className="text-start font-medium">
                 סה"כ
               </TableCell>
-              <TableCell className="text-left font-bold">
+              <TableCell className="text-start font-bold">
                 {formatCurrency(totals.originalTotal)}
               </TableCell>
               {showTargetColumn && (
-                <TableCell className="text-left font-bold text-amber-600">
+                <TableCell className="text-start font-bold text-amber-600">
                   {formatCurrency(totals.targetTotal)}
                   {reductionPercent > 0 && (
                     <span className="text-xs text-red-600 block">↓{reductionPercent}%</span>
@@ -370,7 +372,7 @@ export const EnhancedLineItemTable = ({
                 </TableCell>
               )}
               {showNewOfferColumn && (
-                <TableCell className="text-left font-bold text-green-600">
+                <TableCell className="text-start font-bold text-green-600">
                   {formatCurrency(totals.newOfferTotal)}
                 </TableCell>
               )}
