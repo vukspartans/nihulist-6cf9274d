@@ -848,16 +848,16 @@ const AdvisorDashboard = () => {
           </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8" dir="rtl">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4 mb-6 md:mb-8" dir="rtl">
           <Card 
             className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
             onClick={() => handleStatsCardClick('all')}
           >
-            <CardContent className="p-3 md:p-6">
-              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
-                <FileText className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                <p className="text-xl md:text-2xl font-bold">{activeInvites.length}</p>
-                <p className="text-xs md:text-sm text-muted-foreground leading-tight">כלל הצעות המחיר הפעילות</p>
+            <CardContent className="p-2.5 md:p-4">
+              <div className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                <FileText className="h-5 w-5 md:h-7 md:w-7 text-primary" />
+                <p className="text-lg md:text-xl font-bold">{activeInvites.length}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">כלל הצעות המחיר הפעילות</p>
               </div>
             </CardContent>
           </Card>
@@ -866,16 +866,16 @@ const AdvisorDashboard = () => {
             className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
             onClick={() => handleStatsCardClick('new')}
           >
-            <CardContent className="p-3 md:p-6">
-              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
-                <Bell className="h-6 w-6 md:h-8 md:w-8 text-orange-500" />
-                <div className="flex items-center gap-1 md:gap-2">
-                  <p className="text-xl md:text-2xl font-bold">{newInvites.length}</p>
+            <CardContent className="p-2.5 md:p-4">
+              <div className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                <Bell className="h-5 w-5 md:h-7 md:w-7 text-orange-500" />
+                <div className="flex items-center gap-1">
+                  <p className="text-lg md:text-xl font-bold">{newInvites.length}</p>
                   {newInvites.length > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full animate-fade-in">חדש</span>
+                    <span className="bg-red-500 text-white text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded-full animate-fade-in">חדש</span>
                   )}
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground leading-tight">הצעות חדשות שהתקבלו</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">הצעות חדשות שהתקבלו</p>
               </div>
             </CardContent>
           </Card>
@@ -884,11 +884,11 @@ const AdvisorDashboard = () => {
             className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
             onClick={() => handleStatsCardClick('submitted')}
           >
-            <CardContent className="p-3 md:p-6">
-              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
-                <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
-                <p className="text-xl md:text-2xl font-bold">{proposals.length}</p>
-                <p className="text-xs md:text-sm text-muted-foreground leading-tight">הצעות שהוגשו</p>
+            <CardContent className="p-2.5 md:p-4">
+              <div className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                <ShieldCheck className="h-5 w-5 md:h-7 md:w-7 text-green-500" />
+                <p className="text-lg md:text-xl font-bold">{proposals.length}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">הצעות שהוגשו</p>
               </div>
             </CardContent>
           </Card>
@@ -897,11 +897,11 @@ const AdvisorDashboard = () => {
             className="shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105"
             onClick={() => handleStatsCardClick('unsubmitted')}
           >
-            <CardContent className="p-3 md:p-6">
-              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
-                <Clock className="h-6 w-6 md:h-8 md:w-8 text-blue-500" />
-                <p className="text-xl md:text-2xl font-bold">{unsubmittedInvites.length}</p>
-                <p className="text-xs md:text-sm text-muted-foreground leading-tight">הצעות שטרם הוגשו</p>
+            <CardContent className="p-2.5 md:p-4">
+              <div className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                <Clock className="h-5 w-5 md:h-7 md:w-7 text-blue-500" />
+                <p className="text-lg md:text-xl font-bold">{unsubmittedInvites.length}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">הצעות שטרם הוגשו</p>
               </div>
             </CardContent>
           </Card>
@@ -910,16 +910,16 @@ const AdvisorDashboard = () => {
             className={`shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105 ${pendingNegotiations.length > 0 ? 'ring-2 ring-amber-400' : ''}`}
             onClick={() => handleStatsCardClick('negotiations')}
           >
-            <CardContent className="p-3 md:p-6">
-              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
-                <Handshake className="h-6 w-6 md:h-8 md:w-8 text-amber-500" />
-                <div className="flex items-center gap-1 md:gap-2">
-                  <p className="text-xl md:text-2xl font-bold">{pendingNegotiations.length}</p>
+            <CardContent className="p-2.5 md:p-4">
+              <div className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                <Handshake className="h-5 w-5 md:h-7 md:w-7 text-amber-500" />
+                <div className="flex items-center gap-1">
+                  <p className="text-lg md:text-xl font-bold">{pendingNegotiations.length}</p>
                   {pendingNegotiations.length > 0 && (
-                    <span className="bg-amber-500 text-white text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full animate-pulse">פעיל</span>
+                    <span className="bg-amber-500 text-white text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded-full animate-pulse">פעיל</span>
                   )}
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground leading-tight">בקשות משא ומתן</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">בקשות משא ומתן</p>
               </div>
             </CardContent>
           </Card>
