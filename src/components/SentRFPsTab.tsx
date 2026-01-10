@@ -227,7 +227,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                               {formatDate(invite.deadlineAt)}
                             </TableCell>
                             <TableCell>
-                              {invite.proposalId && (
+                              {invite.proposalId ? (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -242,7 +242,12 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                                   )}
                                   צפה בהצעה
                                 </Button>
-                              )}
+                              ) : invite.status === 'submitted' ? (
+                                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  הצעה חסרה
+                                </Badge>
+                              ) : null}
                               {invite.status === 'declined' && invite.declineReason && (
                                 <span className="text-xs text-muted-foreground block mt-1">
                                   סיבה: {invite.declineReason}
