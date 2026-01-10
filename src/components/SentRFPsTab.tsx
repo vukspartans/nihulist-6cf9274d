@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2 } from 'lucide-react';
-import { useRFPInvitesWithDetails } from '@/hooks/useRFPInvitesWithDetails';
+import { useRFPInvitesWithDetails, AdvisorTypeGroup } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalDetailDialog } from './ProposalDetailDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
@@ -18,7 +18,7 @@ interface SentRFPsTabProps {
 }
 
 export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
-  const { data: rfpsWithInvites, isLoading, error } = useRFPInvitesWithDetails(projectId);
+  const { data: advisorTypeGroups, isLoading, error } = useRFPInvitesWithDetails(projectId);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [loadingProposalId, setLoadingProposalId] = useState<string | null>(null);
@@ -101,6 +101,18 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     }
   };
 
+  // Safe date formatting helper
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      return format(date, 'dd/MM/yyyy', { locale: he });
+    } catch {
+      return '-';
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -121,7 +133,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     );
   }
 
-  if (!rfpsWithInvites || rfpsWithInvites.length === 0) {
+  if (!advisorTypeGroups || advisorTypeGroups.length === 0) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -131,145 +143,120 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     );
   }
 
-  // Check if any RFP has zero invites
-  const hasZeroInvites = rfpsWithInvites.some(rfp => rfp.totalInvites === 0);
+  // Calculate total invites and proposals across all groups
+  const totalInvites = advisorTypeGroups.reduce((sum, g) => sum + g.totalInvites, 0);
+  const totalProposals = advisorTypeGroups.reduce((sum, g) => sum + g.proposalsCount, 0);
 
   return (
     <div className="space-y-4">
-      {/* PHASE 5: Warning banner for RFPs with zero invites */}
-      {hasZeroInvites && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>אזהרה:</strong> חלק מהבקשות לא נשלחו ליועצים. ייתכן שהיועצים שנבחרו אינם פעילים או לא אושרו על ידי המנהל.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" />
-            בקשות שנשלחו
-            <Badge variant="secondary">{rfpsWithInvites.length}</Badge>
+            בקשות שנשלחו לפי סוג יועץ
+            <Badge variant="secondary">{advisorTypeGroups.length} תחומים</Badge>
+            <Badge variant="outline">{totalInvites} בקשות</Badge>
+            {totalProposals > 0 && (
+              <Badge variant="success">{totalProposals} הצעות</Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
-            {rfpsWithInvites.map((rfp) => {
-              const proposalsCount = rfp.advisorInvites.filter(inv => inv.proposalId).length;
-              
-              return (
-                <AccordionItem key={rfp.rfpId} value={rfp.rfpId}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex flex-col items-start text-right gap-1">
-                        {/* Show unique advisor types as badges instead of generic title */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {[...new Set(rfp.advisorInvites.map(inv => inv.advisorType).filter(Boolean))].map((type, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {type}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>נשלח: {format(new Date(rfp.sentAt), 'dd/MM/yyyy', { locale: he })}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{rfp.totalInvites} בקשות</Badge>
-                        {proposalsCount > 0 && (
-                          <Badge variant="success">{proposalsCount} הצעות</Badge>
-                        )}
-                      </div>
+            {advisorTypeGroups.map((group: AdvisorTypeGroup) => (
+              <AccordionItem key={group.advisorType} value={group.advisorType}>
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-sm font-medium">
+                        {group.advisorType}
+                      </Badge>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {rfp.totalInvites === 0 ? (
-                      <Alert variant="destructive" className="mb-4">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          לא נשלחו הזמנות ליועצים עבור בקשה זו. ייתכן שהיועצים שנבחרו אינם פעילים או לא אושרו על ידי המנהל.
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-right">שם יועץ</TableHead>
-                            <TableHead className="text-right">תחום</TableHead>
-                            <TableHead className="text-right">תאריך שליחה</TableHead>
-                            <TableHead className="text-right">סטטוס</TableHead>
-                            <TableHead className="text-right">תאריך יעד</TableHead>
-                            <TableHead className="text-right">פעולות</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {rfp.advisorInvites.map((invite) => (
-                            <TableRow key={invite.inviteId}>
-                              <TableCell className="font-medium">{invite.advisorName}</TableCell>
-                              <TableCell>{invite.advisorType}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Send className="h-3.5 w-3.5" />
-                                  {invite.createdAt 
-                                    ? format(new Date(invite.createdAt), 'dd/MM/yyyy', { locale: he })
-                                    : '-'}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge 
-                                  variant={getStatusVariant(invite.status)}
-                                  className={`gap-1 ${
-                                    invite.status === 'submitted' ? 'bg-green-100 text-green-800 border-green-300' :
-                                    invite.status === 'declined' || invite.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
-                                    invite.status === 'opened' || invite.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                                    ''
-                                  }`}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{group.totalInvites} בקשות</Badge>
+                      {group.proposalsCount > 0 && (
+                        <Badge variant="success">{group.proposalsCount} הצעות</Badge>
+                      )}
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {group.invites.length === 0 ? (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        לא נשלחו הזמנות ליועצים עבור תחום זה.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-right">שם יועץ</TableHead>
+                          <TableHead className="text-right">תאריך שליחה</TableHead>
+                          <TableHead className="text-right">סטטוס</TableHead>
+                          <TableHead className="text-right">תאריך יעד</TableHead>
+                          <TableHead className="text-right">פעולות</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.invites.map((invite) => (
+                          <TableRow key={invite.inviteId}>
+                            <TableCell className="font-medium">{invite.advisorName}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatDate(invite.rfpSentAt)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={getStatusVariant(invite.status)}
+                                className={`gap-1 ${
+                                  invite.status === 'submitted' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  invite.status === 'declined' || invite.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
+                                  invite.status === 'opened' || invite.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                  ''
+                                }`}
+                              >
+                                {getStatusIcon(invite.status)}
+                                {translateStatus(invite.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(invite.deadlineAt)}
+                            </TableCell>
+                            <TableCell>
+                              {invite.proposalId && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewProposal(invite.proposalId!)}
+                                  className="gap-2"
+                                  disabled={loadingProposalId === invite.proposalId}
                                 >
-                                  {getStatusIcon(invite.status)}
-                                  {translateStatus(invite.status)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {invite.deadlineAt 
-                                  ? format(new Date(invite.deadlineAt), 'dd/MM/yyyy', { locale: he })
-                                  : '-'
-                                }
-                              </TableCell>
-                              <TableCell>
-                                {invite.proposalId && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewProposal(invite.proposalId!)}
-                                    className="gap-2"
-                                    disabled={loadingProposalId === invite.proposalId}
-                                  >
-                                    {loadingProposalId === invite.proposalId ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Eye className="h-4 w-4" />
-                                    )}
-                                    צפה בהצעה
-                                  </Button>
-                                )}
-                                {invite.status === 'declined' && invite.declineReason && (
-                                  <span className="text-xs text-muted-foreground block mt-1">
-                                    סיבה: {invite.declineReason}
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
+                                  {loadingProposalId === invite.proposalId ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                  צפה בהצעה
+                                </Button>
+                              )}
+                              {invite.status === 'declined' && invite.declineReason && (
+                                <span className="text-xs text-muted-foreground block mt-1">
+                                  סיבה: {invite.declineReason}
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
           </Accordion>
         </CardContent>
       </Card>
