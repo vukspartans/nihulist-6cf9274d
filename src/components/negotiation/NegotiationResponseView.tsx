@@ -4,11 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2 } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface NegotiationResponseViewProps {
   sessionId: string;
@@ -42,8 +53,11 @@ export const NegotiationResponseView = ({
   const [lineItemDetails, setLineItemDetails] = useState<Map<string, LineItemDetails>>(new Map());
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
+  const [showDeclineDialog, setShowDeclineDialog] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declining, setDeclining] = useState(false);
 
-  const { fetchNegotiationWithDetails, respondToNegotiation, loading } = useNegotiation();
+  const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
 
   useEffect(() => {
@@ -233,11 +247,58 @@ export const NegotiationResponseView = ({
     }
   };
 
+  // Accept target price exactly as requested by entrepreneur
+  const handleAcceptTarget = async () => {
+    // Set all line items to entrepreneur's target prices
+    const acceptedItems = updatedLineItems.map(item => {
+      const negotiationItem = session?.line_item_negotiations?.find(
+        li => li.line_item_id === item.line_item_id
+      );
+      return {
+        ...item,
+        consultant_response_price: negotiationItem?.initiator_target_price || item.consultant_response_price
+      };
+    });
+
+    const result = await respondToNegotiation({
+      session_id: sessionId,
+      consultant_message: consultantMessage || "אני מקבל/ת את המחיר המבוקש",
+      updated_line_items: acceptedItems.length > 0 ? acceptedItems : [],
+    });
+
+    if (result) {
+      onSuccess?.();
+    }
+  };
+
+  // Decline the negotiation request
+  const handleDecline = async () => {
+    setDeclining(true);
+    const success = await cancelNegotiation(sessionId);
+    setDeclining(false);
+    setShowDeclineDialog(false);
+    
+    if (success) {
+      onSuccess?.();
+    }
+  };
+
   const calculateNewTotal = (): number => {
     return updatedLineItems.reduce(
       (sum, item) => sum + item.consultant_response_price,
       0
     );
+  };
+
+  // Calculate reduction percentages
+  const calculateReductionPercent = () => {
+    if (!originalTotal || originalTotal === 0) return 0;
+    return Math.round(((originalTotal - targetTotal) / originalTotal) * 100);
+  };
+
+  const calculateNewReductionPercent = () => {
+    if (!originalTotal || originalTotal === 0) return 0;
+    return Math.round(((originalTotal - newTotal) / originalTotal) * 100);
   };
 
   if (loadingSession) {
@@ -330,6 +391,55 @@ export const NegotiationResponseView = ({
                 </>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Comparison Summary Card - Key change visualization */}
+      {canRespond && (
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-amber-600" />
+              סיכום בקשת העדכון
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-white/60 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
+              </div>
+              <div className="p-3 bg-amber-100/60 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
+                <p className="text-xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
+                  -{calculateReductionPercent()}%
+                </Badge>
+              </div>
+              <div className="p-3 bg-white/60 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">הפרש מבוקש</p>
+                <p className="text-xl font-bold text-red-600">
+                  {formatCurrency(originalTotal - targetTotal)}
+                </p>
+              </div>
+            </div>
+
+            {/* Show if counter-offer differs from target */}
+            {hasLineItems && newTotal !== targetTotal && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">ההצעה החדשה שלך:</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-blue-700">{formatCurrency(newTotal)}</span>
+                    <span className="text-sm text-blue-600 ms-2">(-{calculateNewReductionPercent()}%)</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -543,28 +653,66 @@ export const NegotiationResponseView = ({
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-3 justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 justify-end">
         {onBack && (
           <Button variant="outline" onClick={onBack}>
             {canRespond ? "ביטול" : "חזרה"}
           </Button>
         )}
         {canRespond && (
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                שולח...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 me-2" />
-                שלח הצעה מעודכנת
-              </>
-            )}
-          </Button>
+          <>
+            <Button variant="destructive" onClick={() => setShowDeclineDialog(true)} disabled={loading || declining}>
+              <XCircle className="h-4 w-4 me-2" />
+              דחה בקשה
+            </Button>
+            <Button variant="outline" onClick={handleAcceptTarget} disabled={loading || declining}>
+              <Check className="h-4 w-4 me-2" />
+              קבל מחיר יעד
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || declining}>
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                  שולח...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 me-2" />
+                  שלח הצעה נגדית
+                </>
+              )}
+            </Button>
+          </>
         )}
       </div>
+
+      {/* Decline Dialog */}
+      <AlertDialog open={showDeclineDialog} onOpenChange={setShowDeclineDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>דחיית בקשת משא ומתן</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך לדחות את בקשת המשא ומתן? היזם יקבל הודעה על הדחייה.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="סיבת דחייה (אופציונלי)..."
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDecline}
+              disabled={declining}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {declining ? "דוחה..." : "דחה בקשה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

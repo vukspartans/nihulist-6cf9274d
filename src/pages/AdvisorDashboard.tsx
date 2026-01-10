@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy, Handshake, ArrowLeft } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -109,6 +109,20 @@ interface UserProfile {
   phone: string | null;
 }
 
+interface NegotiationItem {
+  id: string;
+  status: string;
+  created_at: string;
+  target_total: number | null;
+  target_reduction_percent: number | null;
+  global_comment: string | null;
+  proposal_id: string;
+  original_price: number;
+  project_name: string;
+  project_type: string | null;
+  project_location: string | null;
+}
+
 const AdvisorDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -125,8 +139,9 @@ const AdvisorDashboard = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
-  const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals'>('rfp-invites');
+  const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations'>('rfp-invites');
   const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
+  const [negotiations, setNegotiations] = useState<NegotiationItem[]>([]);
   const [proposalFilter, setProposalFilter] = useState<'all' | 'accepted' | 'submitted' | 'under_review' | 'rejected'>('all');
   const [proposalViewDialogOpen, setProposalViewDialogOpen] = useState(false);
   const [selectedProposalToView, setSelectedProposalToView] = useState<string | null>(null);
@@ -384,6 +399,42 @@ const AdvisorDashboard = () => {
           }
         });
         setProposalMap(proposalsByInvite);
+
+        // Fetch active negotiations for this advisor
+        const { data: negotiationsData, error: negotiationsError } = await supabase
+          .from('negotiation_sessions')
+          .select(`
+            id,
+            status,
+            created_at,
+            target_total,
+            target_reduction_percent,
+            global_comment,
+            proposal_id,
+            proposals!inner(price, projects!inner(name, type, location))
+          `)
+          .eq('consultant_advisor_id', advisor.id)
+          .order('created_at', { ascending: false });
+
+        if (negotiationsError) {
+          console.error('[AdvisorDashboard] ❌ Negotiations error:', negotiationsError);
+        } else {
+          const mappedNegotiations: NegotiationItem[] = (negotiationsData || []).map((n: any) => ({
+            id: n.id,
+            status: n.status,
+            created_at: n.created_at,
+            target_total: n.target_total,
+            target_reduction_percent: n.target_reduction_percent,
+            global_comment: n.global_comment,
+            proposal_id: n.proposal_id,
+            original_price: n.proposals?.price || 0,
+            project_name: n.proposals?.projects?.name || 'פרויקט',
+            project_type: n.proposals?.projects?.type || null,
+            project_location: n.proposals?.projects?.location || null,
+          }));
+          setNegotiations(mappedNegotiations);
+          console.debug('[AdvisorDashboard] ✅ Fetched negotiations:', mappedNegotiations.length);
+        }
       }
     } catch (error) {
       toast({
@@ -633,7 +684,9 @@ const AdvisorDashboard = () => {
     );
   }
 
-  const handleStatsCardClick = (cardType: 'all' | 'new' | 'submitted' | 'unsubmitted') => {
+  const pendingNegotiations = negotiations.filter(n => n.status === 'awaiting_response');
+
+  const handleStatsCardClick = (cardType: 'all' | 'new' | 'submitted' | 'unsubmitted' | 'negotiations') => {
     switch (cardType) {
       case 'new':
         setActiveTab('rfp-invites');
@@ -647,6 +700,9 @@ const AdvisorDashboard = () => {
         setActiveTab('rfp-invites');
         setFilterType('unsubmitted');
         setShowActiveOnly(true);
+        break;
+      case 'negotiations':
+        setActiveTab('negotiations');
         break;
       case 'all':
       default:
@@ -849,10 +905,28 @@ const AdvisorDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          <Card 
+            className={`shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:scale-105 ${pendingNegotiations.length > 0 ? 'ring-2 ring-amber-400' : ''}`}
+            onClick={() => handleStatsCardClick('negotiations')}
+          >
+            <CardContent className="p-3 md:p-6">
+              <div className="flex flex-col items-center text-center gap-2 md:gap-3">
+                <Handshake className="h-6 w-6 md:h-8 md:w-8 text-amber-500" />
+                <div className="flex items-center gap-1 md:gap-2">
+                  <p className="text-xl md:text-2xl font-bold">{pendingNegotiations.length}</p>
+                  {pendingNegotiations.length > 0 && (
+                    <span className="bg-amber-500 text-white text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full animate-pulse">פעיל</span>
+                  )}
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground leading-tight">בקשות משא ומתן</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="rfp-invites" className="flex items-center gap-2">
               הזמנות להצעת מחיר
               {newInvites.length > 0 && (
@@ -862,6 +936,14 @@ const AdvisorDashboard = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="my-proposals">ההצעות שלי</TabsTrigger>
+            <TabsTrigger value="negotiations" className="flex items-center gap-2">
+              משא ומתן
+              {pendingNegotiations.length > 0 && (
+                <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {pendingNegotiations.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="rfp-invites" className="space-y-4">
@@ -1303,6 +1385,127 @@ const AdvisorDashboard = () => {
                   </CardContent>
                 </Card>
               ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="negotiations" className="space-y-4">
+            {negotiations.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">אין בקשות משא ומתן כרגע</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    כאשר יזם יבקש לעדכן הצעה שהגשת, הבקשה תופיע כאן
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              negotiations.map((negotiation) => {
+                const isPending = negotiation.status === 'awaiting_response';
+                const isResponded = negotiation.status === 'responded';
+                const isCancelled = negotiation.status === 'cancelled';
+                const isResolved = negotiation.status === 'resolved';
+
+                const reductionPercent = negotiation.target_reduction_percent || 
+                  (negotiation.target_total && negotiation.original_price > 0
+                    ? Math.round(((negotiation.original_price - negotiation.target_total) / negotiation.original_price) * 100)
+                    : 0);
+
+                const getStatusBadge = () => {
+                  if (isPending) return <Badge className="bg-amber-500 text-white">ממתין לתגובה</Badge>;
+                  if (isResponded) return <Badge className="bg-green-500 text-white">נענה</Badge>;
+                  if (isCancelled) return <Badge variant="secondary">בוטל</Badge>;
+                  if (isResolved) return <Badge variant="outline">הסתיים</Badge>;
+                  return <Badge variant="outline">{negotiation.status}</Badge>;
+                };
+
+                return (
+                  <Card 
+                    key={negotiation.id} 
+                    className={`shadow-md transition-shadow ${isPending ? 'border-2 border-amber-400 hover:shadow-lg' : 'opacity-75'}`}
+                  >
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <CardTitle className="text-lg">{negotiation.project_name}</CardTitle>
+                            {isPending && (
+                              <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium">
+                                נדרשת תגובה
+                              </span>
+                            )}
+                          </div>
+                          <CardDescription className="flex items-center gap-2 mt-2">
+                            <MapPin className="h-4 w-4" />
+                            {negotiation.project_location || '—'}
+                          </CardDescription>
+                        </div>
+                        {getStatusBadge()}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Price Summary */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg mb-4">
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                          <p className="text-lg font-bold">₪{negotiation.original_price.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-1">מחיר יעד</p>
+                          <p className="text-lg font-bold text-amber-600">
+                            {negotiation.target_total 
+                              ? `₪${negotiation.target_total.toLocaleString()}`
+                              : '—'
+                            }
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-1">הפחתה מבוקשת</p>
+                          <p className="text-lg font-bold text-red-600">
+                            {reductionPercent > 0 ? `-${reductionPercent}%` : '—'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Global Comment */}
+                      {negotiation.global_comment && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                          <p className="text-sm font-medium text-amber-800 mb-1">הודעה מהיזם:</p>
+                          <p className="text-sm text-amber-700">{negotiation.global_comment}</p>
+                        </div>
+                      )}
+
+                      {/* Metadata */}
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>התקבל: {new Date(negotiation.created_at).toLocaleDateString('he-IL')}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      {isPending ? (
+                        <Button 
+                          className="w-full"
+                          onClick={() => navigate(`/negotiation/${negotiation.id}`)}
+                        >
+                          <ArrowLeft className="h-4 w-4 me-2" />
+                          צפה ושלח תגובה
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => navigate(`/negotiation/${negotiation.id}`)}
+                        >
+                          <FileText className="h-4 w-4 me-2" />
+                          צפה בפרטים
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </TabsContent>
 
