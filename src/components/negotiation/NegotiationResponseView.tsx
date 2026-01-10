@@ -9,7 +9,8 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,7 @@ export const NegotiationResponseView = ({
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [declining, setDeclining] = useState(false);
+  const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -649,14 +651,15 @@ export const NegotiationResponseView = ({
         </CardHeader>
         <CardContent>
           {hasLineItems ? (
-            <div className="space-y-3">
+            <div className="space-y-3" dir="rtl">
               {/* Header */}
-              <div className="grid grid-cols-5 gap-3 text-xs font-medium text-muted-foreground pb-2 border-b">
-                <span className="col-span-1">פריט</span>
+              <div className="grid grid-cols-6 gap-2 text-xs font-medium text-muted-foreground pb-2 border-b">
+                <span className="col-span-1 text-right">פריט</span>
                 <span className="text-center">מחיר מקורי</span>
                 <span className="text-center">יעד היזם</span>
                 <span className="text-center">הפחתה</span>
-                <span className="text-center">הצעה חדשה שלי</span>
+                <span className="text-center">אישור</span>
+                <span className="text-center">הצעה חדשה</span>
               </div>
 
               {session.line_item_negotiations!.map((lineItem) => {
@@ -669,14 +672,15 @@ export const NegotiationResponseView = ({
                   ? Math.round((reduction / lineItem.original_price) * 100) 
                   : 0;
                 const hasChange = reduction > 0;
+                const isApproved = approvedItems.has(lineItem.line_item_id);
 
                 return (
                   <div
                     key={lineItem.id}
-                    className={`rounded-lg border p-3 ${hasChange ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-muted'}`}
+                    className={`rounded-lg border p-3 ${isApproved ? 'bg-green-50/50 border-green-200' : hasChange ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-muted'}`}
                   >
                     {/* Item name and description */}
-                    <div className="mb-2">
+                    <div className="mb-2 text-right">
                       <p className="font-medium text-sm">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
                       {details?.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
@@ -687,14 +691,14 @@ export const NegotiationResponseView = ({
 
                     {/* Entrepreneur's note */}
                     {lineItem.initiator_note && (
-                      <div className="mb-2 p-2 bg-amber-100 rounded text-xs text-amber-800 border border-amber-200">
+                      <div className="mb-2 p-2 bg-amber-100 rounded text-xs text-amber-800 border border-amber-200 text-right">
                         <span className="font-medium">הערת היזם: </span>
                         {lineItem.initiator_note}
                       </div>
                     )}
 
                     {/* Price row */}
-                    <div className="grid grid-cols-5 gap-3 items-center">
+                    <div className="grid grid-cols-6 gap-2 items-center">
                       <div className="col-span-1" />
                       <p className="text-center text-muted-foreground">
                         {formatCurrency(lineItem.original_price)}
@@ -713,18 +717,73 @@ export const NegotiationResponseView = ({
                           <span className="text-xs text-muted-foreground">ללא שינוי</span>
                         )}
                       </div>
-                      <Input
-                        type="number"
-                        value={updatedItem?.consultant_response_price || 0}
-                        onChange={(e) =>
-                          handlePriceChange(
-                            lineItem.line_item_id,
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        className="text-center h-9"
-                        disabled={!canRespond}
-                      />
+                      {/* Approval checkbox */}
+                      <div className="flex justify-center">
+                        {isApproved ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            אושר
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <Checkbox
+                              id={`approve-${lineItem.line_item_id}`}
+                              checked={false}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  const newSet = new Set(approvedItems);
+                                  newSet.add(lineItem.line_item_id);
+                                  setApprovedItems(newSet);
+                                  // Auto-set price to target when approved
+                                  handlePriceChange(lineItem.line_item_id, lineItem.initiator_target_price);
+                                }
+                              }}
+                              disabled={!canRespond}
+                              className="h-4 w-4"
+                            />
+                            <label 
+                              htmlFor={`approve-${lineItem.line_item_id}`}
+                              className="text-xs text-muted-foreground cursor-pointer"
+                            >
+                              אשר
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      {/* Price input or approved indicator */}
+                      {isApproved ? (
+                        <div className="text-center">
+                          <p className="font-medium text-green-700">
+                            {formatCurrency(lineItem.initiator_target_price)}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              const newSet = new Set(approvedItems);
+                              newSet.delete(lineItem.line_item_id);
+                              setApprovedItems(newSet);
+                            }}
+                            disabled={!canRespond}
+                          >
+                            בטל אישור
+                          </Button>
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          value={updatedItem?.consultant_response_price || 0}
+                          onChange={(e) =>
+                            handlePriceChange(
+                              lineItem.line_item_id,
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          className="text-center h-9"
+                          disabled={!canRespond}
+                        />
+                      )}
                     </div>
                   </div>
                 );
@@ -744,20 +803,20 @@ export const NegotiationResponseView = ({
           <Separator className="my-4" />
 
           {/* Totals */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>סה״כ מקורי:</span>
-              <span className="font-medium">{formatCurrency(originalTotal)}</span>
+          <div className="space-y-2" dir="rtl">
+            <div className="flex justify-between items-center">
+              <span className="text-right">סה״כ מקורי:</span>
+              <span className="font-medium text-left">{formatCurrency(originalTotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>יעד היזם:</span>
-              <span className="font-medium text-amber-600">
+            <div className="flex justify-between items-center">
+              <span className="text-right">יעד היזם:</span>
+              <span className="font-medium text-amber-600 text-left">
                 {formatCurrency(targetTotal)}
               </span>
             </div>
-            <div className="flex justify-between text-lg">
-              <span className="font-medium">סה״כ הצעה חדשה:</span>
-              <span className="font-bold text-green-600">
+            <div className="flex justify-between items-center text-lg">
+              <span className="font-medium text-right">סה״כ הצעה חדשה:</span>
+              <span className="font-bold text-green-600 text-left">
                 {formatCurrency(newTotal)}
               </span>
             </div>

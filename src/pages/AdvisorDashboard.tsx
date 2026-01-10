@@ -135,7 +135,7 @@ const AdvisorDashboard = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
@@ -419,21 +419,24 @@ const AdvisorDashboard = () => {
         if (negotiationsError) {
           console.error('[AdvisorDashboard] ❌ Negotiations error:', negotiationsError);
         } else {
-          const mappedNegotiations: NegotiationItem[] = (negotiationsData || []).map((n: any) => ({
-            id: n.id,
-            status: n.status,
-            created_at: n.created_at,
-            target_total: n.target_total,
-            target_reduction_percent: n.target_reduction_percent,
-            global_comment: n.global_comment,
-            proposal_id: n.proposal_id,
-            original_price: n.proposals?.price || 0,
-            project_name: n.proposals?.projects?.name || 'פרויקט',
-            project_type: n.proposals?.projects?.type || null,
-            project_location: n.proposals?.projects?.location || null,
-          }));
+          // Filter to show only pending negotiations (awaiting vendor response)
+          const mappedNegotiations: NegotiationItem[] = (negotiationsData || [])
+            .filter((n: any) => n.status === 'awaiting_response' || n.status === 'open')
+            .map((n: any) => ({
+              id: n.id,
+              status: n.status,
+              created_at: n.created_at,
+              target_total: n.target_total,
+              target_reduction_percent: n.target_reduction_percent,
+              global_comment: n.global_comment,
+              proposal_id: n.proposal_id,
+              original_price: n.proposals?.price || 0,
+              project_name: n.proposals?.projects?.name || 'פרויקט',
+              project_type: n.proposals?.projects?.type || null,
+              project_location: n.proposals?.projects?.location || null,
+            }));
           setNegotiations(mappedNegotiations);
-          console.debug('[AdvisorDashboard] ✅ Fetched negotiations:', mappedNegotiations.length);
+          console.debug('[AdvisorDashboard] ✅ Fetched pending negotiations:', mappedNegotiations.length);
         }
       }
     } catch (error) {
@@ -977,25 +980,25 @@ const AdvisorDashboard = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    <SelectItem value="all">הצג הכל ({rfpInvites.length})</SelectItem>
                     <SelectItem value="active">הצג רק פעילים ({activeInvites.length})</SelectItem>
+                    <SelectItem value="all">הצג הכל ({rfpInvites.length})</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
                 <div className="flex gap-2">
-                  <Button 
-                    variant={!showActiveOnly ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setShowActiveOnly(false)}
-                  >
-                    הצג הכל ({rfpInvites.length})
-                  </Button>
                   <Button 
                     variant={showActiveOnly ? "default" : "outline"} 
                     size="sm"
                     onClick={() => setShowActiveOnly(true)}
                   >
                     הצג רק פעילים ({activeInvites.length})
+                  </Button>
+                  <Button 
+                    variant={!showActiveOnly ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setShowActiveOnly(false)}
+                  >
+                    הצג הכל ({rfpInvites.length})
                   </Button>
                 </div>
               )}
@@ -1393,7 +1396,7 @@ const AdvisorDashboard = () => {
               <Card>
                 <CardContent className="p-6 text-center">
                   <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">אין בקשות משא ומתן כרגע</p>
+                  <p className="text-muted-foreground">אין בקשות משא ומתן פעילות כרגע</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     כאשר יזם יבקש לעדכן הצעה שהגשת, הבקשה תופיע כאן
                   </p>
