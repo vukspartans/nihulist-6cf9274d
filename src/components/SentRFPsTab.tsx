@@ -166,16 +166,20 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
             {advisorTypeGroups.map((group: AdvisorTypeGroup) => (
               <AccordionItem key={group.advisorType} value={group.advisorType}>
                 <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[1fr_auto] items-center w-full pr-4 gap-4">
+                    <div className="flex items-center gap-2 justify-start">
                       <Badge variant="outline" className="text-sm font-medium">
                         {group.advisorType}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{group.totalInvites} בקשות</Badge>
+                    <div className="flex items-center gap-2 justify-end min-w-[140px]">
+                      <Badge variant="outline">
+                        {group.totalInvites === 1 ? 'בקשה 1' : `${group.totalInvites} בקשות`}
+                      </Badge>
                       {group.proposalsCount > 0 && (
-                        <Badge variant="success">{group.proposalsCount} הצעות</Badge>
+                        <Badge variant="success">
+                          {group.proposalsCount === 1 ? 'הצעה 1' : `${group.proposalsCount} הצעות`}
+                        </Badge>
                       )}
                     </div>
                   </div>
