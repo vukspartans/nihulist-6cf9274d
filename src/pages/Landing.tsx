@@ -47,7 +47,7 @@ const Landing = memo(() => {
 
   // Hero images array - optimized for performance
   const heroImages = [
-    "/lovable-uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
+    "/uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
     // Add more images here as they're uploaded
   ];
 
