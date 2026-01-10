@@ -57,6 +57,9 @@ export interface NegotiationSession {
   resolved_at?: string;
   created_at: string;
   updated_at: string;
+  // JSONB fields from database - typed as unknown for flexibility with Json type
+  files?: unknown;
+  milestone_adjustments?: unknown;
 }
 
 export interface LineItemNegotiation {
