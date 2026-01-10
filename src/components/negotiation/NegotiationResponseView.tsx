@@ -9,7 +9,7 @@ import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +39,18 @@ interface ProjectFile {
   url: string;
   size?: number;
   type?: string;
+}
+
+interface MilestoneAdjustment {
+  description: string;
+  entrepreneur_percentage: number;
+  consultant_percentage?: number;
+}
+
+interface NegotiationFile {
+  name: string;
+  url: string;
+  size?: number;
 }
 
 export const NegotiationResponseView = ({
@@ -540,6 +552,94 @@ export const NegotiationResponseView = ({
         </Card>
       )}
 
+      {/* Entrepreneur's Attached Files from Negotiation Request */}
+      {session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
+              <Paperclip className="h-5 w-5" />
+              קבצים שצורפו לבקשה
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(session.files as NegotiationFile[]).map((file, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">{file.name}</span>
+                    {file.size && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => window.open(file.url, "_blank")}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        const link = document.createElement("a");
+                        link.href = file.url;
+                        link.download = file.name;
+                        link.click();
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Milestone Adjustments from Negotiation Request */}
+      {session.milestone_adjustments && Array.isArray(session.milestone_adjustments) && (session.milestone_adjustments as MilestoneAdjustment[]).length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+              <Calendar className="h-5 w-5" />
+              שינויים מבוקשים בתנאי תשלום
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(session.milestone_adjustments as MilestoneAdjustment[]).map((milestone, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200"
+                >
+                  <span className="font-medium text-blue-900">{milestone.description}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground line-through">
+                      {milestone.consultant_percentage ?? milestone.entrepreneur_percentage}%
+                    </span>
+                    <ArrowDown className="h-4 w-4 text-blue-600 rotate-[-90deg]" />
+                    <Badge variant="outline" className="border-blue-400 text-blue-700">
+                      {milestone.entrepreneur_percentage}%
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Line Items or No Items Message */}
       <Card>
         <CardHeader>
@@ -549,11 +649,13 @@ export const NegotiationResponseView = ({
         </CardHeader>
         <CardContent>
           {hasLineItems ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-4 text-sm font-medium text-muted-foreground pb-2 border-b">
-                <span>פריט</span>
+            <div className="space-y-3">
+              {/* Header */}
+              <div className="grid grid-cols-5 gap-3 text-xs font-medium text-muted-foreground pb-2 border-b">
+                <span className="col-span-1">פריט</span>
                 <span className="text-center">מחיר מקורי</span>
                 <span className="text-center">יעד היזם</span>
+                <span className="text-center">הפחתה</span>
                 <span className="text-center">הצעה חדשה שלי</span>
               </div>
 
@@ -562,42 +664,68 @@ export const NegotiationResponseView = ({
                   (u) => u.line_item_id === lineItem.line_item_id
                 );
                 const details = lineItemDetails.get(lineItem.line_item_id);
+                const reduction = lineItem.original_price - lineItem.initiator_target_price;
+                const reductionPercent = lineItem.original_price > 0 
+                  ? Math.round((reduction / lineItem.original_price) * 100) 
+                  : 0;
+                const hasChange = reduction > 0;
 
                 return (
                   <div
                     key={lineItem.id}
-                    className="grid grid-cols-4 gap-4 items-center py-2"
+                    className={`rounded-lg border p-3 ${hasChange ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-muted'}`}
                   >
-                    <div>
-                      <p className="font-medium">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
+                    {/* Item name and description */}
+                    <div className="mb-2">
+                      <p className="font-medium text-sm">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
                       {details?.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                           {details.description}
                         </p>
                       )}
-                      {lineItem.initiator_note && (
-                        <p className="text-xs text-amber-600 mt-0.5">
-                          {lineItem.initiator_note}
-                        </p>
-                      )}
                     </div>
-                    <p className="text-center">
-                      {formatCurrency(lineItem.original_price)}
-                    </p>
-                    <p className="text-center text-amber-600 font-medium">
-                      {formatCurrency(lineItem.initiator_target_price)}
-                    </p>
-                    <Input
-                      type="number"
-                      value={updatedItem?.consultant_response_price || 0}
-                      onChange={(e) =>
-                        handlePriceChange(
-                          lineItem.line_item_id,
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="text-center"
-                    />
+
+                    {/* Entrepreneur's note */}
+                    {lineItem.initiator_note && (
+                      <div className="mb-2 p-2 bg-amber-100 rounded text-xs text-amber-800 border border-amber-200">
+                        <span className="font-medium">הערת היזם: </span>
+                        {lineItem.initiator_note}
+                      </div>
+                    )}
+
+                    {/* Price row */}
+                    <div className="grid grid-cols-5 gap-3 items-center">
+                      <div className="col-span-1" />
+                      <p className="text-center text-muted-foreground">
+                        {formatCurrency(lineItem.original_price)}
+                      </p>
+                      <div className="text-center">
+                        <p className="font-medium text-amber-700">
+                          {formatCurrency(lineItem.initiator_target_price)}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        {hasChange ? (
+                          <Badge variant="outline" className="border-red-300 text-red-600 bg-red-50">
+                            -{reductionPercent}%
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">ללא שינוי</span>
+                        )}
+                      </div>
+                      <Input
+                        type="number"
+                        value={updatedItem?.consultant_response_price || 0}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            lineItem.line_item_id,
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="text-center h-9"
+                        disabled={!canRespond}
+                      />
+                    </div>
                   </div>
                 );
               })}
