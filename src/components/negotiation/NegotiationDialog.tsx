@@ -59,7 +59,8 @@ interface FeeLineItem {
 
 interface LineItemAdjustment {
   line_item_id: string;
-  target_price: number;
+  target_unit_price: number;  // Target per-unit price
+  target_total: number;       // Calculated: target_unit_price × quantity
   initiator_note?: string;
   new_quantity?: number;
 }
@@ -325,8 +326,8 @@ export const NegotiationDialog = ({
       const adj = adjustments.find((a) => a.line_item_id === itemId);
       
       if (adj) {
-        // User made an adjustment - use their target price
-        total += adj.target_price;
+        // User made an adjustment - use their calculated target_total
+        total += adj.target_total;
       } else if (itemTotal > 0) {
         // Include ALL items that have a price (mandatory or optional with price)
         total += itemTotal;
@@ -397,7 +398,7 @@ export const NegotiationDialog = ({
     const lineItemAdjustments = adjustments.map(adj => ({
       line_item_id: adj.line_item_id,
       adjustment_type: "price_change" as const,
-      adjustment_value: adj.target_price,
+      adjustment_value: adj.target_total,
       initiator_note: adj.initiator_note,
     }));
 
@@ -793,7 +794,7 @@ export const NegotiationDialog = ({
                             );
                             const originalPrice = item?.total || (item?.quantity ?? 1) * (item?.unit_price ?? 0) || 0;
                             const changePercent = originalPrice > 0 
-                              ? Math.round(((originalPrice - adj.target_price) / originalPrice) * 100)
+                              ? Math.round(((originalPrice - adj.target_total) / originalPrice) * 100)
                               : 0;
                             
                             return (
@@ -813,7 +814,7 @@ export const NegotiationDialog = ({
                                 <div className="flex items-center gap-2 text-sm">
                                   <span className="text-muted-foreground line-through">{formatCurrency(originalPrice)}</span>
                                   <ArrowLeft className="h-3 w-3 text-muted-foreground" />
-                                  <span className="font-medium text-primary">{formatCurrency(adj.target_price)}</span>
+                                  <span className="font-medium text-primary">{formatCurrency(adj.target_total)}</span>
                                 </div>
                                 {adj.initiator_note && (
                                   <p className="text-xs text-muted-foreground mt-1 border-t border-border/50 pt-1">

@@ -40,7 +40,8 @@ interface FeeLineItem {
 
 interface LineItemAdjustment {
   line_item_id: string;
-  target_price: number;
+  target_unit_price: number;  // Target per-unit price
+  target_total: number;       // Calculated: target_unit_price × quantity
   initiator_note?: string;
   new_quantity?: number;
 }
@@ -104,46 +105,85 @@ export const EnhancedLineItemTable = ({
   }, [items, showOptionalItems]);
 
   // Helper to ensure adjustment exists for an item
-  const ensureAdjustment = (itemId: string, itemTotal: number, updates: Partial<LineItemAdjustment>): LineItemAdjustment[] => {
+  const ensureAdjustment = (
+    itemId: string, 
+    originalUnitPrice: number, 
+    originalQuantity: number, 
+    updates: Partial<LineItemAdjustment>
+  ): LineItemAdjustment[] => {
     const existing = adjustments.find(a => a.line_item_id === itemId);
     if (existing) {
       return adjustments.map(a => 
         a.line_item_id === itemId ? { ...a, ...updates } : a
       );
     } else {
+      // Default: use original values
+      const qty = updates.new_quantity ?? originalQuantity;
+      const unitPrice = updates.target_unit_price ?? originalUnitPrice;
       return [
         ...adjustments,
         { 
           line_item_id: itemId, 
-          target_price: itemTotal,
+          target_unit_price: unitPrice,
+          target_total: unitPrice * qty,
           ...updates 
         }
       ];
     }
   };
 
-  const handleTargetPriceChange = (itemId: string, itemTotal: number, price: number) => {
+  // Handle target UNIT price change - recalculate total
+  const handleTargetUnitPriceChange = (
+    itemId: string, 
+    originalUnitPrice: number, 
+    originalQuantity: number, 
+    targetUnitPrice: number
+  ) => {
     if (!onAdjustmentChange) return;
     
+    // Get current quantity (adjusted or original)
+    const adjustment = adjustments.find(a => a.line_item_id === itemId);
+    const quantity = adjustment?.new_quantity ?? originalQuantity;
+    const targetTotal = targetUnitPrice * quantity;
+    
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { target_price: price }));
+    onAdjustmentChange(ensureAdjustment(itemId, originalUnitPrice, originalQuantity, { 
+      target_unit_price: targetUnitPrice,
+      target_total: targetTotal
+    }));
   };
 
-  const handleNoteChange = (itemId: string, itemTotal: number, note: string) => {
+  const handleNoteChange = (
+    itemId: string, 
+    originalUnitPrice: number, 
+    originalQuantity: number, 
+    note: string
+  ) => {
     if (!onAdjustmentChange) return;
     
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { initiator_note: note }));
+    onAdjustmentChange(ensureAdjustment(itemId, originalUnitPrice, originalQuantity, { initiator_note: note }));
   };
 
-  const handleQuantityChange = (itemId: string, unitPrice: number, itemTotal: number, quantity: number) => {
+  // Handle quantity change - recalculate total using target unit price if set
+  const handleQuantityChange = (
+    itemId: string, 
+    originalUnitPrice: number, 
+    originalQuantity: number, 
+    quantity: number
+  ) => {
     if (!onAdjustmentChange) return;
     
-    const newTotal = unitPrice * quantity;
+    // Use target unit price if set, otherwise use original unit price
+    const adjustment = adjustments.find(a => a.line_item_id === itemId);
+    const unitPriceToUse = adjustment?.target_unit_price ?? originalUnitPrice;
+    const newTotal = unitPriceToUse * quantity;
+    
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { 
-      new_quantity: quantity, 
-      target_price: newTotal 
+    onAdjustmentChange(ensureAdjustment(itemId, originalUnitPrice, originalQuantity, { 
+      new_quantity: quantity,
+      target_unit_price: unitPriceToUse,
+      target_total: newTotal 
     }));
   };
 
@@ -181,8 +221,8 @@ export const EnhancedLineItemTable = ({
 
       const adjustment = adjustments.find(a => a.line_item_id === itemId);
       if (adjustment) {
-        // Use the target price from adjustment (could be 0 for "removed" items)
-        targetTotal += adjustment.target_price;
+        // Use the calculated target_total from adjustment (could be 0 for "removed" items)
+        targetTotal += adjustment.target_total;
       } else if (itemTotal > 0) {
         // No adjustment = use original
         targetTotal += itemTotal;
@@ -192,7 +232,7 @@ export const EnhancedLineItemTable = ({
       if (response) {
         newOfferTotal += response.consultant_price;
       } else if (adjustment) {
-        newOfferTotal += adjustment.target_price;
+        newOfferTotal += adjustment.target_total;
       } else if (itemTotal > 0) {
         newOfferTotal += itemTotal;
       }
@@ -223,7 +263,10 @@ export const EnhancedLineItemTable = ({
               <TableHead className="text-start w-24">מחיר יח'</TableHead>
               <TableHead className="text-start w-24">סה"כ מקורי</TableHead>
               {showTargetColumn && (
-                <TableHead className="text-start w-28">יעד המזמין</TableHead>
+                <>
+                  <TableHead className="text-start w-24">מחיר יעד ליח'</TableHead>
+                  <TableHead className="text-start w-24">סה"כ יעד</TableHead>
+                </>
               )}
               {showNewOfferColumn && (
                 <TableHead className="text-start w-28">הצעה חדשה</TableHead>
@@ -244,8 +287,12 @@ export const EnhancedLineItemTable = ({
               const itemTotal = item.total || (item.unit_price * item.quantity);
               const displayQuantity = adjustment?.new_quantity ?? item.quantity;
               
-              // Check if item is "removed" (target price set to 0)
-              const isRemoved = adjustment?.target_price === 0;
+              // Calculate displayed target unit price and total
+              const displayTargetUnitPrice = adjustment?.target_unit_price ?? item.unit_price;
+              const displayTargetTotal = adjustment?.target_total ?? itemTotal;
+              
+              // Check if item is "removed" (target total set to 0)
+              const isRemoved = adjustment?.target_total === 0;
               const hasAdjustment = !!adjustment;
 
               return (
@@ -296,7 +343,7 @@ export const EnhancedLineItemTable = ({
                         onBlur={(e) => {
                           const rawValue = e.target.value.replace(/[^\d.-]/g, '');
                           const qty = parseFloat(rawValue) || 0;
-                          handleQuantityChange(itemId, item.unit_price, itemTotal, qty);
+                          handleQuantityChange(itemId, item.unit_price, item.quantity, qty);
                           setEditingValues(prev => {
                             const next = { ...prev };
                             delete next[`qty-${itemId}`];
@@ -326,55 +373,73 @@ export const EnhancedLineItemTable = ({
                     </span>
                   </TableCell>
                   {showTargetColumn && (
-                    <TableCell className="text-start">
-                      {mode === 'entrepreneur' ? (
-                        <div className="relative">
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">₪</span>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            value={
-                              editingValues[`price-${itemId}`] !== undefined
-                                ? editingValues[`price-${itemId}`]
-                                : (adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')
-                            }
-                            onChange={(e) => {
-                              setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
-                            }}
-                            onBlur={(e) => {
-                              const rawValue = e.target.value.replace(/[^\d.-]/g, '');
-                              handleTargetPriceChange(itemId, itemTotal, parseFloat(rawValue) || 0);
-                              setEditingValues(prev => {
-                                const next = { ...prev };
-                                delete next[`price-${itemId}`];
-                                return next;
-                              });
-                            }}
-                            className={cn(
-                              "w-28 pr-6",
-                              isRemoved && "bg-destructive/10 text-destructive border-destructive/30"
-                            )}
-                            dir="ltr"
-                          />
-                        </div>
-                      ) : adjustment ? (
-                        <span className={cn(
-                          "font-medium",
-                          isRemoved ? "text-destructive" : "text-amber-600"
-                        )}>
-                          {isRemoved ? "הוסר" : formatCurrency(adjustment.target_price)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
+                    <>
+                      {/* Target Unit Price column */}
+                      <TableCell className="text-start">
+                        {mode === 'entrepreneur' ? (
+                          <div className="relative">
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">₪</span>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={
+                                editingValues[`price-${itemId}`] !== undefined
+                                  ? editingValues[`price-${itemId}`]
+                                  : displayTargetUnitPrice.toLocaleString('he-IL')
+                              }
+                              onChange={(e) => {
+                                setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
+                              }}
+                              onBlur={(e) => {
+                                const rawValue = e.target.value.replace(/[^\d.-]/g, '');
+                                handleTargetUnitPriceChange(itemId, item.unit_price, item.quantity, parseFloat(rawValue) || 0);
+                                setEditingValues(prev => {
+                                  const next = { ...prev };
+                                  delete next[`price-${itemId}`];
+                                  return next;
+                                });
+                              }}
+                              className={cn(
+                                "w-24 pr-6",
+                                isRemoved && "bg-destructive/10 text-destructive border-destructive/30"
+                              )}
+                              dir="ltr"
+                            />
+                          </div>
+                        ) : adjustment ? (
+                          <span className={cn(
+                            "font-medium",
+                            isRemoved ? "text-destructive" : "text-amber-600"
+                          )}>
+                            {isRemoved ? "-" : formatCurrency(adjustment.target_unit_price)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      {/* Target Total column (calculated, read-only) */}
+                      <TableCell className={cn(
+                        "text-start font-medium",
+                        isRemoved && "text-destructive"
+                      )}>
+                        {isRemoved ? (
+                          <Badge variant="destructive" className="text-xs">הוסר</Badge>
+                        ) : (
+                          <span className={cn(
+                            adjustment ? "text-amber-600" : "text-muted-foreground"
+                          )}>
+                            {formatCurrency(displayTargetTotal)}
+                          </span>
+                        )}
+                      </TableCell>
+                    </>
                   )}
                   {showNewOfferColumn && (
                     <TableCell className="text-start">
                       <Input
                         type="text"
                         inputMode="numeric"
-                        value={(response?.consultant_price ?? adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')}
+                        value={(response?.consultant_price ?? adjustment?.target_total ?? itemTotal).toLocaleString('he-IL')}
                         onChange={(e) => {
                           const rawValue = e.target.value.replace(/,/g, '');
                           handleConsultantPriceChange(itemId, parseFloat(rawValue) || 0);
@@ -389,7 +454,7 @@ export const EnhancedLineItemTable = ({
                       <Textarea
                         placeholder="הערה..."
                         value={adjustment?.initiator_note || ""}
-                        onChange={(e) => handleNoteChange(itemId, itemTotal, e.target.value)}
+                        onChange={(e) => handleNoteChange(itemId, item.unit_price, item.quantity, e.target.value)}
                         className={cn(
                           "min-h-[40px] text-sm resize-none",
                           isRemoved && "bg-muted"
@@ -418,17 +483,20 @@ export const EnhancedLineItemTable = ({
                 {formatCurrency(totals.originalTotal)}
               </TableCell>
               {showTargetColumn && (
-                <TableCell className="text-start font-bold text-amber-600">
-                  {formatCurrency(totals.targetTotal)}
-                  {reductionPercent !== 0 && (
-                    <span className={cn(
-                      "text-xs block",
-                      reductionPercent > 0 ? "text-green-600" : "text-red-600"
-                    )}>
-                      {reductionPercent > 0 ? `↓${reductionPercent}%` : `↑${Math.abs(reductionPercent)}%`}
-                    </span>
-                  )}
-                </TableCell>
+                <>
+                  <TableCell className="text-start text-muted-foreground">-</TableCell>
+                  <TableCell className="text-start font-bold text-amber-600">
+                    {formatCurrency(totals.targetTotal)}
+                    {reductionPercent !== 0 && (
+                      <span className={cn(
+                        "text-xs block",
+                        reductionPercent > 0 ? "text-green-600" : "text-red-600"
+                      )}>
+                        {reductionPercent > 0 ? `↓${reductionPercent}%` : `↑${Math.abs(reductionPercent)}%`}
+                      </span>
+                    )}
+                  </TableCell>
+                </>
               )}
               {showNewOfferColumn && (
                 <TableCell className="text-start font-bold text-green-600">
