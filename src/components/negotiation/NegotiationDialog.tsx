@@ -24,7 +24,7 @@ import type { NegotiationCommentInput, CommentType } from "@/types/negotiation";
 import { 
   RefreshCw, FileText, ClipboardList, Calendar, CreditCard, 
   MessageSquare, AlertTriangle, Upload, X, File, ExternalLink,
-  Eye, Package, ChevronDown, ChevronUp, Milestone
+  Eye, Package, ChevronDown, ChevronUp, Milestone, ArrowLeft, ArrowLeftRight, Flag
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
@@ -747,6 +747,7 @@ export const NegotiationDialog = ({
                     <CardTitle className="text-lg">סיכום הבקשה</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Price Summary Cards */}
                     <div className="grid grid-cols-3 gap-4 text-center p-4 bg-muted/30 rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">מחיר מקורי</p>
@@ -754,30 +755,71 @@ export const NegotiationDialog = ({
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">מחיר יעד</p>
-                        <p className="text-xl font-bold text-green-600">{formatCurrency(targetTotal)}</p>
+                        <p className="text-xl font-bold text-primary">{formatCurrency(targetTotal)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">הפחתה</p>
-                        <p className="text-xl font-bold text-red-600">
-                          {hasAdjustments && reductionPercent > 0 ? `↓ ${reductionPercent}%` : "ללא שינוי"}
+                        <p className="text-sm text-muted-foreground">שינוי</p>
+                        <p className={`text-xl font-bold ${
+                          hasAdjustments 
+                            ? reductionPercent > 0 
+                              ? 'text-green-600' 
+                              : reductionPercent < 0 
+                                ? 'text-red-600' 
+                                : 'text-muted-foreground'
+                            : 'text-muted-foreground'
+                        }`}>
+                          {hasAdjustments 
+                            ? reductionPercent > 0 
+                              ? `↓ ${reductionPercent}%` 
+                              : reductionPercent < 0 
+                                ? `↑ ${Math.abs(reductionPercent)}%`
+                                : "ללא שינוי במחיר"
+                            : "ללא שינוי"}
                         </p>
                       </div>
                     </div>
 
+                    {/* Detailed Line Items Changes */}
                     {adjustments.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">פריטים שנבחרו לעדכון:</p>
-                        <div className="space-y-1">
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <ArrowLeftRight className="h-4 w-4" />
+                          פריטים שנבחרו לעדכון ({adjustments.length}):
+                        </p>
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
                           {adjustments.map((adj, idx) => {
                             const item = feeLineItems.find(
                               i => (i.id || `item-${i.item_number}`) === adj.line_item_id
                             );
+                            const originalPrice = item?.total || (item?.quantity ?? 1) * (item?.unit_price ?? 0) || 0;
+                            const changePercent = originalPrice > 0 
+                              ? Math.round(((originalPrice - adj.target_price) / originalPrice) * 100)
+                              : 0;
+                            
                             return (
-                              <div key={idx} className="flex justify-between text-sm bg-muted/30 px-3 py-2 rounded">
-                                <span>{item?.description || adj.line_item_id}</span>
-                                <span className="font-medium text-amber-600">
-                                  {formatCurrency(adj.target_price)}
-                                </span>
+                              <div key={idx} className="bg-muted/30 px-3 py-2 rounded-lg space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium">{item?.description || adj.line_item_id}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    changePercent > 0 
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                      : changePercent < 0 
+                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                        : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                    {changePercent > 0 ? `↓${changePercent}%` : changePercent < 0 ? `↑${Math.abs(changePercent)}%` : 'ללא שינוי'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-muted-foreground line-through">{formatCurrency(originalPrice)}</span>
+                                  <ArrowLeft className="h-3 w-3 text-muted-foreground" />
+                                  <span className="font-medium text-primary">{formatCurrency(adj.target_price)}</span>
+                                </div>
+                                {adj.initiator_note && (
+                                  <p className="text-xs text-muted-foreground mt-1 border-t border-border/50 pt-1">
+                                    הערה: {adj.initiator_note}
+                                  </p>
+                                )}
                               </div>
                             );
                           })}
@@ -785,14 +827,86 @@ export const NegotiationDialog = ({
                       </div>
                     )}
 
+                    {/* Milestone Adjustments Summary */}
+                    {milestoneAdjustments.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <Flag className="h-4 w-4" />
+                          שינויים באבני דרך ({milestoneAdjustments.length}):
+                        </p>
+                        <div className="space-y-2">
+                          {milestoneAdjustments.map((adj, idx) => {
+                            const milestone = milestones.find(m => m.id === adj.milestone_id);
+                            const originalAmount = (adj.original_percentage / 100) * targetTotal;
+                            const targetAmount = (adj.target_percentage / 100) * targetTotal;
+                            
+                            return (
+                              <div key={idx} className="bg-muted/30 px-3 py-2 rounded-lg space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium">{milestone?.name || `אבן דרך ${idx + 1}`}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-muted-foreground">
+                                    {adj.original_percentage}% ({formatCurrency(originalAmount)})
+                                  </span>
+                                  <ArrowLeft className="h-3 w-3 text-muted-foreground" />
+                                  <span className="font-medium text-primary">
+                                    {adj.target_percentage}% ({formatCurrency(targetAmount)})
+                                  </span>
+                                </div>
+                                {adj.initiator_note && (
+                                  <p className="text-xs text-muted-foreground mt-1 border-t border-border/50 pt-1">
+                                    הערה: {adj.initiator_note}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Comments Summary */}
+                    {Object.entries(comments).some(([_, value]) => value.trim()) && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          הערות לפי נושא:
+                        </p>
+                        <div className="space-y-2">
+                          {Object.entries(comments)
+                            .filter(([_, value]) => value.trim())
+                            .map(([type, value]) => {
+                              const commentType = commentTypes.find(ct => ct.type === type);
+                              return (
+                                <div key={type} className="bg-muted/30 px-3 py-2 rounded-lg">
+                                  <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                                    {commentType?.icon}
+                                    {commentType?.label}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{value}</p>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Attached Files */}
                     {uploadedFiles.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">קבצים מצורפים ({uploadedFiles.length}):</p>
-                        <ul className="text-sm space-y-1">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <File className="h-4 w-4" />
+                          קבצים מצורפים ({uploadedFiles.length}):
+                        </p>
+                        <ul className="text-sm space-y-1 bg-muted/30 rounded-lg p-3">
                           {uploadedFiles.map((file, index) => (
                             <li key={index} className="flex items-center gap-2 text-muted-foreground">
                               <File className="h-3 w-3" />
-                              {file.name}
+                              <span>{file.name}</span>
+                              {file.size > 0 && (
+                                <span className="text-xs">({formatFileSize(file.size)})</span>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -801,6 +915,7 @@ export const NegotiationDialog = ({
 
                     <Separator />
 
+                    {/* Global Message */}
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
                         <MessageSquare className="h-4 w-4" />
