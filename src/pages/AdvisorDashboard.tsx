@@ -500,9 +500,12 @@ const AdvisorDashboard = () => {
   };
 
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, openedAt?: string | null) => {
+    // For 'sent' status, check if it was opened to determine color
+    if (status === 'sent') {
+      return openedAt ? 'bg-cyan-100 text-cyan-800' : 'bg-amber-100 text-amber-800 border border-amber-300';
+    }
     switch (status) {
-      case 'sent': return 'bg-blue-100 text-blue-800';
       case 'opened': return 'bg-cyan-100 text-cyan-800';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800';
       case 'submitted': return 'bg-green-100 text-green-800';
@@ -516,9 +519,12 @@ const AdvisorDashboard = () => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: string, openedAt?: string | null) => {
+    // For 'sent' status, show "חדש" if not opened, "נפתח" if opened
+    if (status === 'sent') {
+      return openedAt ? 'נפתח' : 'חדש';
+    }
     switch (status) {
-      case 'sent': return 'נשלח';
       case 'opened': return 'נפתח';
       case 'in_progress': return 'בתהליך';
       case 'submitted': return 'הוגש';
@@ -1072,8 +1078,8 @@ const AdvisorDashboard = () => {
                               );
                             }
                             return (
-                              <Badge className={getStatusColor(invite.status)}>
-                                {getStatusLabel(invite.status)}
+                              <Badge className={getStatusColor(invite.status, invite.opened_at)}>
+                                {getStatusLabel(invite.status, invite.opened_at)}
                               </Badge>
                             );
                           })()}
@@ -1085,7 +1091,7 @@ const AdvisorDashboard = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
                         <div className="flex items-center gap-2 text-sm">
                           <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="font-medium">יזם:</span>
+                          <span className="font-medium">מזמין:</span>
                           <span className="truncate">{invite.rfps?.projects?.entrepreneur_name || '—'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">

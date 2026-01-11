@@ -743,9 +743,9 @@ const RFPDetails = () => {
             <CardContent className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">שם היזם</Label>
+                  <Label className="text-xs text-muted-foreground">שם הארגון</Label>
                   <p className="text-sm font-medium flex items-center gap-1 mt-0.5">
-                    <User className="h-3 w-3 flex-shrink-0" />
+                    <Building2 className="h-3 w-3 flex-shrink-0" />
                     <span className="truncate">{rfpDetails.projects.entrepreneur_name || 'לא צוין'}</span>
                   </p>
                 </div>
