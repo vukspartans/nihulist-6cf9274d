@@ -1138,6 +1138,31 @@ serve(async (req) => {
 
     console.log('[Evaluate] AI evaluation completed in', evaluationTime, 'ms');
     
+    // ============================================================================
+    // ENFORCE KNOCKOUT CRITERIA IN CODE (fail-safe)
+    // ============================================================================
+    // First, enforce knockouts by setting score to 0
+    for (const rankedProposal of evaluationResult.ranked_proposals) {
+      if (rankedProposal.flags.knockout_triggered) {
+        // Enforce rejection: set score to 0, recommendation to Not Recommended
+        rankedProposal.final_score = 0;
+        rankedProposal.recommendation_level = 'Not Recommended';
+        // Ensure knockout_reason is present and in Hebrew
+        if (!rankedProposal.flags.knockout_reason || rankedProposal.flags.knockout_reason.trim() === '') {
+          rankedProposal.flags.knockout_reason = 'קריטריוני הדחה הופעלו - ההצעה לא עומדת בדרישות המינימליות של הפרויקט';
+        }
+        console.log(`[Evaluate] Knockout enforced for proposal ${rankedProposal.proposal_id}: ${rankedProposal.flags.knockout_reason}`);
+      }
+    }
+    
+    // Re-sort proposals by final_score after knockout enforcement (highest score first)
+    evaluationResult.ranked_proposals.sort((a, b) => b.final_score - a.final_score);
+    // Re-assign ranks (1 = best)
+    evaluationResult.ranked_proposals.forEach((proposal, index) => {
+      proposal.rank = index + 1;
+    });
+    
+    // Get model name for metadata
     const model = aiProvider === 'openai'
       ? (Deno.env.get('OPENAI_MODEL') || 'gpt-4o')
       : (Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002');
