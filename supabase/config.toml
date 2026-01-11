@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.rfp-reminder-scheduler]
 verify_jwt = false
+
+[functions.retry-failed-emails]
+verify_jwt = false
