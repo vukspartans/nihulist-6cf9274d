@@ -10,6 +10,7 @@ export interface AdvisorTypeInvite {
   advisorName: string;
   status: 'pending' | 'sent' | 'opened' | 'in_progress' | 'submitted' | 'declined' | 'expired';
   proposalId?: string;
+  proposalStatus?: string;
   declineReason?: string;
   email: string;
   deadlineAt?: string;
@@ -67,19 +68,19 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
       // Fetch proposals with rfp_invite_id for accurate linking
       const { data: proposals } = await supabase
         .from('proposals')
-        .select('id, advisor_id, rfp_invite_id, submitted_at')
+        .select('id, advisor_id, rfp_invite_id, submitted_at, status')
         .eq('project_id', projectId)
         .not('status', 'in', '("withdrawn","rejected")');
 
       // Create proposal map keyed by rfp_invite_id (primary) with fallback temporal matching
-      const proposalByInviteId = new Map<string, { id: string; submitted_at: string }>();
-      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string }> = [];
+      const proposalByInviteId = new Map<string, { id: string; submitted_at: string; status: string }>();
+      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string; status: string }> = [];
       
       (proposals || []).forEach((p: any) => {
         if (p.rfp_invite_id) {
-          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at });
+          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at, status: p.status });
         } else {
-          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at });
+          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at, status: p.status });
         }
       });
 
@@ -94,7 +95,9 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           const advisorType = invite.advisor_type || advisor?.expertise?.[0] || 'לא מוגדר';
           
           // Look up proposal by invite ID first
-          let proposalId: string | undefined = proposalByInviteId.get(invite.id)?.id;
+          const matchedProposal = proposalByInviteId.get(invite.id);
+          let proposalId: string | undefined = matchedProposal?.id;
+          let proposalStatus: string | undefined = matchedProposal?.status;
           
           // Fallback for legacy proposals
           if (!proposalId) {
@@ -104,6 +107,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             );
             if (legacyMatch) {
               proposalId = legacyMatch.id;
+              proposalStatus = legacyMatch.status;
             }
           }
 
@@ -127,6 +131,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             advisorName: advisor?.company_name || 'לא ידוע',
             status: invite.status,
             proposalId,
+            proposalStatus,
             declineReason: invite.decline_reason,
             email: invite.email,
             deadlineAt: invite.deadline_at,
