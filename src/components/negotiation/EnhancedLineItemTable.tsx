@@ -76,6 +76,9 @@ export const EnhancedLineItemTable = ({
   const [modifiedItems, setModifiedItems] = useState<Set<string>>(
     new Set(adjustments.map((a) => a.line_item_id))
   );
+  
+  // Local editing state to prevent controlled input issues
+  const [editingValues, setEditingValues] = useState<Record<string, string>>({});
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("he-IL", {
@@ -279,14 +282,30 @@ export const EnhancedLineItemTable = ({
                   <TableCell className="text-center">
                     {mode === 'entrepreneur' ? (
                       <Input
-                        type="number"
-                        value={displayQuantity}
-                        onChange={(e) => handleQuantityChange(itemId, parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="numeric"
+                        value={
+                          editingValues[`qty-${itemId}`] !== undefined
+                            ? editingValues[`qty-${itemId}`]
+                            : displayQuantity.toString()
+                        }
+                        onChange={(e) => {
+                          setEditingValues(prev => ({ ...prev, [`qty-${itemId}`]: e.target.value }));
+                        }}
+                        onBlur={(e) => {
+                          const rawValue = e.target.value.replace(/[^\d.-]/g, '');
+                          const qty = parseFloat(rawValue) || 0;
+                          handleQuantityChange(itemId, qty);
+                          setEditingValues(prev => {
+                            const next = { ...prev };
+                            delete next[`qty-${itemId}`];
+                            return next;
+                          });
+                        }}
                         className={cn(
                           "w-16 text-center",
                           isRemoved && "bg-muted text-muted-foreground"
                         )}
-                        min={0}
                       />
                     ) : (
                       <span className={cn(isRemoved && "line-through")}>{item.quantity}</span>
@@ -311,10 +330,22 @@ export const EnhancedLineItemTable = ({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          value={(adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')}
+                          value={
+                            editingValues[`price-${itemId}`] !== undefined
+                              ? editingValues[`price-${itemId}`]
+                              : (adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')
+                          }
                           onChange={(e) => {
-                            const rawValue = e.target.value.replace(/,/g, '');
+                            setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
+                          }}
+                          onBlur={(e) => {
+                            const rawValue = e.target.value.replace(/[^\d.-]/g, '');
                             handleTargetPriceChange(itemId, parseFloat(rawValue) || 0);
+                            setEditingValues(prev => {
+                              const next = { ...prev };
+                              delete next[`price-${itemId}`];
+                              return next;
+                            });
                           }}
                           className={cn(
                             "w-24",
