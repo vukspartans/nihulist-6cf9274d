@@ -2,34 +2,35 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CACHE_TIMES } from '@/utils/constants';
 
-export interface AdvisorInviteDetail {
+export interface AdvisorTypeInvite {
   inviteId: string;
+  rfpId: string;
+  rfpSentAt: string;
   advisorId: string;
   advisorName: string;
-  advisorType: string;
   status: 'pending' | 'sent' | 'opened' | 'in_progress' | 'submitted' | 'declined' | 'expired';
-  proposalId?: string | undefined;
+  proposalId?: string;
+  proposalStatus?: string;
   declineReason?: string;
   email: string;
   deadlineAt?: string;
   createdAt: string;
 }
 
-export interface RFPWithInvites {
-  rfpId: string;
-  subject: string;
-  sentAt: string;
+export interface AdvisorTypeGroup {
+  advisorType: string;
+  invites: AdvisorTypeInvite[];
   totalInvites: number;
-  advisorInvites: AdvisorInviteDetail[];
+  proposalsCount: number;
 }
 
 export const useRFPInvitesWithDetails = (projectId: string) => {
   return useQuery({
-    queryKey: ['rfp-invites-details', projectId],
-    queryFn: async () => {
+    queryKey: ['rfp-invites-by-advisor-type', projectId],
+    queryFn: async (): Promise<AdvisorTypeGroup[]> => {
       console.log('[useRFPInvitesWithDetails] Fetching RFPs for project:', projectId);
 
-      // FIXED: Query proposals with rfp_invite_id for accurate matching
+      // Fetch RFPs with invites
       const { data: rfps, error: rfpsError } = await supabase
         .from('rfps')
         .select(`
@@ -64,39 +65,41 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
 
       if (!rfps || rfps.length === 0) return [];
 
-      // FIXED: Fetch proposals with rfp_invite_id for accurate linking
+      // Fetch proposals with rfp_invite_id for accurate linking
       const { data: proposals } = await supabase
         .from('proposals')
-        .select('id, advisor_id, rfp_invite_id, submitted_at')
+        .select('id, advisor_id, rfp_invite_id, submitted_at, status')
         .eq('project_id', projectId)
         .not('status', 'in', '("withdrawn","rejected")');
 
       // Create proposal map keyed by rfp_invite_id (primary) with fallback temporal matching
-      const proposalByInviteId = new Map<string, { id: string; submitted_at: string }>();
-      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string }> = [];
+      const proposalByInviteId = new Map<string, { id: string; submitted_at: string; status: string }>();
+      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string; status: string }> = [];
       
       (proposals || []).forEach((p: any) => {
         if (p.rfp_invite_id) {
-          // Direct link via rfp_invite_id
-          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at });
+          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at, status: p.status });
         } else {
-          // Legacy proposal without rfp_invite_id - use for temporal fallback
-          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at });
+          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at, status: p.status });
         }
       });
 
-      // Transform data
-      const rfpsWithInvites: RFPWithInvites[] = rfps.map(rfp => {
+      // Group by advisor type instead of RFP
+      const groupedByType = new Map<string, AdvisorTypeGroup>();
+
+      rfps.forEach(rfp => {
         const invites = (rfp.rfp_invites as any[]) || [];
         
-        const advisorInvites: AdvisorInviteDetail[] = invites.map(invite => {
+        invites.forEach(invite => {
           const advisor = invite.advisors;
           const advisorType = invite.advisor_type || advisor?.expertise?.[0] || 'לא מוגדר';
           
-          // FIXED: Look up proposal by invite ID first
-          let proposalId: string | undefined = proposalByInviteId.get(invite.id)?.id;
+          // Look up proposal by invite ID first
+          const matchedProposal = proposalByInviteId.get(invite.id);
+          let proposalId: string | undefined = matchedProposal?.id;
+          let proposalStatus: string | undefined = matchedProposal?.status;
           
-          // Fallback for legacy proposals: match by advisor_id AND temporal constraint
+          // Fallback for legacy proposals
           if (!proposalId) {
             const legacyMatch = legacyProposals.find(lp => 
               lp.advisor_id === invite.advisor_id &&
@@ -104,35 +107,56 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             );
             if (legacyMatch) {
               proposalId = legacyMatch.id;
+              proposalStatus = legacyMatch.status;
             }
           }
 
-          return {
+          // Initialize group if doesn't exist
+          if (!groupedByType.has(advisorType)) {
+            groupedByType.set(advisorType, {
+              advisorType,
+              invites: [],
+              totalInvites: 0,
+              proposalsCount: 0,
+            });
+          }
+
+          const group = groupedByType.get(advisorType)!;
+          
+          group.invites.push({
             inviteId: invite.id,
+            rfpId: rfp.id,
+            rfpSentAt: rfp.sent_at,
             advisorId: invite.advisor_id,
             advisorName: advisor?.company_name || 'לא ידוע',
-            advisorType,
             status: invite.status,
             proposalId,
+            proposalStatus,
             declineReason: invite.decline_reason,
             email: invite.email,
             deadlineAt: invite.deadline_at,
             createdAt: invite.created_at,
-          };
-        });
+          });
 
-        return {
-          rfpId: rfp.id,
-          subject: rfp.subject,
-          sentAt: rfp.sent_at,
-          totalInvites: invites.length,
-          advisorInvites,
-        };
+          group.totalInvites++;
+          if (proposalId) group.proposalsCount++;
+        });
       });
 
-      console.log('[useRFPInvitesWithDetails] Processed RFPs:', rfpsWithInvites.length);
+      // Sort invites within each group by date (newest first)
+      groupedByType.forEach(group => {
+        group.invites.sort((a, b) => 
+          new Date(b.rfpSentAt).getTime() - new Date(a.rfpSentAt).getTime()
+        );
+      });
+
+      // Return as array sorted by advisor type (Hebrew)
+      const result = Array.from(groupedByType.values())
+        .sort((a, b) => a.advisorType.localeCompare(b.advisorType, 'he'));
+
+      console.log('[useRFPInvitesWithDetails] Grouped by advisor type:', result.length, 'groups');
       
-      return rfpsWithInvites;
+      return result;
     },
     enabled: !!projectId,
     ...CACHE_TIMES.REALTIME,

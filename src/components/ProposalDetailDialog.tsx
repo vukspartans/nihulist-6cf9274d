@@ -87,6 +87,14 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     milestone_payments?: Array<{description: string; percentage: number; trigger?: string}>;
   } | null>(null);
   const [consultantFileUrls, setConsultantFileUrls] = useState<Record<string, string>>({});
+  const [rfpServiceData, setRfpServiceData] = useState<{
+    mode: string | null;
+    text: string | null;
+    file: { name: string; url: string; size?: number } | null;
+    items: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}>;
+  } | null>(null);
+  const [hasRespondedNegotiation, setHasRespondedNegotiation] = useState(false);
+  const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
@@ -125,6 +133,24 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     if (proposal.file_summaries) setFileSummaries(proposal.file_summaries);
   }, [open, proposal]);
 
+  // Check if there's a responded negotiation for this proposal
+  useEffect(() => {
+    const checkNegotiationStatus = async () => {
+      if (!open || !proposal.id) return;
+      
+      const { data } = await supabase
+        .from('negotiation_sessions')
+        .select('id, status')
+        .eq('proposal_id', proposal.id)
+        .eq('status', 'responded')
+        .maybeSingle();
+      
+      setHasRespondedNegotiation(!!data);
+    };
+    
+    checkNegotiationStatus();
+  }, [open, proposal.id]);
+
   // Fetch service names when dialog opens with selected services
   useEffect(() => {
     const fetchServiceNames = async () => {
@@ -151,23 +177,41 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     fetchServiceNames();
   }, [open, selectedServices]);
 
-  // Fetch entrepreneur's payment terms from rfp_invites
+  // Fetch entrepreneur's payment terms and service details from rfp_invites
   useEffect(() => {
-    const fetchPaymentTerms = async () => {
+    const fetchRfpData = async () => {
       if (!open || !proposal.rfp_invite_id) return;
       
       const { data: inviteData } = await supabase
         .from('rfp_invites')
-        .select('payment_terms')
+        .select('payment_terms, service_details_mode, service_details_text, service_details_file')
         .eq('id', proposal.rfp_invite_id)
         .maybeSingle();
       
       if (inviteData?.payment_terms) {
         setEntrepreneurPaymentTerms(inviteData.payment_terms as any);
       }
+
+      // Fetch service scope items if mode is checklist
+      let scopeItems: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}> = [];
+      if (inviteData?.service_details_mode === 'checklist') {
+        const { data: items } = await supabase
+          .from('rfp_service_scope_items')
+          .select('id, task_name, fee_category, is_optional')
+          .eq('rfp_invite_id', proposal.rfp_invite_id)
+          .order('display_order');
+        if (items) scopeItems = items;
+      }
+
+      setRfpServiceData({
+        mode: inviteData?.service_details_mode || null,
+        text: inviteData?.service_details_text || null,
+        file: (inviteData?.service_details_file as any) || null,
+        items: scopeItems,
+      });
     };
     
-    fetchPaymentTerms();
+    fetchRfpData();
   }, [open, proposal.rfp_invite_id]);
 
   const markProposalAsSeen = async () => {
@@ -302,6 +346,36 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       await supabase.functions.invoke('notify-proposal-rejected', { body: { proposalId: proposal.id, reason } });
       toast({ title: "ההצעה נדחתה" }); onStatusChange?.(); onSuccess?.(); onOpenChange(false);
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
+  };
+
+  // Accept the updated counter-offer after negotiation
+  const handleAcceptCounterOffer = async () => {
+    setIsAcceptingOffer(true);
+    try {
+      // 1. Mark the negotiation session as resolved
+      const { error: sessionError } = await supabase
+        .from('negotiation_sessions')
+        .update({ 
+          status: 'resolved', 
+          resolved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('proposal_id', proposal.id)
+        .eq('status', 'responded');
+      
+      if (sessionError) throw sessionError;
+
+      // 2. Update proposal status (move directly to approval flow)
+      setShowApprovalDialog(true);
+      setHasRespondedNegotiation(false);
+      
+      toast({ title: "הצעה נגדית התקבלה - המשך לאישור" });
+    } catch (err) {
+      console.error('Error accepting counter-offer:', err);
+      toast({ title: "שגיאה בקבלת ההצעה", variant: "destructive" });
+    } finally {
+      setIsAcceptingOffer(false);
+    }
   };
 
   const generateAiAnalysis = async (forceRefresh: boolean = false) => {
@@ -461,19 +535,46 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
             </div>
             {/* Action buttons - including Negotiation */}
             {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
-              <div className="flex items-center gap-2 pt-2 justify-end" dir="rtl">
-                <Button variant="destructive" size="sm" onClick={handleReject}>
-                  <XCircle className="w-4 h-4 me-1" />
-                  דחה הצעה
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowNegotiationDialog(true)}>
-                  <MessageSquare className="w-4 h-4 me-1" />
-                  משא ומתן
-                </Button>
-                <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
-                  <CheckCircle className="w-4 h-4 me-1" />
-                  אשר הצעה
-                </Button>
+              <div className="flex flex-col gap-2 pt-2" dir="rtl">
+                {/* Show special banner for updated counter-offer */}
+                {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+                    <RefreshCw className="w-4 h-4 text-green-600" />
+                    <span className="text-green-800">היועץ שלח הצעה נגדית מעודכנת</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 justify-end">
+                  <Button variant="destructive" size="sm" onClick={handleReject}>
+                    <XCircle className="w-4 h-4 me-1" />
+                    דחה הצעה
+                  </Button>
+                  {!hasRespondedNegotiation && (
+                    <Button variant="outline" size="sm" onClick={() => setShowNegotiationDialog(true)}>
+                      <MessageSquare className="w-4 h-4 me-1" />
+                      משא ומתן
+                    </Button>
+                  )}
+                  {hasRespondedNegotiation ? (
+                    <Button 
+                      size="sm" 
+                      onClick={handleAcceptCounterOffer}
+                      disabled={isAcceptingOffer}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isAcceptingOffer ? (
+                        <Loader2 className="w-4 h-4 me-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 me-1" />
+                      )}
+                      קבל הצעה נגדית
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
+                      <CheckCircle className="w-4 h-4 me-1" />
+                      אשר הצעה
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </DialogHeader>
@@ -659,15 +760,74 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
               {/* Services Tab */}
               <TabsContent value="services" className="p-4 space-y-3 m-0">
-                {/* Selected Services */}
-                <div className="space-y-1.5">
-                  <SectionHeader icon={ListChecks} className="text-xs">שירותים נבחרים</SectionHeader>
-                  {selectedServices.length > 0 ? (
+                {/* RFP Service Details based on mode */}
+                {rfpServiceData?.mode === 'checklist' && rfpServiceData.items.length > 0 && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={ListChecks} className="text-xs">שירותים מבוקשים</SectionHeader>
+                    <Card>
+                      <CardContent className="p-3">
+                        <ul className="space-y-1.5 text-right">
+                          {rfpServiceData.items.map((item) => {
+                            const isSelected = selectedServices.some(s => 
+                              (typeof s === 'string' ? s : s.id) === item.id
+                            );
+                            return (
+                              <li key={item.id} className="flex items-center gap-2 justify-end text-sm">
+                                <span className={!isSelected ? 'text-muted-foreground' : ''}>{item.task_name}</span>
+                                {isSelected ? (
+                                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {rfpServiceData?.mode === 'free_text' && rfpServiceData.text && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={FileText} className="text-xs">פירוט שירותים מבוקשים</SectionHeader>
+                    <Card>
+                      <CardContent className="p-3" dir="rtl">
+                        <div className="text-sm whitespace-pre-wrap leading-relaxed text-right">
+                          {rfpServiceData.text}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {rfpServiceData?.mode === 'file' && rfpServiceData.file && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={FileText} className="text-xs">קובץ שירותים</SectionHeader>
+                    <Card>
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between" dir="rtl">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm">{rfpServiceData.file.name}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => window.open(rfpServiceData.file!.url, '_blank')}>
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Fallback: Show selected services if no RFP mode or items */}
+                {(!rfpServiceData?.mode || (rfpServiceData.mode === 'checklist' && rfpServiceData.items.length === 0)) && selectedServices.length > 0 && (
+                  <div className="space-y-1.5">
+                    <SectionHeader icon={ListChecks} className="text-xs">שירותים נבחרים</SectionHeader>
                     <Card>
                       <CardContent className="p-3">
                         <ul className="space-y-1.5 text-right">
                           {selectedServices.map((service, i) => {
-                            // Resolve service name from UUID or use provided name
                             const serviceId = typeof service === 'string' ? service : service.id;
                             const displayName = typeof service === 'string' 
                               ? (serviceNames[service] || service) 
@@ -683,10 +843,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                         </ul>
                       </CardContent>
                     </Card>
-                  ) : (
-                    <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לא נבחרו שירותים ספציפיים</CardContent></Card>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {!rfpServiceData?.mode && selectedServices.length === 0 && !proposal.services_notes && (
+                  <Card><CardContent className="p-4 text-center text-muted-foreground text-sm">לא הוגדרו שירותים</CardContent></Card>
+                )}
 
                 {/* Services Notes */}
                 {proposal.services_notes && (

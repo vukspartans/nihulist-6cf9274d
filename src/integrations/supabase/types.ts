@@ -242,6 +242,97 @@ export type Database = {
           },
         ]
       }
+      bulk_negotiation_batches: {
+        Row: {
+          created_at: string
+          id: string
+          initiator_id: string
+          message: string | null
+          project_id: string
+          reduction_type: string
+          reduction_value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiator_id: string
+          message?: string | null
+          project_id: string
+          reduction_type: string
+          reduction_value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiator_id?: string
+          message?: string | null
+          project_id?: string
+          reduction_type?: string
+          reduction_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_negotiation_batches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_negotiation_members: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          proposal_id: string
+          session_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          proposal_id: string
+          session_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          proposal_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_negotiation_members_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_negotiation_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           activity_categories: Json | null
@@ -572,13 +663,16 @@ export type Database = {
       }
       negotiation_sessions: {
         Row: {
+          bulk_batch_id: string | null
           consultant_advisor_id: string
           consultant_response_message: string | null
           created_at: string
+          files: Json | null
           global_comment: string | null
           id: string
           initiator_id: string
           initiator_message: string | null
+          milestone_adjustments: Json | null
           negotiated_version_id: string | null
           project_id: string
           proposal_id: string
@@ -590,13 +684,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bulk_batch_id?: string | null
           consultant_advisor_id: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id: string
           proposal_id: string
@@ -608,13 +705,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bulk_batch_id?: string | null
           consultant_advisor_id?: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id?: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id?: string
           proposal_id?: string
@@ -626,6 +726,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_bulk_batch_id_fkey"
+            columns: ["bulk_batch_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_negotiation_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "negotiation_sessions_consultant_advisor_id_fkey"
             columns: ["consultant_advisor_id"]
@@ -1715,6 +1822,9 @@ export type Database = {
             | null
           delivered_at: string | null
           email: string
+          email_attempts: number | null
+          email_last_attempt_at: string | null
+          email_last_error: string | null
           id: string
           last_notification_at: string | null
           opened_at: string | null
@@ -1745,6 +1855,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
@@ -1775,6 +1888,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email?: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null

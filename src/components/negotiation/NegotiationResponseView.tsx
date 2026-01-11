@@ -4,11 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2 } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface NegotiationResponseViewProps {
   sessionId: string;
@@ -30,6 +42,18 @@ interface ProjectFile {
   type?: string;
 }
 
+interface MilestoneAdjustment {
+  description: string;
+  entrepreneur_percentage: number;
+  consultant_percentage?: number;
+}
+
+interface NegotiationFile {
+  name: string;
+  url: string;
+  size?: number;
+}
+
 export const NegotiationResponseView = ({
   sessionId,
   onSuccess,
@@ -42,8 +66,12 @@ export const NegotiationResponseView = ({
   const [lineItemDetails, setLineItemDetails] = useState<Map<string, LineItemDetails>>(new Map());
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
+  const [showDeclineDialog, setShowDeclineDialog] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declining, setDeclining] = useState(false);
+  const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
 
-  const { fetchNegotiationWithDetails, respondToNegotiation, loading } = useNegotiation();
+  const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
 
   useEffect(() => {
@@ -233,11 +261,58 @@ export const NegotiationResponseView = ({
     }
   };
 
+  // Accept target price exactly as requested by entrepreneur
+  const handleAcceptTarget = async () => {
+    // Set all line items to entrepreneur's target prices
+    const acceptedItems = updatedLineItems.map(item => {
+      const negotiationItem = session?.line_item_negotiations?.find(
+        li => li.line_item_id === item.line_item_id
+      );
+      return {
+        ...item,
+        consultant_response_price: negotiationItem?.initiator_target_price || item.consultant_response_price
+      };
+    });
+
+    const result = await respondToNegotiation({
+      session_id: sessionId,
+      consultant_message: consultantMessage || "אני מקבל/ת את המחיר המבוקש",
+      updated_line_items: acceptedItems.length > 0 ? acceptedItems : [],
+    });
+
+    if (result) {
+      onSuccess?.();
+    }
+  };
+
+  // Decline the negotiation request
+  const handleDecline = async () => {
+    setDeclining(true);
+    const success = await cancelNegotiation(sessionId);
+    setDeclining(false);
+    setShowDeclineDialog(false);
+    
+    if (success) {
+      onSuccess?.();
+    }
+  };
+
   const calculateNewTotal = (): number => {
     return updatedLineItems.reduce(
       (sum, item) => sum + item.consultant_response_price,
       0
     );
+  };
+
+  // Calculate reduction percentages
+  const calculateReductionPercent = () => {
+    if (!originalTotal || originalTotal === 0) return 0;
+    return Math.round(((originalTotal - targetTotal) / originalTotal) * 100);
+  };
+
+  const calculateNewReductionPercent = () => {
+    if (!originalTotal || originalTotal === 0) return 0;
+    return Math.round(((originalTotal - newTotal) / originalTotal) * 100);
   };
 
   if (loadingSession) {
@@ -330,6 +405,55 @@ export const NegotiationResponseView = ({
                 </>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Comparison Summary Card - Key change visualization */}
+      {canRespond && (
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-amber-600" />
+              סיכום בקשת העדכון
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-white/60 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
+              </div>
+              <div className="p-3 bg-amber-100/60 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
+                <p className="text-xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
+                  -{calculateReductionPercent()}%
+                </Badge>
+              </div>
+              <div className="p-3 bg-white/60 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">הפרש מבוקש</p>
+                <p className="text-xl font-bold text-red-600">
+                  {formatCurrency(originalTotal - targetTotal)}
+                </p>
+              </div>
+            </div>
+
+            {/* Show if counter-offer differs from target */}
+            {hasLineItems && newTotal !== targetTotal && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">ההצעה החדשה שלך:</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-blue-700">{formatCurrency(newTotal)}</span>
+                    <span className="text-sm text-blue-600 ms-2">(-{calculateNewReductionPercent()}%)</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -430,6 +554,94 @@ export const NegotiationResponseView = ({
         </Card>
       )}
 
+      {/* Entrepreneur's Attached Files from Negotiation Request */}
+      {session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
+              <Paperclip className="h-5 w-5" />
+              קבצים שצורפו לבקשה
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(session.files as NegotiationFile[]).map((file, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">{file.name}</span>
+                    {file.size && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => window.open(file.url, "_blank")}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        const link = document.createElement("a");
+                        link.href = file.url;
+                        link.download = file.name;
+                        link.click();
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Milestone Adjustments from Negotiation Request */}
+      {session.milestone_adjustments && Array.isArray(session.milestone_adjustments) && (session.milestone_adjustments as MilestoneAdjustment[]).length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+              <Calendar className="h-5 w-5" />
+              שינויים מבוקשים בתנאי תשלום
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(session.milestone_adjustments as MilestoneAdjustment[]).map((milestone, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200"
+                >
+                  <span className="font-medium text-blue-900">{milestone.description}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground line-through">
+                      {milestone.consultant_percentage ?? milestone.entrepreneur_percentage}%
+                    </span>
+                    <ArrowDown className="h-4 w-4 text-blue-600 rotate-[-90deg]" />
+                    <Badge variant="outline" className="border-blue-400 text-blue-700">
+                      {milestone.entrepreneur_percentage}%
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Line Items or No Items Message */}
       <Card>
         <CardHeader>
@@ -439,12 +651,15 @@ export const NegotiationResponseView = ({
         </CardHeader>
         <CardContent>
           {hasLineItems ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-4 text-sm font-medium text-muted-foreground pb-2 border-b">
-                <span>פריט</span>
+            <div className="space-y-3" dir="rtl">
+              {/* Header */}
+              <div className="grid grid-cols-6 gap-2 text-xs font-medium text-muted-foreground pb-2 border-b">
+                <span className="col-span-1 text-right">פריט</span>
                 <span className="text-center">מחיר מקורי</span>
                 <span className="text-center">יעד היזם</span>
-                <span className="text-center">הצעה חדשה שלי</span>
+                <span className="text-center">הפחתה</span>
+                <span className="text-center">אישור</span>
+                <span className="text-center">הצעה חדשה</span>
               </div>
 
               {session.line_item_negotiations!.map((lineItem) => {
@@ -452,42 +667,124 @@ export const NegotiationResponseView = ({
                   (u) => u.line_item_id === lineItem.line_item_id
                 );
                 const details = lineItemDetails.get(lineItem.line_item_id);
+                const reduction = lineItem.original_price - lineItem.initiator_target_price;
+                const reductionPercent = lineItem.original_price > 0 
+                  ? Math.round((reduction / lineItem.original_price) * 100) 
+                  : 0;
+                const hasChange = reduction > 0;
+                const isApproved = approvedItems.has(lineItem.line_item_id);
 
                 return (
                   <div
                     key={lineItem.id}
-                    className="grid grid-cols-4 gap-4 items-center py-2"
+                    className={`rounded-lg border p-3 ${isApproved ? 'bg-green-50/50 border-green-200' : hasChange ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-muted'}`}
                   >
-                    <div>
-                      <p className="font-medium">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
+                    {/* Item name and description */}
+                    <div className="mb-2 text-right">
+                      <p className="font-medium text-sm">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
                       {details?.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                           {details.description}
                         </p>
                       )}
-                      {lineItem.initiator_note && (
-                        <p className="text-xs text-amber-600 mt-0.5">
-                          {lineItem.initiator_note}
+                    </div>
+
+                    {/* Entrepreneur's note */}
+                    {lineItem.initiator_note && (
+                      <div className="mb-2 p-2 bg-amber-100 rounded text-xs text-amber-800 border border-amber-200 text-right">
+                        <span className="font-medium">הערת היזם: </span>
+                        {lineItem.initiator_note}
+                      </div>
+                    )}
+
+                    {/* Price row */}
+                    <div className="grid grid-cols-6 gap-2 items-center">
+                      <div className="col-span-1" />
+                      <p className="text-center text-muted-foreground">
+                        {formatCurrency(lineItem.original_price)}
+                      </p>
+                      <div className="text-center">
+                        <p className="font-medium text-amber-700">
+                          {formatCurrency(lineItem.initiator_target_price)}
                         </p>
+                      </div>
+                      <div className="text-center">
+                        {hasChange ? (
+                          <Badge variant="outline" className="border-red-300 text-red-600 bg-red-50">
+                            -{reductionPercent}%
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">ללא שינוי</span>
+                        )}
+                      </div>
+                      {/* Approval checkbox */}
+                      <div className="flex justify-center">
+                        {isApproved ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            אושר
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <Checkbox
+                              id={`approve-${lineItem.line_item_id}`}
+                              checked={false}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  const newSet = new Set(approvedItems);
+                                  newSet.add(lineItem.line_item_id);
+                                  setApprovedItems(newSet);
+                                  // Auto-set price to target when approved
+                                  handlePriceChange(lineItem.line_item_id, lineItem.initiator_target_price);
+                                }
+                              }}
+                              disabled={!canRespond}
+                              className="h-4 w-4"
+                            />
+                            <label 
+                              htmlFor={`approve-${lineItem.line_item_id}`}
+                              className="text-xs text-muted-foreground cursor-pointer"
+                            >
+                              אשר
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      {/* Price input or approved indicator */}
+                      {isApproved ? (
+                        <div className="text-center">
+                          <p className="font-medium text-green-700">
+                            {formatCurrency(lineItem.initiator_target_price)}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              const newSet = new Set(approvedItems);
+                              newSet.delete(lineItem.line_item_id);
+                              setApprovedItems(newSet);
+                            }}
+                            disabled={!canRespond}
+                          >
+                            בטל אישור
+                          </Button>
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          value={updatedItem?.consultant_response_price || 0}
+                          onChange={(e) =>
+                            handlePriceChange(
+                              lineItem.line_item_id,
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          className="text-center h-9"
+                          disabled={!canRespond}
+                        />
                       )}
                     </div>
-                    <p className="text-center">
-                      {formatCurrency(lineItem.original_price)}
-                    </p>
-                    <p className="text-center text-amber-600 font-medium">
-                      {formatCurrency(lineItem.initiator_target_price)}
-                    </p>
-                    <Input
-                      type="number"
-                      value={updatedItem?.consultant_response_price || 0}
-                      onChange={(e) =>
-                        handlePriceChange(
-                          lineItem.line_item_id,
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="text-center"
-                    />
                   </div>
                 );
               })}
@@ -506,20 +803,20 @@ export const NegotiationResponseView = ({
           <Separator className="my-4" />
 
           {/* Totals */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>סה״כ מקורי:</span>
-              <span className="font-medium">{formatCurrency(originalTotal)}</span>
+          <div className="space-y-2" dir="rtl">
+            <div className="flex justify-between items-center">
+              <span className="text-right">סה״כ מקורי:</span>
+              <span className="font-medium text-left">{formatCurrency(originalTotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>יעד היזם:</span>
-              <span className="font-medium text-amber-600">
+            <div className="flex justify-between items-center">
+              <span className="text-right">יעד היזם:</span>
+              <span className="font-medium text-amber-600 text-left">
                 {formatCurrency(targetTotal)}
               </span>
             </div>
-            <div className="flex justify-between text-lg">
-              <span className="font-medium">סה״כ הצעה חדשה:</span>
-              <span className="font-bold text-green-600">
+            <div className="flex justify-between items-center text-lg">
+              <span className="font-medium text-right">סה״כ הצעה חדשה:</span>
+              <span className="font-bold text-green-600 text-left">
                 {formatCurrency(newTotal)}
               </span>
             </div>
@@ -543,28 +840,66 @@ export const NegotiationResponseView = ({
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-3 justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 justify-end">
         {onBack && (
           <Button variant="outline" onClick={onBack}>
             {canRespond ? "ביטול" : "חזרה"}
           </Button>
         )}
         {canRespond && (
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                שולח...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 me-2" />
-                שלח הצעה מעודכנת
-              </>
-            )}
-          </Button>
+          <>
+            <Button variant="destructive" onClick={() => setShowDeclineDialog(true)} disabled={loading || declining}>
+              <XCircle className="h-4 w-4 me-2" />
+              דחה בקשה
+            </Button>
+            <Button variant="outline" onClick={handleAcceptTarget} disabled={loading || declining}>
+              <Check className="h-4 w-4 me-2" />
+              קבל מחיר יעד
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || declining}>
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                  שולח...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 me-2" />
+                  שלח הצעה נגדית
+                </>
+              )}
+            </Button>
+          </>
         )}
       </div>
+
+      {/* Decline Dialog */}
+      <AlertDialog open={showDeclineDialog} onOpenChange={setShowDeclineDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>דחיית בקשת משא ומתן</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך לדחות את בקשת המשא ומתן? היזם יקבל הודעה על הדחייה.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="סיבת דחייה (אופציונלי)..."
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDecline}
+              disabled={declining}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {declining ? "דוחה..." : "דחה בקשה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

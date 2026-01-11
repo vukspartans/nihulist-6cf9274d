@@ -57,6 +57,9 @@ export interface NegotiationSession {
   resolved_at?: string;
   created_at: string;
   updated_at: string;
+  // JSONB fields from database - typed as unknown for flexibility with Json type
+  files?: unknown;
+  milestone_adjustments?: unknown;
 }
 
 export interface LineItemNegotiation {
@@ -87,6 +90,13 @@ export interface NegotiationComment {
 }
 
 // Input types for edge functions
+export interface MilestoneAdjustmentInput {
+  milestone_id: string;
+  original_percentage: number;
+  target_percentage: number;
+  initiator_note?: string;
+}
+
 export interface NegotiationRequestInput {
   project_id: string;
   proposal_id: string;
@@ -96,6 +106,7 @@ export interface NegotiationRequestInput {
   global_comment?: string;
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
+  milestone_adjustments?: MilestoneAdjustmentInput[];
   comments?: NegotiationCommentInput[];
   files?: { name: string; url: string; size: number }[];
 }

@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Users } from "lucide-react";
+import { RefreshCw, Users, Filter } from "lucide-react";
 
 interface ProposalForBulk {
   id: string;
@@ -24,6 +24,7 @@ interface ProposalForBulk {
   supplier_name: string;
   project_id: string;
   current_version?: number;
+  has_active_negotiation?: boolean;
 }
 
 interface BulkNegotiationDialogProps {
@@ -43,13 +44,15 @@ export const BulkNegotiationDialog = ({
   const [selectedProposals, setSelectedProposals] = useState<Set<string>>(
     new Set(proposals.map((p) => p.id))
   );
-  const [reductionType, setReductionType] = useState<"percent" | "fixed">(
+  const [reductionType, setReductionType] = useState<"percent" | "fixed" | "target">(
     "percent"
   );
   const [reductionValue, setReductionValue] = useState(10);
+  const [targetAmount, setTargetAmount] = useState<number | "">("");
   const [bulkMessage, setBulkMessage] = useState("");
   const [sendingProgress, setSendingProgress] = useState(0);
   const [skippedProposals, setSkippedProposals] = useState<string[]>([]);
+  const [filterNewOnly, setFilterNewOnly] = useState(false);
 
   const { createNegotiationSession, loading } = useNegotiation();
 
@@ -62,6 +65,11 @@ export const BulkNegotiationDialog = ({
     }).format(amount);
   };
 
+  // Filter proposals based on filterNewOnly
+  const filteredProposals = filterNewOnly 
+    ? proposals.filter(p => (p.current_version || 1) === 1 && !p.has_active_negotiation)
+    : proposals;
+
   const toggleProposal = (proposalId: string) => {
     const newSelected = new Set(selectedProposals);
     if (newSelected.has(proposalId)) {
@@ -73,6 +81,9 @@ export const BulkNegotiationDialog = ({
   };
 
   const calculateTargetPrice = (originalPrice: number): number => {
+    if (reductionType === "target" && targetAmount !== "") {
+      return targetAmount;
+    }
     if (reductionType === "percent") {
       return originalPrice * (1 - reductionValue / 100);
     }
@@ -80,9 +91,16 @@ export const BulkNegotiationDialog = ({
   };
 
   const handleSubmit = async () => {
-    const selectedList = proposals.filter((p) => selectedProposals.has(p.id));
+    const selectedList = filteredProposals.filter((p) => selectedProposals.has(p.id));
     let successCount = 0;
     const skipped: string[] = [];
+
+    // Build message with target amount if specified
+    let finalMessage = bulkMessage;
+    if (reductionType === "target" && targetAmount !== "") {
+      const targetMsg = `אבקש להתכנס לסכום של ${formatCurrency(targetAmount)}`;
+      finalMessage = finalMessage ? `${targetMsg}\n\n${finalMessage}` : targetMsg;
+    }
 
     for (let i = 0; i < selectedList.length; i++) {
       const proposal = selectedList[i];
@@ -141,8 +159,8 @@ export const BulkNegotiationDialog = ({
         target_total: calculateTargetPrice(proposal.price),
         target_reduction_percent:
           reductionType === "percent" ? reductionValue : undefined,
-        global_comment: bulkMessage || undefined,
-        bulk_message: bulkMessage || undefined,
+        global_comment: finalMessage || undefined,
+        bulk_message: finalMessage || undefined,
       });
 
       if (result && !('existingSession' in result)) {
@@ -172,11 +190,16 @@ export const BulkNegotiationDialog = ({
     setSelectedProposals(new Set(proposals.map((p) => p.id)));
     setReductionType("percent");
     setReductionValue(10);
+    setTargetAmount("");
     setBulkMessage("");
     setSendingProgress(0);
     setSkippedProposals([]);
+    setFilterNewOnly(false);
     onOpenChange(false);
   };
+
+  // Count new proposals (version 1, no active negotiation)
+  const newProposalsCount = proposals.filter(p => (p.current_version || 1) === 1 && !p.has_active_negotiation).length;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -195,11 +218,38 @@ export const BulkNegotiationDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Filter for New Proposals Only */}
+          {newProposalsCount > 0 && newProposalsCount < proposals.length && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="filter-new"
+                checked={filterNewOnly}
+                onCheckedChange={(checked) => {
+                  setFilterNewOnly(!!checked);
+                  if (checked) {
+                    // Select only new proposals when filter is enabled
+                    const newIds = proposals
+                      .filter(p => (p.current_version || 1) === 1 && !p.has_active_negotiation)
+                      .map(p => p.id);
+                    setSelectedProposals(new Set(newIds));
+                  } else {
+                    // Select all when filter is disabled
+                    setSelectedProposals(new Set(proposals.map(p => p.id)));
+                  }
+                }}
+              />
+              <Label htmlFor="filter-new" className="flex items-center gap-2 cursor-pointer">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span>שלח רק להצעות חדשות ({newProposalsCount})</span>
+              </Label>
+            </div>
+          )}
+
           {/* Selected Proposals */}
           <div className="space-y-2">
             <Label>נבחרו {selectedProposals.size} הצעות:</Label>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {proposals.map((proposal) => (
+              {filteredProposals.map((proposal) => (
                 <div
                   key={proposal.id}
                   className="flex items-center justify-between p-2 border rounded"
@@ -210,6 +260,9 @@ export const BulkNegotiationDialog = ({
                       onCheckedChange={() => toggleProposal(proposal.id)}
                     />
                     <span>{proposal.supplier_name}</span>
+                    {(proposal.current_version || 1) > 1 && (
+                      <span className="text-xs text-muted-foreground">(גרסה {proposal.current_version})</span>
+                    )}
                   </div>
                   <span className="font-medium">
                     {formatCurrency(proposal.price)}
@@ -224,8 +277,8 @@ export const BulkNegotiationDialog = ({
             <Label>יעד הפחתה:</Label>
             <RadioGroup
               value={reductionType}
-              onValueChange={(v) => setReductionType(v as "percent" | "fixed")}
-              className="flex gap-4"
+              onValueChange={(v) => setReductionType(v as "percent" | "fixed" | "target")}
+              className="flex flex-wrap gap-4"
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="percent" id="percent" />
@@ -235,21 +288,43 @@ export const BulkNegotiationDialog = ({
                 <RadioGroupItem value="fixed" id="fixed" />
                 <Label htmlFor="fixed">סכום קבוע</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="target" id="target" />
+                <Label htmlFor="target">סכום יעד</Label>
+              </div>
             </RadioGroup>
 
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={reductionValue}
-                onChange={(e) =>
-                  setReductionValue(parseFloat(e.target.value) || 0)
-                }
-                className="w-24"
-              />
-              <span className="text-muted-foreground">
-                {reductionType === "percent" ? "%" : "₪"}
-              </span>
-            </div>
+            {reductionType === "target" ? (
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+                <Label className="text-sm font-medium">אבקש להתכנס לסכום של:</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={targetAmount}
+                    onChange={(e) =>
+                      setTargetAmount(e.target.value ? parseFloat(e.target.value) : "")
+                    }
+                    placeholder="הזן סכום יעד"
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground font-medium">₪</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={reductionValue}
+                  onChange={(e) =>
+                    setReductionValue(parseFloat(e.target.value) || 0)
+                  }
+                  className="w-24"
+                />
+                <span className="text-muted-foreground">
+                  {reductionType === "percent" ? "%" : "₪"}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Bulk Message */}
