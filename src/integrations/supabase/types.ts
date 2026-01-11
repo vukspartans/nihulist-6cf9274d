@@ -1822,6 +1822,9 @@ export type Database = {
             | null
           delivered_at: string | null
           email: string
+          email_attempts: number | null
+          email_last_attempt_at: string | null
+          email_last_error: string | null
           id: string
           last_notification_at: string | null
           opened_at: string | null
@@ -1852,6 +1855,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
@@ -1882,6 +1888,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email?: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
