@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, RefreshCw } from 'lucide-react';
 import { useRFPInvitesWithDetails, AdvisorTypeGroup } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalDetailDialog } from './ProposalDetailDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -232,20 +232,40 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                             </TableCell>
                             <TableCell>
                               {invite.proposalId ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleViewProposal(invite.proposalId!)}
-                                  className="gap-2"
-                                  disabled={loadingProposalId === invite.proposalId}
-                                >
-                                  {loadingProposalId === invite.proposalId ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
+                                <div className="flex items-center gap-2">
+                                  {invite.proposalStatus === 'resubmitted' && (
+                                    <Badge 
+                                      variant="default" 
+                                      className="bg-green-100 text-green-800 border-green-300 gap-1"
+                                    >
+                                      <RefreshCw className="h-3 w-3" />
+                                      הצעה מעודכנת
+                                    </Badge>
                                   )}
-                                  צפה בהצעה
-                                </Button>
+                                  {invite.proposalStatus === 'negotiation_requested' && (
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="bg-amber-100 text-amber-800 border-amber-300 gap-1"
+                                    >
+                                      <Clock className="h-3 w-3" />
+                                      במו״מ
+                                    </Badge>
+                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewProposal(invite.proposalId!)}
+                                    className="gap-2"
+                                    disabled={loadingProposalId === invite.proposalId}
+                                  >
+                                    {loadingProposalId === invite.proposalId ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                    צפה בהצעה
+                                  </Button>
+                                </div>
                               ) : invite.status === 'submitted' ? (
                                 <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
                                   <AlertCircle className="h-3 w-3 mr-1" />

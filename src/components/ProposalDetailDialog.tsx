@@ -93,6 +93,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     file: { name: string; url: string; size?: number } | null;
     items: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}>;
   } | null>(null);
+  const [hasRespondedNegotiation, setHasRespondedNegotiation] = useState(false);
+  const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
@@ -130,6 +132,24 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     if (proposal.ai_analysis) setAiAnalysis(proposal.ai_analysis);
     if (proposal.file_summaries) setFileSummaries(proposal.file_summaries);
   }, [open, proposal]);
+
+  // Check if there's a responded negotiation for this proposal
+  useEffect(() => {
+    const checkNegotiationStatus = async () => {
+      if (!open || !proposal.id) return;
+      
+      const { data } = await supabase
+        .from('negotiation_sessions')
+        .select('id, status')
+        .eq('proposal_id', proposal.id)
+        .eq('status', 'responded')
+        .maybeSingle();
+      
+      setHasRespondedNegotiation(!!data);
+    };
+    
+    checkNegotiationStatus();
+  }, [open, proposal.id]);
 
   // Fetch service names when dialog opens with selected services
   useEffect(() => {
@@ -328,6 +348,36 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     } catch { toast({ title: "שגיאה", variant: "destructive" }); }
   };
 
+  // Accept the updated counter-offer after negotiation
+  const handleAcceptCounterOffer = async () => {
+    setIsAcceptingOffer(true);
+    try {
+      // 1. Mark the negotiation session as resolved
+      const { error: sessionError } = await supabase
+        .from('negotiation_sessions')
+        .update({ 
+          status: 'resolved', 
+          resolved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('proposal_id', proposal.id)
+        .eq('status', 'responded');
+      
+      if (sessionError) throw sessionError;
+
+      // 2. Update proposal status (move directly to approval flow)
+      setShowApprovalDialog(true);
+      setHasRespondedNegotiation(false);
+      
+      toast({ title: "הצעה נגדית התקבלה - המשך לאישור" });
+    } catch (err) {
+      console.error('Error accepting counter-offer:', err);
+      toast({ title: "שגיאה בקבלת ההצעה", variant: "destructive" });
+    } finally {
+      setIsAcceptingOffer(false);
+    }
+  };
+
   const generateAiAnalysis = async (forceRefresh: boolean = false) => {
     setIsGeneratingAi(true);
     try {
@@ -485,19 +535,46 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
             </div>
             {/* Action buttons - including Negotiation */}
             {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
-              <div className="flex items-center gap-2 pt-2 justify-end" dir="rtl">
-                <Button variant="destructive" size="sm" onClick={handleReject}>
-                  <XCircle className="w-4 h-4 me-1" />
-                  דחה הצעה
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowNegotiationDialog(true)}>
-                  <MessageSquare className="w-4 h-4 me-1" />
-                  משא ומתן
-                </Button>
-                <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
-                  <CheckCircle className="w-4 h-4 me-1" />
-                  אשר הצעה
-                </Button>
+              <div className="flex flex-col gap-2 pt-2" dir="rtl">
+                {/* Show special banner for updated counter-offer */}
+                {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+                    <RefreshCw className="w-4 h-4 text-green-600" />
+                    <span className="text-green-800">היועץ שלח הצעה נגדית מעודכנת</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 justify-end">
+                  <Button variant="destructive" size="sm" onClick={handleReject}>
+                    <XCircle className="w-4 h-4 me-1" />
+                    דחה הצעה
+                  </Button>
+                  {!hasRespondedNegotiation && (
+                    <Button variant="outline" size="sm" onClick={() => setShowNegotiationDialog(true)}>
+                      <MessageSquare className="w-4 h-4 me-1" />
+                      משא ומתן
+                    </Button>
+                  )}
+                  {hasRespondedNegotiation ? (
+                    <Button 
+                      size="sm" 
+                      onClick={handleAcceptCounterOffer}
+                      disabled={isAcceptingOffer}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isAcceptingOffer ? (
+                        <Loader2 className="w-4 h-4 me-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 me-1" />
+                      )}
+                      קבל הצעה נגדית
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setShowApprovalDialog(true)}>
+                      <CheckCircle className="w-4 h-4 me-1" />
+                      אשר הצעה
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </DialogHeader>
