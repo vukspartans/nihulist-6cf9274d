@@ -91,16 +91,20 @@ export const EnhancedLineItemTable = ({
 
   const getUnitLabel = (unit: string) => unitLabels[unit] || unit;
 
+  // Helper to generate stable item ID - MUST be consistent everywhere
+  const getItemId = (item: FeeLineItem, idx: number): string => {
+    if (item.id) return item.id;
+    if (item.item_number !== undefined) return `item-${item.item_number}`;
+    return `idx-${idx}`;
+  };
+
   const filteredItems = useMemo(() => {
     if (showOptionalItems) return items;
     return items.filter(item => !item.is_optional);
   }, [items, showOptionalItems]);
 
   // Helper to ensure adjustment exists for an item
-  const ensureAdjustment = (itemId: string, updates: Partial<LineItemAdjustment>): LineItemAdjustment[] => {
-    const item = items.find(i => (i.id || `item-${i.item_number}`) === itemId);
-    const itemTotal = item ? (item.total || (item.unit_price * item.quantity)) : 0;
-    
+  const ensureAdjustment = (itemId: string, itemTotal: number, updates: Partial<LineItemAdjustment>): LineItemAdjustment[] => {
     const existing = adjustments.find(a => a.line_item_id === itemId);
     if (existing) {
       return adjustments.map(a => 
@@ -118,29 +122,26 @@ export const EnhancedLineItemTable = ({
     }
   };
 
-  const handleTargetPriceChange = (itemId: string, price: number) => {
+  const handleTargetPriceChange = (itemId: string, itemTotal: number, price: number) => {
     if (!onAdjustmentChange) return;
     
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, { target_price: price }));
+    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { target_price: price }));
   };
 
-  const handleNoteChange = (itemId: string, note: string) => {
+  const handleNoteChange = (itemId: string, itemTotal: number, note: string) => {
     if (!onAdjustmentChange) return;
     
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, { initiator_note: note }));
+    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { initiator_note: note }));
   };
 
-  const handleQuantityChange = (itemId: string, quantity: number) => {
+  const handleQuantityChange = (itemId: string, unitPrice: number, itemTotal: number, quantity: number) => {
     if (!onAdjustmentChange) return;
     
-    const item = items.find(i => (i.id || `item-${i.item_number}`) === itemId);
-    if (!item) return;
-    
-    const newTotal = item.unit_price * quantity;
+    const newTotal = unitPrice * quantity;
     setModifiedItems(prev => new Set(prev).add(itemId));
-    onAdjustmentChange(ensureAdjustment(itemId, { 
+    onAdjustmentChange(ensureAdjustment(itemId, itemTotal, { 
       new_quantity: quantity, 
       target_price: newTotal 
     }));
@@ -169,8 +170,8 @@ export const EnhancedLineItemTable = ({
     let targetTotal = 0;
     let newOfferTotal = 0;
 
-    filteredItems.forEach(item => {
-      const itemId = item.id || `item-${item.item_number}`;
+    filteredItems.forEach((item, idx) => {
+      const itemId = getItemId(item, idx);
       const itemTotal = item.total || (item.unit_price * item.quantity);
       
       // Include all items with a price > 0 in original total (mandatory + priced optional)
@@ -236,8 +237,8 @@ export const EnhancedLineItemTable = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredItems.map((item, idx) => {
-              const itemId = item.id || `item-${item.item_number || idx}`;
+          {filteredItems.map((item, idx) => {
+              const itemId = getItemId(item, idx);
               const adjustment = adjustments.find(a => a.line_item_id === itemId);
               const response = consultantResponses.find(r => r.line_item_id === itemId);
               const itemTotal = item.total || (item.unit_price * item.quantity);
@@ -295,7 +296,7 @@ export const EnhancedLineItemTable = ({
                         onBlur={(e) => {
                           const rawValue = e.target.value.replace(/[^\d.-]/g, '');
                           const qty = parseFloat(rawValue) || 0;
-                          handleQuantityChange(itemId, qty);
+                          handleQuantityChange(itemId, item.unit_price, itemTotal, qty);
                           setEditingValues(prev => {
                             const next = { ...prev };
                             delete next[`qty-${itemId}`];
@@ -327,32 +328,35 @@ export const EnhancedLineItemTable = ({
                   {showTargetColumn && (
                     <TableCell className="text-start">
                       {mode === 'entrepreneur' ? (
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={
-                            editingValues[`price-${itemId}`] !== undefined
-                              ? editingValues[`price-${itemId}`]
-                              : (adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')
-                          }
-                          onChange={(e) => {
-                            setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
-                          }}
-                          onBlur={(e) => {
-                            const rawValue = e.target.value.replace(/[^\d.-]/g, '');
-                            handleTargetPriceChange(itemId, parseFloat(rawValue) || 0);
-                            setEditingValues(prev => {
-                              const next = { ...prev };
-                              delete next[`price-${itemId}`];
-                              return next;
-                            });
-                          }}
-                          className={cn(
-                            "w-24",
-                            isRemoved && "bg-destructive/10 text-destructive border-destructive/30"
-                          )}
-                          dir="ltr"
-                        />
+                        <div className="relative">
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">₪</span>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={
+                              editingValues[`price-${itemId}`] !== undefined
+                                ? editingValues[`price-${itemId}`]
+                                : (adjustment?.target_price ?? itemTotal).toLocaleString('he-IL')
+                            }
+                            onChange={(e) => {
+                              setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
+                            }}
+                            onBlur={(e) => {
+                              const rawValue = e.target.value.replace(/[^\d.-]/g, '');
+                              handleTargetPriceChange(itemId, itemTotal, parseFloat(rawValue) || 0);
+                              setEditingValues(prev => {
+                                const next = { ...prev };
+                                delete next[`price-${itemId}`];
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              "w-28 pr-6",
+                              isRemoved && "bg-destructive/10 text-destructive border-destructive/30"
+                            )}
+                            dir="ltr"
+                          />
+                        </div>
                       ) : adjustment ? (
                         <span className={cn(
                           "font-medium",
@@ -385,7 +389,7 @@ export const EnhancedLineItemTable = ({
                       <Textarea
                         placeholder="הערה..."
                         value={adjustment?.initiator_note || ""}
-                        onChange={(e) => handleNoteChange(itemId, e.target.value)}
+                        onChange={(e) => handleNoteChange(itemId, itemTotal, e.target.value)}
                         className={cn(
                           "min-h-[40px] text-sm resize-none",
                           isRemoved && "bg-muted"
