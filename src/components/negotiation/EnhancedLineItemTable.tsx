@@ -72,7 +72,8 @@ export const EnhancedLineItemTable = ({
   showOptionalItems = true,
   className,
 }: EnhancedLineItemTableProps) => {
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(
+  // Track which items have been manually modified (for visual feedback)
+  const [modifiedItems, setModifiedItems] = useState<Set<string>>(
     new Set(adjustments.map((a) => a.line_item_id))
   );
 
@@ -92,69 +93,40 @@ export const EnhancedLineItemTable = ({
     return items.filter(item => !item.is_optional);
   }, [items, showOptionalItems]);
 
-  const handleItemToggle = (itemId: string, checked: boolean) => {
-    if (mode !== 'entrepreneur' || !onAdjustmentChange) return;
-
-    const newSelected = new Set(selectedItems);
+  // Helper to ensure adjustment exists for an item
+  const ensureAdjustment = (itemId: string, updates: Partial<LineItemAdjustment>): LineItemAdjustment[] => {
     const item = items.find(i => (i.id || `item-${i.item_number}`) === itemId);
+    const itemTotal = item ? (item.total || (item.unit_price * item.quantity)) : 0;
     
-    if (checked) {
-      newSelected.add(itemId);
-      if (item && !adjustments.find(a => a.line_item_id === itemId)) {
-        const currentTotal = item.total || (item.unit_price * item.quantity);
-        onAdjustmentChange([
-          ...adjustments,
-          {
-            line_item_id: itemId,
-            target_price: currentTotal,
-          },
-        ]);
-      }
+    const existing = adjustments.find(a => a.line_item_id === itemId);
+    if (existing) {
+      return adjustments.map(a => 
+        a.line_item_id === itemId ? { ...a, ...updates } : a
+      );
     } else {
-      newSelected.delete(itemId);
-      onAdjustmentChange(adjustments.filter(a => a.line_item_id !== itemId));
+      return [
+        ...adjustments,
+        { 
+          line_item_id: itemId, 
+          target_price: itemTotal,
+          ...updates 
+        }
+      ];
     }
-    setSelectedItems(newSelected);
   };
 
   const handleTargetPriceChange = (itemId: string, price: number) => {
     if (!onAdjustmentChange) return;
     
-    const existing = adjustments.find(a => a.line_item_id === itemId);
-    if (existing) {
-      onAdjustmentChange(
-        adjustments.map(a => 
-          a.line_item_id === itemId ? { ...a, target_price: price } : a
-        )
-      );
-    } else {
-      // Create new adjustment if it doesn't exist
-      onAdjustmentChange([
-        ...adjustments,
-        { line_item_id: itemId, target_price: price }
-      ]);
-    }
+    setModifiedItems(prev => new Set(prev).add(itemId));
+    onAdjustmentChange(ensureAdjustment(itemId, { target_price: price }));
   };
 
   const handleNoteChange = (itemId: string, note: string) => {
     if (!onAdjustmentChange) return;
     
-    const existing = adjustments.find(a => a.line_item_id === itemId);
-    if (existing) {
-      onAdjustmentChange(
-        adjustments.map(a => 
-          a.line_item_id === itemId ? { ...a, initiator_note: note } : a
-        )
-      );
-    } else {
-      // Create new adjustment with note - get item's current total
-      const item = items.find(i => (i.id || `item-${i.item_number}`) === itemId);
-      const itemTotal = item ? (item.total || (item.unit_price * item.quantity)) : 0;
-      onAdjustmentChange([
-        ...adjustments,
-        { line_item_id: itemId, target_price: itemTotal, initiator_note: note }
-      ]);
-    }
+    setModifiedItems(prev => new Set(prev).add(itemId));
+    onAdjustmentChange(ensureAdjustment(itemId, { initiator_note: note }));
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
@@ -164,23 +136,11 @@ export const EnhancedLineItemTable = ({
     if (!item) return;
     
     const newTotal = item.unit_price * quantity;
-    const existing = adjustments.find(a => a.line_item_id === itemId);
-    
-    if (existing) {
-      onAdjustmentChange(
-        adjustments.map(a => 
-          a.line_item_id === itemId 
-            ? { ...a, new_quantity: quantity, target_price: newTotal } 
-            : a
-        )
-      );
-    } else {
-      // Create new adjustment with quantity change
-      onAdjustmentChange([
-        ...adjustments,
-        { line_item_id: itemId, new_quantity: quantity, target_price: newTotal }
-      ]);
-    }
+    setModifiedItems(prev => new Set(prev).add(itemId));
+    onAdjustmentChange(ensureAdjustment(itemId, { 
+      new_quantity: quantity, 
+      target_price: newTotal 
+    }));
   };
 
   const handleConsultantPriceChange = (itemId: string, price: number) => {
@@ -217,9 +177,10 @@ export const EnhancedLineItemTable = ({
 
       const adjustment = adjustments.find(a => a.line_item_id === itemId);
       if (adjustment) {
+        // Use the target price from adjustment (could be 0 for "removed" items)
         targetTotal += adjustment.target_price;
       } else if (itemTotal > 0) {
-        // Include all priced items that don't have adjustments
+        // No adjustment = use original
         targetTotal += itemTotal;
       }
 
@@ -241,7 +202,6 @@ export const EnhancedLineItemTable = ({
     : 0;
 
   // Determine columns based on mode
-  const showCheckbox = mode === 'entrepreneur';
   const showTargetColumn = mode === 'entrepreneur' || mode === 'consultant';
   const showNewOfferColumn = mode === 'consultant';
   const showNotesColumn = mode === 'entrepreneur';
@@ -253,7 +213,6 @@ export const EnhancedLineItemTable = ({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              {showCheckbox && <TableHead className="w-10"></TableHead>}
               <TableHead className="min-w-[150px] text-start">תיאור</TableHead>
               <TableHead className="text-center w-20">יחידה</TableHead>
               <TableHead className="text-center w-20">כמות</TableHead>
@@ -276,30 +235,36 @@ export const EnhancedLineItemTable = ({
           <TableBody>
             {filteredItems.map((item, idx) => {
               const itemId = item.id || `item-${item.item_number || idx}`;
-              const isSelected = selectedItems.has(itemId);
               const adjustment = adjustments.find(a => a.line_item_id === itemId);
               const response = consultantResponses.find(r => r.line_item_id === itemId);
               const itemTotal = item.total || (item.unit_price * item.quantity);
               const displayQuantity = adjustment?.new_quantity ?? item.quantity;
+              
+              // Check if item is "removed" (target price set to 0)
+              const isRemoved = adjustment?.target_price === 0;
+              const hasAdjustment = !!adjustment;
 
               return (
                 <TableRow 
                   key={itemId}
-                  className={cn(item.is_optional && "bg-muted/20")}
-                >
-                  {showCheckbox && (
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleItemToggle(itemId, !!checked)}
-                      />
-                    </TableCell>
+                  className={cn(
+                    item.is_optional && "bg-muted/20",
+                    isRemoved && "opacity-60 bg-destructive/5"
                   )}
+                >
                   <TableCell>
-                    <div>
-                      <span className="font-medium">{item.description}</span>
+                    <div className={cn(isRemoved && "text-muted-foreground")}>
+                      <span className={cn(
+                        "font-medium",
+                        isRemoved && "line-through"
+                      )}>
+                        {item.description}
+                      </span>
                       {item.is_optional && (
                         <Badge variant="outline" className="mr-2 text-xs">אופציונלי</Badge>
+                      )}
+                      {isRemoved && (
+                        <Badge variant="destructive" className="mr-2 text-xs">הוסר</Badge>
                       )}
                       {item.comment && (
                         <p className="text-xs text-muted-foreground mt-0.5">{item.comment}</p>
@@ -312,27 +277,37 @@ export const EnhancedLineItemTable = ({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    {mode === 'entrepreneur' && isSelected ? (
+                    {mode === 'entrepreneur' ? (
                       <Input
                         type="number"
                         value={displayQuantity}
-                        onChange={(e) => handleQuantityChange(itemId, parseFloat(e.target.value) || 1)}
-                        className="w-16 text-center"
-                        min={1}
+                        onChange={(e) => handleQuantityChange(itemId, parseFloat(e.target.value) || 0)}
+                        className={cn(
+                          "w-16 text-center",
+                          isRemoved && "bg-muted text-muted-foreground"
+                        )}
+                        min={0}
                       />
                     ) : (
-                      <span>{item.quantity}</span>
+                      <span className={cn(isRemoved && "line-through")}>{item.quantity}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-start">
-                    {formatCurrency(item.unit_price)}
+                  <TableCell className={cn("text-start", isRemoved && "text-muted-foreground")}>
+                    <span className={cn(isRemoved && "line-through")}>
+                      {formatCurrency(item.unit_price)}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-start font-medium">
-                    {formatCurrency(itemTotal)}
+                  <TableCell className={cn(
+                    "text-start font-medium",
+                    isRemoved && "text-muted-foreground"
+                  )}>
+                    <span className={cn(isRemoved && "line-through")}>
+                      {formatCurrency(itemTotal)}
+                    </span>
                   </TableCell>
                   {showTargetColumn && (
                     <TableCell className="text-start">
-                      {mode === 'entrepreneur' && isSelected ? (
+                      {mode === 'entrepreneur' ? (
                         <Input
                           type="text"
                           inputMode="numeric"
@@ -341,12 +316,18 @@ export const EnhancedLineItemTable = ({
                             const rawValue = e.target.value.replace(/,/g, '');
                             handleTargetPriceChange(itemId, parseFloat(rawValue) || 0);
                           }}
-                          className="w-24"
+                          className={cn(
+                            "w-24",
+                            isRemoved && "bg-destructive/10 text-destructive border-destructive/30"
+                          )}
                           dir="ltr"
                         />
                       ) : adjustment ? (
-                        <span className="text-amber-600 font-medium">
-                          {formatCurrency(adjustment.target_price)}
+                        <span className={cn(
+                          "font-medium",
+                          isRemoved ? "text-destructive" : "text-amber-600"
+                        )}>
+                          {isRemoved ? "הוסר" : formatCurrency(adjustment.target_price)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -370,15 +351,16 @@ export const EnhancedLineItemTable = ({
                   )}
                   {showNotesColumn && (
                     <TableCell>
-                      {isSelected && (
-                        <Textarea
-                          placeholder="הערה..."
-                          value={adjustment?.initiator_note || ""}
-                          onChange={(e) => handleNoteChange(itemId, e.target.value)}
-                          className="min-h-[40px] text-sm resize-none"
-                          rows={1}
-                        />
-                      )}
+                      <Textarea
+                        placeholder="הערה..."
+                        value={adjustment?.initiator_note || ""}
+                        onChange={(e) => handleNoteChange(itemId, e.target.value)}
+                        className={cn(
+                          "min-h-[40px] text-sm resize-none",
+                          isRemoved && "bg-muted"
+                        )}
+                        rows={1}
+                      />
                     </TableCell>
                   )}
                   {showEntrepreneurNotesColumn && (
@@ -394,7 +376,7 @@ export const EnhancedLineItemTable = ({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/30">
-              <TableCell colSpan={showCheckbox ? 5 : 4} className="text-start font-medium">
+              <TableCell colSpan={4} className="text-start font-medium">
                 סה"כ
               </TableCell>
               <TableCell className="text-start font-bold">
@@ -403,8 +385,13 @@ export const EnhancedLineItemTable = ({
               {showTargetColumn && (
                 <TableCell className="text-start font-bold text-amber-600">
                   {formatCurrency(totals.targetTotal)}
-                  {reductionPercent > 0 && (
-                    <span className="text-xs text-red-600 block">↓{reductionPercent}%</span>
+                  {reductionPercent !== 0 && (
+                    <span className={cn(
+                      "text-xs block",
+                      reductionPercent > 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {reductionPercent > 0 ? `↓${reductionPercent}%` : `↑${Math.abs(reductionPercent)}%`}
+                    </span>
                   )}
                 </TableCell>
               )}
