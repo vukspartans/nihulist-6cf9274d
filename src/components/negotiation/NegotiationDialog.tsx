@@ -74,6 +74,7 @@ const commentTypes: { type: CommentType; label: string; icon: React.ReactNode }[
 ];
 
 interface UploadedFile {
+  id?: string;  // Database ID from negotiation_files table
   name: string;
   url: string;
   size: number;
@@ -175,55 +176,8 @@ export const NegotiationDialog = ({
     loadProposalData();
   }, [open, proposal.id]);
 
-  // Prefetch existing files when dialog opens
-  useEffect(() => {
-    const fetchExistingFiles = async () => {
-      if (!open || !proposal.id) return;
-      
-      setLoadingExistingFiles(true);
-      try {
-        const { data: files, error } = await supabase.storage
-          .from('negotiation-files')
-          .list(proposal.id);
-
-        if (error) {
-          console.log('[NegotiationDialog] No existing files or bucket access:', error.message);
-          setLoadingExistingFiles(false);
-          return;
-        }
-
-        if (files && files.length > 0) {
-          const filesWithUrls: UploadedFile[] = [];
-          
-          for (const file of files) {
-            const storagePath = `${proposal.id}/${file.name}`;
-            const { data: signedUrlData } = await supabase.storage
-              .from('negotiation-files')
-              .createSignedUrl(storagePath, 3600);
-            
-            if (signedUrlData?.signedUrl) {
-              filesWithUrls.push({
-                name: file.name,
-                url: signedUrlData.signedUrl,
-                size: file.metadata?.size || 0,
-                storagePath,
-              });
-            }
-          }
-          
-          if (filesWithUrls.length > 0) {
-            setUploadedFiles(filesWithUrls);
-          }
-        }
-      } catch (err) {
-        console.error('[NegotiationDialog] Error fetching existing files:', err);
-      } finally {
-        setLoadingExistingFiles(false);
-      }
-    };
-
-    fetchExistingFiles();
-  }, [open, proposal.id]);
+  // Each negotiation session starts fresh - no loading of previous files
+  // Files are session-specific and tracked in the negotiation_files table
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -253,13 +207,33 @@ export const NegotiationDialog = ({
           toast.error(`שגיאה בהעלאת ${file.name}: ${error.message}`);
           continue;
         }
+
+        // Record file in database with original name preserved
+        const { data: fileRecord, error: dbError } = await supabase
+          .from('negotiation_files')
+          .insert({
+            proposal_id: proposal.id,
+            storage_path: storagePath,
+            original_name: file.name,  // Preserve Hebrew/original filename!
+            file_size: file.size,
+            mime_type: file.type,
+            uploaded_by: sessionData.session.user.id,
+          })
+          .select('id')
+          .single();
+
+        if (dbError) {
+          console.error('[NegotiationDialog] DB record error:', dbError);
+          // Continue anyway - file is uploaded even if DB record fails
+        }
         
         const { data: signedUrlData } = await supabase.storage
           .from('negotiation-files')
           .createSignedUrl(storagePath, 3600);
         
         newFiles.push({
-          name: file.name,
+          id: fileRecord?.id,  // Track database ID for linking to session later
+          name: file.name,      // Original Hebrew filename
           url: signedUrlData?.signedUrl || '',
           size: file.size,
           storagePath,
