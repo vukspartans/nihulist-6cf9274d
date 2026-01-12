@@ -46,12 +46,13 @@ interface NegotiationDialogProps {
 
 interface FeeLineItem {
   id?: string;
+  item_id?: string;  // Database field
   item_number?: number;
   description: string;
   unit: string;
   quantity: number;
-  unit_price: number;
-  total?: number;
+  unit_price: number | null;
+  total?: number | null;
   is_optional: boolean;
   comment?: string;
   charge_type?: string;
@@ -308,10 +309,18 @@ export const NegotiationDialog = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Helper to get stable item ID
+  const getItemId = (item: FeeLineItem, idx: number): string => {
+    if (item.id) return item.id;
+    if (item.item_id) return item.item_id;
+    if (item.item_number !== undefined) return `item-${item.item_number}`;
+    return `idx-${idx}`;
+  };
+
   // Calculate the original total from all priced line items (mandatory + priced optional)
   const calculateOriginalTotal = (): number => {
     return feeLineItems.reduce((total, item) => {
-      const itemTotal = item.total || (item.unit_price * item.quantity);
+      const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
       // Include all items that have a price (mandatory or optional with price > 0)
       return total + (itemTotal > 0 ? itemTotal : 0);
     }, 0);
@@ -320,14 +329,14 @@ export const NegotiationDialog = ({
   // Calculate target total based on adjustments + unchanged items
   const calculateTargetTotal = (): number => {
     let total = 0;
-    feeLineItems.forEach((item) => {
-      const itemId = item.id || `item-${item.item_number}`;
-      const itemTotal = item.total || (item.unit_price * item.quantity);
+    feeLineItems.forEach((item, idx) => {
+      const itemId = getItemId(item, idx);
+      const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
       const adj = adjustments.find((a) => a.line_item_id === itemId);
       
       if (adj) {
         // User made an adjustment - use their calculated target_total
-        total += adj.target_total;
+        total += adj.target_total ?? 0;
       } else if (itemTotal > 0) {
         // Include ALL items that have a price (mandatory or optional with price)
         total += itemTotal;
