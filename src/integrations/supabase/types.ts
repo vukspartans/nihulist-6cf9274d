@@ -2724,7 +2724,7 @@ export type Database = {
         Args: {
           p_consultant_message?: string
           p_session_id: string
-          p_updated_line_items: Json
+          p_updated_line_items?: Json
         }
         Returns: Json
       }
