@@ -382,60 +382,64 @@ serve(async (req) => {
     }
     console.log("[Negotiation Request] Proposal status updated to negotiation_requested");
 
-    // Send email to consultant
+    // Send email to consultant (non-blocking - don't fail request if email fails)
     const advisorEmail = advisorProfile?.email;
     const advisorCompany = advisor.company_name || "יועץ";
 
     if (advisorEmail) {
-      const resend = new Resend(RESEND_API_KEY);
+      try {
+        const resend = new Resend(RESEND_API_KEY);
+        const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
-      const responseUrl = `https://billding.ai/negotiation/${session.id}`;
+        const emailHtml = await renderAsync(
+          NegotiationRequestEmail({
+            advisorCompany,
+            entrepreneurName: entrepreneurProfile?.name || "יזם",
+            projectName: project.name,
+            originalPrice: proposal.price,
+            targetPrice: target_total,
+            targetReductionPercent: target_reduction_percent,
+            globalComment: global_comment,
+            responseUrl,
+            locale: "he",
+          })
+        );
 
-      const emailHtml = await renderAsync(
-        NegotiationRequestEmail({
-          advisorCompany,
-          entrepreneurName: entrepreneurProfile?.name || "יזם",
-          projectName: project.name,
-          originalPrice: proposal.price,
-          targetPrice: target_total,
-          targetReductionPercent: target_reduction_percent,
-          globalComment: global_comment,
-          responseUrl,
-          locale: "he",
-        })
-      );
+        await resend.emails.send({
+          from: "Billding <notifications@billding.ai>",
+          to: advisorEmail,
+          subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+          html: emailHtml,
+        });
 
-      await resend.emails.send({
-        from: "Billding <notifications@billding.ai>",
-        to: advisorEmail,
-        subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
-        html: emailHtml,
-      });
+        console.log("[Negotiation Request] Email sent to:", advisorEmail);
 
-      console.log("[Negotiation Request] Email sent to:", advisorEmail);
+        // Send to team members with rfp_requests preference
+        const { data: teamMembers } = await supabase
+          .from("advisor_team_members")
+          .select("email, notification_preferences")
+          .eq("advisor_id", proposal.advisor_id)
+          .eq("is_active", true);
 
-      // Send to team members with rfp_requests preference
-      const { data: teamMembers } = await supabase
-        .from("advisor_team_members")
-        .select("email, notification_preferences")
-        .eq("advisor_id", proposal.advisor_id)
-        .eq("is_active", true);
-
-      if (teamMembers) {
-        for (const member of teamMembers) {
-          if (
-            member.notification_preferences.includes("all") ||
-            member.notification_preferences.includes("rfp_requests")
-          ) {
-            await resend.emails.send({
-              from: "Billding <notifications@billding.ai>",
-              to: member.email,
-              subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
-              html: emailHtml,
-            });
-            console.log("[Negotiation Request] Team email sent to:", member.email);
+        if (teamMembers) {
+          for (const member of teamMembers) {
+            if (
+              member.notification_preferences.includes("all") ||
+              member.notification_preferences.includes("rfp_requests")
+            ) {
+              await resend.emails.send({
+                from: "Billding <notifications@billding.ai>",
+                to: member.email,
+                subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+                html: emailHtml,
+              });
+              console.log("[Negotiation Request] Team email sent to:", member.email);
+            }
           }
         }
+      } catch (emailError) {
+        // Log but don't fail the request - negotiation session is already created
+        console.error("[Negotiation Request] Email failed (non-fatal):", emailError);
       }
     }
 

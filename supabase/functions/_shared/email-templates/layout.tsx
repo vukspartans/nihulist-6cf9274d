@@ -36,20 +36,20 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
         
         <Section style={footerSection}>
           {footer || (
-            <>
+            <React.Fragment>
               <Text style={footerText}>
                 צוות Billding - הפלטפורמה המובילה לניהול פרויקטי בנייה
               </Text>
               <Text style={footerText}>
-              <Link href="https://billding.ai" style={footerLink}>
-                billding.ai
-              </Link>
+                <Link href="https://billding.ai" style={footerLink}>
+                  billding.ai
+                </Link>
                 {' | '}
                 <Link href="mailto:support@billding.ai" style={footerLink}>
                   support@billding.ai
                 </Link>
               </Text>
-            </>
+            </React.Fragment>
           )}
         </Section>
       </Container>
