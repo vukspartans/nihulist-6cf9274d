@@ -1471,7 +1471,7 @@ const AdvisorDashboard = () => {
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-muted-foreground mb-1">הפחתה מבוקשת</p>
-                          <p className="text-lg font-bold text-red-600">
+                          <p className="text-lg font-bold text-red-600" dir="ltr">
                             {reductionPercent > 0 ? `-${reductionPercent}%` : '—'}
                           </p>
                         </div>
@@ -1501,7 +1501,7 @@ const AdvisorDashboard = () => {
                           onClick={() => navigate(`/negotiation/${negotiation.id}`)}
                         >
                           צפה ושלח תגובה
-                          <ArrowLeft className="h-4 w-4 ms-2 rotate-180" />
+                          <ArrowLeft className="h-4 w-4 ms-2" />
                         </Button>
                       ) : (
                         <Button 
