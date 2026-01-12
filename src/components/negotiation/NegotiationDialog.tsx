@@ -90,7 +90,12 @@ export const NegotiationDialog = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [adjustments, setAdjustments] = useState<LineItemAdjustment[]>([]);
   const [globalComment, setGlobalComment] = useState("");
-  const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
+  const [existingSession, setExistingSession] = useState<{
+    id: string;
+    status: string;
+    created_at: string;
+  } | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(false);
   const [comments, setComments] = useState<Record<CommentType, string>>({
     document: "",
     scope: "",
@@ -111,6 +116,32 @@ export const NegotiationDialog = ({
   const { getLatestVersion } = useProposalVersions(proposal.id);
 
   const latestVersion = getLatestVersion();
+
+  // Check for existing active negotiation when dialog opens
+  useEffect(() => {
+    const checkExistingNegotiation = async () => {
+      if (!open || !proposal.id) return;
+      
+      setCheckingExisting(true);
+      try {
+        const { data } = await supabase
+          .from("negotiation_sessions")
+          .select("id, status, created_at")
+          .eq("proposal_id", proposal.id)
+          .in("status", ["open", "awaiting_response"])
+          .order("created_at", { ascending: false })
+          .maybeSingle();
+        
+        setExistingSession(data);
+      } catch (err) {
+        console.error("[NegotiationDialog] Error checking existing negotiation:", err);
+      } finally {
+        setCheckingExisting(false);
+      }
+    };
+    
+    checkExistingNegotiation();
+  }, [open, proposal.id]);
 
   // Load proposal fee items
   useEffect(() => {
@@ -365,7 +396,13 @@ export const NegotiationDialog = ({
     });
 
     if (result && 'existingSession' in result) {
-      setExistingSessionId(result.sessionId);
+      // Refresh existing session state if we get a conflict
+      const { data } = await supabase
+        .from("negotiation_sessions")
+        .select("id, status, created_at")
+        .eq("id", result.sessionId)
+        .single();
+      setExistingSession(data);
       return;
     }
 
@@ -375,20 +412,20 @@ export const NegotiationDialog = ({
     }
   };
 
-  const handleCancelAndRetry = async () => {
-    if (!existingSessionId) return;
+  const handleCancelExisting = async () => {
+    if (!existingSession?.id) return;
     
-    const cancelled = await cancelNegotiation(existingSessionId);
+    const cancelled = await cancelNegotiation(existingSession.id);
     if (cancelled) {
-      setExistingSessionId(null);
-      await handleSubmit();
+      setExistingSession(null);
+      toast.success("הבקשה הקודמת בוטלה, ניתן ליצור בקשה חדשה");
     }
   };
 
   const handleClose = () => {
     setAdjustments([]);
     setGlobalComment("");
-    setExistingSessionId(null);
+    setExistingSession(null);
     setUploadedFiles([]);
     setFeeLineItems([]);
     setMilestones([]);
@@ -401,6 +438,16 @@ export const NegotiationDialog = ({
       general: "",
     });
     onOpenChange(false);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("he-IL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const originalTotal = calculateOriginalTotal();
@@ -427,13 +474,20 @@ export const NegotiationDialog = ({
             </DialogDescription>
           </DialogHeader>
 
-          {existingSessionId ? (
+          {/* Show warning immediately if existing session found */}
+          {checkingExisting ? (
+            <div className="flex-1 flex items-center justify-center px-6 py-4">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : existingSession ? (
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <Alert variant="default" className="border-amber-500 bg-amber-50">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle>בקשת עדכון קיימת</AlertTitle>
+                <AlertTitle>קיימת בקשה פעילה</AlertTitle>
                 <AlertDescription className="mt-2">
-                  <p className="mb-3">קיימת כבר בקשת עדכון פעילה להצעה זו. ניתן לבטל אותה ולשלוח בקשה חדשה.</p>
+                  <p className="mb-3">
+                    נשלחה בקשה לעדכון ב-{formatDate(existingSession.created_at)} והיא ממתינה לתגובת היועץ.
+                  </p>
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
@@ -446,7 +500,7 @@ export const NegotiationDialog = ({
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={handleCancelAndRetry}
+                      onClick={handleCancelExisting}
                       disabled={loading}
                       className="bg-amber-600 hover:bg-amber-700"
                     >
@@ -456,15 +510,15 @@ export const NegotiationDialog = ({
                           מבטל...
                         </>
                       ) : (
-                        "בטל ושלח בקשה חדשה"
+                        "בטל בקשה קיימת וצור חדשה"
                       )}
                     </Button>
                   </div>
                 </AlertDescription>
               </Alert>
             </div>
-        ) : (
-          <>
+          ) : (
+            <>
             <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="flex flex-col flex-1 min-h-0">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 shrink-0 mx-6 mt-4 w-[calc(100%-3rem)]">
                 <TabsTrigger value="overview" className="flex items-center gap-1">
