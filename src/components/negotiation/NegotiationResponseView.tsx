@@ -49,9 +49,11 @@ interface MilestoneAdjustment {
 }
 
 interface NegotiationFile {
+  id?: string;
   name: string;
   url: string;
   size?: number;
+  storagePath?: string;
 }
 
 export const NegotiationResponseView = ({
@@ -67,6 +69,7 @@ export const NegotiationResponseView = ({
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
+  const [negotiationFiles, setNegotiationFiles] = useState<NegotiationFile[]>([]);
   const [declineReason, setDeclineReason] = useState("");
   const [declining, setDeclining] = useState(false);
   const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
@@ -120,7 +123,48 @@ export const NegotiationResponseView = ({
       await loadProjectFiles(data.proposal_id);
     }
 
+    // Load negotiation-specific files from database using session_id
+    if (data?.id) {
+      await loadNegotiationFiles(data.id);
+    }
+
     setLoadingSession(false);
+  };
+
+  const loadNegotiationFiles = async (sessionId: string) => {
+    try {
+      const { data: files, error } = await supabase
+        .from('negotiation_files')
+        .select('id, storage_path, original_name, file_size')
+        .eq('session_id', sessionId);
+
+      if (error) {
+        console.error('Error loading negotiation files:', error);
+        return;
+      }
+
+      if (files && files.length > 0) {
+        const filesWithUrls: NegotiationFile[] = [];
+        
+        for (const file of files) {
+          const { data: signedUrlData } = await supabase.storage
+            .from('negotiation-files')
+            .createSignedUrl(file.storage_path, 3600);
+          
+          filesWithUrls.push({
+            id: file.id,
+            name: file.original_name,  // Use original Hebrew name
+            url: signedUrlData?.signedUrl || '',
+            size: file.file_size || 0,
+            storagePath: file.storage_path,
+          });
+        }
+        
+        setNegotiationFiles(filesWithUrls);
+      }
+    } catch (err) {
+      console.error('Error loading negotiation files:', err);
+    }
   };
 
   const loadProjectFiles = async (proposalId: string) => {
@@ -554,8 +598,8 @@ export const NegotiationResponseView = ({
         </Card>
       )}
 
-      {/* Entrepreneur's Attached Files from Negotiation Request */}
-      {session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).length > 0 && (
+      {/* Entrepreneur's Attached Files from Negotiation Request - prioritize DB-tracked files */}
+      {(negotiationFiles.length > 0 || (session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).length > 0)) && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
@@ -565,9 +609,50 @@ export const NegotiationResponseView = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {(session.files as NegotiationFile[]).map((file, idx) => (
+              {/* Show DB-tracked files first (with proper Hebrew names) */}
+              {negotiationFiles.map((file, idx) => (
                 <div
-                  key={idx}
+                  key={`db-${file.id || idx}`}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">{file.name}</span>
+                    {file.size && file.size > 0 && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => window.open(file.url, "_blank")}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        const link = document.createElement("a");
+                        link.href = file.url;
+                        link.download = file.name;
+                        link.click();
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {/* Fallback: show session.files only if no DB files (for backwards compatibility) */}
+              {negotiationFiles.length === 0 && session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).map((file, idx) => (
+                <div
+                  key={`json-${idx}`}
                   className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">

@@ -23,6 +23,7 @@ interface NegotiationCommentInput {
 }
 
 interface UploadedFile {
+  id?: string;          // Database ID from negotiation_files table
   name: string;
   url: string;
   size: number;
@@ -331,6 +332,27 @@ serve(async (req) => {
         throw new Error(`Failed to save negotiation comments: ${commentsError.message}`);
       }
       console.log("[Negotiation Request] Comments created:", insertedComments?.length);
+    }
+
+    // Link uploaded files to the session in negotiation_files table
+    if (files && files.length > 0) {
+      console.log("[Negotiation Request] Linking files to session:", files.length);
+      for (const file of files) {
+        if (file.id) {
+          const { error: fileUpdateError } = await supabase
+            .from("negotiation_files")
+            .update({
+              session_id: session.id,
+              used_at: new Date().toISOString(),
+            })
+            .eq("id", file.id);
+
+          if (fileUpdateError) {
+            console.error("[Negotiation Request] File link error:", fileUpdateError);
+          }
+        }
+      }
+      console.log("[Negotiation Request] Files linked to session");
     }
 
     // Update proposal status

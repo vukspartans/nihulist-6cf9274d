@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.retry-failed-emails]
 verify_jwt = false
+
+[functions.cleanup-unused-negotiation-files]
+verify_jwt = false

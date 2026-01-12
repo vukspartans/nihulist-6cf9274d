@@ -661,6 +661,67 @@ export type Database = {
           },
         ]
       }
+      negotiation_files: {
+        Row: {
+          file_size: number
+          id: string
+          mime_type: string | null
+          original_name: string
+          proposal_id: string
+          session_id: string | null
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+          used_at: string | null
+        }
+        Insert: {
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          original_name: string
+          proposal_id: string
+          session_id?: string | null
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          original_name?: string
+          proposal_id?: string
+          session_id?: string | null
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_files_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_files_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_files_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       negotiation_sessions: {
         Row: {
           bulk_batch_id: string | null
