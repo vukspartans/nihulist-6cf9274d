@@ -128,12 +128,30 @@ export interface NegotiationResponseInput {
   session_id: string;
   consultant_message?: string;
   updated_line_items: UpdatedLineItem[];
+  milestone_responses?: MilestoneResponseInput[];
+  uploaded_files?: UploadedFileInput[];
 }
 
 export interface UpdatedLineItem {
   line_item_id: string;
   consultant_response_price: number;
   consultant_note?: string;
+}
+
+export interface MilestoneResponseInput {
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;
+  accepted: boolean;
+}
+
+export interface UploadedFileInput {
+  url: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
 }
 
 export interface NegotiationRequestOutput {
