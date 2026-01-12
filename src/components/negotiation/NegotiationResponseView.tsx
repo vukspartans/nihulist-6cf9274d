@@ -14,7 +14,7 @@ import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem, FeeLineItem, JsonLineItemAdjustment } from "@/types/negotiation";
 import { 
-  RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, 
+  RefreshCw, Send, ArrowLeft, ArrowRight, FileText, Download, Eye, Loader2, Check, XCircle, 
   AlertTriangle, Paperclip, Calendar, ArrowDown, ArrowUp, CheckCircle2,
   Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus, Upload
 } from "lucide-react";
@@ -656,12 +656,17 @@ export const NegotiationResponseView = ({
               <Badge variant="outline" className="border-blue-300 text-blue-700 bg-white">
                 פרויקט: {session.project?.name}
               </Badge>
-              {onBack && (
-                <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
-                  חזרה
-                  <ArrowLeft className="h-4 w-4 rotate-180" />
-                </Button>
-              )}
+{onBack && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onBack} 
+            className="gap-2"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה לדשבורד
+          </Button>
+        )}
             </div>
           </div>
         </CardContent>
