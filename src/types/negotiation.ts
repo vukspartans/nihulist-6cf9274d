@@ -146,6 +146,45 @@ export interface NegotiationResponseOutput {
   new_version_number: number;
 }
 
+// Fee line item from proposal JSON
+export interface FeeLineItem {
+  item_id?: string;
+  item_number?: number;
+  description: string;
+  unit?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  comment?: string;
+  is_entrepreneur_defined?: boolean;
+  is_optional?: boolean;
+}
+
+// Milestone from proposal JSON
+export interface ProposalMilestone {
+  description: string;
+  percentage: number;
+  is_entrepreneur_defined?: boolean;
+}
+
+// JSON line item adjustment stored in session.files
+export interface JsonLineItemAdjustment {
+  line_item_id: string;
+  original_unit_price: number;
+  target_unit_price: number;
+  quantity: number;
+  original_total: number;
+  target_total: number;
+  initiator_note?: string;
+}
+
+// Initiator profile info
+export interface InitiatorProfile {
+  name: string | null;
+  company_name: string | null;
+  organization_id?: string | null;
+}
+
 // Extended types with relations
 export interface NegotiationSessionWithDetails extends NegotiationSession {
   proposal?: {
@@ -154,6 +193,8 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     supplier_name: string;
     current_version: number;
     advisor_id: string;
+    fee_line_items?: FeeLineItem[];
+    milestone_adjustments?: ProposalMilestone[];
   };
   project?: {
     id: string;
@@ -165,6 +206,7 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     company_name: string;
     user_id: string;
   };
+  initiator_profile?: InitiatorProfile;
   line_item_negotiations?: LineItemNegotiation[];
   comments?: NegotiationComment[];
 }
