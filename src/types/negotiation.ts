@@ -100,7 +100,7 @@ export interface MilestoneAdjustmentInput {
 export interface NegotiationRequestInput {
   project_id: string;
   proposal_id: string;
-  negotiated_version_id: string;
+  negotiated_version_id?: string | null;  // Optional - edge function creates if not provided
   target_total?: number;
   target_reduction_percent?: number;
   global_comment?: string;

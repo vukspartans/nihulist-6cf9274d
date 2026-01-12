@@ -26,9 +26,11 @@ export const useNegotiation = () => {
 
       if (error) throw error;
 
+      // Show success with vendor name
+      const supplierName = result?.supplier_name || "היועץ";
       toast({
-        title: "בקשה נשלחה",
-        description: "בקשת העדכון נשלחה ליועץ בהצלחה",
+        title: "✓ בקשת העדכון נשלחה בהצלחה",
+        description: `הבקשה נשלחה ל${supplierName}. תקבל עדכון כשיגיב להצעה.`,
       });
 
       return result as NegotiationRequestOutput;
