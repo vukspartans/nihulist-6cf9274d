@@ -152,20 +152,23 @@ export const NegotiationResponseView = ({
         setEmbeddedFiles(embedded);
       }
       
-      // Initialize milestone responses from proposal and requested changes
+      // Initialize milestone responses from proposal milestones
+      // Both consultant_percentage (original) and entrepreneur_percentage (requested) 
+      // are stored in the SAME milestone object, not in separate arrays
       if (data.proposal?.milestone_adjustments) {
-        const originalMilestones = data.proposal.milestone_adjustments as any[];
-        const requestedChanges = (data.milestone_adjustments as MilestoneAdjustment[]) || [];
+        const milestones = data.proposal.milestone_adjustments as any[];
         
-        const responses: MilestoneResponse[] = originalMilestones.map((orig: any) => {
-          const origPercentage = orig.percentage ?? orig.consultant_percentage ?? 0;
-          const requested = requestedChanges.find(r => r.description === (orig.description || orig.trigger));
+        const responses: MilestoneResponse[] = milestones.map((milestone: any) => {
+          // Original advisor percentage
+          const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
+          // Entrepreneur's requested percentage (stored in same object)
+          const entrepreneurPercentage = milestone.entrepreneur_percentage ?? originalPercentage;
           
           return {
-            description: orig.description || orig.trigger || 'אבן דרך',
-            originalPercentage: origPercentage,
-            entrepreneurPercentage: requested?.entrepreneur_percentage ?? origPercentage,
-            advisorResponsePercentage: origPercentage, // Default to original
+            description: milestone.description || milestone.trigger || 'אבן דרך',
+            originalPercentage: originalPercentage,
+            entrepreneurPercentage: entrepreneurPercentage,
+            advisorResponsePercentage: originalPercentage, // Default to original
             accepted: false,
           };
         });
@@ -1193,31 +1196,28 @@ export const NegotiationResponseView = ({
                               </TableCell>
                               {canRespond && (
                                 <TableCell className="text-center bg-green-50/30">
-                                  {hasChange ? (
-                                    <div className="flex items-center justify-center gap-2">
+                                  <div className="flex items-center justify-center gap-2">
+                                    {hasChange && (
                                       <Button
                                         size="sm"
                                         variant={milestone.accepted ? "default" : "outline"}
                                         className={milestone.accepted ? "bg-green-600 hover:bg-green-700 h-7 px-2" : "h-7 px-2 border-green-300 text-green-700 hover:bg-green-100"}
                                         onClick={() => handleMilestoneAccept(milestone.description)}
+                                        title="אשר הצעת יזם"
                                       >
                                         <Check className="h-3 w-3" />
                                       </Button>
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        className="w-16 h-7 text-center text-sm"
-                                        value={milestone.advisorResponsePercentage}
-                                        onChange={(e) => handleMilestonePercentageChange(milestone.description, parseInt(e.target.value) || 0)}
-                                      />
-                                      <span className="text-sm text-muted-foreground">%</span>
-                                    </div>
-                                  ) : (
-                                    <Badge variant="outline" className="text-muted-foreground">
-                                      {milestone.advisorResponsePercentage}%
-                                    </Badge>
-                                  )}
+                                    )}
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      className="w-16 h-7 text-center text-sm"
+                                      value={milestone.advisorResponsePercentage}
+                                      onChange={(e) => handleMilestonePercentageChange(milestone.description, parseInt(e.target.value) || 0)}
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                  </div>
                                 </TableCell>
                               )}
                             </TableRow>
@@ -1453,11 +1453,14 @@ export const NegotiationResponseView = ({
             </Card>
           )}
 
-          {negotiationFiles.length === 0 && embeddedFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && !canRespond && (
+          {negotiationFiles.length === 0 && embeddedFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
                 <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>לא צורפו קבצים לבקשה זו</p>
+                {canRespond && (
+                  <p className="text-sm mt-1">באפשרותך להוסיף קבצים לתגובה שלך למטה</p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -1521,6 +1524,68 @@ export const NegotiationResponseView = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Milestone Response Summary */}
+          {milestoneResponses.length > 0 && (
+            <Card className="bg-blue-50/50 border-blue-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-blue-800">
+                  <Calendar className="h-5 w-5" />
+                  שינויים באבני דרך
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {milestoneResponses.map((m, idx) => {
+                    const changedFromOriginal = m.advisorResponsePercentage !== m.originalPercentage;
+                    const acceptedEntrepreneur = m.advisorResponsePercentage === m.entrepreneurPercentage && m.entrepreneurPercentage !== m.originalPercentage;
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center justify-between p-2 rounded-lg ${
+                          acceptedEntrepreneur 
+                            ? 'bg-green-100 border border-green-200' 
+                            : changedFromOriginal 
+                              ? 'bg-amber-50 border border-amber-200' 
+                              : 'bg-muted/30'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{m.description}</span>
+                        <div className="flex items-center gap-2">
+                          {changedFromOriginal && (
+                            <span className="text-xs text-muted-foreground line-through">{m.originalPercentage}%</span>
+                          )}
+                          <Badge 
+                            variant={changedFromOriginal ? "default" : "secondary"}
+                            className={acceptedEntrepreneur ? "bg-green-600" : ""}
+                          >
+                            {m.advisorResponsePercentage}%
+                          </Badge>
+                          {acceptedEntrepreneur && (
+                            <Check className="h-3 w-3 text-green-600" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {!isMilestoneResponseValid && (
+                  <Alert variant="destructive" className="mt-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      סה״כ אבני דרך חייב להיות 100% (כרגע: {milestoneResponseTotal}%)
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {isMilestoneResponseValid && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-green-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>סה״כ: 100%</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Response Message */}
           <Card>
