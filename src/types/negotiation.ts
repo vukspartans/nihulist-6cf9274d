@@ -200,6 +200,7 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     advisor_id: string;
     fee_line_items?: FeeLineItem[];
     milestone_adjustments?: ProposalMilestone[];
+    rfp_invite_id?: string | null;
   };
   project?: {
     id: string;
