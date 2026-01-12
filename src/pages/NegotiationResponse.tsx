@@ -76,10 +76,12 @@ const NegotiationResponse = () => {
   if (authorized === null) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-14 items-center justify-between px-4">
-            <UserHeader />
-            <NavigationLogo />
+            <NavigationLogo size="sm" />
+            <div className="flex items-center gap-2">
+              <UserHeader />
+            </div>
           </div>
         </header>
         <div className="flex items-center justify-center py-24">
@@ -95,10 +97,12 @@ const NegotiationResponse = () => {
   if (!authorized || error) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-14 items-center justify-between px-4">
-            <UserHeader />
-            <NavigationLogo />
+            <NavigationLogo size="sm" />
+            <div className="flex items-center gap-2">
+              <UserHeader />
+            </div>
           </div>
         </header>
         <div className="container max-w-2xl py-12 px-4">
@@ -124,10 +128,12 @@ const NegotiationResponse = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between px-4">
-          <UserHeader />
-          <NavigationLogo />
+          <NavigationLogo size="sm" />
+          <div className="flex items-center gap-2">
+            <UserHeader />
+          </div>
         </div>
       </header>
 
