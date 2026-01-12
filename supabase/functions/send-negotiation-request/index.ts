@@ -127,7 +127,7 @@ serve(async (req) => {
     // Get proposal details (separate queries to avoid nested FK issue)
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select("id, price, timeline_days, scope_text, terms, conditions_json, advisor_id, status, negotiation_count, supplier_name")
+      .select("id, price, timeline_days, scope_text, terms, conditions_json, advisor_id, status, negotiation_count, supplier_name, fee_line_items")
       .eq("id", proposal_id)
       .single();
 
@@ -150,6 +150,7 @@ serve(async (req) => {
           scope_text: proposal.scope_text,
           terms: proposal.terms,
           conditions_json: proposal.conditions_json,
+          line_items: proposal.fee_line_items || [],
           change_reason: "גרסה ראשונית",
         })
         .select("id")
