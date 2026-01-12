@@ -240,7 +240,7 @@ export const useNegotiation = () => {
             .single(),
         ]);
 
-      // Parse fee_line_items from JSON - safely cast
+      // Parse fee_line_items from JSON - safely cast with calculated totals
       const rawFeeLineItems = proposalRes.data?.fee_line_items;
       const feeLineItems = Array.isArray(rawFeeLineItems) 
         ? rawFeeLineItems.map((item: any) => ({
@@ -250,22 +250,38 @@ export const useNegotiation = () => {
             unit: item?.unit,
             quantity: item?.quantity,
             unit_price: item?.unit_price,
-            total: item?.total,
+            total: item?.total ?? ((item?.unit_price || 0) * (item?.quantity || 1)),
             comment: item?.comment,
             is_entrepreneur_defined: item?.is_entrepreneur_defined,
             is_optional: item?.is_optional,
           }))
         : [];
       
-      // Parse milestone_adjustments from JSON - safely cast
+      // Parse milestone_adjustments from JSON - safely cast with flexible structure
       const rawMilestones = proposalRes.data?.milestone_adjustments;
       const milestoneAdjustments = Array.isArray(rawMilestones)
         ? rawMilestones.map((m: any) => ({
-            description: m?.description || '',
-            percentage: m?.percentage || 0,
+            description: m?.description || m?.trigger || '',
+            percentage: m?.percentage ?? m?.entrepreneur_percentage ?? m?.consultant_percentage ?? 0,
+            consultant_percentage: m?.consultant_percentage,
+            entrepreneur_percentage: m?.entrepreneur_percentage,
+            trigger: m?.trigger,
             is_entrepreneur_defined: m?.is_entrepreneur_defined,
           }))
         : [];
+
+      // Fetch organization name from companies table if organization_id exists
+      let organizationName = initiatorRes.data?.company_name;
+      if (initiatorRes.data?.organization_id) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", initiatorRes.data.organization_id)
+          .single();
+        if (companyData?.name) {
+          organizationName = companyData.name;
+        }
+      }
 
       return {
         ...session,
@@ -280,7 +296,11 @@ export const useNegotiation = () => {
         } : undefined,
         project: projectRes.data || undefined,
         advisor: advisorRes.data || undefined,
-        initiator_profile: initiatorRes.data || undefined,
+        initiator_profile: initiatorRes.data ? {
+          name: initiatorRes.data.name,
+          company_name: organizationName || initiatorRes.data.company_name,
+          organization_id: initiatorRes.data.organization_id,
+        } : undefined,
         line_item_negotiations: lineItemsRes.data || [],
         comments: commentsRes.data || [],
       } as NegotiationSessionWithDetails;
