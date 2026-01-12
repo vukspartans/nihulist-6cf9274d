@@ -347,41 +347,8 @@ export const NegotiationDialog = ({
   };
 
   const handleSubmit = async () => {
-    let versionId = latestVersion?.id;
-    
-    if (!versionId) {
-      const { data: proposalData } = await supabase
-        .from("proposals")
-        .select("price, timeline_days, scope_text, terms, conditions_json")
-        .eq("id", proposal.id)
-        .single();
-      
-      if (proposalData) {
-        const { data: newVersion, error: versionError } = await supabase
-          .from("proposal_versions")
-          .insert({
-            proposal_id: proposal.id,
-            version_number: 1,
-            price: proposalData.price,
-            timeline_days: proposalData.timeline_days,
-            scope_text: proposalData.scope_text,
-            terms: proposalData.terms,
-            conditions_json: proposalData.conditions_json,
-            change_reason: "גרסה ראשונית",
-          })
-          .select("id")
-          .single();
-        
-        if (versionError || !newVersion) {
-          console.error("[NegotiationDialog] Failed to create version");
-          return;
-        }
-        versionId = newVersion.id;
-      } else {
-        console.error("[NegotiationDialog] No proposal data found");
-        return;
-      }
-    }
+    // Version creation is now handled by the edge function (bypasses RLS)
+    const versionId = latestVersion?.id || null;
 
     const negotiationComments: NegotiationCommentInput[] = Object.entries(comments)
       .filter(([_, content]) => content.trim())

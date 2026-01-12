@@ -39,7 +39,7 @@ interface MilestoneAdjustment {
 interface RequestBody {
   project_id: string;
   proposal_id: string;
-  negotiated_version_id: string;
+  negotiated_version_id?: string | null;  // Made optional - will be created if not provided
   target_total?: number;
   target_reduction_percent?: number;
   global_comment?: string;
@@ -48,6 +48,7 @@ interface RequestBody {
   milestone_adjustments?: MilestoneAdjustment[];
   comments?: NegotiationCommentInput[];
   files?: UploadedFile[];
+  supplier_name?: string;  // Added for response message
 }
 
 serve(async (req) => {
@@ -100,8 +101,8 @@ serve(async (req) => {
     } = body;
 
     // Validate required fields
-    if (!project_id || !proposal_id || !negotiated_version_id) {
-      throw new Error("Missing required fields: project_id, proposal_id, negotiated_version_id");
+    if (!project_id || !proposal_id) {
+      throw new Error("Missing required fields: project_id, proposal_id");
     }
 
     // Service role client for database operations
@@ -125,13 +126,40 @@ serve(async (req) => {
     // Get proposal details (separate queries to avoid nested FK issue)
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select("id, price, advisor_id, status, negotiation_count")
+      .select("id, price, timeline_days, scope_text, terms, conditions_json, advisor_id, status, negotiation_count, supplier_name")
       .eq("id", proposal_id)
       .single();
 
     if (proposalError || !proposal) {
       console.error("[Negotiation Request] Proposal query error:", proposalError);
       throw new Error("Proposal not found");
+    }
+
+    // Create version if not provided (bypasses RLS as we're using service role)
+    let finalVersionId = negotiated_version_id;
+    if (!finalVersionId) {
+      console.log("[Negotiation Request] Creating initial proposal version");
+      const { data: newVersion, error: versionError } = await supabase
+        .from("proposal_versions")
+        .insert({
+          proposal_id,
+          version_number: 1,
+          price: proposal.price,
+          timeline_days: proposal.timeline_days,
+          scope_text: proposal.scope_text,
+          terms: proposal.terms,
+          conditions_json: proposal.conditions_json,
+          change_reason: "גרסה ראשונית",
+        })
+        .select("id")
+        .single();
+
+      if (versionError || !newVersion) {
+        console.error("[Negotiation Request] Version creation error:", versionError);
+        throw new Error("Failed to create proposal version");
+      }
+      finalVersionId = newVersion.id;
+      console.log("[Negotiation Request] Created version:", finalVersionId);
     }
 
     // Get advisor details
@@ -153,11 +181,11 @@ serve(async (req) => {
       .eq("user_id", advisor.user_id)
       .maybeSingle();
 
-    // Check for existing active negotiation on this version
+    // Check for existing active negotiation on this proposal
     const { data: existingSession } = await supabase
       .from("negotiation_sessions")
       .select("id")
-      .eq("negotiated_version_id", negotiated_version_id)
+      .eq("proposal_id", proposal_id)
       .in("status", ["open", "awaiting_response"])
       .maybeSingle();
 
@@ -189,7 +217,7 @@ serve(async (req) => {
       .insert({
         project_id,
         proposal_id,
-        negotiated_version_id,
+        negotiated_version_id: finalVersionId,
         initiator_id: user.id,
         consultant_advisor_id: proposal.advisor_id,
         status: "awaiting_response",
@@ -384,6 +412,7 @@ serve(async (req) => {
       JSON.stringify({
         session_id: session.id,
         created_at: session.created_at,
+        supplier_name: proposal.supplier_name || advisor.company_name,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
