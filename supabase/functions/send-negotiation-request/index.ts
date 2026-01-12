@@ -239,62 +239,75 @@ serve(async (req) => {
     console.log("[Negotiation Request] Session created:", session.id);
 
     // Create line item negotiations if provided
+    // UUID regex pattern for validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
     if (line_item_adjustments && line_item_adjustments.length > 0) {
-      const lineItemRecords = line_item_adjustments.map((adj) => {
-        let targetPrice = 0;
-        // We need to get original price from line_items
-        // For now, calculate based on adjustment
-        if (adj.adjustment_type === "price_change") {
-          targetPrice = adj.adjustment_value;
-        }
-        
-        return {
-          session_id: session.id,
-          line_item_id: adj.line_item_id,
-          adjustment_type: adj.adjustment_type,
-          adjustment_value: adj.adjustment_value,
-          original_price: 0, // Will be updated by trigger or separate query
-          initiator_target_price: targetPrice,
-          initiator_note: adj.initiator_note,
-        };
-      });
+      // Filter out items with synthetic IDs (non-UUID like "idx-6")
+      // These are items from fee_line_items JSON that don't have database records
+      const validAdjustments = line_item_adjustments.filter((adj) => 
+        uuidRegex.test(adj.line_item_id)
+      );
+      
+      console.log(`[Negotiation Request] Filtered ${line_item_adjustments.length - validAdjustments.length} synthetic IDs, ${validAdjustments.length} valid line items`);
 
-      // Get original prices for line items
-      const lineItemIds = line_item_adjustments.map((a) => a.line_item_id);
-      const { data: originalLineItems } = await supabase
-        .from("proposal_line_items")
-        .select("id, total")
-        .in("id", lineItemIds);
-
-      const priceMap = new Map(originalLineItems?.map((li) => [li.id, li.total]) || []);
-
-      // Update records with original prices and calculate target prices
-      for (const record of lineItemRecords) {
-        const originalPrice = priceMap.get(record.line_item_id) || 0;
-        record.original_price = originalPrice;
-
-        const adj = line_item_adjustments.find((a) => a.line_item_id === record.line_item_id);
-        if (adj) {
+      if (validAdjustments.length > 0) {
+        const lineItemRecords = validAdjustments.map((adj) => {
+          let targetPrice = 0;
+          // We need to get original price from line_items
+          // For now, calculate based on adjustment
           if (adj.adjustment_type === "price_change") {
-            record.initiator_target_price = adj.adjustment_value;
-          } else if (adj.adjustment_type === "flat_discount") {
-            record.initiator_target_price = originalPrice - adj.adjustment_value;
-          } else if (adj.adjustment_type === "percentage_discount") {
-            record.initiator_target_price = originalPrice * (1 - adj.adjustment_value / 100);
+            targetPrice = adj.adjustment_value;
+          }
+          
+          return {
+            session_id: session.id,
+            line_item_id: adj.line_item_id,
+            adjustment_type: adj.adjustment_type,
+            adjustment_value: adj.adjustment_value,
+            original_price: 0, // Will be updated by trigger or separate query
+            initiator_target_price: targetPrice,
+            initiator_note: adj.initiator_note,
+          };
+        });
+
+        // Get original prices for line items
+        const lineItemIds = validAdjustments.map((a) => a.line_item_id);
+        const { data: originalLineItems } = await supabase
+          .from("proposal_line_items")
+          .select("id, total")
+          .in("id", lineItemIds);
+
+        const priceMap = new Map(originalLineItems?.map((li) => [li.id, li.total]) || []);
+
+        // Update records with original prices and calculate target prices
+        for (const record of lineItemRecords) {
+          const originalPrice = priceMap.get(record.line_item_id) || 0;
+          record.original_price = originalPrice;
+
+          const adj = validAdjustments.find((a) => a.line_item_id === record.line_item_id);
+          if (adj) {
+            if (adj.adjustment_type === "price_change") {
+              record.initiator_target_price = adj.adjustment_value;
+            } else if (adj.adjustment_type === "flat_discount") {
+              record.initiator_target_price = originalPrice - adj.adjustment_value;
+            } else if (adj.adjustment_type === "percentage_discount") {
+              record.initiator_target_price = originalPrice * (1 - adj.adjustment_value / 100);
+            }
           }
         }
-      }
 
-      const { data: insertedLineItems, error: lineItemError } = await supabase
-        .from("line_item_negotiations")
-        .insert(lineItemRecords)
-        .select();
+        const { data: insertedLineItems, error: lineItemError } = await supabase
+          .from("line_item_negotiations")
+          .insert(lineItemRecords)
+          .select();
 
-      if (lineItemError) {
-        console.error("[Negotiation Request] Line item negotiations error:", lineItemError);
-        throw new Error(`Failed to save line item adjustments: ${lineItemError.message}`);
+        if (lineItemError) {
+          console.error("[Negotiation Request] Line item negotiations error:", lineItemError);
+          throw new Error(`Failed to save line item adjustments: ${lineItemError.message}`);
+        }
+        console.log("[Negotiation Request] Line items created:", insertedLineItems?.length);
       }
-      console.log("[Negotiation Request] Line items created:", insertedLineItems?.length);
     }
 
     // Create negotiation comments if provided
