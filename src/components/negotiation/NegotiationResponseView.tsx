@@ -317,7 +317,34 @@ export const NegotiationResponseView = ({
 
   // Calculate totals
   const originalTotal = session?.proposal?.price || 0;
-  const targetTotal = session?.target_total || 0;
+  
+  // Recalculate target total from adjustments (don't trust stored value which may be incorrect)
+  const targetTotal = useMemo(() => {
+    if (!feeLineItems.length) return session?.target_total || 0;
+    
+    let total = 0;
+    feeLineItems.forEach((item, idx) => {
+      const itemId = getItemId(item, idx);
+      const originalPrice = item.total || ((item.unit_price || 0) * (item.quantity || 1));
+      
+      // Find adjustment for this item
+      const adjustment = jsonAdjustments.find(adj => 
+        adj.line_item_id === itemId || 
+        adj.line_item_id === item.item_id ||
+        adj.line_item_id === `idx-${item.item_number ?? idx}`
+      );
+      
+      if (adjustment) {
+        // Use adjustment target value (could be target_total or adjustment_value)
+        total += adjustment.target_total ?? adjustment.adjustment_value ?? 0;
+      } else {
+        // No adjustment = unchanged, add original price
+        total += originalPrice;
+      }
+    });
+    
+    return total;
+  }, [feeLineItems, jsonAdjustments, session?.target_total]);
   
   const newTotal = useMemo(() => {
     if (jsonAdjustments.length > 0) {
@@ -577,7 +604,9 @@ export const NegotiationResponseView = ({
                   <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
                   <p className="text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
                   <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
-                    {calculateReductionPercent() > 0 ? `-${calculateReductionPercent()}%` : 'ללא שינוי'}
+                    <span dir="ltr">
+                      {calculateReductionPercent() > 0 ? `-${calculateReductionPercent()}%` : 'ללא שינוי'}
+                    </span>
                   </Badge>
                 </div>
                 <div className="p-4 bg-white/60 rounded-lg">
@@ -738,7 +767,7 @@ export const NegotiationResponseView = ({
                                   variant="outline" 
                                   className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700 bg-amber-50"}
                                 >
-                                  -{changePercent}%
+                                  <span dir="ltr">-{changePercent}%</span>
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="border-muted text-muted-foreground bg-muted/30">
