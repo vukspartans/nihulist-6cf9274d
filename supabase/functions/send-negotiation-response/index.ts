@@ -15,10 +15,28 @@ interface UpdatedLineItem {
   consultant_note?: string;
 }
 
+interface MilestoneResponse {
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;
+  accepted: boolean;
+}
+
+interface UploadedFile {
+  url: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
+}
+
 interface RequestBody {
   session_id: string;
   consultant_message?: string;
   updated_line_items: UpdatedLineItem[];
+  milestone_responses?: MilestoneResponse[];
+  uploaded_files?: UploadedFile[];
 }
 
 serve(async (req) => {
@@ -57,7 +75,7 @@ serve(async (req) => {
     const body: RequestBody = await req.json();
     console.log("[Negotiation Response] Input:", JSON.stringify(body, null, 2));
 
-    const { session_id, consultant_message, updated_line_items } = body;
+    const { session_id, consultant_message, updated_line_items, milestone_responses, uploaded_files } = body;
 
     // session_id is required, but updated_line_items can be empty for proposals without line items
     if (!session_id) {
@@ -123,6 +141,32 @@ serve(async (req) => {
     }
 
     console.log("[Negotiation Response] RPC result:", result);
+
+    // Step: Update session.files to include advisor response files and milestone responses
+    if ((uploaded_files && uploaded_files.length > 0) || (milestone_responses && milestone_responses.length > 0)) {
+      const currentFiles = (session.files as Record<string, unknown>) || {};
+      const updatedFiles: Record<string, unknown> = { ...currentFiles };
+      
+      if (uploaded_files && uploaded_files.length > 0) {
+        updatedFiles.advisor_response_files = uploaded_files;
+        console.log("[Negotiation Response] Adding advisor files:", uploaded_files.length);
+      }
+      
+      if (milestone_responses && milestone_responses.length > 0) {
+        updatedFiles.advisor_milestone_responses = milestone_responses;
+        console.log("[Negotiation Response] Adding milestone responses:", milestone_responses.length);
+      }
+      
+      const { error: updateError } = await supabase
+        .from("negotiation_sessions")
+        .update({ files: updatedFiles })
+        .eq("id", session_id);
+      
+      if (updateError) {
+        console.error("[Negotiation Response] Error updating session files:", updateError);
+        // Non-fatal, continue with the response
+      }
+    }
 
     // Get entrepreneur details for email
     const projectData = session.project as any;

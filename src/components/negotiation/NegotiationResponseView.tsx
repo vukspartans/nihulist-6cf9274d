@@ -15,14 +15,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem, FeeLineItem, JsonLineItemAdjustment } from "@/types/negotiation";
 import { 
   RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, 
-  AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2,
-  Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus
+  AlertTriangle, Paperclip, Calendar, ArrowDown, ArrowUp, CheckCircle2,
+  Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus, Upload
 } from "lucide-react";
 import { getFeeUnitLabel } from "@/constants/rfpUnits";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NegotiationPriceSummary } from "./NegotiationPriceSummary";
 import { NegotiationItemsCard } from "./NegotiationItemsCard";
 import { NegotiationFilesList } from "./NegotiationFilesList";
+import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +56,14 @@ interface MilestoneAdjustment {
   consultant_percentage?: number;
 }
 
+interface MilestoneResponse {
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;
+  accepted: boolean;
+}
+
 interface NegotiationFile {
   id?: string;
   name: string;
@@ -83,6 +92,8 @@ export const NegotiationResponseView = ({
   const [declining, setDeclining] = useState(false);
   const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("overview");
+  const [advisorUploadedFiles, setAdvisorUploadedFiles] = useState<UploadedFile[]>([]);
+  const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -139,6 +150,27 @@ export const NegotiationResponseView = ({
           size: f.size || f.file_size || 0,
         }));
         setEmbeddedFiles(embedded);
+      }
+      
+      // Initialize milestone responses from proposal and requested changes
+      if (data.proposal?.milestone_adjustments) {
+        const originalMilestones = data.proposal.milestone_adjustments as any[];
+        const requestedChanges = (data.milestone_adjustments as MilestoneAdjustment[]) || [];
+        
+        const responses: MilestoneResponse[] = originalMilestones.map((orig: any) => {
+          const origPercentage = orig.percentage ?? orig.consultant_percentage ?? 0;
+          const requested = requestedChanges.find(r => r.description === (orig.description || orig.trigger));
+          
+          return {
+            description: orig.description || orig.trigger || 'אבן דרך',
+            originalPercentage: origPercentage,
+            entrepreneurPercentage: requested?.entrepreneur_percentage ?? origPercentage,
+            advisorResponsePercentage: origPercentage, // Default to original
+            accepted: false,
+          };
+        });
+        
+        setMilestoneResponses(responses);
       }
     }
 
@@ -434,6 +466,8 @@ export const NegotiationResponseView = ({
       session_id: sessionId,
       consultant_message: consultantMessage || undefined,
       updated_line_items: updatedLineItems.length > 0 ? updatedLineItems : [],
+      milestone_responses: milestoneResponses.length > 0 ? milestoneResponses : undefined,
+      uploaded_files: advisorUploadedFiles.length > 0 ? advisorUploadedFiles : undefined,
     });
 
     if (result) {
@@ -450,10 +484,19 @@ export const NegotiationResponseView = ({
       consultant_response_price: adj.target_total ?? adj.adjustment_value ?? 0
     }));
 
+    // Accept all milestone changes
+    const acceptedMilestones = milestoneResponses.map(m => ({
+      ...m,
+      advisorResponsePercentage: m.entrepreneurPercentage,
+      accepted: true
+    }));
+
     const result = await respondToNegotiation({
       session_id: sessionId,
       consultant_message: consultantMessage || "אני מקבל/ת את המחיר המבוקש",
       updated_line_items: acceptedItems.length > 0 ? acceptedItems : [],
+      milestone_responses: acceptedMilestones.length > 0 ? acceptedMilestones : undefined,
+      uploaded_files: advisorUploadedFiles.length > 0 ? advisorUploadedFiles : undefined,
     });
 
     if (result) {
@@ -473,12 +516,47 @@ export const NegotiationResponseView = ({
       targetPrice: targetTotal,
       updatedLineItems: updatedLineItems,
       consultantMessage: consultantMessage,
+      milestoneResponses: milestoneResponses,
+      advisorUploadedFiles: advisorUploadedFiles,
       isCounterOffer: true,
     }));
     
     // Navigate to advisor dashboard with counter-offer context
     navigate(`/advisor-dashboard?counter_offer=${sessionId}`);
   };
+
+  // Milestone response handlers
+  const handleMilestoneAccept = (description: string) => {
+    setMilestoneResponses(prev => prev.map(m => {
+      if (m.description === description) {
+        return {
+          ...m,
+          accepted: true,
+          advisorResponsePercentage: m.entrepreneurPercentage
+        };
+      }
+      return m;
+    }));
+  };
+
+  const handleMilestonePercentageChange = (description: string, percentage: number) => {
+    setMilestoneResponses(prev => prev.map(m => {
+      if (m.description === description) {
+        return {
+          ...m,
+          advisorResponsePercentage: percentage,
+          accepted: false // If custom value, not "accepted"
+        };
+      }
+      return m;
+    }));
+  };
+
+  const milestoneResponseTotal = useMemo(() => {
+    return milestoneResponses.reduce((sum, m) => sum + m.advisorResponsePercentage, 0);
+  }, [milestoneResponses]);
+
+  const isMilestoneResponseValid = milestoneResponseTotal === 100;
 
   const handleDecline = async () => {
     setDeclining(true);
@@ -1041,36 +1119,167 @@ export const NegotiationResponseView = ({
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                תנאי תשלום
+                תנאי תשלום - השוואה
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Show original milestones from proposal */}
-              {session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (
+              {milestoneResponses.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Comparison Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="text-right font-semibold">אבן דרך</TableHead>
+                          <TableHead className="text-center font-semibold">
+                            <div className="flex items-center justify-center gap-1">
+                              <User className="h-4 w-4" />
+                              יועץ (מקורי)
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center font-semibold">
+                            <div className="flex items-center justify-center gap-1">
+                              <Building2 className="h-4 w-4" />
+                              יזם (מבוקש)
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center font-semibold">שינוי</TableHead>
+                          {canRespond && (
+                            <TableHead className="text-center font-semibold bg-green-50">
+                              <div className="flex items-center justify-center gap-1 text-green-700">
+                                <Check className="h-4 w-4" />
+                                התגובה שלך
+                              </div>
+                            </TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {milestoneResponses.map((milestone, idx) => {
+                          const hasChange = milestone.originalPercentage !== milestone.entrepreneurPercentage;
+                          const changeAmount = milestone.entrepreneurPercentage - milestone.originalPercentage;
+                          
+                          return (
+                            <TableRow key={idx} className={hasChange ? "bg-amber-50/30" : ""}>
+                              <TableCell className="font-medium">
+                                {milestone.description}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="secondary">{milestone.originalPercentage}%</Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge 
+                                  variant="outline" 
+                                  className={hasChange ? "border-amber-400 text-amber-700 bg-amber-100" : ""}
+                                >
+                                  {milestone.entrepreneurPercentage}%
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {hasChange ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    {changeAmount > 0 ? (
+                                      <ArrowUp className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <ArrowDown className="h-4 w-4 text-red-600" />
+                                    )}
+                                    <span className={changeAmount > 0 ? "text-green-600" : "text-red-600"} dir="ltr">
+                                      {changeAmount > 0 ? '+' : ''}{changeAmount}%
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              {canRespond && (
+                                <TableCell className="text-center bg-green-50/30">
+                                  {hasChange ? (
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant={milestone.accepted ? "default" : "outline"}
+                                        className={milestone.accepted ? "bg-green-600 hover:bg-green-700 h-7 px-2" : "h-7 px-2 border-green-300 text-green-700 hover:bg-green-100"}
+                                        onClick={() => handleMilestoneAccept(milestone.description)}
+                                      >
+                                        <Check className="h-3 w-3" />
+                                      </Button>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        className="w-16 h-7 text-center text-sm"
+                                        value={milestone.advisorResponsePercentage}
+                                        onChange={(e) => handleMilestonePercentageChange(milestone.description, parseInt(e.target.value) || 0)}
+                                      />
+                                      <span className="text-sm text-muted-foreground">%</span>
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline" className="text-muted-foreground">
+                                      {milestone.advisorResponsePercentage}%
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow className="font-bold">
+                          <TableCell className="text-right">סה״כ</TableCell>
+                          <TableCell className="text-center">
+                            {milestoneResponses.reduce((sum, m) => sum + m.originalPercentage, 0)}%
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {milestoneResponses.reduce((sum, m) => sum + m.entrepreneurPercentage, 0)}%
+                          </TableCell>
+                          <TableCell></TableCell>
+                          {canRespond && (
+                            <TableCell className={`text-center ${isMilestoneResponseValid ? 'bg-green-100' : 'bg-red-100'}`}>
+                              <Badge 
+                                variant="outline" 
+                                className={isMilestoneResponseValid 
+                                  ? "border-green-400 text-green-700 bg-green-100" 
+                                  : "border-red-400 text-red-700 bg-red-100"
+                                }
+                              >
+                                {milestoneResponseTotal}%
+                                {isMilestoneResponseValid ? (
+                                  <CheckCircle2 className="h-3 w-3 ms-1" />
+                                ) : (
+                                  <AlertTriangle className="h-3 w-3 ms-1" />
+                                )}
+                              </Badge>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                  </div>
+                  
+                  {/* Validation Alert */}
+                  {canRespond && !isMilestoneResponseValid && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {milestoneResponseTotal}%
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              ) : session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    הצעת יועץ (מקורית):
+                    אבני דרך מוגדרות:
                   </p>
                   <div className="space-y-2">
                     {session.proposal.milestone_adjustments.map((m, idx) => {
-                      // Calculate the display percentage
                       const displayPercentage = m.percentage ?? m.consultant_percentage ?? m.entrepreneur_percentage ?? 0;
-                      const hasMultiplePercentages = m.consultant_percentage !== undefined && m.entrepreneur_percentage !== undefined;
-                      
                       return (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
                           <span className="font-medium">{m.description || m.trigger || `אבן דרך ${idx + 1}`}</span>
-                          <div className="flex items-center gap-2">
-                            {hasMultiplePercentages ? (
-                              <>
-                                <Badge variant="secondary" className="text-xs">יועץ: {m.consultant_percentage}%</Badge>
-                                <Badge variant="outline" className="text-xs">יזם: {m.entrepreneur_percentage}%</Badge>
-                              </>
-                            ) : (
-                              <Badge variant="secondary">{displayPercentage}%</Badge>
-                            )}
-                          </div>
+                          <Badge variant="secondary">{displayPercentage}%</Badge>
                         </div>
                       );
                     })}
@@ -1079,63 +1288,6 @@ export const NegotiationResponseView = ({
               ) : (
                 <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-lg">
                   <p>לא הוגדרו אבני דרך להצעה זו</p>
-                </div>
-              )}
-              
-              {/* Show requested changes if any */}
-              {milestoneAdjustments.length > 0 && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    הצעת יזם:
-                  </p>
-                  <div className="space-y-2">
-                    {milestoneAdjustments.map((milestone, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
-                      >
-                        <span className="font-medium text-amber-900">{milestone.description}</span>
-                        <div className="flex items-center gap-2">
-                          {milestone.consultant_percentage !== undefined && (
-                            <span className="text-muted-foreground line-through text-sm">
-                              {milestone.consultant_percentage}%
-                            </span>
-                          )}
-                          <ArrowDown className="h-4 w-4 text-amber-600 rotate-[-90deg]" />
-                          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-100">
-                            {milestone.entrepreneur_percentage}%
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Vendor response section for milestone changes */}
-                  {canRespond && (
-                    <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm font-medium text-green-800 mb-2">התגובה שלך:</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-green-300 text-green-700 hover:bg-green-100"
-                          onClick={() => setShowAcceptDialog(true)}
-                        >
-                          <Check className="h-4 w-4 me-1" />
-                          אשר שינויים
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                          onClick={handleCounterOffer}
-                        >
-                          הצע שינוי אחר
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
@@ -1301,11 +1453,37 @@ export const NegotiationResponseView = ({
             </Card>
           )}
 
-          {negotiationFiles.length === 0 && embeddedFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && (
+          {negotiationFiles.length === 0 && embeddedFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && !canRespond && (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
                 <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>לא צורפו קבצים לבקשה זו</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Advisor File Upload Section */}
+          {canRespond && (
+            <Card className="border-green-200 bg-green-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-green-800">
+                  <Upload className="h-5 w-5" />
+                  הוסף קבצים לתגובה שלך
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FileUpload
+                  maxFiles={5}
+                  maxSize={10 * 1024 * 1024}
+                  onUpload={setAdvisorUploadedFiles}
+                  advisorId={session?.proposal?.advisor_id}
+                  existingFiles={advisorUploadedFiles}
+                />
+                {advisorUploadedFiles.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {advisorUploadedFiles.length} קבצים יצורפו לתגובה שלך
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
