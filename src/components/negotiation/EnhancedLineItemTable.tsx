@@ -27,12 +27,13 @@ const unitLabels: Record<string, string> = {
 
 interface FeeLineItem {
   id?: string;
+  item_id?: string;  // Database field
   item_number?: number;
   description: string;
   unit: string;
   quantity: number;
-  unit_price: number;
-  total?: number;
+  unit_price: number | null;
+  total?: number | null;
   is_optional: boolean;
   comment?: string;
   charge_type?: string;
@@ -95,6 +96,7 @@ export const EnhancedLineItemTable = ({
   // Helper to generate stable item ID - MUST be consistent everywhere
   const getItemId = (item: FeeLineItem, idx: number): string => {
     if (item.id) return item.id;
+    if (item.item_id) return item.item_id;
     if (item.item_number !== undefined) return `item-${item.item_number}`;
     return `idx-${idx}`;
   };
@@ -212,7 +214,7 @@ export const EnhancedLineItemTable = ({
 
     filteredItems.forEach((item, idx) => {
       const itemId = getItemId(item, idx);
-      const itemTotal = item.total || (item.unit_price * item.quantity);
+      const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
       
       // Include all items with a price > 0 in original total (mandatory + priced optional)
       if (itemTotal > 0) {
@@ -222,7 +224,7 @@ export const EnhancedLineItemTable = ({
       const adjustment = adjustments.find(a => a.line_item_id === itemId);
       if (adjustment) {
         // Use the calculated target_total from adjustment (could be 0 for "removed" items)
-        targetTotal += adjustment.target_total;
+        targetTotal += adjustment.target_total ?? 0;
       } else if (itemTotal > 0) {
         // No adjustment = use original
         targetTotal += itemTotal;
@@ -230,9 +232,9 @@ export const EnhancedLineItemTable = ({
 
       const response = consultantResponses.find(r => r.line_item_id === itemId);
       if (response) {
-        newOfferTotal += response.consultant_price;
+        newOfferTotal += response.consultant_price ?? 0;
       } else if (adjustment) {
-        newOfferTotal += adjustment.target_total;
+        newOfferTotal += adjustment.target_total ?? 0;
       } else if (itemTotal > 0) {
         newOfferTotal += itemTotal;
       }
@@ -284,12 +286,12 @@ export const EnhancedLineItemTable = ({
               const itemId = getItemId(item, idx);
               const adjustment = adjustments.find(a => a.line_item_id === itemId);
               const response = consultantResponses.find(r => r.line_item_id === itemId);
-              const itemTotal = item.total || (item.unit_price * item.quantity);
-              const displayQuantity = adjustment?.new_quantity ?? item.quantity;
+              const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
+              const displayQuantity = adjustment?.new_quantity ?? item.quantity ?? 1;
               
-              // Calculate displayed target unit price and total
-              const displayTargetUnitPrice = adjustment?.target_unit_price ?? item.unit_price;
-              const displayTargetTotal = adjustment?.target_total ?? itemTotal;
+              // Calculate displayed target unit price and total with null safety
+              const displayTargetUnitPrice = adjustment?.target_unit_price ?? item.unit_price ?? 0;
+              const displayTargetTotal = adjustment?.target_total ?? itemTotal ?? 0;
               
               // Check if item is "removed" (target total set to 0)
               const isRemoved = adjustment?.target_total === 0;
@@ -343,7 +345,7 @@ export const EnhancedLineItemTable = ({
                         onBlur={(e) => {
                           const rawValue = e.target.value.replace(/[^\d.-]/g, '');
                           const qty = parseFloat(rawValue) || 0;
-                          handleQuantityChange(itemId, item.unit_price, item.quantity, qty);
+                          handleQuantityChange(itemId, item.unit_price ?? 0, item.quantity ?? 1, qty);
                           setEditingValues(prev => {
                             const next = { ...prev };
                             delete next[`qty-${itemId}`];
@@ -361,7 +363,7 @@ export const EnhancedLineItemTable = ({
                   </TableCell>
                   <TableCell className={cn("text-start", isRemoved && "text-muted-foreground")}>
                     <span className={cn(isRemoved && "line-through")}>
-                      {formatCurrency(item.unit_price)}
+                      {formatCurrency(item.unit_price ?? 0)}
                     </span>
                   </TableCell>
                   <TableCell className={cn(
@@ -382,17 +384,17 @@ export const EnhancedLineItemTable = ({
                             <Input
                               type="text"
                               inputMode="numeric"
-                              value={
+                            value={
                                 editingValues[`price-${itemId}`] !== undefined
                                   ? editingValues[`price-${itemId}`]
-                                  : displayTargetUnitPrice.toLocaleString('he-IL')
+                                  : (displayTargetUnitPrice ?? 0).toLocaleString('he-IL')
                               }
                               onChange={(e) => {
                                 setEditingValues(prev => ({ ...prev, [`price-${itemId}`]: e.target.value }));
                               }}
                               onBlur={(e) => {
                                 const rawValue = e.target.value.replace(/[^\d.-]/g, '');
-                                handleTargetUnitPriceChange(itemId, item.unit_price, item.quantity, parseFloat(rawValue) || 0);
+                                handleTargetUnitPriceChange(itemId, item.unit_price ?? 0, item.quantity ?? 1, parseFloat(rawValue) || 0);
                                 setEditingValues(prev => {
                                   const next = { ...prev };
                                   delete next[`price-${itemId}`];
@@ -439,7 +441,7 @@ export const EnhancedLineItemTable = ({
                       <Input
                         type="text"
                         inputMode="numeric"
-                        value={(response?.consultant_price ?? adjustment?.target_total ?? itemTotal).toLocaleString('he-IL')}
+                        value={(response?.consultant_price ?? adjustment?.target_total ?? itemTotal ?? 0).toLocaleString('he-IL')}
                         onChange={(e) => {
                           const rawValue = e.target.value.replace(/,/g, '');
                           handleConsultantPriceChange(itemId, parseFloat(rawValue) || 0);
@@ -454,7 +456,7 @@ export const EnhancedLineItemTable = ({
                       <Textarea
                         placeholder="הערה..."
                         value={adjustment?.initiator_note || ""}
-                        onChange={(e) => handleNoteChange(itemId, item.unit_price, item.quantity, e.target.value)}
+                        onChange={(e) => handleNoteChange(itemId, item.unit_price ?? 0, item.quantity ?? 1, e.target.value)}
                         className={cn(
                           "min-h-[40px] text-sm resize-none",
                           isRemoved && "bg-muted"
