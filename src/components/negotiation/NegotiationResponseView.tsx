@@ -96,7 +96,8 @@ export const NegotiationResponseView = ({
         setUpdatedLineItems(
           jsonAdjustments.map((adj) => ({
             line_item_id: adj.line_item_id,
-            consultant_response_price: adj.target_total,
+            // Handle both target_total and adjustment_value formats
+            consultant_response_price: adj.target_total ?? adj.adjustment_value ?? 0,
           }))
         );
       } else if (data.line_item_negotiations && data.line_item_negotiations.length > 0) {
@@ -284,10 +285,33 @@ export const NegotiationResponseView = ({
     return item.item_id || `idx-${item.item_number ?? index}`;
   };
 
-  // Find adjustment for a given item
+  // Find adjustment for a given item - check multiple ID formats
   const getAdjustmentForItem = (item: FeeLineItem, index: number): JsonLineItemAdjustment | undefined => {
     const itemId = getItemId(item, index);
-    return jsonAdjustments.find(adj => adj.line_item_id === itemId);
+    // Try to find by item_id, then by description match as fallback
+    return jsonAdjustments.find(adj => 
+      adj.line_item_id === itemId || 
+      adj.line_item_id === item.item_id ||
+      adj.line_item_id === `idx-${item.item_number ?? index}`
+    );
+  };
+
+  // Get original price for an item (with fallback calculation)
+  const getOriginalPrice = (item: FeeLineItem, adjustment?: JsonLineItemAdjustment): number => {
+    if (adjustment?.original_total) return adjustment.original_total;
+    if (item.total) return item.total;
+    return (item.unit_price || 0) * (item.quantity || 1);
+  };
+
+  // Get target price from adjustment - handle both formats
+  const getTargetPrice = (originalPrice: number, adjustment?: JsonLineItemAdjustment): number => {
+    if (!adjustment) return originalPrice;
+    // First check target_total (direct value)
+    if (adjustment.target_total !== undefined) return adjustment.target_total;
+    // Then check adjustment_value which could be the target price
+    if (adjustment.adjustment_value !== undefined) return adjustment.adjustment_value;
+    // Fallback to original
+    return originalPrice;
   };
 
   // Calculate totals
@@ -388,35 +412,47 @@ export const NegotiationResponseView = ({
   const isCancelled = session.status === "cancelled";
   const isResolved = session.status === "resolved";
 
-  // Get requester info
-  const requesterName = session.initiator_profile?.name || session.initiator_profile?.company_name || "יזם";
+  // Get requester info - prioritize organization name
   const requesterOrg = session.initiator_profile?.company_name;
+  const requesterName = session.initiator_profile?.name || "יזם";
+  const displayName = requesterOrg || requesterName;
   const requestDate = session.created_at ? format(new Date(session.created_at), "d בMMMM yyyy, HH:mm", { locale: he }) : "";
 
   // Get milestone adjustments from session
   const milestoneAdjustments = (session.milestone_adjustments as MilestoneAdjustment[]) || [];
 
-  // Count items with changes
-  const itemsWithChanges = jsonAdjustments.filter(adj => adj.original_total !== adj.target_total).length;
-  const removedItems = jsonAdjustments.filter(adj => adj.target_total === 0).length;
+  // Count items with changes - handle both data formats
+  const itemsWithChanges = jsonAdjustments.filter(adj => {
+    const origTotal = adj.original_total ?? 0;
+    const targTotal = adj.target_total ?? adj.adjustment_value ?? origTotal;
+    return origTotal !== targTotal;
+  }).length;
+  const removedItems = jsonAdjustments.filter(adj => 
+    (adj.target_total ?? adj.adjustment_value) === 0
+  ).length;
 
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header with Requester Info */}
       <Card className="bg-gradient-to-l from-blue-50 to-indigo-50 border-blue-200">
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                 <Building2 className="h-6 w-6 text-blue-600" />
               </div>
-              <div>
+              <div className="text-right">
                 <h2 className="text-xl font-bold text-blue-900">בקשת עדכון הצעה</h2>
-                <div className="flex items-center gap-2 mt-1 text-blue-700">
-                  <User className="h-4 w-4" />
-                  <span className="font-medium">{requesterName}</span>
-                  {requesterOrg && requesterOrg !== requesterName && (
-                    <span className="text-blue-600">• {requesterOrg}</span>
+                <div className="flex items-center gap-2 mt-1 text-blue-700 flex-wrap">
+                  <span className="font-semibold text-lg">{displayName}</span>
+                  {requesterOrg && requesterName && requesterOrg !== requesterName && (
+                    <>
+                      <span className="text-blue-400">•</span>
+                      <div className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        <span className="text-sm">{requesterName}</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1 text-sm text-blue-600">
@@ -425,14 +461,14 @@ export const NegotiationResponseView = ({
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-start gap-2">
               <Badge variant="outline" className="border-blue-300 text-blue-700 bg-white">
                 פרויקט: {session.project?.name}
               </Badge>
               {onBack && (
-                <Button variant="ghost" size="sm" onClick={onBack}>
-                  <ArrowLeft className="h-4 w-4 me-2" />
+                <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
                   חזרה
+                  <ArrowLeft className="h-4 w-4 rotate-180" />
                 </Button>
               )}
             </div>
@@ -648,9 +684,9 @@ export const NegotiationResponseView = ({
                       {feeLineItems.map((item, index) => {
                         const itemId = getItemId(item, index);
                         const adjustment = getAdjustmentForItem(item, index);
-                        const originalPrice = adjustment?.original_total ?? (item.total ?? 0);
-                        const targetPrice = adjustment?.target_total ?? originalPrice;
-                        const hasChange = adjustment && adjustment.original_total !== adjustment.target_total;
+                        const originalPrice = getOriginalPrice(item, adjustment);
+                        const targetPrice = getTargetPrice(originalPrice, adjustment);
+                        const hasChange = adjustment !== undefined && originalPrice !== targetPrice;
                         const isRemoved = targetPrice === 0;
                         const changePercent = originalPrice > 0 
                           ? Math.round(((originalPrice - targetPrice) / originalPrice) * 100) 
@@ -794,45 +830,66 @@ export const NegotiationResponseView = ({
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                שינויים מבוקשים בתנאי תשלום
+                תנאי תשלום
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {milestoneAdjustments.length > 0 ? (
-                <div className="space-y-2">
-                  {milestoneAdjustments.map((milestone, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
-                    >
-                      <span className="font-medium text-blue-900">{milestone.description}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground line-through">
-                          {milestone.consultant_percentage ?? milestone.entrepreneur_percentage}%
-                        </span>
-                        <ArrowDown className="h-4 w-4 text-blue-600 rotate-[-90deg]" />
-                        <Badge variant="outline" className="border-blue-400 text-blue-700">
-                          {milestone.entrepreneur_percentage}%
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+              {/* Show original milestones from proposal */}
+              {session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">אבני דרך לתשלום מההצעה המקורית:</p>
+                  <div className="space-y-2">
+                    {session.proposal.milestone_adjustments.map((m, idx) => {
+                      // Calculate the display percentage
+                      const displayPercentage = m.percentage ?? m.consultant_percentage ?? m.entrepreneur_percentage ?? 0;
+                      const hasMultiplePercentages = m.consultant_percentage !== undefined && m.entrepreneur_percentage !== undefined;
+                      
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                          <span className="font-medium">{m.description || m.trigger || `אבן דרך ${idx + 1}`}</span>
+                          <div className="flex items-center gap-2">
+                            {hasMultiplePercentages ? (
+                              <>
+                                <Badge variant="secondary" className="text-xs">יועץ: {m.consultant_percentage}%</Badge>
+                                <Badge variant="outline" className="text-xs">יזם: {m.entrepreneur_percentage}%</Badge>
+                              </>
+                            ) : (
+                              <Badge variant="secondary">{displayPercentage}%</Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-lg">
-                  <p>לא התבקשו שינויים בתנאי תשלום</p>
+                  <p>לא הוגדרו אבני דרך להצעה זו</p>
                 </div>
               )}
-
-              {/* Show original milestones from proposal if available */}
-              {session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 && milestoneAdjustments.length === 0 && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">תנאי תשלום מקוריים:</p>
+              
+              {/* Show requested changes if any */}
+              {milestoneAdjustments.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm font-medium text-amber-700 mb-2">שינויים מבוקשים:</p>
                   <div className="space-y-2">
-                    {session.proposal.milestone_adjustments.map((m, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                        <span className="text-sm">{m.description}</span>
-                        <Badge variant="secondary">{m.percentage}%</Badge>
+                    {milestoneAdjustments.map((milestone, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+                      >
+                        <span className="font-medium text-amber-900">{milestone.description}</span>
+                        <div className="flex items-center gap-2">
+                          {milestone.consultant_percentage !== undefined && (
+                            <span className="text-muted-foreground line-through text-sm">
+                              {milestone.consultant_percentage}%
+                            </span>
+                          )}
+                          <ArrowDown className="h-4 w-4 text-amber-600 rotate-[-90deg]" />
+                          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-100">
+                            {milestone.entrepreneur_percentage}%
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>

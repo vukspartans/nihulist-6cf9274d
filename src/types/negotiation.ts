@@ -163,18 +163,23 @@ export interface FeeLineItem {
 // Milestone from proposal JSON
 export interface ProposalMilestone {
   description: string;
-  percentage: number;
+  percentage?: number;
+  consultant_percentage?: number;
+  entrepreneur_percentage?: number;
+  trigger?: string;
   is_entrepreneur_defined?: boolean;
 }
 
 // JSON line item adjustment stored in session.files
 export interface JsonLineItemAdjustment {
   line_item_id: string;
-  original_unit_price: number;
-  target_unit_price: number;
-  quantity: number;
-  original_total: number;
-  target_total: number;
+  adjustment_type?: string;
+  adjustment_value?: number;
+  original_unit_price?: number;
+  target_unit_price?: number;
+  quantity?: number;
+  original_total?: number;
+  target_total?: number;
   initiator_note?: string;
 }
 

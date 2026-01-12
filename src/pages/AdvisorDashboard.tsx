@@ -1397,7 +1397,7 @@ const AdvisorDashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="negotiations" className="space-y-4">
+          <TabsContent value="negotiations" className="space-y-4" dir="rtl">
             {negotiations.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
@@ -1432,6 +1432,7 @@ const AdvisorDashboard = () => {
                   <Card 
                     key={negotiation.id} 
                     className={`shadow-md transition-shadow ${isPending ? 'border-2 border-amber-400 hover:shadow-lg' : 'opacity-75'}`}
+                    dir="rtl"
                   >
                     <CardHeader>
                       <div className="flex justify-between items-start">
@@ -1453,8 +1454,8 @@ const AdvisorDashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Price Summary */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg mb-4">
+                      {/* Price Summary - RTL aligned grid */}
+                      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg mb-4" dir="rtl">
                         <div className="text-center">
                           <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
                           <p className="text-lg font-bold">₪{negotiation.original_price.toLocaleString()}</p>
@@ -1478,14 +1479,14 @@ const AdvisorDashboard = () => {
 
                       {/* Global Comment */}
                       {negotiation.global_comment && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4 text-right">
                           <p className="text-sm font-medium text-amber-800 mb-1">הודעה מהיזם:</p>
                           <p className="text-sm text-amber-700">{negotiation.global_comment}</p>
                         </div>
                       )}
 
                       {/* Metadata */}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4 justify-start">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
                           <span>התקבל: {new Date(negotiation.created_at).toLocaleDateString('he-IL')}</span>
@@ -1496,15 +1497,17 @@ const AdvisorDashboard = () => {
                       {isPending ? (
                         <Button 
                           className="w-full"
+                          dir="rtl"
                           onClick={() => navigate(`/negotiation/${negotiation.id}`)}
                         >
-                          <ArrowLeft className="h-4 w-4 me-2" />
                           צפה ושלח תגובה
+                          <ArrowLeft className="h-4 w-4 ms-2 rotate-180" />
                         </Button>
                       ) : (
                         <Button 
                           variant="outline"
                           className="w-full"
+                          dir="rtl"
                           onClick={() => navigate(`/negotiation/${negotiation.id}`)}
                         >
                           <FileText className="h-4 w-4 me-2" />
