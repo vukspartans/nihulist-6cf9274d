@@ -797,17 +797,19 @@ export const NegotiationDialog = ({
                           פריטים שנבחרו לעדכון ({adjustments.length}):
                         </p>
                         <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                          {adjustments.map((adj, idx) => {
-                            const item = feeLineItems.find(
-                              i => (i.id || `item-${i.item_number}`) === adj.line_item_id
+                          {adjustments.map((adj, adjIdx) => {
+                            // Use index-aware lookup to match how IDs are generated
+                            const itemIndex = feeLineItems.findIndex((item, idx) => 
+                              getItemId(item, idx) === adj.line_item_id
                             );
+                            const item = itemIndex >= 0 ? feeLineItems[itemIndex] : undefined;
                             const originalPrice = item?.total || (item?.quantity ?? 1) * (item?.unit_price ?? 0) || 0;
                             const changePercent = originalPrice > 0 
                               ? Math.round(((originalPrice - adj.target_total) / originalPrice) * 100)
                               : 0;
                             
                             return (
-                              <div key={idx} className="bg-muted/30 px-3 py-2 rounded-lg space-y-1">
+                              <div key={adjIdx} className="bg-muted/30 px-3 py-2 rounded-lg space-y-1">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-medium">{item?.description || adj.line_item_id}</span>
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -847,7 +849,7 @@ export const NegotiationDialog = ({
                         <div className="space-y-2">
                           {milestoneAdjustments.map((adj, idx) => {
                             const milestone = milestones.find(m => m.id === adj.milestone_id);
-                            const originalAmount = (adj.original_percentage / 100) * targetTotal;
+                            const originalAmount = (adj.original_percentage / 100) * originalTotal;
                             const targetAmount = (adj.target_percentage / 100) * targetTotal;
                             
                             return (
