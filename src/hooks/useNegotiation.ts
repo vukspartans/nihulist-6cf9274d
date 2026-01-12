@@ -211,7 +211,7 @@ export const useNegotiation = () => {
         await Promise.all([
           supabase
             .from("proposals")
-            .select("id, price, supplier_name, current_version, advisor_id, fee_line_items, milestone_adjustments")
+            .select("id, price, supplier_name, current_version, advisor_id, fee_line_items, milestone_adjustments, rfp_invite_id")
             .eq("id", session.proposal_id)
             .single(),
           supabase
@@ -293,6 +293,7 @@ export const useNegotiation = () => {
           advisor_id: proposalRes.data.advisor_id,
           fee_line_items: feeLineItems,
           milestone_adjustments: milestoneAdjustments,
+          rfp_invite_id: proposalRes.data.rfp_invite_id,
         } : undefined,
         project: projectRes.data || undefined,
         advisor: advisorRes.data || undefined,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +68,7 @@ export const NegotiationResponseView = ({
   onSuccess,
   onBack,
 }: NegotiationResponseViewProps) => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<NegotiationSessionWithDetails | null>(null);
   const [updatedLineItems, setUpdatedLineItems] = useState<UpdatedLineItem[]>([]);
   const [consultantMessage, setConsultantMessage] = useState("");
@@ -73,7 +76,9 @@ export const NegotiationResponseView = ({
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [negotiationFiles, setNegotiationFiles] = useState<NegotiationFile[]>([]);
+  const [embeddedFiles, setEmbeddedFiles] = useState<NegotiationFile[]>([]);
   const [declineReason, setDeclineReason] = useState("");
   const [declining, setDeclining] = useState(false);
   const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
@@ -91,49 +96,75 @@ export const NegotiationResponseView = ({
     const data = await fetchNegotiationWithDetails(sessionId);
     setSession(data);
     
-    // Initialize line items with target prices from JSON adjustments
-    if (data) {
+    // Initialize line items - include ALL items with proper defaults
+    if (data && data.proposal?.fee_line_items) {
       const filesData = data.files as any;
       const jsonAdjustments: JsonLineItemAdjustment[] = filesData?.json_line_item_adjustments || [];
       
-      if (jsonAdjustments.length > 0) {
-        setUpdatedLineItems(
-          jsonAdjustments.map((adj) => ({
-            line_item_id: adj.line_item_id,
-            // Handle both target_total and adjustment_value formats
-            consultant_response_price: adj.target_total ?? adj.adjustment_value ?? 0,
-          }))
-        );
-      } else if (data.line_item_negotiations && data.line_item_negotiations.length > 0) {
-        // Fallback to line_item_negotiations table
-        setUpdatedLineItems(
-          data.line_item_negotiations.map((li) => ({
-            line_item_id: li.line_item_id,
-            consultant_response_price: li.initiator_target_price,
-          }))
-        );
+      // Build a map of adjustments for quick lookup
+      const adjustmentMap = new Map<string, JsonLineItemAdjustment>();
+      jsonAdjustments.forEach((adj) => {
+        adjustmentMap.set(adj.line_item_id, adj);
+      });
+      
+      // Initialize ALL line items - not just those with adjustments
+      const allLineItems = data.proposal.fee_line_items.map((item: any, idx: number) => {
+        const itemId = item.item_id || `idx-${item.item_number ?? idx}`;
+        const originalPrice = item.total || ((item.unit_price || 0) * (item.quantity || 1));
+        
+        // Check for adjustment using multiple ID formats
+        const adjustment = adjustmentMap.get(itemId) || 
+                          adjustmentMap.get(item.item_id) ||
+                          adjustmentMap.get(`idx-${item.item_number ?? idx}`);
+        
+        // Default to original price unless there's an adjustment with a target value
+        const defaultPrice = adjustment 
+          ? (adjustment.target_total ?? adjustment.adjustment_value ?? originalPrice)
+          : originalPrice;
+        
+        return {
+          line_item_id: itemId,
+          consultant_response_price: defaultPrice,
+        };
+      });
+      
+      setUpdatedLineItems(allLineItems);
+      
+      // Extract embedded files from session.files JSON
+      if (filesData?.uploaded_files && Array.isArray(filesData.uploaded_files)) {
+        const embedded = filesData.uploaded_files.map((f: any, idx: number) => ({
+          id: `embedded-${idx}`,
+          name: f.name || f.original_name || 'קובץ',
+          url: f.url || f.storage_path || '',
+          size: f.size || f.file_size || 0,
+        }));
+        setEmbeddedFiles(embedded);
       }
     }
 
-    // Load project files from RFP invite
-    if (data?.proposal_id) {
-      await loadProjectFiles(data.proposal_id);
-    }
-
-    // Load negotiation-specific files from database using session_id
-    if (data?.id) {
-      await loadNegotiationFiles(data.id);
+    // Load files in parallel
+    if (data) {
+      setLoadingFiles(true);
+      await Promise.all([
+        data.proposal_id ? loadProjectFiles(data.proposal_id) : Promise.resolve(),
+        data.id ? loadNegotiationFiles(data.id) : Promise.resolve()
+      ]);
+      setLoadingFiles(false);
     }
 
     setLoadingSession(false);
   };
 
-  const loadNegotiationFiles = async (sessionId: string) => {
+  const loadNegotiationFiles = async (sid: string) => {
     try {
+      console.log('[NegotiationResponseView] Loading negotiation files for session:', sid);
+      
       const { data: files, error } = await supabase
         .from('negotiation_files')
         .select('id, storage_path, original_name, file_size')
-        .eq('session_id', sessionId);
+        .eq('session_id', sid);
+
+      console.log('[NegotiationResponseView] Negotiation files query result:', { files, error });
 
       if (error) {
         console.error('Error loading negotiation files:', error);
@@ -141,21 +172,19 @@ export const NegotiationResponseView = ({
       }
 
       if (files && files.length > 0) {
-        const filesWithUrls: NegotiationFile[] = [];
-        
-        for (const file of files) {
-          const { data: signedUrlData } = await supabase.storage
-            .from('negotiation-files')
-            .createSignedUrl(file.storage_path, 3600);
-          
-          filesWithUrls.push({
-            id: file.id,
-            name: file.original_name,
-            url: signedUrlData?.signedUrl || '',
-            size: file.file_size || 0,
-            storagePath: file.storage_path,
-          });
-        }
+        // Batch all signed URL requests in parallel (N+1 fix)
+        const signedUrlPromises = files.map(file => 
+          supabase.storage.from('negotiation-files').createSignedUrl(file.storage_path, 3600)
+        );
+        const signedUrls = await Promise.all(signedUrlPromises);
+
+        const filesWithUrls: NegotiationFile[] = files.map((file, idx) => ({
+          id: file.id,
+          name: file.original_name,
+          url: signedUrls[idx]?.data?.signedUrl || '',
+          size: file.file_size || 0,
+          storagePath: file.storage_path,
+        }));
         
         setNegotiationFiles(filesWithUrls);
       }
@@ -349,12 +378,29 @@ export const NegotiationResponseView = ({
     return total;
   }, [feeLineItems, jsonAdjustments, session?.target_total]);
   
+  // Calculate newTotal from ALL line items (fixed calculation)
   const newTotal = useMemo(() => {
-    if (jsonAdjustments.length > 0) {
-      return updatedLineItems.reduce((sum, item) => sum + (item.consultant_response_price || 0), 0);
-    }
-    return targetTotal;
-  }, [updatedLineItems, jsonAdjustments, targetTotal]);
+    if (!feeLineItems.length) return targetTotal;
+    
+    let total = 0;
+    feeLineItems.forEach((item, idx) => {
+      const itemId = getItemId(item, idx);
+      const originalPrice = item.total || ((item.unit_price || 0) * (item.quantity || 1));
+      
+      // Check if vendor has made a custom response
+      const vendorResponse = updatedLineItems.find(u => u.line_item_id === itemId);
+      
+      if (vendorResponse !== undefined) {
+        // Use vendor's proposed price
+        total += vendorResponse.consultant_response_price || 0;
+      } else {
+        // No vendor change - use original price
+        total += originalPrice;
+      }
+    });
+    
+    return total;
+  }, [feeLineItems, updatedLineItems, targetTotal]);
 
   const handlePriceChange = useCallback((lineItemId: string, price: number) => {
     setUpdatedLineItems((prev) => {
@@ -396,10 +442,12 @@ export const NegotiationResponseView = ({
   };
 
   const handleAcceptTarget = async () => {
+    setShowAcceptDialog(false);
+    
     // Set all line items to entrepreneur's target prices
     const acceptedItems = jsonAdjustments.map(adj => ({
       line_item_id: adj.line_item_id,
-      consultant_response_price: adj.target_total
+      consultant_response_price: adj.target_total ?? adj.adjustment_value ?? 0
     }));
 
     const result = await respondToNegotiation({
@@ -411,6 +459,25 @@ export const NegotiationResponseView = ({
     if (result) {
       onSuccess?.();
     }
+  };
+
+  const handleCounterOffer = () => {
+    // Get RFP invite ID from proposal
+    const rfpInviteId = session?.proposal?.rfp_invite_id;
+    
+    // Store negotiation context in sessionStorage for pre-filling
+    sessionStorage.setItem('negotiation_context', JSON.stringify({
+      sessionId: sessionId,
+      proposalId: session?.proposal_id,
+      originalPrice: originalTotal,
+      targetPrice: targetTotal,
+      updatedLineItems: updatedLineItems,
+      consultantMessage: consultantMessage,
+      isCounterOffer: true,
+    }));
+    
+    // Navigate to advisor dashboard with counter-offer context
+    navigate(`/advisor-dashboard?counter_offer=${sessionId}`);
   };
 
   const handleDecline = async () => {
@@ -933,12 +1000,25 @@ export const NegotiationResponseView = ({
                           <TableCell className="text-center font-bold">{formatCurrency(originalTotal)}</TableCell>
                           <TableCell className="text-center font-bold text-amber-700">{formatCurrency(targetTotal)}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="border-red-300 text-red-600">
-                              <span dir="ltr">-{calculateReductionPercent()}%</span>
-                            </Badge>
+                            {targetTotal !== originalTotal ? (
+                              <Badge variant="outline" className="border-red-300 text-red-600">
+                                <span dir="ltr">-{calculateReductionPercent()}%</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-muted text-muted-foreground">—</Badge>
+                            )}
                           </TableCell>
-                          <TableCell className="text-center font-bold text-green-700">
-                            {formatCurrency(newTotal)}
+                          <TableCell className="text-center">
+                            {newTotal !== originalTotal ? (
+                              <div className="flex flex-col items-center">
+                                <span className="font-bold text-green-700">{formatCurrency(newTotal)}</span>
+                                <Badge variant="outline" className="border-green-300 text-green-600 text-xs mt-1">
+                                  <span dir="ltr">{calculateNewReductionPercent() > 0 ? `-${calculateNewReductionPercent()}%` : 'ללא שינוי'}</span>
+                                </Badge>
+                              </div>
+                            ) : (
+                              <span className="font-bold text-green-700">{formatCurrency(newTotal)}</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       </TableFooter>
@@ -968,7 +1048,10 @@ export const NegotiationResponseView = ({
               {/* Show original milestones from proposal */}
               {session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">אבני דרך לתשלום מההצעה המקורית:</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    הצעת יועץ (מקורית):
+                  </p>
                   <div className="space-y-2">
                     {session.proposal.milestone_adjustments.map((m, idx) => {
                       // Calculate the display percentage
@@ -1002,7 +1085,10 @@ export const NegotiationResponseView = ({
               {/* Show requested changes if any */}
               {milestoneAdjustments.length > 0 && (
                 <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm font-medium text-amber-700 mb-2">שינויים מבוקשים:</p>
+                  <p className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    הצעת יזם:
+                  </p>
                   <div className="space-y-2">
                     {milestoneAdjustments.map((milestone, idx) => (
                       <div
@@ -1024,6 +1110,32 @@ export const NegotiationResponseView = ({
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Vendor response section for milestone changes */}
+                  {canRespond && (
+                    <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-sm font-medium text-green-800 mb-2">התגובה שלך:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-green-300 text-green-700 hover:bg-green-100"
+                          onClick={() => setShowAcceptDialog(true)}
+                        >
+                          <Check className="h-4 w-4 me-1" />
+                          אשר שינויים
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                          onClick={handleCounterOffer}
+                        >
+                          הצע שינוי אחר
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -1032,7 +1144,7 @@ export const NegotiationResponseView = ({
 
         {/* Files Tab */}
         <TabsContent value="files" className="space-y-4 mt-4">
-          {/* Negotiation Files */}
+          {/* Negotiation Files from database */}
           {negotiationFiles.length > 0 && (
             <Card className="border-amber-200 bg-amber-50/30">
               <CardHeader className="pb-2">
@@ -1044,6 +1156,56 @@ export const NegotiationResponseView = ({
               <CardContent>
                 <div className="space-y-2">
                   {negotiationFiles.map((file, idx) => (
+                    <div
+                      key={file.id || idx}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">{file.name}</span>
+                        {file.size && file.size > 0 && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-700 hover:bg-amber-100"
+                          onClick={() => handleViewFile(file)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-700 hover:bg-amber-100"
+                          onClick={() => handleDownloadFile(file)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Embedded files from session.files JSON */}
+          {embeddedFiles.length > 0 && negotiationFiles.length === 0 && (
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+                  <Paperclip className="h-5 w-5" />
+                  קבצים שצורפו לבקשה ({embeddedFiles.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {embeddedFiles.map((file, idx) => (
                     <div
                       key={file.id || idx}
                       className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
@@ -1139,7 +1301,7 @@ export const NegotiationResponseView = ({
             </Card>
           )}
 
-          {negotiationFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && (
+          {negotiationFiles.length === 0 && embeddedFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
                 <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -1213,7 +1375,7 @@ export const NegotiationResponseView = ({
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={handleAcceptTarget} 
+                    onClick={() => setShowAcceptDialog(true)} 
                     disabled={loading || declining}
                     className="border-green-300 text-green-700 hover:bg-green-50"
                   >
@@ -1221,21 +1383,12 @@ export const NegotiationResponseView = ({
                     קבל מחיר יעד
                   </Button>
                   <Button 
-                    onClick={handleSubmit} 
+                    onClick={handleCounterOffer} 
                     disabled={loading || declining}
                     className="bg-primary"
                   >
-                    {loading ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                        שולח...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 me-2" />
-                        שלח הצעה נגדית
-                      </>
-                    )}
+                    <Send className="h-4 w-4 me-2" />
+                    שלח הצעה נגדית
                   </Button>
                 </div>
               </CardContent>
@@ -1250,7 +1403,7 @@ export const NegotiationResponseView = ({
           <AlertDialogHeader>
             <AlertDialogTitle>דחיית בקשת משא ומתן</AlertDialogTitle>
             <AlertDialogDescription>
-              האם אתה בטוח שברצונך לדחות את בקשת המשא ומתן? היזם יקבל הודעה על הדחייה.
+              האם אתה בטוח שברצונך לדחות את בקשת המשא ומתן? היזם יקבל הודעה על הדחייה וההצעה המקורית תישאר זמינה לקבלה.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea
@@ -1267,6 +1420,50 @@ export const NegotiationResponseView = ({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {declining ? "דוחה..." : "דחה בקשה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Accept Target Price Confirmation Dialog */}
+      <AlertDialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              אישור קבלת מחיר יעד
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right space-y-3">
+              <p>
+                אתה עומד לאשר את מחיר היעד שהוצע על ידי היזם:
+              </p>
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-center">
+                <p className="text-sm text-muted-foreground">מחיר יעד מבוקש</p>
+                <p className="text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                {calculateReductionPercent() > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    (הפחתה של {calculateReductionPercent()}% מהמחיר המקורי)
+                  </p>
+                )}
+              </div>
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <strong>שים לב:</strong> זוהי הצעה מחייבת בהתאם לתנאי השימוש של המערכת. 
+                  לאחר האישור, היזם יקבל הודעה והמחיר המעודכן ייכנס לתוקף.
+                </AlertDescription>
+              </Alert>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleAcceptTarget}
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Check className="h-4 w-4 me-2" />
+              אשר והתחייב
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
