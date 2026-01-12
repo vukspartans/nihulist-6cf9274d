@@ -64,9 +64,17 @@ export const NegotiationRequestEmail = ({
 
         <Text style={detailText}>
           {isHebrew ? 'מחיר מקורי' : 'Original'}: {formatCurrency(originalPrice)}
-          {targetPrice && <><br />{isHebrew ? 'מחיר יעד' : 'Target'}: {formatCurrency(targetPrice)}</>}
-          {targetReductionPercent && <><br />{isHebrew ? 'הפחתה מבוקשת' : 'Reduction'}: {targetReductionPercent}%</>}
         </Text>
+        {targetPrice !== undefined && targetPrice !== null && (
+          <Text style={detailText}>
+            {isHebrew ? 'מחיר יעד' : 'Target'}: {formatCurrency(targetPrice)}
+          </Text>
+        )}
+        {targetReductionPercent !== undefined && targetReductionPercent !== null && (
+          <Text style={detailText}>
+            {isHebrew ? 'הפחתה מבוקשת' : 'Reduction'}: {String(targetReductionPercent)}%
+          </Text>
+        )}
 
         {globalComment && (
           <Text style={commentText}>
