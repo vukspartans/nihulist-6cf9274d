@@ -36,12 +36,13 @@ export const useNegotiation = () => {
       return result as NegotiationRequestOutput;
     } catch (error: any) {
       console.error("[useNegotiation] createNegotiationSession error:", error);
-      
+
       // Handle 409 Conflict - existing negotiation
-      // The error.context contains the response body for FunctionsHttpError
+      // Supabase Functions errors may expose response details via error.context (Response)
       if (error?.context) {
         try {
-          const errorBody = await error.context.json();
+          const raw = await error.context.text();
+          const errorBody = raw ? JSON.parse(raw) : null;
           if (errorBody?.error === "ACTIVE_NEGOTIATION_EXISTS") {
             toast({
               title: "בקשה קיימת",
@@ -53,12 +54,20 @@ export const useNegotiation = () => {
           console.error("[useNegotiation] Error parsing context:", parseError);
         }
       }
-      
-      toast({
-        title: "שגיאה",
-        description: error.message || "לא ניתן לשלוח את הבקשה",
-        variant: "destructive",
-      });
+
+      // Fallback: detect the condition even if context isn't available
+      if (String(error?.message || "").includes("ACTIVE_NEGOTIATION_EXISTS")) {
+        toast({
+          title: "בקשה קיימת",
+          description: "קיימת כבר בקשת עדכון פעילה להצעה זו",
+        });
+      } else {
+        toast({
+          title: "שגיאה",
+          description: error.message || "לא ניתן לשלוח את הבקשה",
+          variant: "destructive",
+        });
+      }
       return null;
     } finally {
       setLoading(false);
