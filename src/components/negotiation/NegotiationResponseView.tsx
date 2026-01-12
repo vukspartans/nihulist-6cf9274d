@@ -1,15 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
-import type { NegotiationSessionWithDetails, UpdatedLineItem } from "@/types/negotiation";
-import { RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2 } from "lucide-react";
+import type { NegotiationSessionWithDetails, UpdatedLineItem, FeeLineItem, JsonLineItemAdjustment } from "@/types/negotiation";
+import { 
+  RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, 
+  TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2,
+  Building2, User, Clock, MessageSquare, ListChecks, FileCheck
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -21,18 +27,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
+import { he } from "date-fns/locale";
 
 interface NegotiationResponseViewProps {
   sessionId: string;
   onSuccess?: () => void;
   onBack?: () => void;
-}
-
-interface LineItemDetails {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
 }
 
 interface ProjectFile {
@@ -65,7 +66,6 @@ export const NegotiationResponseView = ({
   const [updatedLineItems, setUpdatedLineItems] = useState<UpdatedLineItem[]>([]);
   const [consultantMessage, setConsultantMessage] = useState("");
   const [loadingSession, setLoadingSession] = useState(true);
-  const [lineItemDetails, setLineItemDetails] = useState<Map<string, LineItemDetails>>(new Map());
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
@@ -73,6 +73,7 @@ export const NegotiationResponseView = ({
   const [declineReason, setDeclineReason] = useState("");
   const [declining, setDeclining] = useState(false);
   const [approvedItems, setApprovedItems] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -86,35 +87,26 @@ export const NegotiationResponseView = ({
     const data = await fetchNegotiationWithDetails(sessionId);
     setSession(data);
     
-    // Initialize line items with original prices
-    if (data?.line_item_negotiations) {
-      setUpdatedLineItems(
-        data.line_item_negotiations.map((li) => ({
-          line_item_id: li.line_item_id,
-          consultant_response_price: li.initiator_target_price,
-        }))
-      );
-
-      // Fetch line item details for names
-      const lineItemIds = data.line_item_negotiations.map((li) => li.line_item_id);
-      if (lineItemIds.length > 0) {
-        const { data: items } = await supabase
-          .from("proposal_line_items")
-          .select("id, name, description, category")
-          .in("id", lineItemIds);
-        
-        if (items) {
-          const detailsMap = new Map<string, LineItemDetails>();
-          items.forEach((item) => {
-            detailsMap.set(item.id, {
-              id: item.id,
-              name: item.name,
-              description: item.description || undefined,
-              category: item.category || undefined,
-            });
-          });
-          setLineItemDetails(detailsMap);
-        }
+    // Initialize line items with target prices from JSON adjustments
+    if (data) {
+      const filesData = data.files as any;
+      const jsonAdjustments: JsonLineItemAdjustment[] = filesData?.json_line_item_adjustments || [];
+      
+      if (jsonAdjustments.length > 0) {
+        setUpdatedLineItems(
+          jsonAdjustments.map((adj) => ({
+            line_item_id: adj.line_item_id,
+            consultant_response_price: adj.target_total,
+          }))
+        );
+      } else if (data.line_item_negotiations && data.line_item_negotiations.length > 0) {
+        // Fallback to line_item_negotiations table
+        setUpdatedLineItems(
+          data.line_item_negotiations.map((li) => ({
+            line_item_id: li.line_item_id,
+            consultant_response_price: li.initiator_target_price,
+          }))
+        );
       }
     }
 
@@ -153,7 +145,7 @@ export const NegotiationResponseView = ({
           
           filesWithUrls.push({
             id: file.id,
-            name: file.original_name,  // Use original Hebrew name
+            name: file.original_name,
             url: signedUrlData?.signedUrl || '',
             size: file.file_size || 0,
             storagePath: file.storage_path,
@@ -170,7 +162,6 @@ export const NegotiationResponseView = ({
   const loadProjectFiles = async (proposalId: string) => {
     setLoadingFiles(true);
     try {
-      // Get the proposal to find the advisor_id
       const { data: proposal } = await supabase
         .from("proposals")
         .select("advisor_id, project_id")
@@ -178,7 +169,6 @@ export const NegotiationResponseView = ({
         .single();
 
       if (proposal) {
-        // Find the RFP invite for this advisor and project (join through rfps table)
         const { data: rfpInvite } = await supabase
           .from("rfp_invites")
           .select("request_files, rfps!inner(project_id)")
@@ -187,7 +177,6 @@ export const NegotiationResponseView = ({
           .maybeSingle();
 
         if (rfpInvite?.request_files) {
-          // Parse the request_files JSON - safely cast with type guard
           const rawFiles = Array.isArray(rfpInvite.request_files) 
             ? rfpInvite.request_files 
             : [];
@@ -199,7 +188,6 @@ export const NegotiationResponseView = ({
           setProjectFiles(parsedFiles);
         }
 
-        // Also try to get project files
         const { data: projectFilesData } = await supabase
           .from("project_files")
           .select("file_name, file_url, size_mb, file_type")
@@ -221,9 +209,8 @@ export const NegotiationResponseView = ({
     setLoadingFiles(false);
   };
 
-  const handleViewFile = async (file: ProjectFile) => {
+  const handleViewFile = async (file: ProjectFile | NegotiationFile) => {
     try {
-      // Try to get a signed URL if it's a storage URL
       if (file.url.includes("supabase")) {
         const pathMatch = file.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
         if (pathMatch) {
@@ -241,11 +228,10 @@ export const NegotiationResponseView = ({
     }
   };
 
-  const handleDownloadFile = async (file: ProjectFile) => {
+  const handleDownloadFile = async (file: ProjectFile | NegotiationFile) => {
     try {
       let url = file.url;
       
-      // Try to get a signed URL if it's a storage URL
       if (file.url.includes("supabase")) {
         const pathMatch = file.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
         if (pathMatch) {
@@ -282,18 +268,55 @@ export const NegotiationResponseView = ({
     }).format(amount);
   };
 
+  // Parse JSON line item adjustments from session.files
+  const jsonAdjustments = useMemo((): JsonLineItemAdjustment[] => {
+    const filesData = session?.files as any;
+    return filesData?.json_line_item_adjustments || [];
+  }, [session?.files]);
+
+  // Get original fee line items from proposal
+  const feeLineItems = useMemo((): FeeLineItem[] => {
+    return session?.proposal?.fee_line_items || [];
+  }, [session?.proposal?.fee_line_items]);
+
+  // Get item ID helper
+  const getItemId = (item: FeeLineItem, index: number): string => {
+    return item.item_id || `idx-${item.item_number ?? index}`;
+  };
+
+  // Find adjustment for a given item
+  const getAdjustmentForItem = (item: FeeLineItem, index: number): JsonLineItemAdjustment | undefined => {
+    const itemId = getItemId(item, index);
+    return jsonAdjustments.find(adj => adj.line_item_id === itemId);
+  };
+
+  // Calculate totals
+  const originalTotal = session?.proposal?.price || 0;
+  const targetTotal = session?.target_total || 0;
+  
+  const newTotal = useMemo(() => {
+    if (jsonAdjustments.length > 0) {
+      return updatedLineItems.reduce((sum, item) => sum + (item.consultant_response_price || 0), 0);
+    }
+    return targetTotal;
+  }, [updatedLineItems, jsonAdjustments, targetTotal]);
+
   const handlePriceChange = (lineItemId: string, price: number) => {
-    setUpdatedLineItems((prev) =>
-      prev.map((item) =>
-        item.line_item_id === lineItemId
-          ? { ...item, consultant_response_price: price }
-          : item
-      )
-    );
+    setUpdatedLineItems((prev) => {
+      const existing = prev.find(item => item.line_item_id === lineItemId);
+      if (existing) {
+        return prev.map((item) =>
+          item.line_item_id === lineItemId
+            ? { ...item, consultant_response_price: price }
+            : item
+        );
+      } else {
+        return [...prev, { line_item_id: lineItemId, consultant_response_price: price }];
+      }
+    });
   };
 
   const handleSubmit = async () => {
-    // Allow submitting even without line items (for proposals without itemized breakdown)
     const result = await respondToNegotiation({
       session_id: sessionId,
       consultant_message: consultantMessage || undefined,
@@ -305,18 +328,12 @@ export const NegotiationResponseView = ({
     }
   };
 
-  // Accept target price exactly as requested by entrepreneur
   const handleAcceptTarget = async () => {
     // Set all line items to entrepreneur's target prices
-    const acceptedItems = updatedLineItems.map(item => {
-      const negotiationItem = session?.line_item_negotiations?.find(
-        li => li.line_item_id === item.line_item_id
-      );
-      return {
-        ...item,
-        consultant_response_price: negotiationItem?.initiator_target_price || item.consultant_response_price
-      };
-    });
+    const acceptedItems = jsonAdjustments.map(adj => ({
+      line_item_id: adj.line_item_id,
+      consultant_response_price: adj.target_total
+    }));
 
     const result = await respondToNegotiation({
       session_id: sessionId,
@@ -329,7 +346,6 @@ export const NegotiationResponseView = ({
     }
   };
 
-  // Decline the negotiation request
   const handleDecline = async () => {
     setDeclining(true);
     const success = await cancelNegotiation(sessionId);
@@ -341,14 +357,6 @@ export const NegotiationResponseView = ({
     }
   };
 
-  const calculateNewTotal = (): number => {
-    return updatedLineItems.reduce(
-      (sum, item) => sum + item.consultant_response_price,
-      0
-    );
-  };
-
-  // Calculate reduction percentages
   const calculateReductionPercent = () => {
     if (!originalTotal || originalTotal === 0) return 0;
     return Math.round(((originalTotal - targetTotal) / originalTotal) * 100);
@@ -375,34 +383,62 @@ export const NegotiationResponseView = ({
     );
   }
 
-  // Check if session can be responded to
   const canRespond = session.status === "awaiting_response";
   const isAlreadyResponded = session.status === "responded";
   const isCancelled = session.status === "cancelled";
   const isResolved = session.status === "resolved";
 
-  const originalTotal = session.proposal?.price || 0;
-  const targetTotal = session.target_total || 0;
-  const hasLineItems = session.line_item_negotiations && session.line_item_negotiations.length > 0;
-  const newTotal = hasLineItems ? calculateNewTotal() : targetTotal;
+  // Get requester info
+  const requesterName = session.initiator_profile?.name || session.initiator_profile?.company_name || "יזם";
+  const requesterOrg = session.initiator_profile?.company_name;
+  const requestDate = session.created_at ? format(new Date(session.created_at), "d בMMMM yyyy, HH:mm", { locale: he }) : "";
+
+  // Get milestone adjustments from session
+  const milestoneAdjustments = (session.milestone_adjustments as MilestoneAdjustment[]) || [];
+
+  // Count items with changes
+  const itemsWithChanges = jsonAdjustments.filter(adj => adj.original_total !== adj.target_total).length;
+  const removedItems = jsonAdjustments.filter(adj => adj.target_total === 0).length;
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">בקשת עדכון הצעה</h2>
-          <p className="text-muted-foreground">
-            פרויקט: {session.project?.name}
-          </p>
-        </div>
-        {onBack && (
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 me-2" />
-            חזרה
-          </Button>
-        )}
-      </div>
+      {/* Header with Requester Info */}
+      <Card className="bg-gradient-to-l from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-blue-900">בקשת עדכון הצעה</h2>
+                <div className="flex items-center gap-2 mt-1 text-blue-700">
+                  <User className="h-4 w-4" />
+                  <span className="font-medium">{requesterName}</span>
+                  {requesterOrg && requesterOrg !== requesterName && (
+                    <span className="text-blue-600">• {requesterOrg}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-sm text-blue-600">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>נשלח ב-{requestDate}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="outline" className="border-blue-300 text-blue-700 bg-white">
+                פרויקט: {session.project?.name}
+              </Badge>
+              {onBack && (
+                <Button variant="ghost" size="sm" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4 me-2" />
+                  חזרה
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Status Banner for non-respondable sessions */}
       {!canRespond && (
@@ -425,7 +461,7 @@ export const NegotiationResponseView = ({
                 </>
               ) : isCancelled ? (
                 <>
-                  <RefreshCw className="h-5 w-5 text-gray-600" />
+                  <XCircle className="h-5 w-5 text-gray-600" />
                   <div>
                     <p className="font-medium text-gray-800">המשא ומתן בוטל</p>
                     <p className="text-sm text-gray-700">בקשת המשא ומתן בוטלה ולא ניתן להגיב עליה.</p>
@@ -433,7 +469,7 @@ export const NegotiationResponseView = ({
                 </>
               ) : isResolved ? (
                 <>
-                  <RefreshCw className="h-5 w-5 text-amber-600" />
+                  <CheckCircle2 className="h-5 w-5 text-amber-600" />
                   <div>
                     <p className="font-medium text-amber-800">המשא ומתן הסתיים</p>
                     <p className="text-sm text-amber-700">המשא ומתן הסתיים ולא ניתן להגיב עליו עוד.</p>
@@ -441,7 +477,7 @@ export const NegotiationResponseView = ({
                 </>
               ) : (
                 <>
-                  <RefreshCw className="h-5 w-5 text-amber-600" />
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
                   <div>
                     <p className="font-medium text-amber-800">לא ניתן להגיב כעת</p>
                     <p className="text-sm text-amber-700">סטטוס המשא ומתן הנוכחי: {session.status}</p>
@@ -453,510 +489,570 @@ export const NegotiationResponseView = ({
         </Card>
       )}
 
-      {/* Comparison Summary Card - Key change visualization */}
-      {canRespond && (
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-amber-600" />
-              סיכום בקשת העדכון
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 bg-white/60 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
-                <p className="text-xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
-              </div>
-              <div className="p-3 bg-amber-100/60 rounded-lg border border-amber-200">
-                <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
-                <p className="text-xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
-                <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
-                  -{calculateReductionPercent()}%
-                </Badge>
-              </div>
-              <div className="p-3 bg-white/60 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">הפרש מבוקש</p>
-                <p className="text-xl font-bold text-red-600">
-                  {formatCurrency(originalTotal - targetTotal)}
-                </p>
-              </div>
-            </div>
+      {/* Tabbed Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">
+            <TrendingDown className="h-4 w-4 me-1.5 hidden sm:inline" />
+            סקירה
+          </TabsTrigger>
+          <TabsTrigger value="items" className="text-xs sm:text-sm py-2">
+            <ListChecks className="h-4 w-4 me-1.5 hidden sm:inline" />
+            פריטים
+            {itemsWithChanges > 0 && (
+              <Badge variant="secondary" className="ms-1.5 h-5 px-1.5 text-xs">
+                {itemsWithChanges}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="milestones" className="text-xs sm:text-sm py-2">
+            <Calendar className="h-4 w-4 me-1.5 hidden sm:inline" />
+            אבני דרך
+          </TabsTrigger>
+          <TabsTrigger value="files" className="text-xs sm:text-sm py-2">
+            <Paperclip className="h-4 w-4 me-1.5 hidden sm:inline" />
+            קבצים
+          </TabsTrigger>
+          <TabsTrigger value="response" className="text-xs sm:text-sm py-2">
+            <FileCheck className="h-4 w-4 me-1.5 hidden sm:inline" />
+            תגובה
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Show if counter-offer differs from target */}
-            {hasLineItems && newTotal !== targetTotal && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">ההצעה החדשה שלך:</span>
-                  </div>
-                  <div className="text-left">
-                    <span className="font-bold text-blue-700">{formatCurrency(newTotal)}</span>
-                    <span className="text-sm text-blue-600 ms-2">(-{calculateNewReductionPercent()}%)</span>
-                  </div>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4 mt-4">
+          {/* Price Comparison Card */}
+          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingDown className="h-5 w-5 text-amber-600" />
+                סיכום בקשת העדכון
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-4 bg-white/60 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                  <p className="text-2xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
+                </div>
+                <div className="p-4 bg-amber-100/60 rounded-lg border border-amber-200">
+                  <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
+                  <p className="text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                  <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
+                    {calculateReductionPercent() > 0 ? `-${calculateReductionPercent()}%` : 'ללא שינוי'}
+                  </Badge>
+                </div>
+                <div className="p-4 bg-white/60 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">הפרש מבוקש</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {formatCurrency(originalTotal - targetTotal)}
+                  </p>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Project Files Section */}
-      {(projectFiles.length > 0 || loadingFiles) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              קבצי הפרויקט
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingFiles ? (
-              <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                טוען קבצים...
+              {/* Summary Stats */}
+              <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                <div className="p-2 bg-white/50 rounded">
+                  <p className="text-lg font-bold text-foreground">{feeLineItems.length}</p>
+                  <p className="text-xs text-muted-foreground">פריטים בהצעה</p>
+                </div>
+                <div className="p-2 bg-amber-50 rounded">
+                  <p className="text-lg font-bold text-amber-700">{itemsWithChanges}</p>
+                  <p className="text-xs text-amber-600">פריטים לעדכון</p>
+                </div>
+                <div className="p-2 bg-red-50 rounded">
+                  <p className="text-lg font-bold text-red-600">{removedItems}</p>
+                  <p className="text-xs text-red-500">פריטים להסרה</p>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {projectFiles.map((file, idx) => (
+            </CardContent>
+          </Card>
+
+          {/* Global Comment / Initiator Message */}
+          {(session.global_comment || session.initiator_message) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  הודעה מהיזם
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-amber-800 whitespace-pre-wrap">
+                    {session.initiator_message || session.global_comment}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Initiator Comments */}
+          {comments.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">הערות נוספות</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {comments.map((comment) => (
                   <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    key={comment.id}
+                    className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg border"
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm font-medium truncate">{file.name}</span>
-                      {file.size && (
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleViewFile(file)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDownloadFile(file)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                    <span className="text-lg">
+                      {commentTypeIcons[comment.comment_type]}
+                    </span>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">
+                        {commentTypeLabels[comment.comment_type]}
+                      </p>
+                      <p className="text-foreground">{comment.content}</p>
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-      {/* Initiator Comments */}
-      {comments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">הערות היזם</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {comments.map((comment) => (
-              <div
-                key={comment.id}
-                className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200"
-              >
-                <span className="text-xl">
-                  {commentTypeIcons[comment.comment_type]}
-                </span>
-                <div>
-                  <p className="font-medium text-amber-800">
-                    {commentTypeLabels[comment.comment_type]}
-                  </p>
-                  <p className="text-amber-700">{comment.content}</p>
+        {/* Items Tab */}
+        <TabsContent value="items" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="h-5 w-5" />
+                  פירוט פריטים ({feeLineItems.length})
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+                <Badge variant="outline" className="text-amber-700 border-amber-300">
+                  {itemsWithChanges} עדכונים מבוקשים
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {feeLineItems.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">תיאור</TableHead>
+                        <TableHead className="text-center w-20">יחידה</TableHead>
+                        <TableHead className="text-center w-20">כמות</TableHead>
+                        <TableHead className="text-center w-28">מקורי</TableHead>
+                        <TableHead className="text-center w-28">יעד</TableHead>
+                        <TableHead className="text-center w-20">שינוי</TableHead>
+                        <TableHead className="text-center w-32">הצעה חדשה</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {feeLineItems.map((item, index) => {
+                        const itemId = getItemId(item, index);
+                        const adjustment = getAdjustmentForItem(item, index);
+                        const originalPrice = adjustment?.original_total ?? (item.total ?? 0);
+                        const targetPrice = adjustment?.target_total ?? originalPrice;
+                        const hasChange = adjustment && adjustment.original_total !== adjustment.target_total;
+                        const isRemoved = targetPrice === 0;
+                        const changePercent = originalPrice > 0 
+                          ? Math.round(((originalPrice - targetPrice) / originalPrice) * 100) 
+                          : 0;
+                        
+                        const currentResponse = updatedLineItems.find(u => u.line_item_id === itemId);
+                        const isApproved = approvedItems.has(itemId);
 
-      {/* Global Comment */}
-      {session.global_comment && (
-        <Card>
-          <CardContent className="pt-4">
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="font-medium mb-1">הודעה כללית:</p>
-              <p>{session.global_comment}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Entrepreneur's Attached Files from Negotiation Request - prioritize DB-tracked files */}
-      {(negotiationFiles.length > 0 || (session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).length > 0)) && (
-        <Card className="border-amber-200 bg-amber-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
-              <Paperclip className="h-5 w-5" />
-              קבצים שצורפו לבקשה
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {/* Show DB-tracked files first (with proper Hebrew names) */}
-              {negotiationFiles.map((file, idx) => (
-                <div
-                  key={`db-${file.id || idx}`}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                    <span className="text-sm font-medium truncate">{file.name}</span>
-                    {file.size && file.size > 0 && (
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        ({(file.size / 1024).toFixed(1)} KB)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                      onClick={() => window.open(file.url, "_blank")}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                      onClick={() => {
-                        const link = document.createElement("a");
-                        link.href = file.url;
-                        link.download = file.name;
-                        link.click();
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {/* Fallback: show session.files only if no DB files (for backwards compatibility) */}
-              {negotiationFiles.length === 0 && session.files && Array.isArray(session.files) && (session.files as NegotiationFile[]).map((file, idx) => (
-                <div
-                  key={`json-${idx}`}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                    <span className="text-sm font-medium truncate">{file.name}</span>
-                    {file.size && (
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        ({(file.size / 1024).toFixed(1)} KB)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                      onClick={() => window.open(file.url, "_blank")}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                      onClick={() => {
-                        const link = document.createElement("a");
-                        link.href = file.url;
-                        link.download = file.name;
-                        link.click();
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Milestone Adjustments from Negotiation Request */}
-      {session.milestone_adjustments && Array.isArray(session.milestone_adjustments) && (session.milestone_adjustments as MilestoneAdjustment[]).length > 0 && (
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
-              <Calendar className="h-5 w-5" />
-              שינויים מבוקשים בתנאי תשלום
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {(session.milestone_adjustments as MilestoneAdjustment[]).map((milestone, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200"
-                >
-                  <span className="font-medium text-blue-900">{milestone.description}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground line-through">
-                      {milestone.consultant_percentage ?? milestone.entrepreneur_percentage}%
-                    </span>
-                    <ArrowDown className="h-4 w-4 text-blue-600 rotate-[-90deg]" />
-                    <Badge variant="outline" className="border-blue-400 text-blue-700">
-                      {milestone.entrepreneur_percentage}%
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Line Items or No Items Message */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {hasLineItems ? "פריטים לעדכון" : "סיכום הצעה"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {hasLineItems ? (
-            <div className="space-y-3" dir="rtl">
-              {/* Header */}
-              <div className="grid grid-cols-6 gap-2 text-xs font-medium text-muted-foreground pb-2 border-b">
-                <span className="col-span-1 text-right">פריט</span>
-                <span className="text-center">מחיר מקורי</span>
-                <span className="text-center">יעד היזם</span>
-                <span className="text-center">הפחתה</span>
-                <span className="text-center">אישור</span>
-                <span className="text-center">הצעה חדשה</span>
-              </div>
-
-              {session.line_item_negotiations!.map((lineItem) => {
-                const updatedItem = updatedLineItems.find(
-                  (u) => u.line_item_id === lineItem.line_item_id
-                );
-                const details = lineItemDetails.get(lineItem.line_item_id);
-                const reduction = lineItem.original_price - lineItem.initiator_target_price;
-                const reductionPercent = lineItem.original_price > 0 
-                  ? Math.round((reduction / lineItem.original_price) * 100) 
-                  : 0;
-                const hasChange = reduction > 0;
-                const isApproved = approvedItems.has(lineItem.line_item_id);
-
-                return (
-                  <div
-                    key={lineItem.id}
-                    className={`rounded-lg border p-3 ${isApproved ? 'bg-green-50/50 border-green-200' : hasChange ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-muted'}`}
-                  >
-                    {/* Item name and description */}
-                    <div className="mb-2 text-right">
-                      <p className="font-medium text-sm">{details?.name || `פריט #${lineItem.line_item_id.slice(0, 8)}`}</p>
-                      {details?.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                          {details.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Entrepreneur's note */}
-                    {lineItem.initiator_note && (
-                      <div className="mb-2 p-2 bg-amber-100 rounded text-xs text-amber-800 border border-amber-200 text-right">
-                        <span className="font-medium">הערת היזם: </span>
-                        {lineItem.initiator_note}
-                      </div>
-                    )}
-
-                    {/* Price row */}
-                    <div className="grid grid-cols-6 gap-2 items-center">
-                      <div className="col-span-1" />
-                      <p className="text-center text-muted-foreground">
-                        {formatCurrency(lineItem.original_price)}
-                      </p>
-                      <div className="text-center">
-                        <p className="font-medium text-amber-700">
-                          {formatCurrency(lineItem.initiator_target_price)}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        {hasChange ? (
-                          <Badge variant="outline" className="border-red-300 text-red-600 bg-red-50">
-                            -{reductionPercent}%
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">ללא שינוי</span>
-                        )}
-                      </div>
-                      {/* Approval checkbox */}
-                      <div className="flex justify-center">
-                        {isApproved ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            אושר
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <Checkbox
-                              id={`approve-${lineItem.line_item_id}`}
-                              checked={false}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  const newSet = new Set(approvedItems);
-                                  newSet.add(lineItem.line_item_id);
-                                  setApprovedItems(newSet);
-                                  // Auto-set price to target when approved
-                                  handlePriceChange(lineItem.line_item_id, lineItem.initiator_target_price);
-                                }
-                              }}
-                              disabled={!canRespond}
-                              className="h-4 w-4"
-                            />
-                            <label 
-                              htmlFor={`approve-${lineItem.line_item_id}`}
-                              className="text-xs text-muted-foreground cursor-pointer"
-                            >
-                              אשר
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                      {/* Price input or approved indicator */}
-                      {isApproved ? (
-                        <div className="text-center">
-                          <p className="font-medium text-green-700">
-                            {formatCurrency(lineItem.initiator_target_price)}
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-6 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              const newSet = new Set(approvedItems);
-                              newSet.delete(lineItem.line_item_id);
-                              setApprovedItems(newSet);
-                            }}
-                            disabled={!canRespond}
+                        return (
+                          <TableRow 
+                            key={itemId}
+                            className={isRemoved ? "bg-red-50/50" : hasChange ? "bg-amber-50/30" : ""}
                           >
-                            בטל אישור
-                          </Button>
-                        </div>
-                      ) : (
-                        <Input
-                          type="number"
-                          value={updatedItem?.consultant_response_price || 0}
-                          onChange={(e) =>
-                            handlePriceChange(
-                              lineItem.line_item_id,
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="text-center h-9"
-                          disabled={!canRespond}
-                        />
-                      )}
+                            <TableCell className="text-right">
+                              <div>
+                                <p className={`font-medium ${isRemoved ? "line-through text-muted-foreground" : ""}`}>
+                                  {item.description}
+                                </p>
+                                {adjustment?.initiator_note && (
+                                  <p className="text-xs text-amber-700 mt-1 bg-amber-100 px-2 py-1 rounded">
+                                    💬 {adjustment.initiator_note}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center text-sm text-muted-foreground">
+                              {item.unit || '-'}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {adjustment?.quantity ?? item.quantity ?? 1}
+                            </TableCell>
+                            <TableCell className="text-center font-medium">
+                              {formatCurrency(originalPrice)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {isRemoved ? (
+                                <Badge variant="destructive" className="text-xs">הוסר</Badge>
+                              ) : (
+                                <span className={hasChange ? "font-bold text-amber-700" : ""}>
+                                  {formatCurrency(targetPrice)}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {hasChange ? (
+                                <Badge 
+                                  variant="outline" 
+                                  className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700"}
+                                >
+                                  -{changePercent}%
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {isRemoved ? (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              ) : isApproved ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    אושר
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs h-6"
+                                    onClick={() => {
+                                      const newSet = new Set(approvedItems);
+                                      newSet.delete(itemId);
+                                      setApprovedItems(newSet);
+                                    }}
+                                    disabled={!canRespond}
+                                  >
+                                    בטל
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <Input
+                                    type="number"
+                                    value={currentResponse?.consultant_response_price ?? targetPrice}
+                                    onChange={(e) => handlePriceChange(itemId, parseFloat(e.target.value) || 0)}
+                                    className="w-24 h-8 text-center text-sm"
+                                    disabled={!canRespond}
+                                  />
+                                  {hasChange && (
+                                    <Checkbox
+                                      checked={false}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          const newSet = new Set(approvedItems);
+                                          newSet.add(itemId);
+                                          setApprovedItems(newSet);
+                                          handlePriceChange(itemId, targetPrice);
+                                        }
+                                      }}
+                                      disabled={!canRespond}
+                                      className="h-4 w-4"
+                                      title="אשר מחיר יעד"
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow className="bg-muted/50">
+                        <TableCell colSpan={3} className="text-right font-bold">סה״כ</TableCell>
+                        <TableCell className="text-center font-bold">{formatCurrency(originalTotal)}</TableCell>
+                        <TableCell className="text-center font-bold text-amber-700">{formatCurrency(targetTotal)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="border-red-300 text-red-600">
+                            -{calculateReductionPercent()}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-green-700">
+                          {formatCurrency(newTotal)}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-lg">
+                  <p>הצעה זו אינה כוללת פירוט פריטים</p>
+                  <p className="text-sm mt-1">היזם מבקש הנחה כוללת על סך ההצעה</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Milestones Tab */}
+        <TabsContent value="milestones" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                שינויים מבוקשים בתנאי תשלום
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {milestoneAdjustments.length > 0 ? (
+                <div className="space-y-2">
+                  {milestoneAdjustments.map((milestone, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
+                    >
+                      <span className="font-medium text-blue-900">{milestone.description}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground line-through">
+                          {milestone.consultant_percentage ?? milestone.entrepreneur_percentage}%
+                        </span>
+                        <ArrowDown className="h-4 w-4 text-blue-600 rotate-[-90deg]" />
+                        <Badge variant="outline" className="border-blue-400 text-blue-700">
+                          {milestone.entrepreneur_percentage}%
+                        </Badge>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-lg">
+                  <p>לא התבקשו שינויים בתנאי תשלום</p>
+                </div>
+              )}
+
+              {/* Show original milestones from proposal if available */}
+              {session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 && milestoneAdjustments.length === 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">תנאי תשלום מקוריים:</p>
+                  <div className="space-y-2">
+                    {session.proposal.milestone_adjustments.map((m, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                        <span className="text-sm">{m.description}</span>
+                        <Badge variant="secondary">{m.percentage}%</Badge>
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-4 bg-muted/50 rounded-lg text-center">
-              <p className="text-muted-foreground mb-2">
-                הצעה זו אינה כוללת פירוט פריטים
-              </p>
-              <p className="text-sm">
-                היזם מבקש הנחה כוללת על סך ההצעה. ניתן לאשר את היעד או להוסיף הודעה עם הסבר.
-              </p>
-            </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Files Tab */}
+        <TabsContent value="files" className="space-y-4 mt-4">
+          {/* Negotiation Files */}
+          {negotiationFiles.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+                  <Paperclip className="h-5 w-5" />
+                  קבצים שצורפו לבקשה ({negotiationFiles.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {negotiationFiles.map((file, idx) => (
+                    <div
+                      key={file.id || idx}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">{file.name}</span>
+                        {file.size && file.size > 0 && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-700 hover:bg-amber-100"
+                          onClick={() => handleViewFile(file)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-700 hover:bg-amber-100"
+                          onClick={() => handleDownloadFile(file)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          <Separator className="my-4" />
+          {/* Project Files */}
+          {(projectFiles.length > 0 || loadingFiles) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  קבצי הפרויקט ({projectFiles.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingFiles ? (
+                  <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    טוען קבצים...
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {projectFiles.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">{file.name}</span>
+                          {file.size && (
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleViewFile(file)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDownloadFile(file)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Totals */}
-          <div className="space-y-2" dir="rtl">
-            <div className="flex justify-between items-center">
-              <span className="text-right">סה״כ מקורי:</span>
-              <span className="font-medium text-left">{formatCurrency(originalTotal)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-right">יעד היזם:</span>
-              <span className="font-medium text-amber-600 text-left">
-                {formatCurrency(targetTotal)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-lg">
-              <span className="font-medium text-right">סה״כ הצעה חדשה:</span>
-              <span className="font-bold text-green-600 text-left">
-                {formatCurrency(newTotal)}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {negotiationFiles.length === 0 && projectFiles.length === 0 && !loadingFiles && (
+            <Card>
+              <CardContent className="py-6 text-center text-muted-foreground">
+                <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>לא צורפו קבצים לבקשה זו</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-      {/* Response Message */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">הודעה ליזם (אופציונלי)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="הוסף הערות או הסברים להצעה המעודכנת..."
-            value={consultantMessage}
-            onChange={(e) => setConsultantMessage(e.target.value)}
-            className="min-h-[100px]"
-          />
-        </CardContent>
-      </Card>
+        {/* Response Tab */}
+        <TabsContent value="response" className="space-y-4 mt-4">
+          {/* Summary of Your Offer */}
+          <Card className="bg-green-50/50 border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2 text-green-800">
+                <FileCheck className="h-5 w-5" />
+                סיכום ההצעה שלך
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-white rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                  <p className="text-lg font-bold">{formatCurrency(originalTotal)}</p>
+                </div>
+                <div className="p-3 bg-amber-100 rounded-lg">
+                  <p className="text-xs text-amber-700 mb-1">יעד היזם</p>
+                  <p className="text-lg font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg border border-green-200">
+                  <p className="text-xs text-green-700 mb-1">ההצעה שלך</p>
+                  <p className="text-lg font-bold text-green-700">{formatCurrency(newTotal)}</p>
+                  <Badge variant="outline" className="mt-1 text-xs border-green-400 text-green-700">
+                    {calculateNewReductionPercent() > 0 ? `-${calculateNewReductionPercent()}%` : 'ללא הנחה'}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-end">
-        {onBack && (
-          <Button variant="outline" onClick={onBack}>
-            {canRespond ? "ביטול" : "חזרה"}
-          </Button>
-        )}
-        {canRespond && (
-          <>
-            <Button variant="destructive" onClick={() => setShowDeclineDialog(true)} disabled={loading || declining}>
-              <XCircle className="h-4 w-4 me-2" />
-              דחה בקשה
-            </Button>
-            <Button variant="outline" onClick={handleAcceptTarget} disabled={loading || declining}>
-              <Check className="h-4 w-4 me-2" />
-              קבל מחיר יעד
-            </Button>
-            <Button onClick={handleSubmit} disabled={loading || declining}>
-              {loading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin me-2" />
-                  שולח...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 me-2" />
-                  שלח הצעה נגדית
-                </>
-              )}
-            </Button>
-          </>
-        )}
-      </div>
+          {/* Response Message */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">הודעה ליזם (אופציונלי)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="הוסף הערות או הסברים להצעה המעודכנת..."
+                value={consultantMessage}
+                onChange={(e) => setConsultantMessage(e.target.value)}
+                className="min-h-[100px]"
+                disabled={!canRespond}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          {canRespond && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setShowDeclineDialog(true)} 
+                    disabled={loading || declining}
+                  >
+                    <XCircle className="h-4 w-4 me-2" />
+                    דחה בקשה
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleAcceptTarget} 
+                    disabled={loading || declining}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    <Check className="h-4 w-4 me-2" />
+                    קבל מחיר יעד
+                  </Button>
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={loading || declining}
+                    className="bg-primary"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin me-2" />
+                        שולח...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 me-2" />
+                        שלח הצעה נגדית
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Decline Dialog */}
       <AlertDialog open={showDeclineDialog} onOpenChange={setShowDeclineDialog}>

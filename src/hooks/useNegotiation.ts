@@ -206,12 +206,12 @@ export const useNegotiation = () => {
 
       if (sessionError) throw sessionError;
 
-      // Fetch related data
-      const [proposalRes, projectRes, advisorRes, lineItemsRes, commentsRes] =
+      // Fetch related data including fee_line_items and initiator profile
+      const [proposalRes, projectRes, advisorRes, lineItemsRes, commentsRes, initiatorRes] =
         await Promise.all([
           supabase
             .from("proposals")
-            .select("id, price, supplier_name, current_version, advisor_id")
+            .select("id, price, supplier_name, current_version, advisor_id, fee_line_items, milestone_adjustments")
             .eq("id", session.proposal_id)
             .single(),
           supabase
@@ -233,13 +233,54 @@ export const useNegotiation = () => {
             .select("*")
             .eq("session_id", sessionId)
             .order("created_at", { ascending: true }),
+          supabase
+            .from("profiles")
+            .select("name, company_name, organization_id")
+            .eq("user_id", session.initiator_id)
+            .single(),
         ]);
+
+      // Parse fee_line_items from JSON - safely cast
+      const rawFeeLineItems = proposalRes.data?.fee_line_items;
+      const feeLineItems = Array.isArray(rawFeeLineItems) 
+        ? rawFeeLineItems.map((item: any) => ({
+            item_id: item?.item_id,
+            item_number: item?.item_number,
+            description: item?.description || '',
+            unit: item?.unit,
+            quantity: item?.quantity,
+            unit_price: item?.unit_price,
+            total: item?.total,
+            comment: item?.comment,
+            is_entrepreneur_defined: item?.is_entrepreneur_defined,
+            is_optional: item?.is_optional,
+          }))
+        : [];
+      
+      // Parse milestone_adjustments from JSON - safely cast
+      const rawMilestones = proposalRes.data?.milestone_adjustments;
+      const milestoneAdjustments = Array.isArray(rawMilestones)
+        ? rawMilestones.map((m: any) => ({
+            description: m?.description || '',
+            percentage: m?.percentage || 0,
+            is_entrepreneur_defined: m?.is_entrepreneur_defined,
+          }))
+        : [];
 
       return {
         ...session,
-        proposal: proposalRes.data,
-        project: projectRes.data,
-        advisor: advisorRes.data,
+        proposal: proposalRes.data ? {
+          id: proposalRes.data.id,
+          price: proposalRes.data.price,
+          supplier_name: proposalRes.data.supplier_name,
+          current_version: proposalRes.data.current_version,
+          advisor_id: proposalRes.data.advisor_id,
+          fee_line_items: feeLineItems,
+          milestone_adjustments: milestoneAdjustments,
+        } : undefined,
+        project: projectRes.data || undefined,
+        advisor: advisorRes.data || undefined,
+        initiator_profile: initiatorRes.data || undefined,
         line_item_negotiations: lineItemsRes.data || [],
         comments: commentsRes.data || [],
       } as NegotiationSessionWithDetails;
