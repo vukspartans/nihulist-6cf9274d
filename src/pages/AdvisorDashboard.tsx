@@ -400,7 +400,7 @@ const AdvisorDashboard = () => {
         });
         setProposalMap(proposalsByInvite);
 
-        // Fetch active negotiations for this advisor
+        // Fetch active negotiations for this advisor (include files and fee_line_items for recalculation)
         const { data: negotiationsData, error: negotiationsError } = await supabase
           .from('negotiation_sessions')
           .select(`
@@ -411,7 +411,8 @@ const AdvisorDashboard = () => {
             target_reduction_percent,
             global_comment,
             proposal_id,
-            proposals!inner(price, projects!inner(name, type, location))
+            files,
+            proposals!inner(price, fee_line_items, projects!inner(name, type, location))
           `)
           .eq('consultant_advisor_id', advisor.id)
           .order('created_at', { ascending: false });
@@ -419,22 +420,67 @@ const AdvisorDashboard = () => {
         if (negotiationsError) {
           console.error('[AdvisorDashboard] ❌ Negotiations error:', negotiationsError);
         } else {
+          // Helper to recalculate target total from line items and adjustments
+          const recalculateTargetTotal = (
+            feeLineItems: any[],
+            jsonAdjustments: any[],
+            storedTargetTotal: number | null
+          ): number => {
+            if (!feeLineItems || feeLineItems.length === 0) {
+              return storedTargetTotal || 0;
+            }
+            
+            let total = 0;
+            feeLineItems.forEach((item: any, idx: number) => {
+              const itemId = item.item_id || `idx-${item.item_number ?? idx}`;
+              const originalPrice = item.total || ((item.unit_price || 0) * (item.quantity || 1));
+              
+              // Find adjustment for this item
+              const adjustment = jsonAdjustments?.find((adj: any) => 
+                adj.line_item_id === itemId || adj.line_item_id === item.item_id
+              );
+              
+              if (adjustment) {
+                // Use adjustment value (target_total or adjustment_value)
+                total += adjustment.target_total ?? adjustment.adjustment_value ?? 0;
+              } else if (originalPrice > 0) {
+                // No adjustment = unchanged, add original price
+                total += originalPrice;
+              }
+            });
+            
+            return total;
+          };
+
           // Filter to show only pending negotiations (awaiting vendor response)
           const mappedNegotiations: NegotiationItem[] = (negotiationsData || [])
             .filter((n: any) => n.status === 'awaiting_response' || n.status === 'open')
-            .map((n: any) => ({
-              id: n.id,
-              status: n.status,
-              created_at: n.created_at,
-              target_total: n.target_total,
-              target_reduction_percent: n.target_reduction_percent,
-              global_comment: n.global_comment,
-              proposal_id: n.proposal_id,
-              original_price: n.proposals?.price || 0,
-              project_name: n.proposals?.projects?.name || 'פרויקט',
-              project_type: n.proposals?.projects?.type || null,
-              project_location: n.proposals?.projects?.location || null,
-            }));
+            .map((n: any) => {
+              const feeLineItems = n.proposals?.fee_line_items || [];
+              const filesData = n.files as any;
+              const jsonAdjustments = filesData?.json_line_item_adjustments || [];
+              
+              // Recalculate target total from adjustments
+              const calculatedTargetTotal = recalculateTargetTotal(
+                feeLineItems,
+                jsonAdjustments,
+                n.target_total
+              );
+
+              return {
+                id: n.id,
+                status: n.status,
+                created_at: n.created_at,
+                target_total: calculatedTargetTotal, // Use recalculated value
+                target_reduction_percent: n.target_reduction_percent,
+                global_comment: n.global_comment,
+                proposal_id: n.proposal_id,
+                original_price: n.proposals?.price || 0,
+                project_name: n.proposals?.projects?.name || 'פרויקט',
+                project_type: n.proposals?.projects?.type || null,
+                project_location: n.proposals?.projects?.location || null,
+              };
+            });
           setNegotiations(mappedNegotiations);
           console.debug('[AdvisorDashboard] ✅ Fetched pending negotiations:', mappedNegotiations.length);
         }
