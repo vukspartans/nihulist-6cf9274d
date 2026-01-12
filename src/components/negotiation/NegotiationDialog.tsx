@@ -644,7 +644,8 @@ export const NegotiationDialog = ({
                         milestones={milestones}
                         adjustments={milestoneAdjustments}
                         onAdjustmentChange={setMilestoneAdjustments}
-                        proposalTotal={calculateOriginalTotal()}
+                        originalTotal={calculateOriginalTotal()}
+                        targetTotal={calculateTargetTotal()}
                       />
                     </div>
                   ) : (

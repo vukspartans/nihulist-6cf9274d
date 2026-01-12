@@ -34,7 +34,8 @@ interface MilestoneNegotiationTableProps {
   milestones: MilestonePayment[];
   adjustments: MilestoneAdjustment[];
   onAdjustmentChange: (adjustments: MilestoneAdjustment[]) => void;
-  proposalTotal: number;
+  originalTotal: number;  // Original proposal total
+  targetTotal: number;    // Target total after item adjustments
   className?: string;
 }
 
@@ -42,7 +43,8 @@ export const MilestoneNegotiationTable = ({
   milestones,
   adjustments,
   onAdjustmentChange,
-  proposalTotal,
+  originalTotal,
+  targetTotal,
   className,
 }: MilestoneNegotiationTableProps) => {
   const formatCurrency = (amount: number) => {
@@ -174,9 +176,9 @@ export const MilestoneNegotiationTable = ({
               const milestoneId = milestone.id || milestone.name;
               const isSelected = selectedMilestones.has(milestoneId);
               const adjustment = adjustments.find(a => a.milestone_id === milestoneId);
-              const originalAmount = (milestone.percentage / 100) * proposalTotal;
+              const originalAmount = (milestone.percentage / 100) * originalTotal;
               const targetPercentage = adjustment?.target_percentage ?? milestone.percentage;
-              const targetAmount = (targetPercentage / 100) * proposalTotal;
+              const targetAmount = (targetPercentage / 100) * targetTotal;
 
               return (
                 <TableRow key={milestoneId}>
@@ -255,7 +257,7 @@ export const MilestoneNegotiationTable = ({
                 {totals.originalTotal}%
               </TableCell>
               <TableCell className="text-start font-bold">
-                {formatCurrency(proposalTotal)}
+                {formatCurrency(originalTotal)}
               </TableCell>
               <TableCell className={cn(
                 "text-center font-bold",
@@ -264,7 +266,7 @@ export const MilestoneNegotiationTable = ({
                 {adjustments.length > 0 ? `${totals.targetTotal}%` : "-"}
               </TableCell>
               <TableCell className="text-start font-bold text-amber-600">
-                {adjustments.length > 0 ? formatCurrency(proposalTotal) : "-"}
+                {adjustments.length > 0 ? formatCurrency(targetTotal) : "-"}
               </TableCell>
               <TableCell />
             </TableRow>
