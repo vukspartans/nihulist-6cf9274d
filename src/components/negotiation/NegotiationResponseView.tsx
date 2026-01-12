@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { NegotiationSessionWithDetails, UpdatedLineItem, FeeLineItem, JsonLineItemAdjustment } from "@/types/negotiation";
 import { 
   RefreshCw, Send, ArrowLeft, FileText, Download, Eye, Loader2, Check, XCircle, 
-  TrendingDown, AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2,
-  Building2, User, Clock, MessageSquare, ListChecks, FileCheck
+  AlertTriangle, Paperclip, Calendar, ArrowDown, CheckCircle2,
+  Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus
 } from "lucide-react";
+import { getFeeUnitLabel } from "@/constants/rfpUnits";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -526,31 +527,32 @@ export const NegotiationResponseView = ({
       )}
 
       {/* Tabbed Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
         <TabsList className="grid w-full grid-cols-5 h-auto">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">
-            <TrendingDown className="h-4 w-4 me-1.5 hidden sm:inline" />
+          {/* RTL order: סקירה first (rightmost) */}
+          <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
+            <LayoutList className="h-4 w-4 hidden sm:inline" />
             סקירה
           </TabsTrigger>
-          <TabsTrigger value="items" className="text-xs sm:text-sm py-2">
-            <ListChecks className="h-4 w-4 me-1.5 hidden sm:inline" />
+          <TabsTrigger value="items" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
+            <ListChecks className="h-4 w-4 hidden sm:inline" />
             פריטים
             {itemsWithChanges > 0 && (
-              <Badge variant="secondary" className="ms-1.5 h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                 {itemsWithChanges}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="milestones" className="text-xs sm:text-sm py-2">
-            <Calendar className="h-4 w-4 me-1.5 hidden sm:inline" />
+          <TabsTrigger value="milestones" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
+            <Calendar className="h-4 w-4 hidden sm:inline" />
             אבני דרך
           </TabsTrigger>
-          <TabsTrigger value="files" className="text-xs sm:text-sm py-2">
-            <Paperclip className="h-4 w-4 me-1.5 hidden sm:inline" />
+          <TabsTrigger value="files" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
+            <Paperclip className="h-4 w-4 hidden sm:inline" />
             קבצים
           </TabsTrigger>
-          <TabsTrigger value="response" className="text-xs sm:text-sm py-2">
-            <FileCheck className="h-4 w-4 me-1.5 hidden sm:inline" />
+          <TabsTrigger value="response" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
+            <FileCheck className="h-4 w-4 hidden sm:inline" />
             תגובה
           </TabsTrigger>
         </TabsList>
@@ -558,10 +560,10 @@ export const NegotiationResponseView = ({
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4 mt-4">
           {/* Price Comparison Card */}
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <Card className="bg-gradient-to-l from-amber-50 to-orange-50 border-amber-200">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-lg flex items-center gap-2 flex-row-reverse justify-end">
+                <LayoutList className="h-5 w-5 text-amber-600" />
                 סיכום בקשת העדכון
               </CardTitle>
             </CardHeader>
@@ -655,8 +657,8 @@ export const NegotiationResponseView = ({
         <TabsContent value="items" className="space-y-4 mt-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center justify-between flex-row-reverse">
+                <div className="flex items-center gap-2 flex-row-reverse">
                   <ListChecks className="h-5 w-5" />
                   פירוט פריטים ({feeLineItems.length})
                 </div>
@@ -667,17 +669,17 @@ export const NegotiationResponseView = ({
             </CardHeader>
             <CardContent>
               {feeLineItems.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" dir="rtl">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">תיאור</TableHead>
-                        <TableHead className="text-center w-20">יחידה</TableHead>
-                        <TableHead className="text-center w-20">כמות</TableHead>
-                        <TableHead className="text-center w-28">מקורי</TableHead>
-                        <TableHead className="text-center w-28">יעד</TableHead>
-                        <TableHead className="text-center w-20">שינוי</TableHead>
-                        <TableHead className="text-center w-32">הצעה חדשה</TableHead>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-right min-w-[200px] font-semibold">תיאור</TableHead>
+                        <TableHead className="text-center w-20 font-semibold">יחידה</TableHead>
+                        <TableHead className="text-center w-20 font-semibold">כמות</TableHead>
+                        <TableHead className="text-center w-28 font-semibold">מקורי</TableHead>
+                        <TableHead className="text-center w-28 font-semibold">יעד</TableHead>
+                        <TableHead className="text-center w-24 font-semibold">שינוי</TableHead>
+                        <TableHead className="text-center w-32 font-semibold">הצעה חדשה</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -713,7 +715,7 @@ export const NegotiationResponseView = ({
                               </div>
                             </TableCell>
                             <TableCell className="text-center text-sm text-muted-foreground">
-                              {item.unit || '-'}
+                              {getFeeUnitLabel(item.unit || '') || '-'}
                             </TableCell>
                             <TableCell className="text-center">
                               {adjustment?.quantity ?? item.quantity ?? 1}
@@ -734,12 +736,14 @@ export const NegotiationResponseView = ({
                               {hasChange ? (
                                 <Badge 
                                   variant="outline" 
-                                  className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700"}
+                                  className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700 bg-amber-50"}
                                 >
                                   -{changePercent}%
                                 </Badge>
                               ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
+                                <Badge variant="outline" className="border-muted text-muted-foreground bg-muted/30">
+                                  <Minus className="h-3 w-3" />
+                                </Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-center">
