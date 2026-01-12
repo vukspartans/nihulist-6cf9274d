@@ -765,15 +765,42 @@ const Auth = () => {
             </Alert>
           )}
           <CardHeader className="text-center space-y-3 sm:space-y-4 p-0 sm:p-6">
-            {/* Role Badge */}
+            {/* Role Switcher Toggle */}
             <div className="flex justify-center">
-              <Badge className={`text-xs sm:text-sm px-3 py-1 sm:px-4 sm:py-1.5 text-white font-medium ${
-                formData.role === 'entrepreneur'
-                  ? 'bg-gradient-to-r from-primary to-primary-glow'
-                  : 'bg-gradient-to-r from-tech-purple to-accent'
-              }`}>
-                {formData.role === 'entrepreneur' ? '🏢 יזם נדל"ן' : '💼 יועץ מקצועי'}
-              </Badge>
+              <div className="inline-flex rounded-full p-1 bg-muted/50 border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, role: 'entrepreneur' }));
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('type', 'entrepreneur');
+                    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+                  }}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    formData.role === 'entrepreneur'
+                      ? 'bg-gradient-to-r from-primary to-primary-glow text-white shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  🏢 יזם נדל"ן
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, role: 'advisor' }));
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('type', 'advisor');
+                    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+                  }}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    formData.role === 'advisor'
+                      ? 'bg-gradient-to-r from-tech-purple to-accent text-white shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  💼 יועץ
+                </button>
+              </div>
             </div>
             
             {/* Role Icon */}
