@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNegotiation } from "@/hooks/useNegotiation";
 import { useNegotiationComments } from "@/hooks/useNegotiationComments";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { getFeeUnitLabel } from "@/constants/rfpUnits";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NegotiationPriceSummary } from "./NegotiationPriceSummary";
+import { NegotiationItemsCard } from "./NegotiationItemsCard";
+import { NegotiationFilesList } from "./NegotiationFilesList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -353,7 +356,7 @@ export const NegotiationResponseView = ({
     return targetTotal;
   }, [updatedLineItems, jsonAdjustments, targetTotal]);
 
-  const handlePriceChange = (lineItemId: string, price: number) => {
+  const handlePriceChange = useCallback((lineItemId: string, price: number) => {
     setUpdatedLineItems((prev) => {
       const existing = prev.find(item => item.line_item_id === lineItemId);
       if (existing) {
@@ -362,11 +365,23 @@ export const NegotiationResponseView = ({
             ? { ...item, consultant_response_price: price }
             : item
         );
-      } else {
-        return [...prev, { line_item_id: lineItemId, consultant_response_price: price }];
       }
+      return [...prev, { line_item_id: lineItemId, consultant_response_price: price }];
     });
-  };
+  }, []);
+
+  const handleApprovalChange = useCallback((itemId: string, approved: boolean, targetPrice: number) => {
+    setApprovedItems((prev) => {
+      const newSet = new Set(prev);
+      if (approved) {
+        newSet.add(itemId);
+        handlePriceChange(itemId, targetPrice);
+      } else {
+        newSet.delete(itemId);
+      }
+      return newSet;
+    });
+  }, [handlePriceChange]);
 
   const handleSubmit = async () => {
     const result = await respondToNegotiation({
@@ -555,14 +570,41 @@ export const NegotiationResponseView = ({
 
       {/* Tabbed Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
-          {/* RTL order: סקירה first (rightmost) */}
-          <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
-            <LayoutList className="h-4 w-4 hidden sm:inline" />
+        {/* Mobile: Horizontal scrollable tabs */}
+        <ScrollArea className="w-full sm:hidden">
+          <TabsList className="flex w-max h-auto p-1 gap-1">
+            <TabsTrigger value="overview" className="text-xs py-2 px-3 flex-row-reverse gap-1 whitespace-nowrap">
+              סקירה
+            </TabsTrigger>
+            <TabsTrigger value="items" className="text-xs py-2 px-3 flex-row-reverse gap-1 whitespace-nowrap">
+              פריטים
+              {itemsWithChanges > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {itemsWithChanges}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="milestones" className="text-xs py-2 px-3 flex-row-reverse gap-1 whitespace-nowrap">
+              אבני דרך
+            </TabsTrigger>
+            <TabsTrigger value="files" className="text-xs py-2 px-3 flex-row-reverse gap-1 whitespace-nowrap">
+              קבצים
+            </TabsTrigger>
+            <TabsTrigger value="response" className="text-xs py-2 px-3 flex-row-reverse gap-1 whitespace-nowrap">
+              תגובה
+            </TabsTrigger>
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+        
+        {/* Desktop: Grid tabs */}
+        <TabsList className="hidden sm:grid w-full grid-cols-5 h-auto">
+          <TabsTrigger value="overview" className="text-sm py-2 flex-row-reverse gap-1.5">
+            <LayoutList className="h-4 w-4" />
             סקירה
           </TabsTrigger>
-          <TabsTrigger value="items" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
-            <ListChecks className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="items" className="text-sm py-2 flex-row-reverse gap-1.5">
+            <ListChecks className="h-4 w-4" />
             פריטים
             {itemsWithChanges > 0 && (
               <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -570,16 +612,16 @@ export const NegotiationResponseView = ({
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="milestones" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
-            <Calendar className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="milestones" className="text-sm py-2 flex-row-reverse gap-1.5">
+            <Calendar className="h-4 w-4" />
             אבני דרך
           </TabsTrigger>
-          <TabsTrigger value="files" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
-            <Paperclip className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="files" className="text-sm py-2 flex-row-reverse gap-1.5">
+            <Paperclip className="h-4 w-4" />
             קבצים
           </TabsTrigger>
-          <TabsTrigger value="response" className="text-xs sm:text-sm py-2 flex-row-reverse gap-1.5">
-            <FileCheck className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="response" className="text-sm py-2 flex-row-reverse gap-1.5">
+            <FileCheck className="h-4 w-4" />
             תגובה
           </TabsTrigger>
         </TabsList>
@@ -595,41 +637,42 @@ export const NegotiationResponseView = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-4 bg-white/60 rounded-lg">
+              {/* Price comparison - responsive grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
+                <div className="p-3 sm:p-4 bg-white/60 rounded-lg">
                   <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
-                  <p className="text-2xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{formatCurrency(originalTotal)}</p>
                 </div>
-                <div className="p-4 bg-amber-100/60 rounded-lg border border-amber-200">
+                <div className="p-3 sm:p-4 bg-amber-100/60 rounded-lg border border-amber-200">
                   <p className="text-xs text-amber-700 mb-1">מחיר יעד מבוקש</p>
-                  <p className="text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
                   <Badge variant="outline" className="mt-1 text-xs border-amber-400 text-amber-700">
                     <span dir="ltr">
                       {calculateReductionPercent() > 0 ? `-${calculateReductionPercent()}%` : 'ללא שינוי'}
                     </span>
                   </Badge>
                 </div>
-                <div className="p-4 bg-white/60 rounded-lg">
+                <div className="p-3 sm:p-4 bg-white/60 rounded-lg">
                   <p className="text-xs text-muted-foreground mb-1">הפרש מבוקש</p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-xl sm:text-2xl font-bold text-red-600">
                     {formatCurrency(originalTotal - targetTotal)}
                   </p>
                 </div>
               </div>
 
-              {/* Summary Stats */}
-              <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-                <div className="p-2 bg-white/50 rounded">
-                  <p className="text-lg font-bold text-foreground">{feeLineItems.length}</p>
-                  <p className="text-xs text-muted-foreground">פריטים בהצעה</p>
+              {/* Summary Stats - responsive grid */}
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3 text-center">
+                <div className="p-1.5 sm:p-2 bg-white/50 rounded">
+                  <p className="text-base sm:text-lg font-bold text-foreground">{feeLineItems.length}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">פריטים בהצעה</p>
                 </div>
-                <div className="p-2 bg-amber-50 rounded">
-                  <p className="text-lg font-bold text-amber-700">{itemsWithChanges}</p>
-                  <p className="text-xs text-amber-600">פריטים לעדכון</p>
+                <div className="p-1.5 sm:p-2 bg-amber-50 rounded">
+                  <p className="text-base sm:text-lg font-bold text-amber-700">{itemsWithChanges}</p>
+                  <p className="text-[10px] sm:text-xs text-amber-600">פריטים לעדכון</p>
                 </div>
-                <div className="p-2 bg-red-50 rounded">
-                  <p className="text-lg font-bold text-red-600">{removedItems}</p>
-                  <p className="text-xs text-red-500">פריטים להסרה</p>
+                <div className="p-1.5 sm:p-2 bg-red-50 rounded">
+                  <p className="text-base sm:text-lg font-bold text-red-600">{removedItems}</p>
+                  <p className="text-[10px] sm:text-xs text-red-500">פריטים להסרה</p>
                 </div>
               </div>
             </CardContent>
@@ -698,155 +741,210 @@ export const NegotiationResponseView = ({
             </CardHeader>
             <CardContent>
               {feeLineItems.length > 0 ? (
-                <div className="overflow-x-auto" dir="rtl">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="text-right min-w-[200px] font-semibold">תיאור</TableHead>
-                        <TableHead className="text-center w-20 font-semibold">יחידה</TableHead>
-                        <TableHead className="text-center w-20 font-semibold">כמות</TableHead>
-                        <TableHead className="text-center w-28 font-semibold">מקורי</TableHead>
-                        <TableHead className="text-center w-28 font-semibold">יעד</TableHead>
-                        <TableHead className="text-center w-24 font-semibold">שינוי</TableHead>
-                        <TableHead className="text-center w-32 font-semibold">הצעה חדשה</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {feeLineItems.map((item, index) => {
-                        const itemId = getItemId(item, index);
-                        const adjustment = getAdjustmentForItem(item, index);
-                        const originalPrice = getOriginalPrice(item, adjustment);
-                        const targetPrice = getTargetPrice(originalPrice, adjustment);
-                        const hasChange = adjustment !== undefined && originalPrice !== targetPrice;
-                        const isRemoved = targetPrice === 0;
-                        const changePercent = originalPrice > 0 
-                          ? Math.round(((originalPrice - targetPrice) / originalPrice) * 100) 
-                          : 0;
-                        
-                        const currentResponse = updatedLineItems.find(u => u.line_item_id === itemId);
-                        const isApproved = approvedItems.has(itemId);
+                <>
+                  {/* Mobile: Card view */}
+                  <div className="sm:hidden space-y-3" dir="rtl">
+                    {feeLineItems.map((item, index) => {
+                      const itemId = getItemId(item, index);
+                      const adjustment = getAdjustmentForItem(item, index);
+                      const originalPrice = getOriginalPrice(item, adjustment);
+                      const targetPrice = getTargetPrice(originalPrice, adjustment);
+                      const hasChange = adjustment !== undefined && originalPrice !== targetPrice;
+                      const isRemoved = targetPrice === 0;
+                      const changePercent = originalPrice > 0 
+                        ? Math.round(((originalPrice - targetPrice) / originalPrice) * 100) 
+                        : 0;
+                      
+                      const currentResponse = updatedLineItems.find(u => u.line_item_id === itemId);
+                      const isApproved = approvedItems.has(itemId);
 
-                        return (
-                          <TableRow 
-                            key={itemId}
-                            className={isRemoved ? "bg-red-50/50" : hasChange ? "bg-amber-50/30" : ""}
-                          >
-                            <TableCell className="text-right">
-                              <div>
-                                <p className={`font-medium ${isRemoved ? "line-through text-muted-foreground" : ""}`}>
-                                  {item.description}
-                                </p>
-                                {adjustment?.initiator_note && (
-                                  <p className="text-xs text-amber-700 mt-1 bg-amber-100 px-2 py-1 rounded">
-                                    💬 {adjustment.initiator_note}
+                      return (
+                        <NegotiationItemsCard
+                          key={itemId}
+                          item={item}
+                          index={index}
+                          itemId={itemId}
+                          adjustment={adjustment}
+                          originalPrice={originalPrice}
+                          targetPrice={targetPrice}
+                          hasChange={hasChange}
+                          isRemoved={isRemoved}
+                          changePercent={changePercent}
+                          currentResponse={currentResponse}
+                          isApproved={isApproved}
+                          canRespond={canRespond}
+                          formatCurrency={formatCurrency}
+                          onPriceChange={handlePriceChange}
+                          onApprovalChange={handleApprovalChange}
+                        />
+                      );
+                    })}
+                    
+                    {/* Mobile Summary Footer */}
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-3">
+                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">מקורי</p>
+                            <p className="font-bold">{formatCurrency(originalTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-amber-700">יעד</p>
+                            <p className="font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-green-700">הצעה</p>
+                            <p className="font-bold text-green-700">{formatCurrency(newTotal)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Desktop: Table view */}
+                  <div className="hidden sm:block overflow-x-auto" dir="rtl">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="text-right min-w-[200px] font-semibold">תיאור</TableHead>
+                          <TableHead className="text-center w-20 font-semibold">יחידה</TableHead>
+                          <TableHead className="text-center w-20 font-semibold">כמות</TableHead>
+                          <TableHead className="text-center w-28 font-semibold">מקורי</TableHead>
+                          <TableHead className="text-center w-28 font-semibold">יעד</TableHead>
+                          <TableHead className="text-center w-24 font-semibold">שינוי</TableHead>
+                          <TableHead className="text-center w-32 font-semibold">הצעה חדשה</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {feeLineItems.map((item, index) => {
+                          const itemId = getItemId(item, index);
+                          const adjustment = getAdjustmentForItem(item, index);
+                          const originalPrice = getOriginalPrice(item, adjustment);
+                          const targetPrice = getTargetPrice(originalPrice, adjustment);
+                          const hasChange = adjustment !== undefined && originalPrice !== targetPrice;
+                          const isRemoved = targetPrice === 0;
+                          const changePercent = originalPrice > 0 
+                            ? Math.round(((originalPrice - targetPrice) / originalPrice) * 100) 
+                            : 0;
+                          
+                          const currentResponse = updatedLineItems.find(u => u.line_item_id === itemId);
+                          const isApproved = approvedItems.has(itemId);
+
+                          return (
+                            <TableRow 
+                              key={itemId}
+                              className={isRemoved ? "bg-red-50/50" : hasChange ? "bg-amber-50/30" : ""}
+                            >
+                              <TableCell className="text-right">
+                                <div>
+                                  <p className={`font-medium ${isRemoved ? "line-through text-muted-foreground" : ""}`}>
+                                    {item.description}
                                   </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center text-sm text-muted-foreground">
-                              {getFeeUnitLabel(item.unit || '') || '-'}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {adjustment?.quantity ?? item.quantity ?? 1}
-                            </TableCell>
-                            <TableCell className="text-center font-medium">
-                              {formatCurrency(originalPrice)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {isRemoved ? (
-                                <Badge variant="destructive" className="text-xs">הוסר</Badge>
-                              ) : (
-                                <span className={hasChange ? "font-bold text-amber-700" : ""}>
-                                  {formatCurrency(targetPrice)}
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {hasChange ? (
-                                <Badge 
-                                  variant="outline" 
-                                  className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700 bg-amber-50"}
-                                >
-                                  <span dir="ltr">-{changePercent}%</span>
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-muted text-muted-foreground bg-muted/30">
-                                  <Minus className="h-3 w-3" />
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {isRemoved ? (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              ) : isApproved ? (
-                                <div className="flex flex-col items-center gap-1">
-                                  <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    אושר
-                                  </Badge>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-xs h-6"
-                                    onClick={() => {
-                                      const newSet = new Set(approvedItems);
-                                      newSet.delete(itemId);
-                                      setApprovedItems(newSet);
-                                    }}
-                                    disabled={!canRespond}
-                                  >
-                                    בטל
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5">
-                                  <Input
-                                    type="number"
-                                    value={currentResponse?.consultant_response_price ?? targetPrice}
-                                    onChange={(e) => handlePriceChange(itemId, parseFloat(e.target.value) || 0)}
-                                    className="w-24 h-8 text-center text-sm"
-                                    disabled={!canRespond}
-                                  />
-                                  {hasChange && (
-                                    <Checkbox
-                                      checked={false}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          const newSet = new Set(approvedItems);
-                                          newSet.add(itemId);
-                                          setApprovedItems(newSet);
-                                          handlePriceChange(itemId, targetPrice);
-                                        }
-                                      }}
-                                      disabled={!canRespond}
-                                      className="h-4 w-4"
-                                      title="אשר מחיר יעד"
-                                    />
+                                  {adjustment?.initiator_note && (
+                                    <p className="text-xs text-amber-700 mt-1 bg-amber-100 px-2 py-1 rounded">
+                                      💬 {adjustment.initiator_note}
+                                    </p>
                                   )}
                                 </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow className="bg-muted/50">
-                        <TableCell colSpan={3} className="text-right font-bold">סה״כ</TableCell>
-                        <TableCell className="text-center font-bold">{formatCurrency(originalTotal)}</TableCell>
-                        <TableCell className="text-center font-bold text-amber-700">{formatCurrency(targetTotal)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="border-red-300 text-red-600">
-                            -{calculateReductionPercent()}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center font-bold text-green-700">
-                          {formatCurrency(newTotal)}
-                        </TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  </Table>
-                </div>
+                              </TableCell>
+                              <TableCell className="text-center text-sm text-muted-foreground">
+                                {getFeeUnitLabel(item.unit || '') || '-'}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {adjustment?.quantity ?? item.quantity ?? 1}
+                              </TableCell>
+                              <TableCell className="text-center font-medium">
+                                {formatCurrency(originalPrice)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {isRemoved ? (
+                                  <Badge variant="destructive" className="text-xs">הוסר</Badge>
+                                ) : (
+                                  <span className={hasChange ? "font-bold text-amber-700" : ""}>
+                                    {formatCurrency(targetPrice)}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {hasChange ? (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={isRemoved ? "border-red-300 text-red-600 bg-red-50" : "border-amber-300 text-amber-700 bg-amber-50"}
+                                  >
+                                    <span dir="ltr">-{changePercent}%</span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-muted text-muted-foreground bg-muted/30">
+                                    <Minus className="h-3 w-3" />
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {isRemoved ? (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                ) : isApproved ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      אושר
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-xs h-6"
+                                      onClick={() => handleApprovalChange(itemId, false, targetPrice)}
+                                      disabled={!canRespond}
+                                    >
+                                      בטל
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <Input
+                                      type="number"
+                                      value={currentResponse?.consultant_response_price ?? targetPrice}
+                                      onChange={(e) => handlePriceChange(itemId, parseFloat(e.target.value) || 0)}
+                                      className="w-24 h-8 text-center text-sm"
+                                      disabled={!canRespond}
+                                    />
+                                    {hasChange && (
+                                      <Checkbox
+                                        checked={false}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            handleApprovalChange(itemId, true, targetPrice);
+                                          }
+                                        }}
+                                        disabled={!canRespond}
+                                        className="h-4 w-4"
+                                        title="אשר מחיר יעד"
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow className="bg-muted/50">
+                          <TableCell colSpan={3} className="text-right font-bold">סה״כ</TableCell>
+                          <TableCell className="text-center font-bold">{formatCurrency(originalTotal)}</TableCell>
+                          <TableCell className="text-center font-bold text-amber-700">{formatCurrency(targetTotal)}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="border-red-300 text-red-600">
+                              <span dir="ltr">-{calculateReductionPercent()}%</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-green-700">
+                            {formatCurrency(newTotal)}
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                  </div>
+                </>
               ) : (
                 <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-lg">
                   <p>הצעה זו אינה כוללת פירוט פריטים</p>
@@ -1062,7 +1160,7 @@ export const NegotiationResponseView = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
                 <div className="p-3 bg-white rounded-lg">
                   <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
                   <p className="text-lg font-bold">{formatCurrency(originalTotal)}</p>
@@ -1075,7 +1173,9 @@ export const NegotiationResponseView = ({
                   <p className="text-xs text-green-700 mb-1">ההצעה שלך</p>
                   <p className="text-lg font-bold text-green-700">{formatCurrency(newTotal)}</p>
                   <Badge variant="outline" className="mt-1 text-xs border-green-400 text-green-700">
-                    {calculateNewReductionPercent() > 0 ? `-${calculateNewReductionPercent()}%` : 'ללא הנחה'}
+                    <span dir="ltr">
+                      {calculateNewReductionPercent() > 0 ? `-${calculateNewReductionPercent()}%` : 'ללא הנחה'}
+                    </span>
                   </Badge>
                 </div>
               </div>
