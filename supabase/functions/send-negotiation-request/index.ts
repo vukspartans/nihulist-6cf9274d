@@ -415,6 +415,21 @@ serve(async (req) => {
 
         console.log("[Negotiation Request] Email sent to:", advisorEmail);
 
+        // Log successful email send
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_request_email_sent",
+          entity_type: "proposal",
+          entity_id: proposal_id,
+          project_id,
+          meta: {
+            session_id: session.id,
+            recipient: advisorEmail,
+            advisor_company: advisorCompany,
+          },
+        });
+
         // Send to team members with rfp_requests preference
         const { data: teamMembers } = await supabase
           .from("advisor_team_members")
@@ -441,7 +456,23 @@ serve(async (req) => {
       } catch (emailError) {
         // Log but don't fail the request - negotiation session is already created
         console.error("[Negotiation Request] Email failed (non-fatal):", emailError);
+        // Log email failure for debugging
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_request_email_failed",
+          entity_type: "proposal",
+          entity_id: proposal_id,
+          project_id,
+          meta: {
+            session_id: session.id,
+            recipient: advisorEmail,
+            error: String(emailError),
+          },
+        });
       }
+    } else {
+      console.warn("[Negotiation Request] No advisor email found, skipping notification");
     }
 
     // Log activity

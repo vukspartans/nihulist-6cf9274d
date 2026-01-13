@@ -181,33 +181,68 @@ serve(async (req) => {
       ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
       : session.target_total || (session.proposal as any).price;
 
-    // Send email to entrepreneur
+    // Send email to entrepreneur (non-blocking - don't fail request if email fails)
     if (entrepreneurProfile?.email) {
-      const resend = new Resend(RESEND_API_KEY);
+      try {
+        const resend = new Resend(RESEND_API_KEY);
 
-      const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
+        const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
-      const emailHtml = await renderAsync(
-        NegotiationResponseEmail({
-          entrepreneurName: entrepreneurProfile.name || "יזם",
-          advisorCompany: advisorData.company_name || "יועץ",
-          projectName: projectData.name,
-          previousPrice: (session.proposal as any).price,
-          newPrice: newTotal,
-          consultantMessage: consultant_message,
-          proposalUrl,
-          locale: "he",
-        })
-      );
+        const emailHtml = await renderAsync(
+          NegotiationResponseEmail({
+            entrepreneurName: entrepreneurProfile.name || "יזם",
+            advisorCompany: advisorData.company_name || "יועץ",
+            projectName: projectData.name,
+            previousPrice: (session.proposal as any).price,
+            newPrice: newTotal,
+            consultantMessage: consultant_message,
+            proposalUrl,
+            locale: "he",
+          })
+        );
 
-      await resend.emails.send({
-        from: "Billding <notifications@billding.ai>",
-        to: entrepreneurProfile.email,
-        subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
-        html: emailHtml,
-      });
+        await resend.emails.send({
+          from: "Billding <notifications@billding.ai>",
+          to: entrepreneurProfile.email,
+          subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
+          html: emailHtml,
+        });
 
-      console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);
+        console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);
+
+        // Log successful email send
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_response_email_sent",
+          entity_type: "proposal",
+          entity_id: (session.proposal as any).id,
+          project_id: projectData.id,
+          meta: {
+            session_id,
+            recipient: entrepreneurProfile.email,
+            new_price: newTotal,
+          },
+        });
+      } catch (emailError) {
+        console.error("[Negotiation Response] Email failed (non-fatal):", emailError);
+        // Log email failure for debugging
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_response_email_failed",
+          entity_type: "proposal",
+          entity_id: (session.proposal as any).id,
+          project_id: projectData.id,
+          meta: {
+            session_id,
+            recipient: entrepreneurProfile.email,
+            error: String(emailError),
+          },
+        });
+      }
+    } else {
+      console.warn("[Negotiation Response] No entrepreneur email found, skipping notification");
     }
 
     // Log activity
