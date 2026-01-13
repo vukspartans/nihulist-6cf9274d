@@ -407,7 +407,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       submitted: { label: "הוגש", variant: "default", icon: CheckCircle }, accepted: { label: "אושר", variant: "default", icon: CheckCircle },
       rejected: { label: "נדחה", variant: "destructive", icon: XCircle }, under_review: { label: "בבדיקה", variant: "secondary", icon: AlertCircle },
       draft: { label: "טיוטה", variant: "outline", icon: FileText }, withdrawn: { label: "בוטל", variant: "outline", icon: XCircle },
-      negotiation_requested: { label: "במו״מ", variant: "secondary", icon: MessageSquare }, resubmitted: { label: "הוגש מחדש", variant: "default", icon: RefreshCw },
+      negotiation_requested: { label: "משא ומתן", variant: "secondary", icon: MessageSquare }, resubmitted: { label: "הוגש מחדש", variant: "default", icon: RefreshCw },
     };
     const c = cfg[status] || cfg.draft; const Icon = c.icon;
     return <Badge variant={c.variant} className="gap-1"><Icon className="w-3 h-3" />{c.label}</Badge>;

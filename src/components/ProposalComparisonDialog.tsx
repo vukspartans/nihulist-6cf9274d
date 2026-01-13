@@ -926,7 +926,7 @@ export const ProposalComparisonDialog = ({
                                 {proposal.status === 'resubmitted' && 'עודכן'}
                                 {proposal.status === 'accepted' && 'אושר'}
                                 {proposal.status === 'rejected' && 'נדחה'}
-                                {proposal.status === 'negotiation_requested' && 'בהמתנה לעדכון'}
+                                {proposal.status === 'negotiation_requested' && 'משא ומתן'}
                               </Badge>
                             </div>
 

@@ -73,7 +73,7 @@ const getStatusBadge = (status: string) => {
     rejected: { variant: 'destructive', label: 'נדחה' },
     withdrawn: { variant: 'muted', label: 'בוטל' },
     resubmitted: { variant: 'secondary', label: '🔄 מעודכן' },
-    negotiation_requested: { variant: 'warning', label: '💬 משא״מ' },
+    negotiation_requested: { variant: 'warning', label: '💬 משא ומתן' },
   };
 
   const config = statusConfig[status] || { variant: 'secondary', label: status };

@@ -248,7 +248,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                                       className="bg-amber-100 text-amber-800 border-amber-300 gap-1"
                                     >
                                       <Clock className="h-3 w-3" />
-                                      במו״מ
+                                      משא ומתן
                                     </Badge>
                                   )}
                                   <Button
