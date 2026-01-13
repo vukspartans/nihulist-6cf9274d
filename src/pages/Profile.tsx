@@ -11,8 +11,10 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import NavigationLogo from '@/components/NavigationLogo';
+import { UserHeader } from '@/components/UserHeader';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { ExpertiseSelector } from '@/components/ExpertiseSelector';
@@ -721,26 +723,28 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6" dir="rtl">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-            <Link to={getDashboardRoute()} className="hover:text-foreground transition-colors">
-              דשבורד
-            </Link>
-            <ArrowRight className="h-4 w-4" />
-            <span>הפרופיל שלי</span>
+      <div className="min-h-screen bg-background" dir="rtl">
+        {/* Sticky Top Navigation Bar */}
+        <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <NavigationLogo size="sm" className="flex-shrink-0" />
+            <UserHeader />
           </div>
-          
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-48" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardContent>
-          </Card>
+        </div>
+        
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-8 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -749,19 +753,17 @@ const Profile = () => {
   const isAdvisor = profile?.role === 'advisor' || authProfile?.role === 'advisor';
 
   return (
-    <div className="min-h-screen bg-background p-6 animate-fade-in" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Dashboard Button */}
-        <div className="mb-6">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(getDashboardRoute())}
-            className="gap-2"
-          >
-            <ArrowRight className="h-4 w-4" />
-            חזרה לדשבורד
-          </Button>
+    <div className="min-h-screen bg-background" dir="rtl">
+      {/* Sticky Top Navigation Bar */}
+      <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
+        <div className="flex items-center justify-between gap-2">
+          <NavigationLogo size="sm" className="flex-shrink-0" />
+          <UserHeader />
         </div>
+      </div>
+      
+      <div className="p-6 animate-fade-in">
+        <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Page Header with Completion */}
         <Card className="border-2">
@@ -1796,6 +1798,7 @@ const Profile = () => {
         </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
