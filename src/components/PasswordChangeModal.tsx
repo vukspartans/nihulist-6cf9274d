@@ -256,6 +256,14 @@ export const PasswordChangeModal = ({
           </div>
 
           <div className={required ? "" : "flex gap-2"}>
+            <Button 
+              type="submit" 
+              className={required ? "w-full" : "flex-1"} 
+              disabled={loading} 
+              size="lg"
+            >
+              {loading ? "משנה סיסמה..." : (required ? "שנה סיסמה והמשך" : "שנה סיסמה")}
+            </Button>
             {!required && (
               <Button 
                 type="button" 
@@ -267,14 +275,6 @@ export const PasswordChangeModal = ({
                 ביטול
               </Button>
             )}
-            <Button 
-              type="submit" 
-              className={required ? "w-full" : "flex-1"} 
-              disabled={loading} 
-              size="lg"
-            >
-              {loading ? "משנה סיסמה..." : (required ? "שנה סיסמה והמשך" : "שנה סיסמה")}
-            </Button>
           </div>
         </form>
 
