@@ -10,3 +10,4 @@ export { AdvisorProfileModal } from "./AdvisorProfileModal";
 export { NegotiationPriceSummary } from "./NegotiationPriceSummary";
 export { NegotiationItemsCard } from "./NegotiationItemsCard";
 export { NegotiationFilesList } from "./NegotiationFilesList";
+export { EntrepreneurNegotiationView } from "./EntrepreneurNegotiationView";
