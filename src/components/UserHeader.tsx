@@ -136,6 +136,7 @@ export const UserHeader = () => {
       <PasswordChangeModal 
         open={showPasswordModal}
         userId={user.id}
+        required={false}
         onSuccess={() => {
           setShowPasswordModal(false);
         }}
