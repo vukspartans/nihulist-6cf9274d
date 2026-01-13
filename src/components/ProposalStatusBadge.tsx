@@ -55,7 +55,7 @@ export const ProposalStatusBadge = ({
         };
       case 'negotiation_requested':
         return {
-          text: 'במשא ומתן',
+          text: 'משא ומתן',
           icon: MessageCircle,
           className: 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600',
         };

@@ -298,7 +298,7 @@ export const ProjectDetail = () => {
       rejected: { variant: 'destructive', label: 'נדחתה' },
       withdrawn: { variant: 'muted', label: 'בוטל' },
       resubmitted: { variant: 'secondary', label: '🔄 הצעה מעודכנת' },
-      negotiation_requested: { variant: 'warning', label: '💬 במשא ומתן' },
+      negotiation_requested: { variant: 'warning', label: '💬 משא ומתן' },
     };
 
     const config = statusConfig[status] || { variant: 'secondary', label: status };
