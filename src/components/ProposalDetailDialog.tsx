@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
-import { NegotiationDialog } from '@/components/negotiation/NegotiationDialog';
+import { NegotiationDialog, EntrepreneurNegotiationView } from '@/components/negotiation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
@@ -94,6 +94,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     items: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}>;
   } | null>(null);
   const [hasRespondedNegotiation, setHasRespondedNegotiation] = useState(false);
+  const [respondedSessionId, setRespondedSessionId] = useState<string | null>(null);
+  const [showNegotiationDetails, setShowNegotiationDetails] = useState(false);
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
 
   const files = proposal.files || [];
@@ -146,6 +148,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         .maybeSingle();
       
       setHasRespondedNegotiation(!!data);
+      setRespondedSessionId(data?.id || null);
     };
     
     checkNegotiationStatus();
@@ -540,7 +543,16 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
                     <RefreshCw className="w-4 h-4 text-green-600" />
-                    <span className="text-green-800">היועץ שלח הצעה נגדית מעודכנת</span>
+                    <span className="text-green-800 flex-1">היועץ שלח הצעה נגדית מעודכנת</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => setShowNegotiationDetails(true)}
+                    >
+                      <Eye className="w-3.5 h-3.5 me-1" />
+                      צפה בפרטים
+                    </Button>
                   </div>
                 )}
                 <div className="flex items-center gap-2 justify-end">
@@ -1061,6 +1073,20 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           onStatusChange?.();
           onSuccess?.();
           onOpenChange(false);
+        }}
+      />
+      
+      <EntrepreneurNegotiationView
+        open={showNegotiationDetails}
+        onOpenChange={setShowNegotiationDetails}
+        sessionId={respondedSessionId}
+        onAccept={() => {
+          setShowNegotiationDetails(false);
+          handleAcceptCounterOffer();
+        }}
+        onContinueNegotiation={() => {
+          setShowNegotiationDetails(false);
+          setShowNegotiationDialog(true);
         }}
       />
     </TooltipProvider>
