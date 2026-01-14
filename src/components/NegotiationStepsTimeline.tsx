@@ -11,8 +11,9 @@ export interface NegotiationStep {
   version?: number;
   status?: string;
   price?: number;
+  currency?: string;
   viewData: {
-    type: 'proposal' | 'negotiation_session' | 'version';
+    type: 'proposal' | 'negotiation_session';
     id: string;
   };
 }
@@ -101,7 +102,7 @@ export const NegotiationStepsTimeline = ({
     <div className={`space-y-1.5 ${compact ? 'py-2' : 'py-3 px-2'}`}>
       {steps.map((step, index) => (
         <div
-          key={`${step.type}-${step.date}-${index}`}
+          key={`${step.viewData.type}-${step.viewData.id}-${index}`}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg ${getStepBgColor(step.type)} transition-colors`}
         >
           {/* Step Icon */}
@@ -122,7 +123,7 @@ export const NegotiationStepsTimeline = ({
           {/* Price (for offers only) */}
           {step.price !== undefined && step.type !== 'change_request' && (
             <span className="text-sm font-semibold text-foreground min-w-[80px] text-left">
-              ₪{step.price.toLocaleString()}
+              {step.currency === 'USD' ? '$' : '₪'}{step.price.toLocaleString()}
             </span>
           )}
 

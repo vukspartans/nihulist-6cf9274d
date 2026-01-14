@@ -128,9 +128,6 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
       handleViewProposal(step.viewData.id);
     } else if (step.viewData.type === 'negotiation_session') {
       setViewingSessionId(step.viewData.id);
-    } else if (step.viewData.type === 'version') {
-      // For now, show toast - future enhancement
-      toast.info('צפייה בגרסה ספציפית - בפיתוח');
     }
   };
 
@@ -153,9 +150,9 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     return `${symbol}${price.toLocaleString()}`;
   };
 
-  // Check if invite has negotiation history
+  // Check if invite has negotiation history to show timeline (show even single step if proposal exists)
   const hasNegotiationHistory = (invite: AdvisorTypeInvite): boolean => {
-    return (invite.negotiationSteps?.length ?? 0) > 1;
+    return (invite.negotiationSteps?.length ?? 0) >= 1;
   };
 
   // Render a single invite card
@@ -246,15 +243,15 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
             </div>
           )}
 
-          {/* Negotiation timeline - always visible when exists */}
+          {/* Negotiation timeline - always visible when proposal exists */}
           {showTimeline && invite.negotiationSteps && (
             <div className="border-t pt-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-muted-foreground font-medium">
-                  היסטוריית משא ומתן
+                  {invite.negotiationSteps.length > 1 ? 'היסטוריית משא ומתן' : 'היסטוריית הצעות'}
                 </span>
                 <Badge variant="outline" className="text-xs py-0">
-                  {invite.negotiationSteps.length} שלבים
+                  {invite.negotiationSteps.length} {invite.negotiationSteps.length === 1 ? 'שלב' : 'שלבים'}
                 </Badge>
               </div>
               <NegotiationStepsTimeline 
