@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, Ban } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, Ban, BarChart3 } from 'lucide-react';
 import { useRFPInvitesWithDetails, AdvisorTypeGroup, AdvisorTypeInvite } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalDetailDialog } from './ProposalDetailDialog';
+import { ProposalComparisonDialog } from './ProposalComparisonDialog';
 import { NegotiationStepsTimeline, NegotiationStep } from './NegotiationStepsTimeline';
 import { EntrepreneurNegotiationView } from './negotiation/EntrepreneurNegotiationView';
 import { format } from 'date-fns';
@@ -26,6 +27,24 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   
   // Negotiation view state
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
+  
+  // Comparison dialog state
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  
+  // Get latest proposal IDs for comparison (one per vendor, excluding rejected)
+  const latestProposalIds = useMemo(() => {
+    if (!advisorTypeGroups) return [];
+    
+    // Collect the most recent proposal from each advisor
+    return advisorTypeGroups
+      .flatMap(g => g.invites)
+      .filter(invite => 
+        invite.proposalId && 
+        invite.proposalStatus !== 'rejected'
+      )
+      .map(invite => invite.proposalId!)
+      .filter((id, index, arr) => arr.indexOf(id) === index); // unique
+  }, [advisorTypeGroups]);
 
   // Helper function to translate status to Hebrew
   const translateStatus = (status: string, proposalStatus?: string): string => {
@@ -334,11 +353,22 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           <Send className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-lg">בקשות שנשלחו לפי סוג יועץ</h3>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Badge variant="secondary">{advisorTypeGroups.length} תחומים</Badge>
           <Badge variant="outline">{totalInvites} בקשות</Badge>
           {totalProposals > 0 && (
             <Badge variant="success">{totalProposals} הצעות</Badge>
+          )}
+          {latestProposalIds.length >= 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setComparisonDialogOpen(true)}
+              className="gap-1.5 mr-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              השווה הצעות ({latestProposalIds.length})
+            </Button>
           )}
         </div>
       </div>
@@ -399,6 +429,15 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         open={!!viewingSessionId}
         onOpenChange={(open) => !open && setViewingSessionId(null)}
         sessionId={viewingSessionId}
+      />
+
+      {/* Proposal Comparison Dialog */}
+      <ProposalComparisonDialog
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+        proposalIds={latestProposalIds}
+        advisorType="כללי"
+        projectId={projectId}
       />
     </div>
   );

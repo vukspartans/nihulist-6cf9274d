@@ -138,7 +138,7 @@ export const NegotiationStepsTimeline = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2.5 gap-1.5 text-primary hover:text-primary"
+            className="h-7 px-2.5 gap-1.5 text-primary hover:bg-primary hover:text-white"
             onClick={() => onViewStep(step)}
           >
             <Eye className="h-3.5 w-3.5" />
