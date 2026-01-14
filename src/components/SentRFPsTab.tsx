@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -28,23 +28,18 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   // Negotiation view state
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   
-  // Comparison dialog state
-  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  // Comparison dialog state - tracks which advisor type is being compared
+  const [comparisonAdvisorType, setComparisonAdvisorType] = useState<string | null>(null);
   
-  // Get latest proposal IDs for comparison (one per vendor, excluding rejected)
-  const latestProposalIds = useMemo(() => {
-    if (!advisorTypeGroups) return [];
-    
-    // Collect the most recent proposal from each advisor
-    return advisorTypeGroups
-      .flatMap(g => g.invites)
+  // Helper to get proposal IDs for a specific advisor type group
+  const getGroupProposalIds = (group: AdvisorTypeGroup): string[] => {
+    return group.invites
       .filter(invite => 
         invite.proposalId && 
         invite.proposalStatus !== 'rejected'
       )
-      .map(invite => invite.proposalId!)
-      .filter((id, index, arr) => arr.indexOf(id) === index); // unique
-  }, [advisorTypeGroups]);
+      .map(invite => invite.proposalId!);
+  };
 
   // Helper function to translate status to Hebrew
   const translateStatus = (status: string, proposalStatus?: string): string => {
@@ -359,17 +354,6 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           {totalProposals > 0 && (
             <Badge variant="success">{totalProposals} הצעות</Badge>
           )}
-          {latestProposalIds.length >= 2 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setComparisonDialogOpen(true)}
-              className="gap-1.5 mr-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              השווה הצעות ({latestProposalIds.length})
-            </Button>
-          )}
         </div>
       </div>
 
@@ -397,6 +381,21 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
+              {/* Comparison button for this group - show when 2+ proposals */}
+              {group.proposalsCount >= 2 && (
+                <div className="mb-3 flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setComparisonAdvisorType(group.advisorType)}
+                    className="gap-1.5"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    השווה הצעות ({group.proposalsCount})
+                  </Button>
+                </div>
+              )}
+              
               {group.invites.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
                   לא נשלחו הזמנות ליועצים עבור תחום זה.
@@ -431,14 +430,18 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         sessionId={viewingSessionId}
       />
 
-      {/* Proposal Comparison Dialog */}
-      <ProposalComparisonDialog
-        open={comparisonDialogOpen}
-        onOpenChange={setComparisonDialogOpen}
-        proposalIds={latestProposalIds}
-        advisorType="כללי"
-        projectId={projectId}
-      />
+      {/* Proposal Comparison Dialog - per advisor type */}
+      {comparisonAdvisorType && advisorTypeGroups && (
+        <ProposalComparisonDialog
+          open={!!comparisonAdvisorType}
+          onOpenChange={(open) => !open && setComparisonAdvisorType(null)}
+          proposalIds={getGroupProposalIds(
+            advisorTypeGroups.find(g => g.advisorType === comparisonAdvisorType)!
+          )}
+          advisorType={comparisonAdvisorType}
+          projectId={projectId}
+        />
+      )}
     </div>
   );
 };
