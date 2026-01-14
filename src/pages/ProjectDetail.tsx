@@ -212,10 +212,10 @@ export const ProjectDetail = () => {
         .from('rfps')
         .select('id')
         .eq('project_id', id)
-        .maybeSingle();
+        .limit(1);
 
       if (error) throw error;
-      setRfpSent(!!data);
+      setRfpSent(data && data.length > 0);
     } catch (error) {
       console.error('Error checking RFP status:', error);
     }

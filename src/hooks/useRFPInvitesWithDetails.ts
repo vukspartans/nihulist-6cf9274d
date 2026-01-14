@@ -132,7 +132,8 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
         proposalId: string,
         proposalSubmittedAt: string,
         proposalStatus: string,
-        originalPrice: number
+        originalPrice: number,
+        proposalCurrency?: string
       ): NegotiationStep[] => {
         const steps: NegotiationStep[] = [];
         const propNegotiations = negotiationsByProposalId.get(proposalId) || [];
@@ -145,6 +146,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           type: 'original_offer',
           version: 1,
           price: originalPrice,
+          currency: proposalCurrency,
           status: propNegotiations.length === 0 ? proposalStatus : undefined,
           viewData: { type: 'proposal', id: proposalId },
         });
@@ -188,8 +190,9 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
               type: 'updated_offer',
               version: ver.version_number,
               price: ver.price,
+              currency: proposalCurrency,
               status: isLast ? proposalStatus : undefined,
-              viewData: { type: 'version', id: ver.id },
+              viewData: { type: 'proposal', id: proposalId },
             });
             versionIndex++;
           }
@@ -241,7 +244,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           // Build negotiation steps if proposal exists
           let negotiationSteps: NegotiationStep[] | undefined;
           if (proposalId && proposalSubmittedAt && originalPrice !== undefined) {
-            negotiationSteps = buildNegotiationSteps(proposalId, proposalSubmittedAt, proposalStatus || 'submitted', originalPrice);
+            negotiationSteps = buildNegotiationSteps(proposalId, proposalSubmittedAt, proposalStatus || 'submitted', originalPrice, currency);
           }
 
           // Initialize group if doesn't exist
