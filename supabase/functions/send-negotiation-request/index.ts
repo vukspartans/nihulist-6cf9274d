@@ -490,6 +490,33 @@ serve(async (req) => {
       },
     });
 
+    // Add in-app notification for advisor
+    try {
+      await supabase.from("notification_queue").insert({
+        notification_type: "negotiation_request",
+        recipient_id: advisor.user_id,
+        recipient_email: advisorProfile?.email || "",
+        subject: "בקשה לעדכון הצעת מחיר",
+        body_html: `<p>היזם ${entrepreneurProfile?.name || "יזם"} שלח בקשה לעדכון הצעת המחיר בפרויקט ${project.name}</p>`,
+        entity_type: "proposal",
+        entity_id: proposal_id,
+        template_data: {
+          session_id: session.id,
+          entrepreneur_name: entrepreneurProfile?.name,
+          project_name: project.name,
+          target_total,
+          target_reduction_percent,
+          project_id,
+        },
+        priority: 2,
+        status: "pending",
+      });
+      console.log("[Negotiation Request] In-app notification created for advisor:", advisor.user_id);
+    } catch (notifError) {
+      console.error("[Negotiation Request] Failed to create in-app notification:", notifError);
+      // Non-fatal, continue
+    }
+
     return new Response(
       JSON.stringify({
         session_id: session.id,
