@@ -10,6 +10,7 @@ export interface NegotiationStep {
   type: 'original_offer' | 'change_request' | 'updated_offer';
   version?: number;
   status?: string;
+  price?: number;
   viewData: {
     type: 'proposal' | 'negotiation_session' | 'version';
     id: string;
@@ -117,6 +118,13 @@ export const NegotiationStepsTimeline = ({
           <span className="flex-1 text-sm font-medium">
             {step.label}
           </span>
+
+          {/* Price (for offers only) */}
+          {step.price !== undefined && step.type !== 'change_request' && (
+            <span className="text-sm font-semibold text-foreground min-w-[80px] text-left">
+              ₪{step.price.toLocaleString()}
+            </span>
+          )}
 
           {/* Status Badge */}
           {step.status && (
