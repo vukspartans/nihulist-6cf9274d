@@ -4,9 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, RefreshCw } from 'lucide-react';
-import { useRFPInvitesWithDetails, AdvisorTypeGroup } from '@/hooks/useRFPInvitesWithDetails';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, RefreshCw, ChevronDown, History } from 'lucide-react';
+import { useRFPInvitesWithDetails, AdvisorTypeGroup, AdvisorTypeInvite } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalDetailDialog } from './ProposalDetailDialog';
+import { NegotiationStepsTimeline, NegotiationStep } from './NegotiationStepsTimeline';
+import { EntrepreneurNegotiationView } from './negotiation/EntrepreneurNegotiationView';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -22,6 +25,10 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [loadingProposalId, setLoadingProposalId] = useState<string | null>(null);
+  const [expandedInvites, setExpandedInvites] = useState<Set<string>>(new Set());
+  
+  // Negotiation view state
+  const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
 
   // Helper function to translate status to Hebrew
   const translateStatus = (status: string): string => {
@@ -101,6 +108,33 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     }
   };
 
+  // Handle viewing a negotiation step
+  const handleViewStep = (step: NegotiationStep) => {
+    if (step.viewData.type === 'proposal') {
+      handleViewProposal(step.viewData.id);
+    } else if (step.viewData.type === 'negotiation_session') {
+      setViewingSessionId(step.viewData.id);
+    } else if (step.viewData.type === 'version') {
+      // For versions, we'll open the proposal with version context
+      // For now, find the proposal and open it
+      // The version ID can be used to highlight specific version
+      toast.info('צפייה בגרסה ספציפית - בפיתוח');
+    }
+  };
+
+  // Toggle expanded state for an invite
+  const toggleInviteExpanded = (inviteId: string) => {
+    setExpandedInvites(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(inviteId)) {
+        newSet.delete(inviteId);
+      } else {
+        newSet.add(inviteId);
+      }
+      return newSet;
+    });
+  };
+
   // Safe date formatting helper
   const formatDate = (dateString: string | undefined): string => {
     if (!dateString) return '-';
@@ -111,6 +145,11 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     } catch {
       return '-';
     }
+  };
+
+  // Check if invite has negotiation history
+  const hasNegotiationHistory = (invite: AdvisorTypeInvite): boolean => {
+    return (invite.negotiationSteps?.length ?? 0) > 1;
   };
 
   if (isLoading) {
@@ -193,30 +232,31 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-right">שם יועץ</TableHead>
-                          <TableHead className="text-right">תאריך שליחה</TableHead>
-                          <TableHead className="text-right">סטטוס</TableHead>
-                          <TableHead className="text-right">תאריך יעד</TableHead>
-                          <TableHead className="text-right">פעולות</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {group.invites.map((invite) => (
-                          <TableRow key={invite.inviteId}>
-                            <TableCell className="font-medium">{invite.advisorName}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
+                    <div className="space-y-2">
+                      {group.invites.map((invite) => (
+                        <Collapsible
+                          key={invite.inviteId}
+                          open={expandedInvites.has(invite.inviteId)}
+                          onOpenChange={() => hasNegotiationHistory(invite) && toggleInviteExpanded(invite.inviteId)}
+                        >
+                          <div className="border rounded-lg overflow-hidden">
+                            {/* Main row */}
+                            <div className="flex items-center gap-4 p-3 bg-card hover:bg-muted/30 transition-colors">
+                              {/* Advisor name */}
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium truncate block">{invite.advisorName}</span>
+                              </div>
+
+                              {/* Sent date */}
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-[100px]">
+                                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
                                 {formatDate(invite.rfpSentAt)}
                               </div>
-                            </TableCell>
-                            <TableCell>
+
+                              {/* Status */}
                               <Badge 
                                 variant={getStatusVariant(invite.status)}
-                                className={`gap-1 ${
+                                className={`gap-1 min-w-[90px] justify-center ${
                                   invite.status === 'submitted' ? 'bg-green-100 text-green-800 border-green-300' :
                                   invite.status === 'declined' || invite.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
                                   invite.status === 'opened' || invite.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-300' :
@@ -226,62 +266,98 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                                 {getStatusIcon(invite.status)}
                                 {translateStatus(invite.status)}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {formatDate(invite.deadlineAt)}
-                            </TableCell>
-                            <TableCell>
-                              {invite.proposalId ? (
-                                <div className="flex items-center gap-2">
-                                  {invite.proposalStatus === 'resubmitted' && (
-                                    <Badge 
-                                      variant="default" 
-                                      className="bg-green-100 text-green-800 border-green-300 gap-1"
-                                    >
-                                      <RefreshCw className="h-3 w-3" />
-                                      הצעה מעודכנת
-                                    </Badge>
-                                  )}
-                                  {invite.proposalStatus === 'negotiation_requested' && (
-                                    <Badge 
-                                      variant="secondary" 
-                                      className="bg-amber-100 text-amber-800 border-amber-300 gap-1"
-                                    >
-                                      <Clock className="h-3 w-3" />
-                                      משא ומתן
-                                    </Badge>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewProposal(invite.proposalId!)}
-                                    className="gap-2"
-                                    disabled={loadingProposalId === invite.proposalId}
-                                  >
-                                    {loadingProposalId === invite.proposalId ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Eye className="h-4 w-4" />
+
+                              {/* Deadline */}
+                              <div className="text-sm text-muted-foreground min-w-[85px]">
+                                {formatDate(invite.deadlineAt)}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-2 min-w-[180px] justify-end">
+                                {invite.proposalId && (
+                                  <>
+                                    {invite.proposalStatus === 'resubmitted' && (
+                                      <Badge 
+                                        variant="default" 
+                                        className="bg-green-100 text-green-800 border-green-300 gap-1"
+                                      >
+                                        <RefreshCw className="h-3 w-3" />
+                                        מעודכנת
+                                      </Badge>
                                     )}
-                                    צפה בהצעה
-                                  </Button>
+                                    {invite.proposalStatus === 'negotiation_requested' && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="bg-amber-100 text-amber-800 border-amber-300 gap-1"
+                                      >
+                                        <Clock className="h-3 w-3" />
+                                        משא ומתן
+                                      </Badge>
+                                    )}
+                                    
+                                    {/* Expand button for negotiation history */}
+                                    {hasNegotiationHistory(invite) && (
+                                      <CollapsibleTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-2 gap-1"
+                                        >
+                                          <History className="h-4 w-4" />
+                                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expandedInvites.has(invite.inviteId) ? 'rotate-180' : ''}`} />
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                    )}
+
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleViewProposal(invite.proposalId!)}
+                                      className="gap-1.5"
+                                      disabled={loadingProposalId === invite.proposalId}
+                                    >
+                                      {loadingProposalId === invite.proposalId ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Eye className="h-4 w-4" />
+                                      )}
+                                      צפה בהצעה
+                                    </Button>
+                                  </>
+                                )}
+                                
+                                {!invite.proposalId && invite.status === 'submitted' && (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    הצעה חסרה
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Decline reason */}
+                            {invite.status === 'declined' && invite.declineReason && (
+                              <div className="px-3 pb-2 text-xs text-muted-foreground border-t bg-muted/20">
+                                סיבה: {invite.declineReason}
+                              </div>
+                            )}
+
+                            {/* Negotiation timeline (collapsible) */}
+                            <CollapsibleContent>
+                              {invite.negotiationSteps && invite.negotiationSteps.length > 0 && (
+                                <div className="border-t bg-muted/10">
+                                  <NegotiationStepsTimeline
+                                    steps={invite.negotiationSteps}
+                                    onViewStep={handleViewStep}
+                                    compact
+                                  />
                                 </div>
-                              ) : invite.status === 'submitted' ? (
-                                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                  הצעה חסרה
-                                </Badge>
-                              ) : null}
-                              {invite.status === 'declined' && invite.declineReason && (
-                                <span className="text-xs text-muted-foreground block mt-1">
-                                  סיבה: {invite.declineReason}
-                                </span>
                               )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      ))}
+                    </div>
                   )}
                 </AccordionContent>
               </AccordionItem>
@@ -290,6 +366,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         </CardContent>
       </Card>
 
+      {/* Proposal Detail Dialog */}
       {selectedProposal && (
         <ProposalDetailDialog
           open={detailDialogOpen}
@@ -301,6 +378,13 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           projectId={projectId}
         />
       )}
+
+      {/* Negotiation Session View Dialog */}
+      <EntrepreneurNegotiationView
+        open={!!viewingSessionId}
+        onOpenChange={(open) => !open && setViewingSessionId(null)}
+        sessionId={viewingSessionId}
+      />
     </div>
   );
 };
