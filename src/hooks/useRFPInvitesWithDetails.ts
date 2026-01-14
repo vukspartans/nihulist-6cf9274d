@@ -9,15 +9,20 @@ export interface AdvisorTypeInvite {
   rfpSentAt: string;
   advisorId: string;
   advisorName: string;
+  advisorLogo?: string;
   status: 'pending' | 'sent' | 'opened' | 'in_progress' | 'submitted' | 'declined' | 'expired';
   proposalId?: string;
   proposalStatus?: string;
   proposalSubmittedAt?: string;
   declineReason?: string;
+  declineNote?: string;
   email: string;
   deadlineAt?: string;
   createdAt: string;
   negotiationSteps?: NegotiationStep[];
+  currentPrice?: number;
+  originalPrice?: number;
+  currency?: string;
 }
 
 export interface AdvisorTypeGroup {
@@ -46,13 +51,15 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             advisor_type,
             status,
             decline_reason,
+            decline_note,
             email,
             deadline_at,
             created_at,
             advisors!rfp_invites_advisor_id_fkey (
               id,
               company_name,
-              expertise
+              expertise,
+              logo_url
             )
           )
         `)
@@ -71,7 +78,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
       // Fetch proposals with rfp_invite_id for accurate linking
       const { data: proposals } = await supabase
         .from('proposals')
-        .select('id, advisor_id, rfp_invite_id, submitted_at, status')
+        .select('id, advisor_id, rfp_invite_id, submitted_at, status, price, currency')
         .eq('project_id', projectId)
         .not('status', 'in', '("withdrawn","rejected")');
 
@@ -93,14 +100,14 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
         .order('version_number', { ascending: true });
 
       // Create maps for quick lookup
-      const proposalByInviteId = new Map<string, { id: string; submitted_at: string; status: string }>();
-      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string; status: string }> = [];
+      const proposalByInviteId = new Map<string, { id: string; submitted_at: string; status: string; price: number; currency: string }>();
+      const legacyProposals: Array<{ id: string; advisor_id: string; submitted_at: string; status: string; price: number; currency: string }> = [];
       
       (proposals || []).forEach((p: any) => {
         if (p.rfp_invite_id) {
-          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at, status: p.status });
+          proposalByInviteId.set(p.rfp_invite_id, { id: p.id, submitted_at: p.submitted_at, status: p.status, price: p.price, currency: p.currency || 'ILS' });
         } else {
-          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at, status: p.status });
+          legacyProposals.push({ id: p.id, advisor_id: p.advisor_id, submitted_at: p.submitted_at, status: p.status, price: p.price, currency: p.currency || 'ILS' });
         }
       });
 
@@ -124,7 +131,8 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
       const buildNegotiationSteps = (
         proposalId: string,
         proposalSubmittedAt: string,
-        proposalStatus: string
+        proposalStatus: string,
+        originalPrice: number
       ): NegotiationStep[] => {
         const steps: NegotiationStep[] = [];
         const propNegotiations = negotiationsByProposalId.get(proposalId) || [];
@@ -136,6 +144,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           label: 'הצעה מקורית',
           type: 'original_offer',
           version: 1,
+          price: originalPrice,
           status: propNegotiations.length === 0 ? proposalStatus : undefined,
           viewData: { type: 'proposal', id: proposalId },
         });
@@ -178,6 +187,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
               label: `הצעה V${ver.version_number}`,
               type: 'updated_offer',
               version: ver.version_number,
+              price: ver.price,
               status: isLast ? proposalStatus : undefined,
               viewData: { type: 'version', id: ver.id },
             });
@@ -203,6 +213,8 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           let proposalId: string | undefined = matchedProposal?.id;
           let proposalStatus: string | undefined = matchedProposal?.status;
           let proposalSubmittedAt: string | undefined = matchedProposal?.submitted_at;
+          let originalPrice: number | undefined = matchedProposal?.price;
+          let currency: string | undefined = matchedProposal?.currency;
           
           // Fallback for legacy proposals
           if (!proposalId) {
@@ -214,13 +226,22 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
               proposalId = legacyMatch.id;
               proposalStatus = legacyMatch.status;
               proposalSubmittedAt = legacyMatch.submitted_at;
+              originalPrice = legacyMatch.price;
+              currency = legacyMatch.currency;
             }
           }
 
+          // Calculate current price from latest version if available
+          const propVersions = proposalId ? (versionsByProposalId.get(proposalId) || []) : [];
+          const latestVersion = propVersions.length > 0 
+            ? propVersions.reduce((max, v) => v.version_number > max.version_number ? v : max, propVersions[0])
+            : null;
+          const currentPrice = latestVersion?.price ?? originalPrice;
+
           // Build negotiation steps if proposal exists
           let negotiationSteps: NegotiationStep[] | undefined;
-          if (proposalId && proposalSubmittedAt) {
-            negotiationSteps = buildNegotiationSteps(proposalId, proposalSubmittedAt, proposalStatus || 'submitted');
+          if (proposalId && proposalSubmittedAt && originalPrice !== undefined) {
+            negotiationSteps = buildNegotiationSteps(proposalId, proposalSubmittedAt, proposalStatus || 'submitted', originalPrice);
           }
 
           // Initialize group if doesn't exist
@@ -241,15 +262,20 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             rfpSentAt: rfp.sent_at,
             advisorId: invite.advisor_id,
             advisorName: advisor?.company_name || 'לא ידוע',
+            advisorLogo: advisor?.logo_url,
             status: invite.status,
             proposalId,
             proposalStatus,
             proposalSubmittedAt,
             declineReason: invite.decline_reason,
+            declineNote: invite.decline_note,
             email: invite.email,
             deadlineAt: invite.deadline_at,
             createdAt: invite.created_at,
             negotiationSteps,
+            currentPrice,
+            originalPrice,
+            currency,
           });
 
           group.totalInvites++;
