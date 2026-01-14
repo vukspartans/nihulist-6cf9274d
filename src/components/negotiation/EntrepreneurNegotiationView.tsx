@@ -224,26 +224,37 @@ export const EntrepreneurNegotiationView = ({
 
   if (!sessionId) return null;
 
+  // Determine if this is a pending request (entrepreneur's view) or advisor's response
+  const isAwaitingResponse = session?.status === 'awaiting_response' || session?.status === 'open';
+  const dialogTitle = isAwaitingResponse ? 'בקשה לשינויים' : 'תגובת היועץ למשא ומתן';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[85vh] overflow-hidden p-0 flex flex-col" dir="rtl">
         <DialogHeader className="p-4 pb-3 flex-shrink-0 border-b">
           <DialogTitle className="text-lg font-bold text-right flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
-            תגובת היועץ למשא ומתן
+            {dialogTitle}
+            {isAwaitingResponse && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 mr-2">
+                ממתין לתגובה
+              </Badge>
+            )}
           </DialogTitle>
           {session && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground pt-1">
               <span className="flex items-center gap-1">
                 <Building2 className="w-4 h-4" />
-                {session.advisor?.company_name || "יועץ"}
+                {isAwaitingResponse ? `נשלחה ל${session.advisor?.company_name || "יועץ"}` : (session.advisor?.company_name || "יועץ")}
               </span>
-              {session.responded_at && (
-                <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {formatDate(session.responded_at)}
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                {isAwaitingResponse 
+                  ? formatDate(session.created_at)
+                  : session.responded_at 
+                    ? formatDate(session.responded_at) 
+                    : formatDate(session.created_at)}
+              </span>
             </div>
           )}
         </DialogHeader>
@@ -280,21 +291,36 @@ export const EntrepreneurNegotiationView = ({
                   {/* Price Summary Card */}
                   <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
-                          <p className="font-bold text-lg">{formatCurrency(totals.originalTotal)}</p>
+                      {isAwaitingResponse ? (
+                        // Show entrepreneur's request summary
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                            <p className="font-bold text-lg">{formatCurrency(totals.originalTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">מחיר שביקשת</p>
+                            <p className="font-bold text-lg text-primary">{formatCurrency(totals.targetTotal)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">מחיר שביקשת</p>
-                          <p className="font-bold text-lg text-primary">{formatCurrency(totals.targetTotal)}</p>
+                      ) : (
+                        // Show full comparison with advisor response
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">מחיר מקורי</p>
+                            <p className="font-bold text-lg">{formatCurrency(totals.originalTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">מחיר שביקשת</p>
+                            <p className="font-bold text-lg text-primary">{formatCurrency(totals.targetTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">תגובת היועץ</p>
+                            <p className="font-bold text-lg text-green-600">{formatCurrency(totals.advisorTotal)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">תגובת היועץ</p>
-                          <p className="font-bold text-lg text-green-600">{formatCurrency(totals.advisorTotal)}</p>
-                        </div>
-                      </div>
-                      {totals.advisorTotal !== totals.targetTotal && (
+                      )}
+                      {!isAwaitingResponse && totals.advisorTotal !== totals.targetTotal && (
                         <div className="mt-3 pt-3 border-t text-center">
                           <Badge variant={totals.advisorTotal <= totals.targetTotal ? "default" : "secondary"}>
                             {totals.advisorTotal <= totals.targetTotal 
@@ -303,24 +329,49 @@ export const EntrepreneurNegotiationView = ({
                           </Badge>
                         </div>
                       )}
+                      {isAwaitingResponse && session?.target_reduction_percent && (
+                        <div className="mt-3 pt-3 border-t text-center">
+                          <Badge variant="outline" className="bg-primary/10">
+                            הנחה מבוקשת: {session.target_reduction_percent}%
+                          </Badge>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
-                  {/* Consultant Message */}
-                  {session.consultant_response_message && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4 text-primary" />
-                          הודעת היועץ
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm whitespace-pre-wrap text-right">
-                          {session.consultant_response_message}
-                        </p>
-                      </CardContent>
-                    </Card>
+                  {/* Message Card - Show initiator message for pending, consultant response for responded */}
+                  {isAwaitingResponse ? (
+                    session.initiator_message && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-primary" />
+                            ההודעה שלך ליועץ
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm whitespace-pre-wrap text-right">
+                            {session.initiator_message}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )
+                  ) : (
+                    session.consultant_response_message && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-primary" />
+                            הודעת היועץ
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm whitespace-pre-wrap text-right">
+                            {session.consultant_response_message}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )
                   )}
 
                   {/* Quick Stats */}
@@ -352,8 +403,12 @@ export const EntrepreneurNegotiationView = ({
                             <TableHead className="text-right">פריט</TableHead>
                             <TableHead className="text-center">מקורי</TableHead>
                             <TableHead className="text-center">בקשה</TableHead>
-                            <TableHead className="text-center">תגובה</TableHead>
-                            <TableHead className="text-center w-12">סטטוס</TableHead>
+                            {!isAwaitingResponse && (
+                              <>
+                                <TableHead className="text-center">תגובה</TableHead>
+                                <TableHead className="text-center w-12">סטטוס</TableHead>
+                              </>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -382,16 +437,20 @@ export const EntrepreneurNegotiationView = ({
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-center text-sm font-bold text-green-600">
-                                  {formatCurrency(details.advisorResponse)}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {details.advisorAccepted ? (
-                                    <CheckCircle className="w-4 h-4 text-green-600 mx-auto" />
-                                  ) : (
-                                    <XCircle className="w-4 h-4 text-amber-500 mx-auto" />
-                                  )}
-                                </TableCell>
+                                {!isAwaitingResponse && (
+                                  <>
+                                    <TableCell className="text-center text-sm font-bold text-green-600">
+                                      {formatCurrency(details.advisorResponse)}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {details.advisorAccepted ? (
+                                        <CheckCircle className="w-4 h-4 text-green-600 mx-auto" />
+                                      ) : (
+                                        <XCircle className="w-4 h-4 text-amber-500 mx-auto" />
+                                      )}
+                                    </TableCell>
+                                  </>
+                                )}
                               </TableRow>
                             );
                           })}
@@ -405,10 +464,14 @@ export const EntrepreneurNegotiationView = ({
                             <TableCell className="text-center font-bold text-primary">
                               {formatCurrency(totals.targetTotal)}
                             </TableCell>
-                            <TableCell className="text-center font-bold text-green-600">
-                              {formatCurrency(totals.advisorTotal)}
-                            </TableCell>
-                            <TableCell />
+                            {!isAwaitingResponse && (
+                              <>
+                                <TableCell className="text-center font-bold text-green-600">
+                                  {formatCurrency(totals.advisorTotal)}
+                                </TableCell>
+                                <TableCell />
+                              </>
+                            )}
                           </TableRow>
                         </TableFooter>
                       </Table>
@@ -515,17 +578,22 @@ export const EntrepreneurNegotiationView = ({
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   סגור
                 </Button>
-                {onContinueNegotiation && (
-                  <Button variant="outline" onClick={onContinueNegotiation}>
-                    <MessageSquare className="w-4 h-4 me-1" />
-                    המשך משא ומתן
-                  </Button>
-                )}
-                {onAccept && (
-                  <Button onClick={onAccept} className="bg-green-600 hover:bg-green-700">
-                    <CheckCircle className="w-4 h-4 me-1" />
-                    קבל הצעה נגדית
-                  </Button>
+                {/* Only show action buttons when advisor has responded */}
+                {!isAwaitingResponse && (
+                  <>
+                    {onContinueNegotiation && (
+                      <Button variant="outline" onClick={onContinueNegotiation}>
+                        <MessageSquare className="w-4 h-4 me-1" />
+                        המשך משא ומתן
+                      </Button>
+                    )}
+                    {onAccept && (
+                      <Button onClick={onAccept} className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle className="w-4 h-4 me-1" />
+                        קבל הצעה נגדית
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </DialogFooter>
