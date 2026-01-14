@@ -27,7 +27,7 @@ import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
 import { TaskBoard } from '@/components/tasks';
 import { PaymentDashboard } from '@/components/payments';
-import { NegotiationSummaryCard } from '@/components/NegotiationSummaryCard';
+
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -487,13 +487,6 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="sent-rfps" className="space-y-4">
-          <NegotiationSummaryCard 
-            projectId={project.id}
-            onViewProposal={(proposalId) => {
-              const p = proposals.find(pr => pr.id === proposalId);
-              if (p) handleViewProposal(p);
-            }}
-          />
           <SentRFPsTab projectId={project.id} />
         </TabsContent>
 
