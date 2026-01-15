@@ -131,7 +131,6 @@ serve(async (req) => {
         advisorCompany: advisor.company_name || 'יועץ',
         advisorType: advisorType,
         price: proposal.price,
-        timelineDays: proposal.timeline_days,
         filesCount,
         projectUrl,
       })

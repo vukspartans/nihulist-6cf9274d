@@ -12,7 +12,6 @@ interface ProposalSubmittedEmailProps {
   advisorCompany: string
   advisorType: string
   price: number
-  timelineDays: number
   filesCount: number
   projectUrl: string
 }
@@ -23,7 +22,6 @@ export const ProposalSubmittedEmail = ({
   advisorCompany,
   advisorType,
   price,
-  timelineDays,
   filesCount,
   projectUrl,
 }: ProposalSubmittedEmailProps) => (
@@ -40,8 +38,7 @@ export const ProposalSubmittedEmail = ({
       </Text>
 
       <Text style={detailText}>
-        מחיר: ₪{price.toLocaleString('he-IL')}<br />
-        לוח זמנים: {timelineDays} ימים
+        מחיר: ₪{price.toLocaleString('he-IL')}
         {filesCount > 0 && <><br />קבצים: {filesCount}</>}
       </Text>
 
