@@ -46,16 +46,12 @@ interface ProposalApprovalDialogProps {
     services_notes?: string;
   };
   onSuccess?: () => void;
-  /** If provided, the negotiation session will be marked as 'resolved' after successful approval */
-  negotiationSessionId?: string | null;
 }
 
 export const ProposalApprovalDialog = ({
   open,
   onOpenChange,
   proposal,
-  onSuccess,
-  negotiationSessionId,
 }: ProposalApprovalDialogProps) => {
   const [notes, setNotes] = useState('');
   const [signature, setSignature] = useState<SignatureData | null>(null);
@@ -95,25 +91,11 @@ export const ProposalApprovalDialog = ({
     });
 
     if (result.success) {
-      // If this was a counter-offer acceptance, mark the negotiation session as resolved
-      if (negotiationSessionId) {
-        console.log('[Approval] Marking negotiation session as resolved:', negotiationSessionId);
-        await supabase
-          .from('negotiation_sessions')
-          .update({ 
-            status: 'resolved', 
-            resolved_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', negotiationSessionId);
-      }
-
       onOpenChange(false);
       setNotes('');
       setSignature(null);
       setAuthorizationAccepted(false);
       setStep('notes');
-      onSuccess?.();
     }
   };
 
