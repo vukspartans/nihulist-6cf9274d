@@ -136,23 +136,50 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   }, [open, proposal]);
 
   // Check if there's a responded negotiation for this proposal
+  // Also check for 'resolved' sessions where proposal is not yet accepted (user exited before completing signature)
   useEffect(() => {
     const checkNegotiationStatus = async () => {
       if (!open || !proposal.id) return;
       
-      const { data } = await supabase
+      // First check for 'responded' status
+      const { data: respondedData } = await supabase
         .from('negotiation_sessions')
         .select('id, status')
         .eq('proposal_id', proposal.id)
         .eq('status', 'responded')
         .maybeSingle();
       
-      setHasRespondedNegotiation(!!data);
-      setRespondedSessionId(data?.id || null);
+      if (respondedData) {
+        setHasRespondedNegotiation(true);
+        setRespondedSessionId(respondedData.id);
+        return;
+      }
+      
+      // If no 'responded' session, check for 'resolved' session where proposal is NOT yet accepted
+      // This handles the edge case where user clicked "Accept" but didn't complete signature
+      if (proposal.status !== 'accepted') {
+        const { data: resolvedData } = await supabase
+          .from('negotiation_sessions')
+          .select('id, status')
+          .eq('proposal_id', proposal.id)
+          .eq('status', 'resolved')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (resolvedData) {
+          setHasRespondedNegotiation(true);
+          setRespondedSessionId(resolvedData.id);
+          return;
+        }
+      }
+      
+      setHasRespondedNegotiation(false);
+      setRespondedSessionId(null);
     };
     
     checkNegotiationStatus();
-  }, [open, proposal.id]);
+  }, [open, proposal.id, proposal.status]);
 
   // Fetch service names when dialog opens with selected services
   useEffect(() => {
@@ -352,33 +379,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   };
 
   // Accept the updated counter-offer after negotiation
-  const handleAcceptCounterOffer = async () => {
-    setIsAcceptingOffer(true);
-    try {
-      // 1. Mark the negotiation session as resolved
-      const { error: sessionError } = await supabase
-        .from('negotiation_sessions')
-        .update({ 
-          status: 'resolved', 
-          resolved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('proposal_id', proposal.id)
-        .eq('status', 'responded');
-      
-      if (sessionError) throw sessionError;
-
-      // 2. Update proposal status (move directly to approval flow)
-      setShowApprovalDialog(true);
-      setHasRespondedNegotiation(false);
-      
-      toast({ title: "הצעה נגדית התקבלה - המשך לאישור" });
-    } catch (err) {
-      console.error('Error accepting counter-offer:', err);
-      toast({ title: "שגיאה בקבלת ההצעה", variant: "destructive" });
-    } finally {
-      setIsAcceptingOffer(false);
-    }
+  // NOTE: We do NOT update the negotiation session status here!
+  // The session will be marked as 'resolved' only AFTER the user completes the approval signature
+  const handleAcceptCounterOffer = () => {
+    // Just open the approval dialog - don't update DB yet
+    // The negotiation session ID is passed to the approval dialog
+    // which will mark it as 'resolved' after successful signature
+    setShowApprovalDialog(true);
   };
 
   const generateAiAnalysis = async (forceRefresh: boolean = false) => {
@@ -1058,7 +1065,19 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         </DialogContent>
       </Dialog>
 
-      <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} />
+      <ProposalApprovalDialog 
+        open={showApprovalDialog} 
+        onOpenChange={setShowApprovalDialog} 
+        proposal={proposal} 
+        negotiationSessionId={hasRespondedNegotiation ? respondedSessionId : null}
+        onSuccess={() => { 
+          setHasRespondedNegotiation(false);
+          setRespondedSessionId(null);
+          onStatusChange?.(); 
+          onSuccess?.(); 
+          onOpenChange(false); 
+        }} 
+      />
       
       <NegotiationDialog
         open={showNegotiationDialog}
