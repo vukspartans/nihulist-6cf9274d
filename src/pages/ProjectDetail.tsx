@@ -27,6 +27,7 @@ import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
 import { TaskBoard } from '@/components/tasks';
 import { PaymentDashboard } from '@/components/payments';
+import LegalFooter from '@/components/LegalFooter';
 
 
 export const ProjectDetail = () => {

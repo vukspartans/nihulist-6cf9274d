@@ -22,6 +22,7 @@ import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import { AdvisorProposalViewDialog } from '@/components/AdvisorProposalViewDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import LegalFooter from '@/components/LegalFooter';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
