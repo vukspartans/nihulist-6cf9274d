@@ -398,11 +398,16 @@ const ForConsultants = () => {
 
       {/* Back to Home */}
       <div className="py-8 bg-background border-t border-border/40">
-        <div className="container mx-auto px-4 lg:px-6">
+        <div className="container mx-auto px-4 lg:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors story-link">
             <ArrowRight className="w-4 h-4" />
             חזרה לעמוד הבית
           </Link>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <button onClick={() => setShowPrivacy(true)} className="hover:text-primary transition-colors">מדיניות פרטיות</button>
+            <span>•</span>
+            <button onClick={() => setShowTerms(true)} className="hover:text-primary transition-colors">תנאי שימוש</button>
+          </div>
         </div>
       </div>
 

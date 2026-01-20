@@ -630,6 +630,7 @@ const Dashboard = () => {
           </>
         )}
       </div>
+      <LegalFooter />
       <BackToTop />
     </div>
   );

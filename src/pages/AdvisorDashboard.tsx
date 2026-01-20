@@ -1586,6 +1586,7 @@ const AdvisorDashboard = () => {
         />
       )}
       
+      <LegalFooter />
       <BackToTop threshold={20} />
     </div>
   );
