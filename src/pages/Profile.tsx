@@ -1800,6 +1800,7 @@ const Profile = () => {
         </Tabs>
         </div>
       </div>
+      <LegalFooter />
     </div>
   );
 };

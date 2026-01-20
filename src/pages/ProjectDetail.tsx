@@ -583,6 +583,7 @@ export const ProjectDetail = () => {
         />
       )}
       </div>
+      <LegalFooter />
       <BackToTop />
     </div>
   );
