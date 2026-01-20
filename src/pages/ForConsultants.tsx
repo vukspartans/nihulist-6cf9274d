@@ -25,9 +25,14 @@ import { useNavigate, Link } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
 import Logo from "@/components/Logo";
 import BackToTop from "@/components/BackToTop";
+import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
+import { TermsAndConditions } from "@/components/TermsAndConditions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const ForConsultants = () => {
   const [activeStep, setActiveStep] = useState(0);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
 
   const onboardingSteps = [
@@ -413,6 +418,19 @@ const ForConsultants = () => {
 
       {/* Back to Top Button */}
       <BackToTop />
+
+      {/* Privacy Policy Dialog */}
+      <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
+
+      {/* Terms of Service Dialog */}
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">תנאי שימוש</DialogTitle>
+          </DialogHeader>
+          <TermsAndConditions accepted={true} onAcceptChange={() => {}} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

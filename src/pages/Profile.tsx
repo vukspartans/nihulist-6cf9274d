@@ -29,6 +29,7 @@ import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { TeamMemberManager } from '@/components/TeamMemberManager';
 import OrganizationProfileTab from '@/components/OrganizationProfileTab';
 import { PRODUCTION_URL } from '@/utils/urls';
+import LegalFooter from '@/components/LegalFooter';
 
 const COVER_OPTIONS = [
   { id: '0', image: '', name: 'ללא תמונת רקע' },
