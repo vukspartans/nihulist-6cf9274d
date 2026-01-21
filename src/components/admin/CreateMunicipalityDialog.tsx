@@ -90,7 +90,7 @@ export function CreateMunicipalityDialog({
 
           <div className="space-y-2">
             <Label>אזור</Label>
-            <Select value={region} onValueChange={setRegion}>
+            <Select dir="rtl" value={region} onValueChange={setRegion}>
               <SelectTrigger>
                 <SelectValue placeholder="בחר אזור" />
               </SelectTrigger>

@@ -101,7 +101,7 @@ export function CreateLicensingPhaseDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>עירייה</Label>
-              <Select value={municipalityId} onValueChange={setMunicipalityId}>
+              <Select dir="rtl" value={municipalityId} onValueChange={setMunicipalityId}>
                 <SelectTrigger>
                   <SelectValue placeholder="בחר עירייה" />
                 </SelectTrigger>
@@ -118,7 +118,7 @@ export function CreateLicensingPhaseDialog({
 
             <div className="space-y-2">
               <Label>סוג פרויקט</Label>
-              <Select value={projectType} onValueChange={setProjectType}>
+              <Select dir="rtl" value={projectType} onValueChange={setProjectType}>
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
