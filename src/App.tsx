@@ -41,6 +41,7 @@ import TaskTemplatesManagement from "./pages/admin/TaskTemplatesManagement";
 import PaymentCategoriesManagement from "./pages/admin/PaymentCategoriesManagement";
 import PaymentStatusesManagement from "./pages/admin/PaymentStatusesManagement";
 import MilestoneTemplatesManagement from "./pages/admin/MilestoneTemplatesManagement";
+import RFPTemplatesManagement from "./pages/admin/RFPTemplatesManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
@@ -223,6 +224,7 @@ const AppContent = () => {
             <Route path="/heyadmin/advisors" element={<AdminRoute><AdvisorsManagement /></AdminRoute>} />
             <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
+            <Route path="/heyadmin/rfp-templates" element={<AdminRoute><RFPTemplatesManagement /></AdminRoute>} />
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
             <Route path="/heyadmin/feedback" element={<AdminRoute><FeedbackManagement /></AdminRoute>} />
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
