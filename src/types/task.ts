@@ -1,9 +1,10 @@
-export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
+export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled' | 'delayed';
 
 export interface ProjectTask {
   id: string;
   project_id: string;
   template_id?: string | null;
+  stage_id?: string | null;
   name: string;
   description?: string | null;
   phase?: string | null;
@@ -29,6 +30,23 @@ export interface ProjectTask {
     id: string;
     company_name: string | null;
   } | null;
+}
+
+export interface ProjectLicensingStage {
+  id: string;
+  project_id: string;
+  licensing_phase_id: string | null;
+  name: string;
+  description?: string | null;
+  display_order: number;
+  planned_start_date?: string | null;
+  planned_end_date?: string | null;
+  actual_start_date?: string | null;
+  actual_end_date?: string | null;
+  progress_percent: number;
+  status: 'pending' | 'in_progress' | 'completed' | 'delayed' | 'blocked';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TaskDependency {

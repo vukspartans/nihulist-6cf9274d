@@ -1682,6 +1682,72 @@ export type Database = {
           },
         ]
       }
+      project_licensing_stages: {
+        Row: {
+          actual_end_date: string | null
+          actual_start_date: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          licensing_phase_id: string | null
+          name: string
+          planned_end_date: string | null
+          planned_start_date: string | null
+          progress_percent: number | null
+          project_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          licensing_phase_id?: string | null
+          name: string
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          licensing_phase_id?: string | null
+          name?: string
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_licensing_stages_licensing_phase_id_fkey"
+            columns: ["licensing_phase_id"]
+            isOneToOne: false
+            referencedRelation: "licensing_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_licensing_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_tasks: {
         Row: {
           actual_end_date: string | null
@@ -1704,6 +1770,7 @@ export type Database = {
           planned_start_date: string | null
           progress_percent: number | null
           project_id: string
+          stage_id: string | null
           status: string
           template_id: string | null
           updated_at: string
@@ -1729,6 +1796,7 @@ export type Database = {
           planned_start_date?: string | null
           progress_percent?: number | null
           project_id: string
+          stage_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -1754,6 +1822,7 @@ export type Database = {
           planned_start_date?: string | null
           progress_percent?: number | null
           project_id?: string
+          stage_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -1771,6 +1840,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_licensing_stages"
             referencedColumns: ["id"]
           },
           {
@@ -1793,6 +1869,7 @@ export type Database = {
           id: string
           is_large_scale: boolean | null
           location: string | null
+          municipality_id: string | null
           name: string
           owner_id: string
           phase: string | null
@@ -1813,6 +1890,7 @@ export type Database = {
           id?: string
           is_large_scale?: boolean | null
           location?: string | null
+          municipality_id?: string | null
           name: string
           owner_id: string
           phase?: string | null
@@ -1833,6 +1911,7 @@ export type Database = {
           id?: string
           is_large_scale?: boolean | null
           location?: string | null
+          municipality_id?: string | null
           name?: string
           owner_id?: string
           phase?: string | null
@@ -1843,7 +1922,15 @@ export type Database = {
           units?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_line_items: {
         Row: {
@@ -2667,6 +2754,7 @@ export type Database = {
           dependency_type: string
           depends_on_task_id: string
           id: string
+          lag_days: number | null
           task_id: string
         }
         Insert: {
@@ -2674,6 +2762,7 @@ export type Database = {
           dependency_type?: string
           depends_on_task_id: string
           id?: string
+          lag_days?: number | null
           task_id: string
         }
         Update: {
@@ -2681,6 +2770,7 @@ export type Database = {
           dependency_type?: string
           depends_on_task_id?: string
           id?: string
+          lag_days?: number | null
           task_id?: string
         }
         Relationships: [
