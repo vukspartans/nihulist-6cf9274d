@@ -88,8 +88,8 @@ export function CreateFeeItemTemplateDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="advisor_specialty">סוג יועץ *</Label>
-            <Select value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
-              <SelectTrigger>
+            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
+              <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue placeholder="בחר סוג יועץ" />
               </SelectTrigger>
               <SelectContent>
@@ -109,6 +109,7 @@ export function CreateFeeItemTemplateDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="לדוגמה: הכנת תכנית אדריכלית"
+              className="text-right"
               required
             />
           </div>
@@ -116,8 +117,8 @@ export function CreateFeeItemTemplateDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="unit">יחידת מדידה</Label>
-              <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger>
+              <Select dir="rtl" value={unit} onValueChange={setUnit}>
+                <SelectTrigger dir="rtl" className="text-right">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,14 +140,15 @@ export function CreateFeeItemTemplateDialog({
                 step={0.1}
                 value={defaultQuantity}
                 onChange={(e) => setDefaultQuantity(parseFloat(e.target.value) || 1)}
+                className="text-right"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="charge_type">סוג חיוב</Label>
-            <Select value={chargeType} onValueChange={setChargeType}>
-              <SelectTrigger>
+            <Select dir="rtl" value={chargeType} onValueChange={setChargeType}>
+              <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -168,19 +170,19 @@ export function CreateFeeItemTemplateDialog({
             />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !advisorSpecialty || !description.trim()}
+            >
+              {createMutation.isPending ? "יוצר..." : "צור פריט"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !advisorSpecialty || !description.trim()}
-            >
-              {createMutation.isPending ? "יוצר..." : "צור פריט"}
             </Button>
           </DialogFooter>
         </form>
