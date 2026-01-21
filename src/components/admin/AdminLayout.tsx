@@ -14,6 +14,9 @@ import {
   Menu,
   Bell,
   MessageSquareHeart,
+  MapPin,
+  GitBranch,
+  FileStack,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { UserHeader } from "@/components/UserHeader";
@@ -45,6 +48,12 @@ const navigationItems = [
   { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
   { title: adminTranslations.navigation.feedback, url: "/heyadmin/feedback", icon: MessageSquareHeart },
   { title: adminTranslations.navigation.auditLog, url: "/heyadmin/audit", icon: Shield },
+];
+
+const licensingNavigationItems = [
+  { title: "עיריות", url: "/heyadmin/municipalities", icon: MapPin },
+  { title: "שלבי רישוי", url: "/heyadmin/licensing-phases", icon: GitBranch },
+  { title: "תבניות משימות", url: "/heyadmin/task-templates", icon: FileStack },
 ];
 
 function AdminSidebar() {
@@ -95,6 +104,44 @@ function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive}
+                      className={`
+                        relative rounded-lg transition-all duration-200
+                        ${isActive 
+                          ? 'bg-primary/10 text-primary font-medium shadow-sm' 
+                          : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                        }
+                      `}
+                    >
+                      <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                        {isActive && !isCollapsed && (
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="px-3 py-4">
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
+            {!isCollapsed && adminTranslations.licensing.sectionTitle}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {licensingNavigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.url;
                 

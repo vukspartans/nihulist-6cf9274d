@@ -35,6 +35,9 @@ import RFPsManagement from "./pages/admin/RFPsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLog from "./pages/admin/AuditLog";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
+import MunicipalitiesManagement from "./pages/admin/MunicipalitiesManagement";
+import LicensingPhasesManagement from "./pages/admin/LicensingPhasesManagement";
+import TaskTemplatesManagement from "./pages/admin/TaskTemplatesManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,6 +223,9 @@ const AppContent = () => {
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
             <Route path="/heyadmin/feedback" element={<AdminRoute><FeedbackManagement /></AdminRoute>} />
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
+            <Route path="/heyadmin/municipalities" element={<AdminRoute><MunicipalitiesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/licensing-phases" element={<AdminRoute><LicensingPhasesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/task-templates" element={<AdminRoute><TaskTemplatesManagement /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

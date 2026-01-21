@@ -129,6 +129,12 @@ export type ProjectType = typeof PROJECT_TYPES[number];
 export type ProjectPhase = typeof PROJECT_PHASES[number];
 export type ProjectStatus = typeof PROJECT_STATUSES[number];
 
+// Options format for Select components
+export const PROJECT_TYPE_OPTIONS = PROJECT_TYPES.map(type => ({
+  value: type,
+  label: type,
+}));
+
 // Helper function to get project types by category
 export const getProjectTypesByCategory = (category: ProjectCategory): ProjectType[] => {
   const categoryMappings: Record<ProjectCategory, ProjectType[]> = {

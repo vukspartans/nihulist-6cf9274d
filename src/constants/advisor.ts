@@ -143,3 +143,9 @@ export const ADVISOR_EXPERTISE_CATEGORIES = {
 } as const;
 
 export type AdvisorExpertiseCategory = keyof typeof ADVISOR_EXPERTISE_CATEGORIES;
+
+// Options format for Select components
+export const EXPERTISE_OPTIONS = ADVISOR_EXPERTISE.map(expertise => ({
+  value: expertise,
+  label: expertise,
+}));
