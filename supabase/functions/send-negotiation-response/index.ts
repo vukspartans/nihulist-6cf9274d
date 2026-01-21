@@ -15,10 +15,28 @@ interface UpdatedLineItem {
   consultant_note?: string;
 }
 
+interface MilestoneResponse {
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;
+  accepted: boolean;
+}
+
+interface UploadedFile {
+  url: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
+}
+
 interface RequestBody {
   session_id: string;
   consultant_message?: string;
   updated_line_items: UpdatedLineItem[];
+  milestone_responses?: MilestoneResponse[];
+  uploaded_files?: UploadedFile[];
 }
 
 serve(async (req) => {
@@ -57,7 +75,7 @@ serve(async (req) => {
     const body: RequestBody = await req.json();
     console.log("[Negotiation Response] Input:", JSON.stringify(body, null, 2));
 
-    const { session_id, consultant_message, updated_line_items } = body;
+    const { session_id, consultant_message, updated_line_items, milestone_responses, uploaded_files } = body;
 
     // session_id is required, but updated_line_items can be empty for proposals without line items
     if (!session_id) {
@@ -124,6 +142,32 @@ serve(async (req) => {
 
     console.log("[Negotiation Response] RPC result:", result);
 
+    // Step: Update session.files to include advisor response files and milestone responses
+    if ((uploaded_files && uploaded_files.length > 0) || (milestone_responses && milestone_responses.length > 0)) {
+      const currentFiles = (session.files as Record<string, unknown>) || {};
+      const updatedFiles: Record<string, unknown> = { ...currentFiles };
+      
+      if (uploaded_files && uploaded_files.length > 0) {
+        updatedFiles.advisor_response_files = uploaded_files;
+        console.log("[Negotiation Response] Adding advisor files:", uploaded_files.length);
+      }
+      
+      if (milestone_responses && milestone_responses.length > 0) {
+        updatedFiles.advisor_milestone_responses = milestone_responses;
+        console.log("[Negotiation Response] Adding milestone responses:", milestone_responses.length);
+      }
+      
+      const { error: updateError } = await supabase
+        .from("negotiation_sessions")
+        .update({ files: updatedFiles })
+        .eq("id", session_id);
+      
+      if (updateError) {
+        console.error("[Negotiation Response] Error updating session files:", updateError);
+        // Non-fatal, continue with the response
+      }
+    }
+
     // Get entrepreneur details for email
     const projectData = session.project as any;
     const { data: entrepreneurProfile } = await supabase
@@ -137,33 +181,68 @@ serve(async (req) => {
       ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
       : session.target_total || (session.proposal as any).price;
 
-    // Send email to entrepreneur
+    // Send email to entrepreneur (non-blocking - don't fail request if email fails)
     if (entrepreneurProfile?.email) {
-      const resend = new Resend(RESEND_API_KEY);
+      try {
+        const resend = new Resend(RESEND_API_KEY);
 
-      const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
+        const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
-      const emailHtml = await renderAsync(
-        NegotiationResponseEmail({
-          entrepreneurName: entrepreneurProfile.name || "יזם",
-          advisorCompany: advisorData.company_name || "יועץ",
-          projectName: projectData.name,
-          previousPrice: (session.proposal as any).price,
-          newPrice: newTotal,
-          consultantMessage: consultant_message,
-          proposalUrl,
-          locale: "he",
-        })
-      );
+        const emailHtml = await renderAsync(
+          NegotiationResponseEmail({
+            entrepreneurName: entrepreneurProfile.name || "יזם",
+            advisorCompany: advisorData.company_name || "יועץ",
+            projectName: projectData.name,
+            previousPrice: (session.proposal as any).price,
+            newPrice: newTotal,
+            consultantMessage: consultant_message,
+            proposalUrl,
+            locale: "he",
+          })
+        );
 
-      await resend.emails.send({
-        from: "Billding <notifications@billding.ai>",
-        to: entrepreneurProfile.email,
-        subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
-        html: emailHtml,
-      });
+        await resend.emails.send({
+          from: "Billding <notifications@billding.ai>",
+          to: entrepreneurProfile.email,
+          subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
+          html: emailHtml,
+        });
 
-      console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);
+        console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);
+
+        // Log successful email send
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_response_email_sent",
+          entity_type: "proposal",
+          entity_id: (session.proposal as any).id,
+          project_id: projectData.id,
+          meta: {
+            session_id,
+            recipient: entrepreneurProfile.email,
+            new_price: newTotal,
+          },
+        });
+      } catch (emailError) {
+        console.error("[Negotiation Response] Email failed (non-fatal):", emailError);
+        // Log email failure for debugging
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_response_email_failed",
+          entity_type: "proposal",
+          entity_id: (session.proposal as any).id,
+          project_id: projectData.id,
+          meta: {
+            session_id,
+            recipient: entrepreneurProfile.email,
+            error: String(emailError),
+          },
+        });
+      }
+    } else {
+      console.warn("[Negotiation Response] No entrepreneur email found, skipping notification");
     }
 
     // Log activity
@@ -181,6 +260,32 @@ serve(async (req) => {
         new_price: newTotal,
       },
     });
+
+    // Add in-app notification for entrepreneur
+    try {
+      await supabase.from("notification_queue").insert({
+        notification_type: "negotiation_response",
+        recipient_id: projectData.owner_id,
+        recipient_email: entrepreneurProfile?.email || "",
+        subject: "הצעה מעודכנת התקבלה",
+        body_html: `<p>היועץ ${advisorData.company_name || "יועץ"} שלח תגובה לבקשת המשא ומתן בפרויקט ${projectData.name}</p>`,
+        entity_type: "proposal",
+        entity_id: (session.proposal as any).id,
+        template_data: {
+          session_id,
+          advisor_name: advisorData.company_name,
+          project_name: projectData.name,
+          new_price: newTotal,
+          project_id: projectData.id,
+        },
+        priority: 2,
+        status: "pending",
+      });
+      console.log("[Negotiation Response] In-app notification created for:", projectData.owner_id);
+    } catch (notifError) {
+      console.error("[Negotiation Response] Failed to create in-app notification:", notifError);
+      // Non-fatal, continue
+    }
 
     return new Response(
       JSON.stringify({

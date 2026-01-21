@@ -22,16 +22,34 @@ interface NegotiationCommentInput {
   entity_reference?: string;
 }
 
+interface UploadedFile {
+  id?: string;          // Database ID from negotiation_files table
+  name: string;
+  url: string;
+  size: number;
+  storagePath?: string;
+}
+
+interface MilestoneAdjustment {
+  milestone_id: string;
+  original_percentage: number;
+  target_percentage: number;
+  initiator_note?: string;
+}
+
 interface RequestBody {
   project_id: string;
   proposal_id: string;
-  negotiated_version_id: string;
+  negotiated_version_id?: string | null;  // Made optional - will be created if not provided
   target_total?: number;
   target_reduction_percent?: number;
   global_comment?: string;
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
+  milestone_adjustments?: MilestoneAdjustment[];
   comments?: NegotiationCommentInput[];
+  files?: UploadedFile[];
+  supplier_name?: string;  // Added for response message
 }
 
 serve(async (req) => {
@@ -78,12 +96,14 @@ serve(async (req) => {
       target_reduction_percent,
       global_comment,
       line_item_adjustments,
+      milestone_adjustments,
       comments,
+      files,
     } = body;
 
     // Validate required fields
-    if (!project_id || !proposal_id || !negotiated_version_id) {
-      throw new Error("Missing required fields: project_id, proposal_id, negotiated_version_id");
+    if (!project_id || !proposal_id) {
+      throw new Error("Missing required fields: project_id, proposal_id");
     }
 
     // Service role client for database operations
@@ -107,13 +127,41 @@ serve(async (req) => {
     // Get proposal details (separate queries to avoid nested FK issue)
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select("id, price, advisor_id, status, negotiation_count")
+      .select("id, price, timeline_days, scope_text, terms, conditions_json, advisor_id, status, negotiation_count, supplier_name, fee_line_items")
       .eq("id", proposal_id)
       .single();
 
     if (proposalError || !proposal) {
       console.error("[Negotiation Request] Proposal query error:", proposalError);
       throw new Error("Proposal not found");
+    }
+
+    // Create version if not provided (bypasses RLS as we're using service role)
+    let finalVersionId = negotiated_version_id;
+    if (!finalVersionId) {
+      console.log("[Negotiation Request] Creating initial proposal version");
+      const { data: newVersion, error: versionError } = await supabase
+        .from("proposal_versions")
+        .insert({
+          proposal_id,
+          version_number: 1,
+          price: proposal.price,
+          timeline_days: proposal.timeline_days,
+          scope_text: proposal.scope_text,
+          terms: proposal.terms,
+          conditions_json: proposal.conditions_json,
+          line_items: proposal.fee_line_items || [],
+          change_reason: "גרסה ראשונית",
+        })
+        .select("id")
+        .single();
+
+      if (versionError || !newVersion) {
+        console.error("[Negotiation Request] Version creation error:", versionError);
+        throw new Error("Failed to create proposal version");
+      }
+      finalVersionId = newVersion.id;
+      console.log("[Negotiation Request] Created version:", finalVersionId);
     }
 
     // Get advisor details
@@ -135,11 +183,11 @@ serve(async (req) => {
       .eq("user_id", advisor.user_id)
       .maybeSingle();
 
-    // Check for existing active negotiation on this version
+    // Check for existing active negotiation on this proposal
     const { data: existingSession } = await supabase
       .from("negotiation_sessions")
       .select("id")
-      .eq("negotiated_version_id", negotiated_version_id)
+      .eq("proposal_id", proposal_id)
       .in("status", ["open", "awaiting_response"])
       .maybeSingle();
 
@@ -171,7 +219,7 @@ serve(async (req) => {
       .insert({
         project_id,
         proposal_id,
-        negotiated_version_id,
+        negotiated_version_id: finalVersionId,
         initiator_id: user.id,
         consultant_advisor_id: proposal.advisor_id,
         status: "awaiting_response",
@@ -179,6 +227,8 @@ serve(async (req) => {
         target_reduction_percent,
         global_comment,
         initiator_message: global_comment,
+        files: files || [],
+        milestone_adjustments: milestone_adjustments || [],
       })
       .select()
       .single();
@@ -191,62 +241,86 @@ serve(async (req) => {
     console.log("[Negotiation Request] Session created:", session.id);
 
     // Create line item negotiations if provided
+    // UUID regex pattern for validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
     if (line_item_adjustments && line_item_adjustments.length > 0) {
-      const lineItemRecords = line_item_adjustments.map((adj) => {
-        let targetPrice = 0;
-        // We need to get original price from line_items
-        // For now, calculate based on adjustment
-        if (adj.adjustment_type === "price_change") {
-          targetPrice = adj.adjustment_value;
-        }
+      // Filter out items with synthetic IDs (non-UUID like "idx-6")
+      // These are items from fee_line_items JSON that don't have database records
+      const validAdjustments = line_item_adjustments.filter((adj) => 
+        uuidRegex.test(adj.line_item_id)
+      );
+      
+      console.log(`[Negotiation Request] Filtered ${line_item_adjustments.length - validAdjustments.length} synthetic IDs, ${validAdjustments.length} valid line items`);
+
+      if (validAdjustments.length > 0) {
+        // IMPORTANT: Verify line_item_id actually exists in proposal_line_items table
+        // Items from fee_line_items JSON have UUIDs but may not exist in the table
+        const lineItemIds = validAdjustments.map((a) => a.line_item_id);
+        const { data: existingLineItems } = await supabase
+          .from("proposal_line_items")
+          .select("id, total")
+          .eq("proposal_id", proposal_id)
+          .in("id", lineItemIds);
+
+        const existingIds = new Set((existingLineItems || []).map((li) => li.id));
+        const priceMap = new Map((existingLineItems || []).map((li) => [li.id, li.total]));
         
-        return {
-          session_id: session.id,
-          line_item_id: adj.line_item_id,
-          adjustment_type: adj.adjustment_type,
-          adjustment_value: adj.adjustment_value,
-          original_price: 0, // Will be updated by trigger or separate query
-          initiator_target_price: targetPrice,
-          initiator_note: adj.initiator_note,
-        };
-      });
+        // Only insert adjustments for line items that exist in the database
+        const dbValidAdjustments = validAdjustments.filter((a) => existingIds.has(a.line_item_id));
+        const jsonOnlyAdjustments = validAdjustments.filter((a) => !existingIds.has(a.line_item_id));
+        
+        console.log(`[Negotiation Request] ${dbValidAdjustments.length} DB items, ${jsonOnlyAdjustments.length} JSON-only items (stored in session)`);
 
-      // Get original prices for line items
-      const lineItemIds = line_item_adjustments.map((a) => a.line_item_id);
-      const { data: originalLineItems } = await supabase
-        .from("proposal_line_items")
-        .select("id, total")
-        .in("id", lineItemIds);
+        // Store JSON-only adjustments in the session for reference
+        if (jsonOnlyAdjustments.length > 0) {
+          await supabase
+            .from("negotiation_sessions")
+            .update({
+              files: {
+                ...((files as any) || {}),
+                json_line_item_adjustments: jsonOnlyAdjustments,
+              },
+            })
+            .eq("id", session.id);
+        }
 
-      const priceMap = new Map(originalLineItems?.map((li) => [li.id, li.total]) || []);
+        if (dbValidAdjustments.length > 0) {
+          const lineItemRecords = dbValidAdjustments.map((adj) => {
+            const originalPrice = priceMap.get(adj.line_item_id) || 0;
+            let targetPrice = 0;
+            
+            if (adj.adjustment_type === "price_change") {
+              targetPrice = adj.adjustment_value;
+            } else if (adj.adjustment_type === "flat_discount") {
+              targetPrice = originalPrice - adj.adjustment_value;
+            } else if (adj.adjustment_type === "percentage_discount") {
+              targetPrice = originalPrice * (1 - adj.adjustment_value / 100);
+            }
+            
+            return {
+              session_id: session.id,
+              line_item_id: adj.line_item_id,
+              adjustment_type: adj.adjustment_type,
+              adjustment_value: adj.adjustment_value,
+              original_price: originalPrice,
+              initiator_target_price: targetPrice,
+              initiator_note: adj.initiator_note,
+            };
+          });
 
-      // Update records with original prices and calculate target prices
-      for (const record of lineItemRecords) {
-        const originalPrice = priceMap.get(record.line_item_id) || 0;
-        record.original_price = originalPrice;
+          const { data: insertedLineItems, error: lineItemError } = await supabase
+            .from("line_item_negotiations")
+            .insert(lineItemRecords)
+            .select();
 
-        const adj = line_item_adjustments.find((a) => a.line_item_id === record.line_item_id);
-        if (adj) {
-          if (adj.adjustment_type === "price_change") {
-            record.initiator_target_price = adj.adjustment_value;
-          } else if (adj.adjustment_type === "flat_discount") {
-            record.initiator_target_price = originalPrice - adj.adjustment_value;
-          } else if (adj.adjustment_type === "percentage_discount") {
-            record.initiator_target_price = originalPrice * (1 - adj.adjustment_value / 100);
+          if (lineItemError) {
+            console.error("[Negotiation Request] Line item negotiations error:", lineItemError);
+            throw new Error(`Failed to save line item adjustments: ${lineItemError.message}`);
           }
+          console.log("[Negotiation Request] Line items created:", insertedLineItems?.length);
         }
       }
-
-      const { data: insertedLineItems, error: lineItemError } = await supabase
-        .from("line_item_negotiations")
-        .insert(lineItemRecords)
-        .select();
-
-      if (lineItemError) {
-        console.error("[Negotiation Request] Line item negotiations error:", lineItemError);
-        throw new Error(`Failed to save line item adjustments: ${lineItemError.message}`);
-      }
-      console.log("[Negotiation Request] Line items created:", insertedLineItems?.length);
     }
 
     // Create negotiation comments if provided
@@ -272,6 +346,27 @@ serve(async (req) => {
       console.log("[Negotiation Request] Comments created:", insertedComments?.length);
     }
 
+    // Link uploaded files to the session in negotiation_files table
+    if (files && files.length > 0) {
+      console.log("[Negotiation Request] Linking files to session:", files.length);
+      for (const file of files) {
+        if (file.id) {
+          const { error: fileUpdateError } = await supabase
+            .from("negotiation_files")
+            .update({
+              session_id: session.id,
+              used_at: new Date().toISOString(),
+            })
+            .eq("id", file.id);
+
+          if (fileUpdateError) {
+            console.error("[Negotiation Request] File link error:", fileUpdateError);
+          }
+        }
+      }
+      console.log("[Negotiation Request] Files linked to session");
+    }
+
     // Update proposal status
     const { error: proposalUpdateError } = await supabase
       .from("proposals")
@@ -288,61 +383,96 @@ serve(async (req) => {
     }
     console.log("[Negotiation Request] Proposal status updated to negotiation_requested");
 
-    // Send email to consultant
+    // Send email to consultant (non-blocking - don't fail request if email fails)
     const advisorEmail = advisorProfile?.email;
     const advisorCompany = advisor.company_name || "יועץ";
 
     if (advisorEmail) {
-      const resend = new Resend(RESEND_API_KEY);
+      try {
+        const resend = new Resend(RESEND_API_KEY);
+        const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
-      const responseUrl = `https://billding.ai/negotiation/${session.id}`;
+        const emailHtml = await renderAsync(
+          NegotiationRequestEmail({
+            advisorCompany,
+            entrepreneurName: entrepreneurProfile?.name || "יזם",
+            projectName: project.name,
+            originalPrice: proposal.price,
+            targetPrice: target_total,
+            targetReductionPercent: target_reduction_percent,
+            globalComment: global_comment,
+            responseUrl,
+            locale: "he",
+          })
+        );
 
-      const emailHtml = await renderAsync(
-        NegotiationRequestEmail({
-          advisorCompany,
-          entrepreneurName: entrepreneurProfile?.name || "יזם",
-          projectName: project.name,
-          originalPrice: proposal.price,
-          targetPrice: target_total,
-          targetReductionPercent: target_reduction_percent,
-          globalComment: global_comment,
-          responseUrl,
-          locale: "he",
-        })
-      );
+        await resend.emails.send({
+          from: "Billding <notifications@billding.ai>",
+          to: advisorEmail,
+          subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+          html: emailHtml,
+        });
 
-      await resend.emails.send({
-        from: "Billding <notifications@billding.ai>",
-        to: advisorEmail,
-        subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
-        html: emailHtml,
-      });
+        console.log("[Negotiation Request] Email sent to:", advisorEmail);
 
-      console.log("[Negotiation Request] Email sent to:", advisorEmail);
+        // Log successful email send
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_request_email_sent",
+          entity_type: "proposal",
+          entity_id: proposal_id,
+          project_id,
+          meta: {
+            session_id: session.id,
+            recipient: advisorEmail,
+            advisor_company: advisorCompany,
+          },
+        });
 
-      // Send to team members with rfp_requests preference
-      const { data: teamMembers } = await supabase
-        .from("advisor_team_members")
-        .select("email, notification_preferences")
-        .eq("advisor_id", proposal.advisor_id)
-        .eq("is_active", true);
+        // Send to team members with rfp_requests preference
+        const { data: teamMembers } = await supabase
+          .from("advisor_team_members")
+          .select("email, notification_preferences")
+          .eq("advisor_id", proposal.advisor_id)
+          .eq("is_active", true);
 
-      if (teamMembers) {
-        for (const member of teamMembers) {
-          if (
-            member.notification_preferences.includes("all") ||
-            member.notification_preferences.includes("rfp_requests")
-          ) {
-            await resend.emails.send({
-              from: "Billding <notifications@billding.ai>",
-              to: member.email,
-              subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
-              html: emailHtml,
-            });
-            console.log("[Negotiation Request] Team email sent to:", member.email);
+        if (teamMembers) {
+          for (const member of teamMembers) {
+            if (
+              member.notification_preferences.includes("all") ||
+              member.notification_preferences.includes("rfp_requests")
+            ) {
+              await resend.emails.send({
+                from: "Billding <notifications@billding.ai>",
+                to: member.email,
+                subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+                html: emailHtml,
+              });
+              console.log("[Negotiation Request] Team email sent to:", member.email);
+            }
           }
         }
+      } catch (emailError) {
+        // Log but don't fail the request - negotiation session is already created
+        console.error("[Negotiation Request] Email failed (non-fatal):", emailError);
+        // Log email failure for debugging
+        await supabase.from("activity_log").insert({
+          actor_id: user.id,
+          actor_type: "system",
+          action: "negotiation_request_email_failed",
+          entity_type: "proposal",
+          entity_id: proposal_id,
+          project_id,
+          meta: {
+            session_id: session.id,
+            recipient: advisorEmail,
+            error: String(emailError),
+          },
+        });
       }
+    } else {
+      console.warn("[Negotiation Request] No advisor email found, skipping notification");
     }
 
     // Log activity
@@ -360,10 +490,38 @@ serve(async (req) => {
       },
     });
 
+    // Add in-app notification for advisor
+    try {
+      await supabase.from("notification_queue").insert({
+        notification_type: "negotiation_request",
+        recipient_id: advisor.user_id,
+        recipient_email: advisorProfile?.email || "",
+        subject: "בקשה לעדכון הצעת מחיר",
+        body_html: `<p>היזם ${entrepreneurProfile?.name || "יזם"} שלח בקשה לעדכון הצעת המחיר בפרויקט ${project.name}</p>`,
+        entity_type: "proposal",
+        entity_id: proposal_id,
+        template_data: {
+          session_id: session.id,
+          entrepreneur_name: entrepreneurProfile?.name,
+          project_name: project.name,
+          target_total,
+          target_reduction_percent,
+          project_id,
+        },
+        priority: 2,
+        status: "pending",
+      });
+      console.log("[Negotiation Request] In-app notification created for advisor:", advisor.user_id);
+    } catch (notifError) {
+      console.error("[Negotiation Request] Failed to create in-app notification:", notifError);
+      // Non-fatal, continue
+    }
+
     return new Response(
       JSON.stringify({
         session_id: session.id,
         created_at: session.created_at,
+        supplier_name: proposal.supplier_name || advisor.company_name,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

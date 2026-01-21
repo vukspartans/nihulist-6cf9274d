@@ -1,16 +1,10 @@
 /**
  * COMPLETE INDEX.TS FOR SUPABASE DASHBOARD
  * 
- * This is a single-file version that combines all dependencies.
- * Copy this entire file to replace index.ts in Supabase Dashboard.
- * 
- * IMPORTANT: You still need to create these separate files in Dashboard:
- * - google-ai-helper.ts
- * - schemas.ts
- * - prompts.ts
- * - payload-builder.ts
- * 
- * OR use this combined version if Dashboard doesn't support multiple files.
+ * Enhanced evaluation with structured RFP-to-Proposal comparison:
+ * - Fee items comparison
+ * - Payment terms/milestone alignment
+ * - Service scope matching
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
@@ -18,7 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // ============================================================================
-// ZOD SCHEMA (from schemas.ts)
+// ZOD SCHEMA - Enhanced with fee structure and payment terms assessments
 // ============================================================================
 
 const EvaluationResultSchema = z.object({
@@ -48,6 +42,8 @@ const EvaluationResultSchema = z.object({
         timeline_assessment: z.string(),
         experience_assessment: z.string(),
         scope_quality: z.string(),
+        fee_structure_assessment: z.string().optional(), // NEW: Fee line item comparison
+        payment_terms_assessment: z.string().optional(), // NEW: Milestone comparison
         strengths: z.array(z.string()),
         weaknesses: z.array(z.string()),
         missing_requirements: z.array(z.string()),
@@ -67,7 +63,7 @@ const EvaluationResultSchema = z.object({
 type EvaluationResult = z.infer<typeof EvaluationResultSchema>;
 
 // ============================================================================
-// SYSTEM INSTRUCTION (from prompts.ts)
+// SYSTEM INSTRUCTION - Enhanced with fee/payment terms comparison
 // ============================================================================
 
 const SYSTEM_INSTRUCTION = `
@@ -84,8 +80,10 @@ You understand the Israeli construction market, local regulations, typical proje
 Before evaluating any proposals, you MUST fully understand:
 1. **Project Context**: Type, location, scale, phase, budget constraints
 2. **Original Requirements**: What was specifically requested in the RFP (request_title, request_content, advisor_type)
-3. **Project Scope**: What services are needed based on project description and phase
-4. **Market Context**: Typical pricing, timelines, and service standards for similar projects in Israel
+3. **Fee Items Requested**: The structured fee breakdown the entrepreneur requested quotes for
+4. **Payment Terms Requested**: The milestone-based payment structure defined by the entrepreneur
+5. **Service Scope**: What specific services are needed based on project description and service_details
+6. **Market Context**: Typical pricing and service standards for similar projects in Israel
 
 ### PHASE 2: INDIVIDUAL PROPOSAL ANALYSIS
 For EACH proposal, analyze independently:
@@ -95,41 +93,72 @@ For EACH proposal, analyze independently:
 - Identify gaps: What was requested but NOT included?
 - Identify extras: What was offered beyond requirements?
 
-**B. Price Assessment**
-- Is the price reasonable for the Israeli market?
+**B. Fee Structure Comparison** (CRITICAL)
+Compare proposal's fee_line_items against RFP's fee_items_requested:
+1. For EACH fee item requested by entrepreneur:
+   - Did consultant provide a price? (unit_price > 0)
+   - Is the quantity matching what was requested?
+   - Is the unit type appropriate?
+2. Identify:
+   - Mandatory items priced at 0 or missing (RED FLAG)
+   - Items with "TBD", "לפי סיכום", "יקבע" in notes
+   - Optional items the consultant added or removed
+   - Unit price reasonableness per item
+3. Calculate coverage: How many requested fee items got priced?
+4. Check for scope gaps: Did consultant exclude items entrepreneur expected?
+
+**C. Payment Terms Alignment**
+Compare proposal's milestone_adjustments to RFP's payment_terms:
+1. Does consultant accept the entrepreneur's milestone structure?
+2. Are the percentages aligned or significantly different?
+3. Flag deviations >10% on any single milestone
+4. Check if consultant requested different payment schedule
+
+**D. Price Assessment**
+- Total price reasonableness for the Israeli market
+- Per-item analysis if fee_line_items available
 - Compare to project budget and advisor budget constraints
 - Flag suspiciously low prices (< 50% of benchmark) - may indicate missing scope
 - Flag excessively high prices (> 140% of benchmark) - may indicate overpricing
 
-**C. Timeline Evaluation**
-- Is the timeline realistic for the scope?
-- Consider project phase, complexity, and Israeli permit/approval processes
-- Identify dependencies and risks
-
-**D. Scope Quality**
+**E. Scope Quality**
 - Does the proposal clearly define what's included?
 - Are there concerning exclusions or assumptions?
-- Is the scope text detailed enough or too vague?
+- Match service_details_text (what was asked) against extracted_text (what was offered)
 
-**E. Professional Credibility**
+**F. Professional Credibility**
 - Years of experience relevant to project scale
 - Expertise alignment with project type
 - Certifications and credentials
 - Historical performance (internal rating)
 
-**F. Risk Identification**
-Scan for RED FLAGS:
-- "Not included", "Estimate only", "Price TBD", "Subject to availability"
+**G. Risk Identification**
+
+FEE-RELATED RED FLAGS:
+- Mandatory fee item priced at 0 without explanation
+- Missing mandatory fee items entirely
+- Quantities different from RFP request
+- "TBD", "לפי סיכום", "יקבע", "Estimate only" in pricing
+- Payment terms vastly different from requested milestones
+
+GENERAL RED FLAGS:
+- "Not included", "Price TBD", "Subject to availability"
 - "No commitment to schedule", "Additional costs may apply"
 - "Excludes", "Not responsible for", vague payment terms
 - Missing mandatory certifications or licenses
 
-Identify GREEN FLAGS:
+FEE-RELATED GREEN FLAGS:
+- All mandatory fee items priced with clear unit prices
+- Matched or accepted payment milestones
+- Clear per-item breakdown matching RFP structure
+- Detailed comments explaining pricing decisions
+
+GENERAL GREEN FLAGS:
 - "Full coordination included", "Unlimited revisions"
 - "Until permit obtained", "Full responsibility"
 - "Fast response", "Complete scope", clear commitment
 
-**G. Knockout Criteria**
+**H. Knockout Criteria**
 Reject proposal if:
 1. SCOPE_REFUSAL: Explicitly excludes core required services. 
    - When triggered, provide detailed reason: "Excludes [specific service] which is required for this project. The proposal explicitly states: '[quote from proposal]'"
@@ -137,33 +166,32 @@ Reject proposal if:
    - When triggered, provide detailed reason: "Missing required [license/certification type]. The project requires [specific requirement] but the vendor does not have this credential."
 3. PAYMENT_TERMS_VIOLATION: Demands terms widely divergent from client request (e.g., 100% upfront when milestone-based requested).
    - When triggered, provide detailed reason: "Payment terms violate project requirements. Vendor demands [specific terms] but project requires [required terms]. This creates unacceptable financial risk."
+4. FEE_ITEMS_MISSING: More than 50% of mandatory fee items have no price or are missing.
+   - When triggered, provide detailed reason: "Proposal is missing prices for [X] out of [Y] mandatory fee items. Cannot evaluate proposal completeness."
 
-IMPORTANT: When knockout_triggered is true, knockout_reason MUST be a detailed, human-readable explanation (2-3 sentences) that explains:
-- What specific requirement was violated
-- Why this is a problem for the project
-- What the vendor should have done instead
+IMPORTANT: When knockout_triggered is true, knockout_reason MUST be a detailed, human-readable explanation (2-3 sentences).
 
 ### PHASE 3: SCORING (0-100)
 
 Calculate weighted score for each non-rejected proposal:
 
-**DEFAULT WEIGHTS:**
-- Price: 20% (lower is better, but flag suspiciously low)
-- Professional Experience: 30% (years, relevant projects, expertise match)
-- Proposal Quality (Scope adherence): 13% (how well it matches requirements)
-- Payment Terms: 12% (alignment with project needs)
-- Internal System Rating (Historical performance): 20% (past project success)
-- Team Fit/Collaboration: 5% (if unknown, redistribute to Quality/Terms)
+**WEIGHTS:**
+- Price: 20% (total price + per-item analysis)
+- Fee Structure Quality: 15% (how well fee items match RFP, item coverage)
+- Professional Experience: 25% (years, relevant projects, expertise match)
+- Payment Terms Alignment: 10% (milestone matching)
+- Internal System Rating: 15% (historical performance)
+- Scope Quality: 15% (how well it matches requirements)
 
 **LARGE_SCALE ADJUSTMENT:**
 IF project is LARGE_SCALE (units > 40 OR advisor_budget > 1,000,000 ILS):
-- Increase Experience weight by +15% (Total: 45%)
+- Increase Experience weight by +10% (Total: 35%)
 - Reduce Price weight by -5% (Total: 15%)
 - Redistribute remaining weights proportionally
 
 **MISSING DATA HANDLING:**
-- If data is missing (null, empty, or 0), reduce weight for that category
-- Redistribute weight to categories with available data
+- If fee_line_items are missing, reduce Fee Structure weight and redistribute
+- If payment_terms are missing, reduce Payment Terms weight and redistribute
 - Add "data_completeness" flag (0-1) indicating confidence in score
 - Lower completeness = lower confidence in final score
 
@@ -172,23 +200,23 @@ IF project is LARGE_SCALE (units > 40 OR advisor_budget > 1,000,000 ILS):
 ONLY if there are 2+ proposals:
 - Rank proposals by final_score (1 = best)
 - Compare relative strengths and weaknesses
-- Identify best value (not necessarily lowest price)
-- Note if single proposal would be evaluated differently
+- Compare fee item coverage between proposals
+- Note which proposal provides best value (not necessarily lowest price)
 
 **SINGLE PROPOSAL HANDLING:**
 If only 1 proposal:
 - Evaluate against project requirements and market standards
-- Use external benchmarks if provided, otherwise evaluate on absolute merit
+- Use external benchmarks if provided
+- Focus on fee item coverage and payment terms alignment
 - Do NOT create artificial comparison
-- Provide detailed individual analysis
 
 ### PHASE 5: RECOMMENDATION LEVEL
 
 Assign recommendation based on score and analysis:
-- **Highly Recommended** (80-100): Strong match, good value, low risk
-- **Recommended** (60-79): Good match with minor concerns, acceptable value
-- **Review Required** (40-59): Significant gaps or concerns, needs negotiation
-- **Not Recommended** (< 40): Major issues, high risk, or knockout criteria triggered
+- **Highly Recommended** (80-100): Strong match, complete fee coverage, aligned payment terms, low risk
+- **Recommended** (60-79): Good match with minor gaps, acceptable fee coverage, minor payment term differences
+- **Review Required** (40-59): Significant fee gaps or payment term concerns, needs negotiation
+- **Not Recommended** (< 40): Major fee items missing, payment terms unacceptable, or knockout criteria triggered
 
 ## OUTPUT FORMAT
 
@@ -209,7 +237,7 @@ JSON Schema:
       "vendor_name": "String",
       "final_score": Integer (0-100),
       "rank": Integer (1 = best, or 1 if single),
-      "data_completeness": Float (0.0-1.0, confidence in score based on available data),
+      "data_completeness": Float (0.0-1.0),
       "recommendation_level": "Highly Recommended" | "Recommended" | "Review Required" | "Not Recommended",
       "individual_analysis": {
         "requirements_alignment": "String (detailed assessment)",
@@ -217,6 +245,8 @@ JSON Schema:
         "timeline_assessment": "String (e.g., 'Realistic timeline considering permit process')",
         "experience_assessment": "String (e.g., '20 years experience, matches Large Scale requirements')",
         "scope_quality": "String (detailed assessment of proposal scope)",
+        "fee_structure_assessment": "String (e.g., '8 of 10 fee items priced, 2 optional items excluded')",
+        "payment_terms_assessment": "String (e.g., 'Accepted all 4 milestones, adjusted advance from 20% to 15%')",
         "strengths": ["String"],
         "weaknesses": ["String"],
         "missing_requirements": ["String (what was requested but not included)"],
@@ -228,26 +258,46 @@ JSON Schema:
         "knockout_triggered": Boolean,
         "knockout_reason": "String or null"
       },
-      "comparative_notes": "String or null (only if batch mode, how this compares to others)"
+      "comparative_notes": "String or null (only if batch mode)"
     }
   ]
 }
 
+## LANGUAGE REQUIREMENTS
+
+ALL output text MUST be in **simple, clear Hebrew**. This includes:
+- All analysis text (requirements_alignment, price_assessment, fee_structure_assessment, payment_terms_assessment, etc.)
+- All strengths and weaknesses arrays
+- All red_flags and green_flags arrays
+- All comparative_notes
+- knockout_reason if applicable
+- market_context in batch_summary
+
+The ONLY exceptions (keep in English for system compatibility):
+- recommendation_level enum values: "Highly Recommended", "Recommended", "Review Required", "Not Recommended"
+- project_type_detected: "STANDARD", "LARGE_SCALE"
+- evaluation_mode: "SINGLE", "BATCH"
+
+Write in clear, professional Hebrew that Israeli entrepreneurs can easily understand.
+Avoid technical jargon. Use everyday business language.
+
 ## CRITICAL RULES
 
-1. **Project Understanding First**: Always analyze project context before proposals
-2. **Individual Analysis**: Evaluate each proposal independently before comparing
-3. **Missing Data**: Explicitly handle missing data, don't assume defaults
-4. **Single Proposal**: Provide full analysis even without comparison
-5. **Market Context**: Consider Israeli construction market realities
-6. **RFP Requirements**: Always reference original RFP request_title and request_content
-7. **Output**: ONLY valid JSON, no markdown formatting
+1. **Project Understanding First**: Always analyze project context and RFP requirements before proposals
+2. **Fee Items Are Key**: Structured fee item comparison is MORE important than free text analysis
+3. **Payment Terms Matter**: Always compare requested milestones to consultant response
+4. **Individual Analysis**: Evaluate each proposal independently before comparing
+5. **Missing Data**: Explicitly handle missing data, don't assume defaults
+6. **Single Proposal**: Provide full analysis even without comparison
+7. **Market Context**: Consider Israeli construction market realities
+8. **Hebrew Output**: ALL text content must be in clear, simple Hebrew
+9. **Output**: ONLY valid JSON, no markdown formatting
 
 CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanations.
 `;
 
 // ============================================================================
-// PAYLOAD BUILDER (from payload-builder.ts)
+// PAYLOAD BUILDER - Enhanced with structured RFP and proposal data
 // ============================================================================
 
 function extractScopeFromDescription(description: string | null, projectType: string | null): string[] {
@@ -271,6 +321,45 @@ function extractScopeFromDescription(description: string | null, projectType: st
   return found.length > 0 ? found : [projectType || "General"];
 }
 
+interface RFPFeeItem {
+  id?: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  is_optional: boolean;
+  charge_type?: string;
+}
+
+interface MilestonePayment {
+  description: string;
+  percentage: number;
+  trigger?: string;
+}
+
+interface PaymentTerms {
+  advance_percent?: number;
+  milestone_payments?: MilestonePayment[];
+  payment_term_type?: string;
+  notes?: string;
+}
+
+interface ProposalFeeLineItem {
+  name?: string;
+  description?: string;
+  unit?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  is_optional?: boolean;
+  category?: string;
+}
+
+interface ProposalMilestoneAdjustment {
+  description?: string;
+  consultant_percentage?: number;
+  entrepreneur_percentage?: number;
+}
+
 interface ProposalData {
   proposal_id: string;
   vendor_name: string;
@@ -289,6 +378,13 @@ interface ProposalData {
   rfp_request_title?: string | null;
   rfp_request_content?: string | null;
   rfp_advisor_type?: string | null;
+  // NEW: Structured data
+  rfp_fee_items?: RFPFeeItem[];
+  rfp_payment_terms?: PaymentTerms | null;
+  rfp_service_details?: string | null;
+  fee_line_items?: ProposalFeeLineItem[];
+  milestone_adjustments?: ProposalMilestoneAdjustment[];
+  consultant_request_notes?: string | null;
 }
 
 interface ProjectMetadata {
@@ -319,10 +415,15 @@ function buildUserContent(
   const evaluationMode = proposals.length === 1 ? "SINGLE" : "BATCH";
 
   const firstProposal = proposals[0];
-  const rfpRequirements = {
+  
+  // Build RFP requirements with structured data
+  const rfpRequirements: any = {
     request_title: firstProposal.rfp_request_title || null,
     request_content: firstProposal.rfp_request_content || null,
-    advisor_type: firstProposal.rfp_advisor_type || null
+    advisor_type: firstProposal.rfp_advisor_type || null,
+    service_details: firstProposal.rfp_service_details || null,
+    payment_terms: firstProposal.rfp_payment_terms || null,
+    fee_items_requested: firstProposal.rfp_fee_items || []
   };
 
   const userContent = {
@@ -340,7 +441,7 @@ function buildUserContent(
       is_large_scale: isLargeScale,
       required_scope: required_scope
     },
-    rfp_requirements: rfpRequirements.request_title || rfpRequirements.request_content 
+    rfp_requirements: rfpRequirements.request_title || rfpRequirements.request_content || rfpRequirements.fee_items_requested?.length > 0
       ? rfpRequirements 
       : null,
     benchmark_data: evaluationMode === "SINGLE" 
@@ -357,15 +458,20 @@ function buildUserContent(
       const hasRating = p.db_internal_rating > 0;
       const hasExpertise = p.expertise && p.expertise.length > 0;
       const hasTerms = (p.terms || "").trim().length > 0;
+      const hasFeeLineItems = p.fee_line_items && p.fee_line_items.length > 0;
+      const hasMilestoneAdjustments = p.milestone_adjustments && p.milestone_adjustments.length > 0;
       
+      // Enhanced completeness score including structured data
       const completenessScore = (
-        (hasPrice ? 1 : 0) * 0.15 +
-        (hasTimeline ? 1 : 0) * 0.10 +
-        (hasScope ? 1 : 0) * 0.20 +
-        (hasExperience ? 1 : 0) * 0.15 +
-        (hasRating ? 1 : 0) * 0.15 +
-        (hasExpertise ? 1 : 0) * 0.10 +
-        (hasTerms ? 1 : 0) * 0.15
+        (hasPrice ? 1 : 0) * 0.12 +
+        (hasTimeline ? 1 : 0) * 0.08 +
+        (hasScope ? 1 : 0) * 0.15 +
+        (hasExperience ? 1 : 0) * 0.12 +
+        (hasRating ? 1 : 0) * 0.12 +
+        (hasExpertise ? 1 : 0) * 0.08 +
+        (hasTerms ? 1 : 0) * 0.08 +
+        (hasFeeLineItems ? 1 : 0) * 0.15 +
+        (hasMilestoneAdjustments ? 1 : 0) * 0.10
       );
 
       return {
@@ -383,6 +489,10 @@ function buildUserContent(
         db_internal_rating: p.db_internal_rating,
         expertise: p.expertise || [],
         certifications: p.certifications || [],
+        // Structured proposal data
+        fee_line_items: p.fee_line_items || [],
+        milestone_adjustments: p.milestone_adjustments || [],
+        consultant_notes: p.consultant_request_notes || null,
         data_completeness: Math.round(completenessScore * 100) / 100,
         missing_data_flags: {
           no_price: !hasPrice,
@@ -391,7 +501,9 @@ function buildUserContent(
           no_experience: !hasExperience,
           no_rating: !hasRating,
           no_expertise: !hasExpertise,
-          no_terms: !hasTerms
+          no_terms: !hasTerms,
+          no_fee_line_items: !hasFeeLineItems,
+          no_milestone_adjustments: !hasMilestoneAdjustments
         }
       };
     })
@@ -407,13 +519,9 @@ function buildUserContent(
 async function callOpenAI(
   systemInstruction: string,
   userContent: string,
-  apiKey: string
+  apiKey: string,
+  vendorNameMap: Map<string, string>
 ): Promise<EvaluationResult> {
-  // Model selection for batch processing (fastest to slowest):
-  // - gpt-3.5-turbo: FASTEST (~10-15s for 5 proposals), lower quality
-  // - gpt-4o-mini: FAST (~30-40s for 5 proposals), good quality/price balance
-  // - gpt-4o: MEDIUM (~20-30s for 5 proposals), best quality, faster than mini for complex tasks
-  // - gpt-4-turbo: SLOWER (~40-50s), highest quality
   const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4o';
   
   const aiEndpoint = 'https://api.openai.com/v1/chat/completions';
@@ -422,7 +530,6 @@ async function callOpenAI(
   console.log('[Evaluate] Model:', model);
   console.log('[Evaluate] Endpoint:', aiEndpoint);
   
-  // OpenAI API format with JSON mode
   const payload = {
     model: model,
     messages: [
@@ -435,8 +542,8 @@ async function callOpenAI(
         content: userContent
       }
     ],
-    temperature: 0.0, // Deterministic output
-    response_format: { type: "json_object" }, // Force JSON output
+    temperature: 0.0,
+    response_format: { type: "json_object" },
     max_tokens: 8192
   };
 
@@ -460,7 +567,6 @@ async function callOpenAI(
   const result = await response.json();
   console.log('[Evaluate] OpenAI response received');
 
-  // Extract JSON from OpenAI response
   const jsonText = result.choices?.[0]?.message?.content;
   
   if (!jsonText) {
@@ -468,7 +574,6 @@ async function callOpenAI(
     throw new Error('No content in AI response. Check API response format.');
   }
 
-  // Clean JSON (remove markdown code blocks if present - though OpenAI with json_object shouldn't return these)
   let cleanedJson = jsonText.trim();
   if (cleanedJson.startsWith('```json')) {
     cleanedJson = cleanedJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -476,7 +581,6 @@ async function callOpenAI(
     cleanedJson = cleanedJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
 
-  // Parse and validate JSON
   let parsed: any;
   try {
     parsed = JSON.parse(cleanedJson);
@@ -485,32 +589,42 @@ async function callOpenAI(
     throw new Error(`Invalid JSON response from AI: ${error.message}`);
   }
 
-  // Validate with Zod
+  // Inject vendor_name from our source data
+  if (parsed.ranked_proposals && Array.isArray(parsed.ranked_proposals)) {
+    for (const proposal of parsed.ranked_proposals) {
+      const vendorName = vendorNameMap.get(proposal.proposal_id);
+      if (vendorName) {
+        proposal.vendor_name = vendorName;
+      } else if (!proposal.vendor_name || proposal.vendor_name.trim() === '') {
+        proposal.vendor_name = 'Unknown Vendor';
+      }
+    }
+  }
+
   const validated = EvaluationResultSchema.parse(parsed);
   return validated;
 }
 
 // ============================================================================
-// GOOGLE AI STUDIO HELPER (from google-ai-helper.ts)
+// GOOGLE AI STUDIO HELPER
 // ============================================================================
 
 async function callGoogleAIStudio(
   systemInstruction: string,
   userContent: string,
-  apiKey: string
+  apiKey: string,
+  vendorNameMap: Map<string, string>
 ): Promise<EvaluationResult> {
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002';
   
   console.log('[Evaluate] Using Google AI Studio API');
   console.log('[Evaluate] Model:', model);
   
-  // Use v1 for gemini-1.5 models, v1beta for gemini-3 models
   const apiVersion = model.includes('gemini-3') ? 'v1beta' : 'v1';
   const aiEndpoint = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent`;
   
   console.log('[Evaluate] Endpoint:', aiEndpoint);
   
-  // responseMimeType is only supported in v1beta, not in v1
   const generationConfig: any = {
     temperature: 0.0,
     topK: 1,
@@ -518,7 +632,6 @@ async function callGoogleAIStudio(
     maxOutputTokens: 8192,
   };
   
-  // Only add responseMimeType for v1beta API
   if (apiVersion === 'v1beta') {
     generationConfig.responseMimeType = "application/json";
   }
@@ -579,12 +692,24 @@ async function callGoogleAIStudio(
     throw new Error(`Invalid JSON response from AI: ${error.message}`);
   }
 
+  // Inject vendor_name from our source data
+  if (parsed.ranked_proposals && Array.isArray(parsed.ranked_proposals)) {
+    for (const proposal of parsed.ranked_proposals) {
+      const vendorName = vendorNameMap.get(proposal.proposal_id);
+      if (vendorName) {
+        proposal.vendor_name = vendorName;
+      } else if (!proposal.vendor_name || proposal.vendor_name.trim() === '') {
+        proposal.vendor_name = 'Unknown Vendor';
+      }
+    }
+  }
+
   const validated = EvaluationResultSchema.parse(parsed);
   return validated;
 }
 
 // ============================================================================
-// MAIN FUNCTION (from index.ts)
+// MAIN FUNCTION
 // ============================================================================
 
 const corsHeaders = {
@@ -629,23 +754,18 @@ function getOpenAIAPIKey(): string {
   return apiKey;
 }
 
-// Determine which AI provider to use
 function getAIProvider(): 'openai' | 'google' {
-  // Check explicit provider setting
   const explicitProvider = Deno.env.get('AI_PROVIDER')?.toLowerCase();
   if (explicitProvider === 'openai' || explicitProvider === 'google') {
     return explicitProvider as 'openai' | 'google';
   }
   
-  // Auto-detect based on available API keys
   const hasOpenAI = !!(Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPENAI_KEY'));
   const hasGoogle = !!(Deno.env.get('GOOGLE_API_KEY') || Deno.env.get('GEMENI_API_KEY'));
   
-  // Prefer OpenAI if both are available (faster for batch processing)
   if (hasOpenAI) return 'openai';
   if (hasGoogle) return 'google';
   
-  // Default to Google if neither is explicitly set (backward compatibility)
   return 'google';
 }
 
@@ -674,7 +794,6 @@ serve(async (req) => {
 
     console.log(`[Evaluate] Starting batch evaluation for project: ${project_id}`);
 
-    // Determine AI provider
     const aiProvider = getAIProvider();
     console.log(`[Evaluate] Using AI provider: ${aiProvider}`);
 
@@ -715,6 +834,7 @@ serve(async (req) => {
       );
     }
 
+    // Enhanced proposals query with structured data
     let proposalsQuery = supabase
       .from('proposals')
       .select(`
@@ -729,6 +849,10 @@ serve(async (req) => {
         extracted_text,
         files,
         advisor_id,
+        fee_line_items,
+        milestone_adjustments,
+        consultant_request_notes,
+        services_notes,
         advisors!fk_proposals_advisor(
           id,
           company_name,
@@ -820,7 +944,19 @@ serve(async (req) => {
     }
 
     const advisorIds = proposals.map(p => p.advisor_id).filter(Boolean);
-    let rfpInvitesMap = new Map<string, { request_title: string | null; request_content: string | null; advisor_type: string | null }>();
+    
+    // Enhanced RFP invites map with structured data
+    let rfpInvitesMap = new Map<string, { 
+      request_title: string | null; 
+      request_content: string | null; 
+      advisor_type: string | null;
+      payment_terms: PaymentTerms | null;
+      service_details_text: string | null;
+      invite_id: string | null;
+    }>();
+    
+    // Map to store fee items per invite
+    let inviteFeeItemsMap = new Map<string, RFPFeeItem[]>();
     
     if (advisorIds.length > 0) {
       const { data: rfps, error: rfpsError } = await supabase
@@ -831,9 +967,10 @@ serve(async (req) => {
       if (!rfpsError && rfps && rfps.length > 0) {
         const rfpIds = rfps.map(r => r.id);
         
+        // Fetch RFP invites with enhanced data
         const { data: invites, error: invitesError } = await supabase
           .from('rfp_invites')
-          .select('advisor_id, request_title, request_content, advisor_type')
+          .select('id, advisor_id, request_title, request_content, advisor_type, payment_terms, service_details_text')
           .in('rfp_id', rfpIds)
           .in('advisor_id', advisorIds);
         
@@ -843,8 +980,37 @@ serve(async (req) => {
               rfpInvitesMap.set(invite.advisor_id, {
                 request_title: invite.request_title || null,
                 request_content: invite.request_content || null,
-                advisor_type: invite.advisor_type || null
+                advisor_type: invite.advisor_type || null,
+                payment_terms: invite.payment_terms as PaymentTerms || null,
+                service_details_text: invite.service_details_text || null,
+                invite_id: invite.id
               });
+            }
+          }
+          
+          // Fetch fee items for these invites
+          const inviteIds = invites.map(i => i.id).filter(Boolean);
+          if (inviteIds.length > 0) {
+            const { data: feeItems, error: feeItemsError } = await supabase
+              .from('rfp_request_fee_items')
+              .select('id, rfp_invite_id, description, unit, quantity, is_optional, charge_type')
+              .in('rfp_invite_id', inviteIds);
+            
+            if (!feeItemsError && feeItems) {
+              for (const item of feeItems) {
+                if (item.rfp_invite_id) {
+                  const existing = inviteFeeItemsMap.get(item.rfp_invite_id) || [];
+                  existing.push({
+                    id: item.id,
+                    description: item.description,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    is_optional: item.is_optional || false,
+                    charge_type: item.charge_type
+                  });
+                  inviteFeeItemsMap.set(item.rfp_invite_id, existing);
+                }
+              }
             }
           }
         }
@@ -852,6 +1018,7 @@ serve(async (req) => {
     }
     
     console.log(`[Evaluate] Found RFP invite data for ${rfpInvitesMap.size} proposals`);
+    console.log(`[Evaluate] Found fee items for ${inviteFeeItemsMap.size} invites`);
 
     for (const proposal of proposals) {
       if (!proposal.extracted_text || proposal.extracted_text.trim().length < 50) {
@@ -899,6 +1066,8 @@ serve(async (req) => {
       }
       
       const rfpInviteData = p.advisor_id ? rfpInvitesMap.get(p.advisor_id) : null;
+      const inviteId = rfpInviteData?.invite_id;
+      const feeItems = inviteId ? inviteFeeItemsMap.get(inviteId) || [] : [];
       
       return {
         proposal_id: p.id,
@@ -918,10 +1087,20 @@ serve(async (req) => {
         rfp_request_title: rfpInviteData?.request_title || null,
         rfp_request_content: rfpInviteData?.request_content || null,
         rfp_advisor_type: rfpInviteData?.advisor_type || null,
+        // NEW: Structured RFP data
+        rfp_fee_items: feeItems,
+        rfp_payment_terms: rfpInviteData?.payment_terms || null,
+        rfp_service_details: rfpInviteData?.service_details_text || null,
+        // NEW: Structured proposal data
+        fee_line_items: p.fee_line_items || [],
+        milestone_adjustments: p.milestone_adjustments || [],
+        consultant_request_notes: p.consultant_request_notes || p.services_notes || null,
       };
     });
     
     console.log('[Evaluate] Proposal data prepared:', proposalData.length, 'proposals');
+    console.log('[Evaluate] First proposal fee items count:', proposalData[0]?.rfp_fee_items?.length || 0);
+    console.log('[Evaluate] First proposal line items count:', proposalData[0]?.fee_line_items?.length || 0);
 
     const userContent = buildUserContent(
       proposalData,
@@ -940,13 +1119,17 @@ serve(async (req) => {
 
     console.log('[Evaluate] Calling AI with', proposals.length, 'proposals');
 
+    const vendorNameMap = new Map<string, string>();
+    for (const p of proposalData) {
+      vendorNameMap.set(p.proposal_id, p.vendor_name || p.company_name || 'Unknown Vendor');
+    }
+
     const startTime = Date.now();
     
-    // Call appropriate AI provider
     const evaluationResult = await Promise.race([
       aiProvider === 'openai' 
-        ? callOpenAI(SYSTEM_INSTRUCTION, userContent, apiKey)
-        : callGoogleAIStudio(SYSTEM_INSTRUCTION, userContent, apiKey),
+        ? callOpenAI(SYSTEM_INSTRUCTION, userContent, apiKey, vendorNameMap)
+        : callGoogleAIStudio(SYSTEM_INSTRUCTION, userContent, apiKey, vendorNameMap),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Evaluation timeout')), EVALUATION_TIMEOUT_MS)
       ),
@@ -1064,4 +1247,3 @@ serve(async (req) => {
     );
   }
 });
-

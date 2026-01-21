@@ -34,6 +34,8 @@ import LazySection from "@/components/LazySection";
 import MobileNav from "@/components/MobileNav";
 import Logo from "@/components/Logo";
 import BackToTop from "@/components/BackToTop";
+import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
+import { TermsAndConditions } from "@/components/TermsAndConditions";
 
 // Lazy load heavy components
 const OptimizedTestimonials = lazy(() => import("@/components/OptimizedTestimonials"));
@@ -42,12 +44,14 @@ const Landing = memo(() => {
   // Billding Landing Page
   const [showUserTypeDialog, setShowUserTypeDialog] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
   const { user, primaryRole } = useAuth();
 
   // Hero images array - optimized for performance
   const heroImages = [
-    "/lovable-uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
+    "/uploads/1e5c97d5-fcff-4d72-8564-66041529e61d.png",
     // Add more images here as they're uploaded
   ];
 
@@ -545,8 +549,13 @@ const Landing = memo(() => {
               </div>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-8 text-center text-white/70">
-            <p>© 2026 Billding. כל הזכויות שמורות. Made with ❤️</p>
+          <div className="border-t border-white/10 pt-8 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-4 text-sm text-white/80">
+              <button onClick={() => setShowPrivacy(true)} className="hover:text-white transition-colors">מדיניות פרטיות</button>
+              <span>•</span>
+              <button onClick={() => setShowTerms(true)} className="hover:text-white transition-colors">תנאי שימוש</button>
+            </div>
+            <p className="text-white/70">© 2026 Billding. כל הזכויות שמורות. Made with ❤️</p>
           </div>
         </div>
       </footer>
@@ -627,6 +636,19 @@ const Landing = memo(() => {
 
       {/* Back to Top Button */}
       <BackToTop />
+
+      {/* Privacy Policy Dialog */}
+      <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
+
+      {/* Terms of Service Dialog */}
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">תנאי שימוש</DialogTitle>
+          </DialogHeader>
+          <TermsAndConditions accepted={true} onAcceptChange={() => {}} />
+        </DialogContent>
+      </Dialog>
     </div>
 });
 

@@ -242,6 +242,97 @@ export type Database = {
           },
         ]
       }
+      bulk_negotiation_batches: {
+        Row: {
+          created_at: string
+          id: string
+          initiator_id: string
+          message: string | null
+          project_id: string
+          reduction_type: string
+          reduction_value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiator_id: string
+          message?: string | null
+          project_id: string
+          reduction_type: string
+          reduction_value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiator_id?: string
+          message?: string | null
+          project_id?: string
+          reduction_type?: string
+          reduction_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_negotiation_batches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_negotiation_members: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          proposal_id: string
+          session_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          proposal_id: string
+          session_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          proposal_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_negotiation_members_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_negotiation_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_negotiation_members_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           activity_categories: Json | null
@@ -430,6 +521,53 @@ export type Database = {
         }
         Relationships: []
       }
+      licensing_phases: {
+        Row: {
+          created_at: string | null
+          default_duration_days: number | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          municipality_id: string | null
+          name: string
+          project_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name?: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licensing_phases_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       line_item_negotiations: {
         Row: {
           adjustment_type: string
@@ -529,6 +667,146 @@ export type Database = {
         }
         Relationships: []
       }
+      milestone_template_tasks: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_critical: boolean
+          milestone_template_id: string
+          task_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_critical?: boolean
+          milestone_template_id: string
+          task_template_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_critical?: boolean
+          milestone_template_id?: string
+          task_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_template_tasks_milestone_template_id_fkey"
+            columns: ["milestone_template_id"]
+            isOneToOne: false
+            referencedRelation: "milestone_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestone_template_tasks_task_template_id_fkey"
+            columns: ["task_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milestone_templates: {
+        Row: {
+          advisor_specialty: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          display_order: number
+          fixed_amount: number | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          municipality_id: string | null
+          name: string
+          name_en: string | null
+          percentage_of_total: number
+          project_type: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_specialty?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          municipality_id?: string | null
+          name: string
+          name_en?: string | null
+          percentage_of_total: number
+          project_type?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_specialty?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          municipality_id?: string | null
+          name?: string
+          name_en?: string | null
+          percentage_of_total?: number
+          project_type?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_templates_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      municipalities: {
+        Row: {
+          created_at: string | null
+          has_special_requirements: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          region: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_special_requirements?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          region?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_special_requirements?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          region?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       negotiation_comments: {
         Row: {
           author_id: string
@@ -570,15 +848,79 @@ export type Database = {
           },
         ]
       }
+      negotiation_files: {
+        Row: {
+          file_size: number
+          id: string
+          mime_type: string | null
+          original_name: string
+          proposal_id: string
+          session_id: string | null
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+          used_at: string | null
+        }
+        Insert: {
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          original_name: string
+          proposal_id: string
+          session_id?: string | null
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          original_name?: string
+          proposal_id?: string
+          session_id?: string | null
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_files_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_files_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_files_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       negotiation_sessions: {
         Row: {
+          bulk_batch_id: string | null
           consultant_advisor_id: string
           consultant_response_message: string | null
           created_at: string
+          files: Json | null
           global_comment: string | null
           id: string
           initiator_id: string
           initiator_message: string | null
+          milestone_adjustments: Json | null
           negotiated_version_id: string | null
           project_id: string
           proposal_id: string
@@ -590,13 +932,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bulk_batch_id?: string | null
           consultant_advisor_id: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id: string
           proposal_id: string
@@ -608,13 +953,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bulk_batch_id?: string | null
           consultant_advisor_id?: string
           consultant_response_message?: string | null
           created_at?: string
+          files?: Json | null
           global_comment?: string | null
           id?: string
           initiator_id?: string
           initiator_message?: string | null
+          milestone_adjustments?: Json | null
           negotiated_version_id?: string | null
           project_id?: string
           proposal_id?: string
@@ -626,6 +974,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_bulk_batch_id_fkey"
+            columns: ["bulk_batch_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_negotiation_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "negotiation_sessions_consultant_advisor_id_fkey"
             columns: ["consultant_advisor_id"]
@@ -726,6 +1081,117 @@ export type Database = {
           subject?: string
           template_data?: Json | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      organization_approval_chains: {
+        Row: {
+          after_status_code: string
+          approver_role: string | null
+          approver_user_id: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          notify_email: string | null
+          notify_on_enter: boolean
+          organization_id: string
+          requires_signature: boolean
+          signature_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          after_status_code: string
+          approver_role?: string | null
+          approver_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notify_email?: string | null
+          notify_on_enter?: boolean
+          organization_id: string
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          after_status_code?: string
+          approver_role?: string | null
+          approver_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notify_email?: string | null
+          notify_on_enter?: boolean
+          organization_id?: string
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_approval_chains_after_status_code_fkey"
+            columns: ["after_status_code"]
+            isOneToOne: false
+            referencedRelation: "payment_status_definitions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "organization_approval_chains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          name_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          name_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          name_en?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -938,6 +1404,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_status_definitions: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          email_template_key: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          is_terminal: boolean
+          name: string
+          name_en: string | null
+          notify_on_enter: boolean
+          notify_roles: string[] | null
+          requires_signature: boolean
+          signature_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          email_template_key?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          is_terminal?: boolean
+          name: string
+          name_en?: string | null
+          notify_on_enter?: boolean
+          notify_roles?: string[] | null
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          email_template_key?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          is_terminal?: boolean
+          name?: string
+          name_en?: string | null
+          notify_on_enter?: boolean
+          notify_roles?: string[] | null
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1153,6 +1682,72 @@ export type Database = {
           },
         ]
       }
+      project_licensing_stages: {
+        Row: {
+          actual_end_date: string | null
+          actual_start_date: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          licensing_phase_id: string | null
+          name: string
+          planned_end_date: string | null
+          planned_start_date: string | null
+          progress_percent: number | null
+          project_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          licensing_phase_id?: string | null
+          name: string
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          licensing_phase_id?: string | null
+          name?: string
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_percent?: number | null
+          project_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_licensing_stages_licensing_phase_id_fkey"
+            columns: ["licensing_phase_id"]
+            isOneToOne: false
+            referencedRelation: "licensing_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_licensing_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_tasks: {
         Row: {
           actual_end_date: string | null
@@ -1168,13 +1763,16 @@ export type Database = {
           id: string
           is_blocked: boolean | null
           is_milestone: boolean | null
+          is_payment_critical: boolean | null
           name: string
           notes: string | null
+          payment_milestone_id: string | null
           phase: string | null
           planned_end_date: string | null
           planned_start_date: string | null
           progress_percent: number | null
           project_id: string
+          stage_id: string | null
           status: string
           template_id: string | null
           updated_at: string
@@ -1193,13 +1791,16 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
+          is_payment_critical?: boolean | null
           name: string
           notes?: string | null
+          payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
           progress_percent?: number | null
           project_id: string
+          stage_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -1218,13 +1819,16 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
+          is_payment_critical?: boolean | null
           name?: string
           notes?: string | null
+          payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
           progress_percent?: number | null
           project_id?: string
+          stage_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -1238,10 +1842,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_tasks_payment_milestone_id_fkey"
+            columns: ["payment_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "payment_milestones"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_licensing_stages"
             referencedColumns: ["id"]
           },
           {
@@ -1264,6 +1882,7 @@ export type Database = {
           id: string
           is_large_scale: boolean | null
           location: string | null
+          municipality_id: string | null
           name: string
           owner_id: string
           phase: string | null
@@ -1284,6 +1903,7 @@ export type Database = {
           id?: string
           is_large_scale?: boolean | null
           location?: string | null
+          municipality_id?: string | null
           name: string
           owner_id: string
           phase?: string | null
@@ -1304,6 +1924,7 @@ export type Database = {
           id?: string
           is_large_scale?: boolean | null
           location?: string | null
+          municipality_id?: string | null
           name?: string
           owner_id?: string
           phase?: string | null
@@ -1314,7 +1935,15 @@ export type Database = {
           units?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_line_items: {
         Row: {
@@ -1715,6 +2344,9 @@ export type Database = {
             | null
           delivered_at: string | null
           email: string
+          email_attempts: number | null
+          email_last_attempt_at: string | null
+          email_last_error: string | null
           id: string
           last_notification_at: string | null
           opened_at: string | null
@@ -1745,6 +2377,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
@@ -1775,6 +2410,9 @@ export type Database = {
             | null
           delivered_at?: string | null
           email?: string
+          email_attempts?: number | null
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
           id?: string
           last_notification_at?: string | null
           opened_at?: string | null
@@ -2129,6 +2767,7 @@ export type Database = {
           dependency_type: string
           depends_on_task_id: string
           id: string
+          lag_days: number | null
           task_id: string
         }
         Insert: {
@@ -2136,6 +2775,7 @@ export type Database = {
           dependency_type?: string
           depends_on_task_id: string
           id?: string
+          lag_days?: number | null
           task_id: string
         }
         Update: {
@@ -2143,6 +2783,7 @@ export type Database = {
           dependency_type?: string
           depends_on_task_id?: string
           id?: string
+          lag_days?: number | null
           task_id?: string
         }
         Relationships: [
@@ -2166,46 +2807,89 @@ export type Database = {
         Row: {
           advisor_specialty: string | null
           created_at: string
+          created_by_user_id: string | null
           default_duration_days: number | null
+          depends_on_template_id: string | null
           description: string | null
           display_order: number | null
           id: string
           is_active: boolean | null
+          is_default: boolean | null
           is_milestone: boolean | null
+          is_user_template: boolean | null
+          licensing_phase_id: string | null
+          municipality_id: string | null
           name: string
           phase: string | null
           project_type: string
+          template_group_id: string | null
           updated_at: string
         }
         Insert: {
           advisor_specialty?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           default_duration_days?: number | null
+          depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           is_milestone?: boolean | null
+          is_user_template?: boolean | null
+          licensing_phase_id?: string | null
+          municipality_id?: string | null
           name: string
           phase?: string | null
           project_type: string
+          template_group_id?: string | null
           updated_at?: string
         }
         Update: {
           advisor_specialty?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           default_duration_days?: number | null
+          depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           is_milestone?: boolean | null
+          is_user_template?: boolean | null
+          licensing_phase_id?: string | null
+          municipality_id?: string | null
           name?: string
           phase?: string | null
           project_type?: string
+          template_group_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_depends_on_template_id_fkey"
+            columns: ["depends_on_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_licensing_phase_id_fkey"
+            columns: ["licensing_phase_id"]
+            isOneToOne: false
+            referencedRelation: "licensing_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_feedback: {
         Row: {
@@ -2547,7 +3231,7 @@ export type Database = {
         Args: {
           p_consultant_message?: string
           p_session_id: string
-          p_updated_line_items: Json
+          p_updated_line_items?: Json
         }
         Returns: Json
       }

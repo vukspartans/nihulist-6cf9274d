@@ -11,6 +11,7 @@ const statusConfig: Record<TaskStatus, { label: string; variant: 'default' | 'se
   blocked: { label: 'חסום', variant: 'destructive' },
   completed: { label: 'הושלם', variant: 'success' },
   cancelled: { label: 'בוטל', variant: 'muted' },
+  delayed: { label: 'באיחור', variant: 'destructive' },
 };
 
 export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {

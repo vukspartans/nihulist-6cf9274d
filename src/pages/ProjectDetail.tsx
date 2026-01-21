@@ -27,6 +27,8 @@ import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
 import { TaskBoard } from '@/components/tasks';
 import { PaymentDashboard } from '@/components/payments';
+import LegalFooter from '@/components/LegalFooter';
+
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -211,10 +213,10 @@ export const ProjectDetail = () => {
         .from('rfps')
         .select('id')
         .eq('project_id', id)
-        .maybeSingle();
+        .limit(1);
 
       if (error) throw error;
-      setRfpSent(!!data);
+      setRfpSent(data && data.length > 0);
     } catch (error) {
       console.error('Error checking RFP status:', error);
     }
@@ -297,7 +299,7 @@ export const ProjectDetail = () => {
       rejected: { variant: 'destructive', label: 'נדחתה' },
       withdrawn: { variant: 'muted', label: 'בוטל' },
       resubmitted: { variant: 'secondary', label: '🔄 הצעה מעודכנת' },
-      negotiation_requested: { variant: 'warning', label: '💬 במשא ומתן' },
+      negotiation_requested: { variant: 'warning', label: '💬 משא ומתן' },
     };
 
     const config = statusConfig[status] || { variant: 'secondary', label: status };
@@ -485,7 +487,7 @@ export const ProjectDetail = () => {
           />
         </TabsContent>
 
-        <TabsContent value="sent-rfps">
+        <TabsContent value="sent-rfps" className="space-y-4">
           <SentRFPsTab projectId={project.id} />
         </TabsContent>
 
@@ -582,6 +584,7 @@ export const ProjectDetail = () => {
         />
       )}
       </div>
+      <LegalFooter />
       <BackToTop />
     </div>
   );

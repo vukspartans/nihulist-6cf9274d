@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { VersionBadge } from '@/components/negotiation/VersionBadge';
 
 interface FeeLineItem {
   item_id?: string;
@@ -72,7 +73,7 @@ const getStatusBadge = (status: string) => {
     rejected: { variant: 'destructive', label: 'נדחה' },
     withdrawn: { variant: 'muted', label: 'בוטל' },
     resubmitted: { variant: 'secondary', label: '🔄 מעודכן' },
-    negotiation_requested: { variant: 'warning', label: '💬 משא״מ' },
+    negotiation_requested: { variant: 'warning', label: '💬 משא ומתן' },
   };
 
   const config = statusConfig[status] || { variant: 'secondary', label: status };
@@ -248,9 +249,17 @@ export const ProposalComparisonTable = ({
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate max-w-[150px]">
-                              {proposal.advisors?.company_name || proposal.supplier_name}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-sm truncate max-w-[150px]">
+                                {proposal.advisors?.company_name || proposal.supplier_name}
+                              </p>
+                              {(proposal.current_version && proposal.current_version > 1) && (
+                                <VersionBadge 
+                                  currentVersion={proposal.current_version}
+                                  hasActiveNegotiation={proposal.status === 'negotiation_requested'}
+                                />
+                              )}
+                            </div>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               {proposal.files && proposal.files.length > 0 && (
                                 <span className="flex items-center gap-0.5">

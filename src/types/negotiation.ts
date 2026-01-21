@@ -57,6 +57,9 @@ export interface NegotiationSession {
   resolved_at?: string;
   created_at: string;
   updated_at: string;
+  // JSONB fields from database - typed as unknown for flexibility with Json type
+  files?: unknown;
+  milestone_adjustments?: unknown;
 }
 
 export interface LineItemNegotiation {
@@ -87,15 +90,23 @@ export interface NegotiationComment {
 }
 
 // Input types for edge functions
+export interface MilestoneAdjustmentInput {
+  milestone_id: string;
+  original_percentage: number;
+  target_percentage: number;
+  initiator_note?: string;
+}
+
 export interface NegotiationRequestInput {
   project_id: string;
   proposal_id: string;
-  negotiated_version_id: string;
+  negotiated_version_id?: string | null;  // Optional - edge function creates if not provided
   target_total?: number;
   target_reduction_percent?: number;
   global_comment?: string;
   bulk_message?: string;
   line_item_adjustments?: LineItemAdjustment[];
+  milestone_adjustments?: MilestoneAdjustmentInput[];
   comments?: NegotiationCommentInput[];
   files?: { name: string; url: string; size: number }[];
 }
@@ -117,12 +128,30 @@ export interface NegotiationResponseInput {
   session_id: string;
   consultant_message?: string;
   updated_line_items: UpdatedLineItem[];
+  milestone_responses?: MilestoneResponseInput[];
+  uploaded_files?: UploadedFileInput[];
 }
 
 export interface UpdatedLineItem {
   line_item_id: string;
   consultant_response_price: number;
   consultant_note?: string;
+}
+
+export interface MilestoneResponseInput {
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;
+  accepted: boolean;
+}
+
+export interface UploadedFileInput {
+  url: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
 }
 
 export interface NegotiationRequestOutput {
@@ -135,6 +164,50 @@ export interface NegotiationResponseOutput {
   new_version_number: number;
 }
 
+// Fee line item from proposal JSON
+export interface FeeLineItem {
+  item_id?: string;
+  item_number?: number;
+  description: string;
+  unit?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  comment?: string;
+  is_entrepreneur_defined?: boolean;
+  is_optional?: boolean;
+}
+
+// Milestone from proposal JSON
+export interface ProposalMilestone {
+  description: string;
+  percentage?: number;
+  consultant_percentage?: number;
+  entrepreneur_percentage?: number;
+  trigger?: string;
+  is_entrepreneur_defined?: boolean;
+}
+
+// JSON line item adjustment stored in session.files
+export interface JsonLineItemAdjustment {
+  line_item_id: string;
+  adjustment_type?: string;
+  adjustment_value?: number;
+  original_unit_price?: number;
+  target_unit_price?: number;
+  quantity?: number;
+  original_total?: number;
+  target_total?: number;
+  initiator_note?: string;
+}
+
+// Initiator profile info
+export interface InitiatorProfile {
+  name: string | null;
+  company_name: string | null;
+  organization_id?: string | null;
+}
+
 // Extended types with relations
 export interface NegotiationSessionWithDetails extends NegotiationSession {
   proposal?: {
@@ -143,6 +216,9 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     supplier_name: string;
     current_version: number;
     advisor_id: string;
+    fee_line_items?: FeeLineItem[];
+    milestone_adjustments?: ProposalMilestone[];
+    rfp_invite_id?: string | null;
   };
   project?: {
     id: string;
@@ -154,6 +230,7 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     company_name: string;
     user_id: string;
   };
+  initiator_profile?: InitiatorProfile;
   line_item_negotiations?: LineItemNegotiation[];
   comments?: NegotiationComment[];
 }

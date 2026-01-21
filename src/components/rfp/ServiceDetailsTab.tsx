@@ -329,15 +329,16 @@ export const ServiceDetailsTab = ({
                         <Badge variant="outline" className="text-xs">אופציונלי</Badge>
                       )}
                       <Select
+                        dir="rtl"
                         value={item.fee_category}
                         onValueChange={(value) => updateScopeItemCategory(index, value)}
                       >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger dir="rtl" className="w-40 text-right">
                           <SelectValue placeholder="סעיף שכ&quot;ט" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent dir="rtl">
                           {feeCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
+                            <SelectItem key={cat} value={cat} className="text-right">
                               {cat}
                             </SelectItem>
                           ))}

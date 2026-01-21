@@ -12,6 +12,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Rate limiting helper - Resend allows 2 requests per second
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const RATE_LIMIT_DELAY_MS = 600 // 600ms between requests = ~1.6 requests/second (safe margin)
+
 // Helper function to get team member emails
 async function getTeamMemberEmails(
   supabase: any, 
@@ -48,6 +52,7 @@ interface RFPInvite {
   request_title: string | null
   request_content: string | null
   request_files: Array<{ name: string; url: string; size: number; path: string }> | null
+  email_attempts: number | null
 }
 
 interface Project {
@@ -143,7 +148,8 @@ serve(async (req) => {
         deadline_at,
         request_title,
         request_content,
-        request_files
+        request_files,
+        email_attempts
       `)
       .eq('rfp_id', rfp_id)
       .eq('status', 'sent')
@@ -165,8 +171,14 @@ serve(async (req) => {
 
     const emailResults = []
 
-    // Send email to each invited advisor
-    for (const invite of invites as RFPInvite[]) {
+    // Send email to each invited advisor with rate limiting
+    for (let i = 0; i < invites.length; i++) {
+      const invite = invites[i] as RFPInvite
+      
+      // Add delay between emails to respect Resend's rate limit (2 requests/second)
+      if (i > 0) {
+        await delay(RATE_LIMIT_DELAY_MS)
+      }
       try {
         // Get advisor details
         const { data: advisor, error: advisorError } = await supabase
@@ -261,15 +273,28 @@ serve(async (req) => {
         })
 
         if (emailError) {
-          console.error('[send-rfp-email] Resend error:', emailError)
+          console.error('[send-rfp-email] Resend error for', invite.email, ':', emailError)
+          
+          // Track the failure in the database
+          const currentAttempts = (invite.email_attempts || 0) + 1
+          await supabase
+            .from('rfp_invites')
+            .update({ 
+              email_attempts: currentAttempts,
+              email_last_error: emailError.message || 'Unknown error',
+              email_last_attempt_at: new Date().toISOString()
+            })
+            .eq('id', invite.id)
+          
           emailResults.push({
             invite_id: invite.id,
             email: invite.email,
             success: false,
             error: emailError.message,
+            attempts: currentAttempts,
           })
         } else {
-          console.log('[send-rfp-email] Email sent successfully:', emailData)
+          console.log('[send-rfp-email] Email sent successfully to', invite.email, ':', emailData)
           emailResults.push({
             invite_id: invite.id,
             email: invite.email,
@@ -277,19 +302,37 @@ serve(async (req) => {
             message_id: emailData?.id,
           })
 
-          // Update invite status to mark email as delivered
+          // Update invite status to mark email as delivered and clear any previous errors
           await supabase
             .from('rfp_invites')
-            .update({ delivered_at: new Date().toISOString() })
+            .update({ 
+              delivered_at: new Date().toISOString(),
+              email_attempts: (invite.email_attempts || 0) + 1,
+              email_last_error: null,
+              email_last_attempt_at: new Date().toISOString()
+            })
             .eq('id', invite.id)
         }
       } catch (error) {
-        console.error('[send-rfp-email] Error processing invite:', invite.id, error)
+        console.error('[send-rfp-email] Error processing invite:', invite.id, 'email:', invite.email, error)
+        
+        // Track the failure in the database
+        const currentAttempts = (invite.email_attempts || 0) + 1
+        await supabase
+          .from('rfp_invites')
+          .update({ 
+            email_attempts: currentAttempts,
+            email_last_error: error.message || 'Unknown error',
+            email_last_attempt_at: new Date().toISOString()
+          })
+          .eq('id', invite.id)
+        
         emailResults.push({
           invite_id: invite.id,
           email: invite.email,
           success: false,
           error: error.message,
+          attempts: currentAttempts,
         })
       }
     }

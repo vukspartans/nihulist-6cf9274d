@@ -26,15 +26,18 @@ export function PaymentMilestoneCard({ milestone, onRequestPayment }: PaymentMil
   const canRequestPayment = milestone.status === 'pending' || milestone.status === 'due';
 
   return (
-    <Card className={`border-r-4 ${
-      milestone.status === 'paid' 
-        ? 'border-r-green-500 bg-green-50/30 dark:bg-green-900/10' 
-        : milestone.status === 'overdue'
-        ? 'border-r-destructive'
-        : milestone.status === 'due'
-        ? 'border-r-amber-500'
-        : 'border-r-muted'
-    }`}>
+    <Card 
+      dir="rtl"
+      className={`border-r-4 ${
+        milestone.status === 'paid' 
+          ? 'border-r-green-500 bg-green-50/30 dark:bg-green-900/10' 
+          : milestone.status === 'overdue'
+          ? 'border-r-destructive'
+          : milestone.status === 'due'
+          ? 'border-r-amber-500'
+          : 'border-r-muted'
+      }`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">

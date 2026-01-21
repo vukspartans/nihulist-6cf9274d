@@ -13,6 +13,7 @@ export interface Project {
   timeline_start: string;
   timeline_end: string;
   awaiting_banner_until: string | null;
+  municipality_id: string | null;
   created_at: string;
   updated_at: string;
 }

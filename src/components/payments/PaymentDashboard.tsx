@@ -11,7 +11,6 @@ import { CreatePaymentRequestDialog } from './CreatePaymentRequestDialog';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
 import { PaymentRequestDetailDialog } from './PaymentRequestDetailDialog';
-import { SignatureData } from '@/components/SignatureCanvas';
 import { useAuth } from '@/hooks/useAuth';
 
 interface PaymentDashboardProps {
@@ -86,10 +85,10 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
     }
   };
 
-  const handleApproveSubmit = async (request: PaymentRequest, signature?: SignatureData) => {
+  const handleApproveSubmit = async (request: PaymentRequest, signatureId?: string) => {
     await updatePaymentRequestStatus(request.id, 'approved', {
       approved_by: user?.id,
-      // Note: signature storage would require additional implementation
+      approver_signature_id: signatureId,
     });
   };
 
@@ -111,7 +110,7 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       {/* Header */}
       <Card>
         <CardHeader className="pb-3">

@@ -26,20 +26,23 @@ export const useNegotiation = () => {
 
       if (error) throw error;
 
+      // Show success with vendor name
+      const supplierName = result?.supplier_name || "היועץ";
       toast({
-        title: "בקשה נשלחה",
-        description: "בקשת העדכון נשלחה ליועץ בהצלחה",
+        title: "✓ בקשת העדכון נשלחה בהצלחה",
+        description: `הבקשה נשלחה ל${supplierName}. תקבל עדכון כשיגיב להצעה.`,
       });
 
       return result as NegotiationRequestOutput;
     } catch (error: any) {
       console.error("[useNegotiation] createNegotiationSession error:", error);
-      
+
       // Handle 409 Conflict - existing negotiation
-      // The error.context contains the response body for FunctionsHttpError
+      // Supabase Functions errors may expose response details via error.context (Response)
       if (error?.context) {
         try {
-          const errorBody = await error.context.json();
+          const raw = await error.context.text();
+          const errorBody = raw ? JSON.parse(raw) : null;
           if (errorBody?.error === "ACTIVE_NEGOTIATION_EXISTS") {
             toast({
               title: "בקשה קיימת",
@@ -51,12 +54,20 @@ export const useNegotiation = () => {
           console.error("[useNegotiation] Error parsing context:", parseError);
         }
       }
-      
-      toast({
-        title: "שגיאה",
-        description: error.message || "לא ניתן לשלוח את הבקשה",
-        variant: "destructive",
-      });
+
+      // Fallback: detect the condition even if context isn't available
+      if (String(error?.message || "").includes("ACTIVE_NEGOTIATION_EXISTS")) {
+        toast({
+          title: "בקשה קיימת",
+          description: "קיימת כבר בקשת עדכון פעילה להצעה זו",
+        });
+      } else {
+        toast({
+          title: "שגיאה",
+          description: error.message || "לא ניתן לשלוח את הבקשה",
+          variant: "destructive",
+        });
+      }
       return null;
     } finally {
       setLoading(false);
@@ -195,12 +206,12 @@ export const useNegotiation = () => {
 
       if (sessionError) throw sessionError;
 
-      // Fetch related data
-      const [proposalRes, projectRes, advisorRes, lineItemsRes, commentsRes] =
+      // Fetch related data including fee_line_items and initiator profile
+      const [proposalRes, projectRes, advisorRes, lineItemsRes, commentsRes, initiatorRes] =
         await Promise.all([
           supabase
             .from("proposals")
-            .select("id, price, supplier_name, current_version, advisor_id")
+            .select("id, price, supplier_name, current_version, advisor_id, fee_line_items, milestone_adjustments, rfp_invite_id")
             .eq("id", session.proposal_id)
             .single(),
           supabase
@@ -222,13 +233,75 @@ export const useNegotiation = () => {
             .select("*")
             .eq("session_id", sessionId)
             .order("created_at", { ascending: true }),
+          supabase
+            .from("profiles")
+            .select("name, company_name, organization_id")
+            .eq("user_id", session.initiator_id)
+            .single(),
         ]);
+
+      // Parse fee_line_items from JSON - safely cast with calculated totals
+      const rawFeeLineItems = proposalRes.data?.fee_line_items;
+      const feeLineItems = Array.isArray(rawFeeLineItems) 
+        ? rawFeeLineItems.map((item: any) => ({
+            item_id: item?.item_id,
+            item_number: item?.item_number,
+            description: item?.description || '',
+            unit: item?.unit,
+            quantity: item?.quantity,
+            unit_price: item?.unit_price,
+            total: item?.total ?? ((item?.unit_price || 0) * (item?.quantity || 1)),
+            comment: item?.comment,
+            is_entrepreneur_defined: item?.is_entrepreneur_defined,
+            is_optional: item?.is_optional,
+          }))
+        : [];
+      
+      // Parse milestone_adjustments from JSON - safely cast with flexible structure
+      const rawMilestones = proposalRes.data?.milestone_adjustments;
+      const milestoneAdjustments = Array.isArray(rawMilestones)
+        ? rawMilestones.map((m: any) => ({
+            description: m?.description || m?.trigger || '',
+            percentage: m?.percentage ?? m?.entrepreneur_percentage ?? m?.consultant_percentage ?? 0,
+            consultant_percentage: m?.consultant_percentage,
+            entrepreneur_percentage: m?.entrepreneur_percentage,
+            trigger: m?.trigger,
+            is_entrepreneur_defined: m?.is_entrepreneur_defined,
+          }))
+        : [];
+
+      // Fetch organization name from companies table if organization_id exists
+      let organizationName = initiatorRes.data?.company_name;
+      if (initiatorRes.data?.organization_id) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", initiatorRes.data.organization_id)
+          .single();
+        if (companyData?.name) {
+          organizationName = companyData.name;
+        }
+      }
 
       return {
         ...session,
-        proposal: proposalRes.data,
-        project: projectRes.data,
-        advisor: advisorRes.data,
+        proposal: proposalRes.data ? {
+          id: proposalRes.data.id,
+          price: proposalRes.data.price,
+          supplier_name: proposalRes.data.supplier_name,
+          current_version: proposalRes.data.current_version,
+          advisor_id: proposalRes.data.advisor_id,
+          fee_line_items: feeLineItems,
+          milestone_adjustments: milestoneAdjustments,
+          rfp_invite_id: proposalRes.data.rfp_invite_id,
+        } : undefined,
+        project: projectRes.data || undefined,
+        advisor: advisorRes.data || undefined,
+        initiator_profile: initiatorRes.data ? {
+          name: initiatorRes.data.name,
+          company_name: organizationName || initiatorRes.data.company_name,
+          organization_id: initiatorRes.data.organization_id,
+        } : undefined,
         line_item_negotiations: lineItemsRes.data || [],
         comments: commentsRes.data || [],
       } as NegotiationSessionWithDetails;

@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import BackToTop from '@/components/BackToTop';
 import { useIsMobile } from "@/hooks/use-mobile";
+import LegalFooter from "@/components/LegalFooter";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -630,6 +631,7 @@ const Dashboard = () => {
           </>
         )}
       </div>
+      <LegalFooter />
       <BackToTop />
     </div>
   );

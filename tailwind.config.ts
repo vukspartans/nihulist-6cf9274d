@@ -61,12 +61,16 @@ export default {
 					foreground: 'hsl(var(--card-foreground))',
 					glass: 'hsl(var(--card-glass))'
 				},
-				tech: {
-					blue: 'hsl(var(--tech-blue))',
-					purple: 'hsl(var(--tech-purple))',
-					'purple-light': 'hsl(var(--tech-purple-light))',
-					success: 'hsl(var(--tech-success))'
-				},
+			tech: {
+				blue: 'hsl(var(--tech-blue))',
+				purple: 'hsl(var(--tech-purple))',
+				'purple-light': 'hsl(var(--tech-purple-light))',
+				success: 'hsl(var(--tech-success))'
+			},
+			construction: {
+				orange: '#F97316',
+				success: '#22C55E'
+			},
 				glass: {
 					bg: 'var(--glass-bg)',
 					border: 'var(--glass-border)'

@@ -35,23 +35,7 @@ serve(async (req) => {
         files,
         project_id,
         advisor_id,
-        projects!fk_proposals_project (
-          id,
-          name,
-          owner_id,
-          profiles!projects_owner_id_fkey (
-            name,
-            email
-          )
-        ),
-        advisors!fk_proposals_advisor (
-          id,
-          company_name,
-          user_id
-        ),
-        rfp_invites!inner (
-          advisor_type
-        )
+        rfp_invite_id
       `)
       .eq('id', proposal_id)
       .single();
@@ -61,12 +45,65 @@ serve(async (req) => {
       throw new Error('Proposal not found');
     }
 
-    console.log('[Proposal Submitted] Proposal data:', proposal);
+    // Fetch project with owner profile
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select(`
+        id,
+        name,
+        owner_id
+      `)
+      .eq('id', proposal.project_id)
+      .single();
 
-    const project = proposal.projects as any;
-    const advisor = proposal.advisors as any;
-    const entrepreneurProfile = project.profiles as any;
-    const rfpInvite = Array.isArray(proposal.rfp_invites) ? proposal.rfp_invites[0] : proposal.rfp_invites;
+    if (projectError || !project) {
+      console.error('[Proposal Submitted] Project not found:', projectError);
+      throw new Error('Project not found');
+    }
+
+    // Fetch owner profile
+    const { data: entrepreneurProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', project.owner_id)
+      .single();
+
+    if (profileError || !entrepreneurProfile) {
+      console.error('[Proposal Submitted] Entrepreneur profile not found:', profileError);
+      throw new Error('Entrepreneur profile not found');
+    }
+
+    // Fetch advisor
+    const { data: advisor, error: advisorError } = await supabase
+      .from('advisors')
+      .select('id, company_name, user_id')
+      .eq('id', proposal.advisor_id)
+      .single();
+
+    if (advisorError || !advisor) {
+      console.error('[Proposal Submitted] Advisor not found:', advisorError);
+      throw new Error('Advisor not found');
+    }
+
+    // Fetch RFP invite for advisor_type
+    let advisorType = 'יועץ';
+    if (proposal.rfp_invite_id) {
+      const { data: rfpInvite } = await supabase
+        .from('rfp_invites')
+        .select('advisor_type')
+        .eq('id', proposal.rfp_invite_id)
+        .single();
+      if (rfpInvite?.advisor_type) {
+        advisorType = rfpInvite.advisor_type;
+      }
+    }
+
+    if (proposalError || !proposal) {
+      console.error('[Proposal Submitted] Proposal not found:', proposalError);
+      throw new Error('Proposal not found');
+    }
+
+    console.log('[Proposal Submitted] Proposal data:', { proposal, project, advisor });
 
     if (!entrepreneurProfile?.email) {
       console.error('[Proposal Submitted] Entrepreneur email not found');
@@ -92,9 +129,8 @@ serve(async (req) => {
         entrepreneurName: entrepreneurProfile.name || 'יזם',
         projectName: project.name,
         advisorCompany: advisor.company_name || 'יועץ',
-        advisorType: rfpInvite?.advisor_type || 'יועץ',
+        advisorType: advisorType,
         price: proposal.price,
-        timelineDays: proposal.timeline_days,
         filesCount,
         projectUrl,
       })

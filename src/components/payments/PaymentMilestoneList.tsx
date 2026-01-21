@@ -26,7 +26,7 @@ export function PaymentMilestoneList({
   }, {} as Record<string, PaymentMilestone[]>);
 
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ArrowLeft, ArrowRight, Loader2, X, Home, Plus, Check } from 'lucide-react';
+import { FileText, ArrowLeft, ArrowRight, Loader2, X, Home, Plus, Check, Building2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from "@/components/ui/progress"
@@ -18,6 +18,9 @@ import { PROJECT_PHASES } from '@/constants/project';
 import { ProjectTypeSelector } from '@/components/ProjectTypeSelector';
 import { useDropzone } from 'react-dropzone';
 import { sanitizeFileName } from '@/utils/fileUtils';
+import { useMunicipalities } from '@/hooks/useMunicipalities';
+import { useTemplateResolver } from '@/hooks/useTemplateResolver';
+import { useBulkTaskCreation } from '@/hooks/useBulkTaskCreation';
 
 interface FormData {
   address: string;
@@ -27,6 +30,7 @@ interface FormData {
   budget: string;
   advisorsBudget: string;
   description: string;
+  municipalityId: string;
 }
 
 interface FileWithMetadata {
@@ -50,6 +54,7 @@ export const ProjectWizard = () => {
     budget: '',
     advisorsBudget: '',
     description: '',
+    municipalityId: '',
   });
   const [filesWithMetadata, setFilesWithMetadata] = useState<FileWithMetadata[]>([]);
   const [creating, setCreating] = useState(false);
@@ -60,6 +65,9 @@ export const ProjectWizard = () => {
 
   const totalSteps = 3;
   const { getCanonicalProjectTypes } = useAdvisorsValidation();
+  const { data: municipalities = [] } = useMunicipalities(false); // Only active
+  const { resolveTemplate } = useTemplateResolver();
+  const { createStagesAndTasksFromTemplates } = useBulkTaskCreation();
 
   // Get canonical project types with fallback
   const projectTypes = getCanonicalProjectTypes().length > 0 
@@ -187,9 +195,10 @@ export const ProjectWizard = () => {
         advisors_budget: advisorsBudget,
         description: formData.description || null,
         owner_id: user.id,
-        status: 'active', // Set to active status
-        timeline_start: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        timeline_end: oneYearFromNow.toISOString().split('T')[0] // Format as YYYY-MM-DD
+        status: 'active',
+        timeline_start: today.toISOString().split('T')[0],
+        timeline_end: oneYearFromNow.toISOString().split('T')[0],
+        municipality_id: formData.municipalityId || null
       };
 
       const { data: project, error } = await supabase
@@ -204,6 +213,29 @@ export const ProjectWizard = () => {
         projectId: project.id,
         filesWillBeUploaded: filesWithMetadata.length
       });
+
+      // Resolve and create tasks from templates (if available)
+      try {
+        const { templates, source } = await resolveTemplate(
+          formData.projectType,
+          formData.municipalityId || null
+        );
+        
+        if (templates.length > 0) {
+          console.log(`[ProjectWizard] Found ${templates.length} templates from ${source}`);
+          const result = await createStagesAndTasksFromTemplates(
+            project.id,
+            templates,
+            new Date()
+          );
+          console.log('[ProjectWizard] Created stages and tasks:', result);
+        } else {
+          console.log('[ProjectWizard] No templates found, task board will be empty');
+        }
+      } catch (templateError) {
+        console.error('[ProjectWizard] Template creation error (non-blocking):', templateError);
+        // Don't fail project creation if template loading fails
+      }
 
       // Upload files if any and create project_files records
       const uploadedFileIds: string[] = [];
@@ -512,6 +544,33 @@ export const ProjectWizard = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Municipality - Optional */}
+            <div className="space-y-2">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                עירייה (אופציונלי)
+              </Label>
+              <Select 
+                dir="rtl" 
+                value={formData.municipalityId} 
+                onValueChange={(value) => handleSelectChange('municipalityId', value)}
+              >
+                <SelectTrigger className="h-12 text-right justify-end">
+                  <SelectValue placeholder="בחר עירייה" className="text-right" />
+                </SelectTrigger>
+                <SelectContent dir="rtl" align="end" className="bg-background border shadow-lg z-50 max-h-60">
+                  {municipalities.map((municipality) => (
+                    <SelectItem key={municipality.id} value={municipality.id} className="text-right">
+                      <span className="block w-full text-right">{municipality.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                בחירת עירייה תטען תבניות משימות ספציפיות לרשות
+              </p>
             </div>
 
             {/* Budget - Optional */}

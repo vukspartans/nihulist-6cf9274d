@@ -105,6 +105,7 @@ interface ProposalData {
   consultant_request_notes?: string;
   consultant_request_files?: UploadedFile[];
   services_notes?: string;
+  rfp_invite_id?: string;
 }
 
 export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: AdvisorProposalViewDialogProps) {
@@ -117,6 +118,12 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [negotiationSessionId, setNegotiationSessionId] = useState<string | null>(null);
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
+  const [rfpServiceData, setRfpServiceData] = useState<{
+    mode: string | null;
+    text: string | null;
+    file: { name: string; url: string; size?: number } | null;
+    items: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}>;
+  } | null>(null);
   const { fetchNegotiationByProposal } = useNegotiation();
 
   // Helper to calculate item total dynamically (fallback when total field is missing)
@@ -169,6 +176,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
           files, signature_blob, signature_meta_json, status, submitted_at,
           fee_line_items, selected_services, milestone_adjustments,
           consultant_request_notes, consultant_request_files, services_notes,
+          rfp_invite_id,
           projects!proposals_project_id_fkey (id, name, type, location)
         `)
         .eq('id', proposalId)
@@ -187,6 +195,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
         consultant_request_notes: data.consultant_request_notes as string,
         consultant_request_files: (data.consultant_request_files as unknown as UploadedFile[]) || [],
         services_notes: data.services_notes as string,
+        rfp_invite_id: data.rfp_invite_id,
       };
       setProposal(proposalData);
 
@@ -196,6 +205,11 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
       );
       if (serviceIds.length > 0) {
         fetchServiceNames(serviceIds);
+      }
+
+      // Fetch RFP service details
+      if (proposalData.rfp_invite_id) {
+        await fetchRfpServiceData(proposalData.rfp_invite_id);
       }
 
       // Combine all files for URL loading
@@ -216,6 +230,31 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRfpServiceData = async (rfpInviteId: string) => {
+    const { data: inviteData } = await supabase
+      .from('rfp_invites')
+      .select('service_details_mode, service_details_text, service_details_file')
+      .eq('id', rfpInviteId)
+      .maybeSingle();
+
+    let scopeItems: Array<{id: string; task_name: string; fee_category: string | null; is_optional: boolean}> = [];
+    if (inviteData?.service_details_mode === 'checklist') {
+      const { data: items } = await supabase
+        .from('rfp_service_scope_items')
+        .select('id, task_name, fee_category, is_optional')
+        .eq('rfp_invite_id', rfpInviteId)
+        .order('display_order');
+      if (items) scopeItems = items;
+    }
+
+    setRfpServiceData({
+      mode: inviteData?.service_details_mode || null,
+      text: inviteData?.service_details_text || null,
+      file: (inviteData?.service_details_file as any) || null,
+      items: scopeItems,
+    });
   };
 
   const loadSignedUrls = async (files: UploadedFile[]) => {
@@ -357,7 +396,8 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
     conditions.validity_days || conditions.notes;
 
   const hasPricingData = feeLineItems.length > 0;
-  const hasServicesData = selectedServices.length > 0 || proposal?.services_notes;
+  const hasServicesData = selectedServices.length > 0 || proposal?.services_notes || 
+    (rfpServiceData?.mode && (rfpServiceData.text || rfpServiceData.file || rfpServiceData.items.length > 0));
 
   if (loading) {
     return (
@@ -733,19 +773,74 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                   <Card>
                     <CardContent className="p-4 text-center text-muted-foreground text-xs">
                       <ClipboardList className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                      לא נבחרו שירותים
+                      לא הוגדרו שירותים
                     </CardContent>
                   </Card>
                 ) : (
                   <>
-                    {/* Selected Services */}
-                    {selectedServices.length > 0 && (
+                    {/* RFP Service Details based on mode */}
+                    {rfpServiceData?.mode === 'checklist' && rfpServiceData.items.length > 0 && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={ClipboardList}>שירותים מבוקשים</SectionHeader>
+                          <div className="mt-2 space-y-1">
+                            {rfpServiceData.items.map((item) => {
+                              const isSelected = selectedServices.some(s => 
+                                (typeof s === 'string' ? s : s.id) === item.id
+                              );
+                              return (
+                                <div key={item.id} className="flex items-center gap-2 p-1.5 bg-muted/50 rounded text-xs">
+                                  {isSelected ? (
+                                    <CheckCircle className="h-3 w-3 text-green-600 shrink-0" />
+                                  ) : (
+                                    <XCircle className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                                  )}
+                                  <span className={`text-right flex-1 ${!isSelected ? 'text-muted-foreground' : ''}`}>
+                                    {item.task_name}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {rfpServiceData?.mode === 'free_text' && rfpServiceData.text && (
+                      <Card>
+                        <CardContent className="p-3" dir="rtl">
+                          <SectionHeader icon={FileText}>פירוט שירותים מבוקשים</SectionHeader>
+                          <div className="text-xs whitespace-pre-wrap leading-relaxed text-right mt-2">
+                            {rfpServiceData.text}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {rfpServiceData?.mode === 'file' && rfpServiceData.file && (
+                      <Card>
+                        <CardContent className="p-3">
+                          <SectionHeader icon={FileText}>קובץ שירותים</SectionHeader>
+                          <div className="flex items-center justify-between mt-2" dir="rtl">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-xs">{rfpServiceData.file.name}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => window.open(rfpServiceData.file!.url, '_blank')}>
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Fallback: Show selected services if no RFP mode */}
+                    {(!rfpServiceData?.mode || (rfpServiceData.mode === 'checklist' && rfpServiceData.items.length === 0)) && selectedServices.length > 0 && (
                       <Card>
                         <CardContent className="p-3">
                           <SectionHeader icon={ClipboardList}>שירותים שנבחרו</SectionHeader>
                           <div className="mt-2 space-y-1">
                             {selectedServices.map((service: any, idx: number) => {
-                              // Resolve UUID to service name
                               const displayName = typeof service === 'string' 
                                 ? (serviceNames[service] || (service.match(/^[0-9a-f-]{36}$/i) ? 'טוען...' : service))
                                 : service.name || service.task_name || service.title || JSON.stringify(service);
