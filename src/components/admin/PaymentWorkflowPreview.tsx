@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, PenTool, CheckSquare, Upload, Flag } from 'lucide-react';
+import { ArrowRight, Bell, PenTool, CheckSquare, Upload, Flag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PaymentStatusDefinition } from '@/types/paymentStatus';
 
@@ -30,10 +30,10 @@ export function PaymentWorkflowPreview({ statuses }: PaymentWorkflowPreviewProps
   };
 
   return (
-    <div className="bg-muted/30 rounded-lg p-4 mb-6">
-      <h3 className="text-sm font-medium mb-3 text-muted-foreground">תצוגה מקדימה של תהליך האישור</h3>
+    <div className="bg-muted/30 rounded-lg p-4 mb-6" dir="rtl">
+      <h3 className="text-sm font-medium mb-3 text-muted-foreground text-right">תצוגה מקדימה של תהליך האישור</h3>
       
-      <div className="flex flex-wrap items-center gap-2" dir="ltr">
+      <div className="flex flex-wrap flex-row-reverse items-center justify-end gap-2">
         {flowStatuses.map((status, index) => (
           <div key={status.id} className="flex items-center gap-2">
             <div className="flex flex-col items-center gap-1">
@@ -60,15 +60,15 @@ export function PaymentWorkflowPreview({ statuses }: PaymentWorkflowPreviewProps
             </div>
             
             {index < flowStatuses.length - 1 && (
-              <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
         ))}
       </div>
 
       {terminalStatuses.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-dashed flex items-center gap-2" dir="ltr">
-          <span className="text-xs text-muted-foreground ml-2">סטטוסי סיום נוספים:</span>
+        <div className="mt-3 pt-3 border-t border-dashed flex flex-row-reverse items-center justify-end gap-2">
+          <span className="text-xs text-muted-foreground mr-2">סטטוסי סיום נוספים:</span>
           {terminalStatuses.map((status) => (
             <Badge
               key={status.id}
