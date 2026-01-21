@@ -62,6 +62,7 @@ const managementItems = [
   { title: adminTranslations.navigation.advisors, url: "/heyadmin/advisors", icon: Briefcase },
   { title: adminTranslations.navigation.projects, url: "/heyadmin/projects", icon: FolderKanban },
   { title: adminTranslations.navigation.rfps, url: "/heyadmin/rfps", icon: FileText },
+  { title: adminTranslations.navigation.rfpTemplates, url: "/heyadmin/rfp-templates", icon: FileStack },
   { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
   { title: adminTranslations.navigation.feedback, url: "/heyadmin/feedback", icon: MessageSquareHeart },
   { title: adminTranslations.navigation.auditLog, url: "/heyadmin/audit", icon: Shield },
