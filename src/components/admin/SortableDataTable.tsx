@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -57,10 +57,10 @@ export function SortableDataTable<T extends { id: string; display_order: number 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [items, setItems] = useState<T[]>(data);
 
-  // Sync local items with data prop
-  if (JSON.stringify(data.map(d => d.id)) !== JSON.stringify(items.map(i => i.id))) {
+  // Sync local items with data prop when it changes
+  useEffect(() => {
     setItems(data);
-  }
+  }, [data]);
 
   const totalPages = Math.ceil(items.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;

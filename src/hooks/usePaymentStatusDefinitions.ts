@@ -67,7 +67,7 @@ export const useCreatePaymentStatusDefinition = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY], exact: false });
       toast({
         title: 'שלב אישור נוסף בהצלחה',
       });
@@ -105,7 +105,7 @@ export const useUpdatePaymentStatusDefinition = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY], exact: false });
       toast({
         title: 'שלב אישור עודכן בהצלחה',
       });
@@ -136,7 +136,7 @@ export const useDeletePaymentStatusDefinition = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY], exact: false });
       toast({
         title: 'שלב אישור נמחק בהצלחה',
       });
@@ -173,7 +173,7 @@ export const useReorderPaymentStatuses = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY], exact: false });
     },
     onError: (error: Error) => {
       console.error('Error reordering statuses:', error);
