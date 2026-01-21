@@ -160,16 +160,16 @@ export function CreateLicensingPhaseDialog({
             </div>
           </div>
 
-          <DialogFooter className="flex-row-reverse gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
+            <Button type="submit" disabled={createPhase.isPending || !name.trim()}>
+              {createPhase.isPending ? "יוצר..." : "צור שלב"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button type="submit" disabled={createPhase.isPending || !name.trim()}>
-              {createPhase.isPending ? "יוצר..." : "צור שלב"}
             </Button>
           </DialogFooter>
         </form>

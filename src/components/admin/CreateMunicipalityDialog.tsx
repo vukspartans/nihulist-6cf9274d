@@ -103,16 +103,16 @@ export function CreateMunicipalityDialog({
             </Label>
           </div>
 
-          <DialogFooter className="flex-row-reverse gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
+            <Button type="submit" disabled={createMunicipality.isPending || !name.trim()}>
+              {createMunicipality.isPending ? "יוצר..." : "צור עירייה"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button type="submit" disabled={createMunicipality.isPending || !name.trim()}>
-              {createMunicipality.isPending ? "יוצר..." : "צור עירייה"}
             </Button>
           </DialogFooter>
         </form>

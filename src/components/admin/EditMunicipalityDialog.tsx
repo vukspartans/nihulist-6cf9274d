@@ -107,16 +107,16 @@ export function EditMunicipalityDialog({
             </Label>
           </div>
 
-          <DialogFooter className="flex-row-reverse gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
+            <Button type="submit" disabled={updateMunicipality.isPending || !name.trim()}>
+              {updateMunicipality.isPending ? "שומר..." : "שמור שינויים"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button type="submit" disabled={updateMunicipality.isPending || !name.trim()}>
-              {updateMunicipality.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
           </DialogFooter>
         </form>
