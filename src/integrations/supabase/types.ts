@@ -977,6 +977,75 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_approval_chains: {
+        Row: {
+          after_status_code: string
+          approver_role: string | null
+          approver_user_id: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          notify_email: string | null
+          notify_on_enter: boolean
+          organization_id: string
+          requires_signature: boolean
+          signature_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          after_status_code: string
+          approver_role?: string | null
+          approver_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notify_email?: string | null
+          notify_on_enter?: boolean
+          organization_id: string
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          after_status_code?: string
+          approver_role?: string | null
+          approver_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notify_email?: string | null
+          notify_on_enter?: boolean
+          organization_id?: string
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_approval_chains_after_status_code_fkey"
+            columns: ["after_status_code"]
+            isOneToOne: false
+            referencedRelation: "payment_status_definitions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "organization_approval_chains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_categories: {
         Row: {
           color: string | null
@@ -1228,6 +1297,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_status_definitions: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          email_template_key: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          is_terminal: boolean
+          name: string
+          name_en: string | null
+          notify_on_enter: boolean
+          notify_roles: string[] | null
+          requires_signature: boolean
+          signature_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          email_template_key?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          is_terminal?: boolean
+          name: string
+          name_en?: string | null
+          notify_on_enter?: boolean
+          notify_roles?: string[] | null
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          email_template_key?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          is_terminal?: boolean
+          name?: string
+          name_en?: string | null
+          notify_on_enter?: boolean
+          notify_roles?: string[] | null
+          requires_signature?: boolean
+          signature_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

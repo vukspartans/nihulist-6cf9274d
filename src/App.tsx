@@ -39,6 +39,7 @@ import MunicipalitiesManagement from "./pages/admin/MunicipalitiesManagement";
 import LicensingPhasesManagement from "./pages/admin/LicensingPhasesManagement";
 import TaskTemplatesManagement from "./pages/admin/TaskTemplatesManagement";
 import PaymentCategoriesManagement from "./pages/admin/PaymentCategoriesManagement";
+import PaymentStatusesManagement from "./pages/admin/PaymentStatusesManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
