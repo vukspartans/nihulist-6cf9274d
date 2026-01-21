@@ -38,7 +38,7 @@ export function DataTable<T extends { id: string }>({
   const currentData = data.slice(startIndex, endIndex);
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full" dir="rtl">
       <div className="border rounded-lg overflow-hidden relative">
         {/* Scroll indicator for mobile */}
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 opacity-0 md:opacity-0 transition-opacity" id="scroll-indicator-left" />
@@ -48,7 +48,7 @@ export function DataTable<T extends { id: string }>({
             <TableHeader>
               <TableRow className="bg-muted/30">
                 {columns.map((column, index) => (
-                  <TableHead key={index} className="font-semibold whitespace-nowrap">
+                  <TableHead key={index} className="font-semibold whitespace-nowrap text-right">
                     {column.header}
                   </TableHead>
                 ))}
@@ -109,7 +109,7 @@ export function DataTable<T extends { id: string }>({
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" />
             </Button>
             <span className="flex items-center px-3 text-sm whitespace-nowrap">
               {adminTranslations.common.page} {currentPage} {adminTranslations.common.of} {totalPages}
@@ -120,7 +120,7 @@ export function DataTable<T extends { id: string }>({
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
         </div>
