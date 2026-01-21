@@ -185,7 +185,7 @@ export default function MilestoneTemplatesManagement() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir="rtl">
         {/* Header */}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
