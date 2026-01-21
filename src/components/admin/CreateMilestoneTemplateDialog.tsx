@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCreateMilestoneTemplate } from "@/hooks/useMilestoneTemplates";
 import { useMunicipalities } from "@/hooks/useMunicipalities";
-import { PROJECT_TYPES } from "@/constants/project";
+import { PROJECT_TYPE_OPTIONS } from "@/constants/project";
 import { EXPERTISE_OPTIONS } from "@/constants/advisor";
 import { TRIGGER_TYPES, type CreateMilestoneTemplateInput } from "@/types/milestoneTemplate";
 import { adminTranslations } from "@/constants/adminTranslations";
@@ -144,7 +144,7 @@ export function CreateMilestoneTemplateDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">{t.dialog.projectTypeAll}</SelectItem>
-                      {PROJECT_TYPES.map((type) => (
+                      {PROJECT_TYPE_OPTIONS.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>

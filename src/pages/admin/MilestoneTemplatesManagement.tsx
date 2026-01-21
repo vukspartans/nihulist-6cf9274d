@@ -26,7 +26,7 @@ import {
   useDeleteMilestoneTemplate,
 } from "@/hooks/useMilestoneTemplates";
 import { adminTranslations } from "@/constants/adminTranslations";
-import { PROJECT_TYPES } from "@/constants/project";
+import { PROJECT_TYPE_OPTIONS } from "@/constants/project";
 import type { MilestoneTemplate } from "@/types/milestoneTemplate";
 
 const getTriggerIcon = (triggerType: string) => {
@@ -74,22 +74,20 @@ export default function MilestoneTemplatesManagement() {
 
   const getProjectTypeLabel = (value: string | null) => {
     if (!value) return t.dialog.projectTypeAll;
-    const found = PROJECT_TYPES.find((pt) => pt.value === value);
+    const found = PROJECT_TYPE_OPTIONS.find((pt) => pt.value === value);
     return found?.label || value;
   };
 
   const columns = [
     {
-      key: "display_order",
-      label: t.columns.order,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.order,
+      cell: (m: MilestoneTemplate) => (
         <span className="text-muted-foreground text-sm">{m.display_order}</span>
       ),
     },
     {
-      key: "name",
-      label: t.columns.name,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.name,
+      cell: (m: MilestoneTemplate) => (
         <div className="flex flex-col">
           <span className="font-medium">{m.name}</span>
           {m.name_en && (
@@ -101,18 +99,16 @@ export default function MilestoneTemplatesManagement() {
       ),
     },
     {
-      key: "project_type",
-      label: t.columns.projectType,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.projectType,
+      cell: (m: MilestoneTemplate) => (
         <Badge variant="outline" className="text-xs">
           {getProjectTypeLabel(m.project_type)}
         </Badge>
       ),
     },
     {
-      key: "percentage_of_total",
-      label: t.columns.percentage,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.percentage,
+      cell: (m: MilestoneTemplate) => (
         <div className="flex items-center gap-2 min-w-[100px]">
           <Progress value={Number(m.percentage_of_total)} className="h-2 flex-1" />
           <span className="text-sm font-medium w-12 text-left">
@@ -122,9 +118,8 @@ export default function MilestoneTemplatesManagement() {
       ),
     },
     {
-      key: "trigger_type",
-      label: t.columns.trigger,
-      render: (m: MilestoneTemplate) => {
+      header: t.columns.trigger,
+      cell: (m: MilestoneTemplate) => {
         const Icon = getTriggerIcon(m.trigger_type);
         const label = t.triggerTypes[m.trigger_type as keyof typeof t.triggerTypes] || m.trigger_type;
         return (
@@ -136,9 +131,8 @@ export default function MilestoneTemplatesManagement() {
       },
     },
     {
-      key: "linked_tasks",
-      label: t.columns.linkedTasks,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.linkedTasks,
+      cell: (m: MilestoneTemplate) => (
         <div className="flex items-center gap-1.5">
           <Link className="h-4 w-4 text-muted-foreground" />
           <Badge variant="secondary" className="text-xs">
@@ -148,9 +142,8 @@ export default function MilestoneTemplatesManagement() {
       ),
     },
     {
-      key: "is_active",
-      label: t.columns.status,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.status,
+      cell: (m: MilestoneTemplate) => (
         <Switch
           checked={m.is_active}
           onCheckedChange={() => handleToggleActive(m)}
@@ -159,9 +152,8 @@ export default function MilestoneTemplatesManagement() {
       ),
     },
     {
-      key: "actions",
-      label: t.columns.actions,
-      render: (m: MilestoneTemplate) => (
+      header: t.columns.actions,
+      cell: (m: MilestoneTemplate) => (
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -217,8 +209,6 @@ export default function MilestoneTemplatesManagement() {
         <DataTable
           data={filteredMilestones}
           columns={columns}
-          isLoading={isLoading}
-          emptyMessage="אין תבניות אבני דרך להצגה"
         />
 
         {/* Dialogs */}
