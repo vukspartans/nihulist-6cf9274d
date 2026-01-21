@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
-import { Plus, Search, Pencil, Trash2, FileStack, DollarSign, ClipboardList } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileStack, DollarSign, ClipboardList, Milestone, Settings } from "lucide-react";
 import { ADVISOR_EXPERTISE } from "@/constants/advisor";
 import { getFeeUnitLabel, getChargeTypeLabel } from "@/constants/rfpUnits";
 import {
@@ -36,10 +37,13 @@ import {
   FeeItemTemplate,
   ServiceScopeTemplate,
 } from "@/hooks/useRFPTemplatesAdmin";
+import { useMilestoneTemplates } from "@/hooks/useMilestoneTemplates";
 import { CreateFeeItemTemplateDialog } from "@/components/admin/CreateFeeItemTemplateDialog";
 import { EditFeeItemTemplateDialog } from "@/components/admin/EditFeeItemTemplateDialog";
 import { CreateServiceScopeTemplateDialog } from "@/components/admin/CreateServiceScopeTemplateDialog";
 import { EditServiceScopeTemplateDialog } from "@/components/admin/EditServiceScopeTemplateDialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 export default function RFPTemplatesManagement() {
   // Filter state
@@ -68,6 +72,15 @@ export default function RFPTemplatesManagement() {
   const { data: services = [], isLoading: loadingServices } = useServiceScopeTemplates(
     selectedAdvisorType === "all" ? undefined : selectedAdvisorType
   );
+  const { data: allMilestones = [], isLoading: loadingMilestones } = useMilestoneTemplates(false);
+
+  // Filter milestones by advisor specialty
+  const filteredMilestones = useMemo(() => {
+    if (selectedAdvisorType === "all") return allMilestones;
+    return allMilestones.filter(
+      (m) => m.advisor_specialty === selectedAdvisorType || m.advisor_specialty === null
+    );
+  }, [allMilestones, selectedAdvisorType]);
 
   // Mutations
   const deleteFeeItem = useDeleteFeeItemTemplate();
@@ -76,13 +89,23 @@ export default function RFPTemplatesManagement() {
   const reorderServices = useReorderServiceScopeTemplates();
 
   // Filter data by search
-  const filteredFeeItems = feeItems.filter((item) =>
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFeeItems = useMemo(() => {
+    if (!searchQuery) return feeItems;
+    const query = searchQuery.toLowerCase();
+    return feeItems.filter((item) =>
+      item.description.toLowerCase().includes(query) ||
+      item.advisor_specialty.toLowerCase().includes(query)
+    );
+  }, [feeItems, searchQuery]);
 
-  const filteredServices = services.filter((item) =>
-    item.task_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredServices = useMemo(() => {
+    if (!searchQuery) return services;
+    const query = searchQuery.toLowerCase();
+    return services.filter((item) =>
+      item.task_name.toLowerCase().includes(query) ||
+      item.advisor_specialty.toLowerCase().includes(query)
+    );
+  }, [services, searchQuery]);
 
   // Handle delete
   const handleDelete = async () => {
@@ -138,7 +161,7 @@ export default function RFPTemplatesManagement() {
     {
       header: "פעולות",
       cell: (item) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 justify-end">
           <Button
             variant="ghost"
             size="icon"
@@ -200,7 +223,7 @@ export default function RFPTemplatesManagement() {
     {
       header: "פעולות",
       cell: (item) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 justify-end">
           <Button
             variant="ghost"
             size="icon"
@@ -230,6 +253,58 @@ export default function RFPTemplatesManagement() {
     },
   ];
 
+  // Milestone columns (read-only view)
+  const milestoneColumns: Column<any>[] = [
+    {
+      header: "שם אבן דרך",
+      accessorKey: "name",
+      cell: (item) => <span className="font-medium">{item.name}</span>,
+    },
+    {
+      header: "סוג יועץ",
+      accessorKey: "advisor_specialty",
+      cell: (item) =>
+        item.advisor_specialty ? (
+          <Badge variant="secondary" className="text-xs">
+            {item.advisor_specialty}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">כללי</span>
+        ),
+    },
+    {
+      header: "אחוז מהסה\"כ",
+      accessorKey: "percentage_of_total",
+      cell: (item) => (
+        <div className="flex items-center gap-2">
+          <Progress value={item.percentage_of_total} className="w-16 h-2" />
+          <span className="text-sm">{item.percentage_of_total}%</span>
+        </div>
+      ),
+    },
+    {
+      header: "סוג טריגר",
+      accessorKey: "trigger_type",
+      cell: (item) => {
+        const labels: Record<string, string> = {
+          task_completion: "השלמת משימה",
+          manual: "ידני",
+          date_based: "תאריך",
+        };
+        return <span className="text-sm">{labels[item.trigger_type] || item.trigger_type}</span>;
+      },
+    },
+    {
+      header: "סטטוס",
+      accessorKey: "is_active",
+      cell: (item) => (
+        <Badge variant={item.is_active ? "default" : "secondary"}>
+          {item.is_active ? "פעיל" : "לא פעיל"}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-6" dir="rtl">
@@ -238,23 +313,32 @@ export default function RFPTemplatesManagement() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <FileStack className="h-6 w-6 text-primary" />
-              ניהול תבניות RFP
+              ניהול תבניות בקשה
             </h1>
             <p className="text-muted-foreground mt-1">
-              ניהול תבניות שכר טרחה ורשימות שירותים ליזמים
+              ניהול תבניות שכר טרחה, שירותים ואבני דרך ליזמים
             </p>
           </div>
 
           <div className="flex gap-2">
-            {activeTab === "fee-items" ? (
+            {activeTab === "fee-items" && (
               <Button onClick={() => setCreateFeeItemOpen(true)}>
                 <Plus className="h-4 w-4 ml-2" />
                 צור פריט שכ"ט
               </Button>
-            ) : (
+            )}
+            {activeTab === "services" && (
               <Button onClick={() => setCreateServiceOpen(true)}>
                 <Plus className="h-4 w-4 ml-2" />
                 צור שירות
+              </Button>
+            )}
+            {activeTab === "milestones" && (
+              <Button asChild variant="outline">
+                <Link to="/heyadmin/milestone-templates">
+                  <Settings className="h-4 w-4 ml-2" />
+                  ניהול אבני דרך
+                </Link>
               </Button>
             )}
           </div>
@@ -266,10 +350,11 @@ export default function RFPTemplatesManagement() {
             <div className="flex flex-col gap-4 sm:flex-row">
               <div className="flex-1">
                 <Select
+                  dir="rtl"
                   value={selectedAdvisorType}
                   onValueChange={setSelectedAdvisorType}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger dir="rtl" className="text-right">
                     <SelectValue placeholder="כל סוגי היועצים" />
                   </SelectTrigger>
                   <SelectContent>
@@ -289,7 +374,7 @@ export default function RFPTemplatesManagement() {
                   placeholder="חיפוש..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 text-right"
                 />
               </div>
             </div>
@@ -297,15 +382,19 @@ export default function RFPTemplatesManagement() {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <Tabs dir="rtl" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList dir="rtl" className="grid w-full grid-cols-3 max-w-lg">
             <TabsTrigger value="fee-items" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               שכר טרחה ({feeItems.length})
             </TabsTrigger>
             <TabsTrigger value="services" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
-              רשימת שירותים ({services.length})
+              שירותים ({services.length})
+            </TabsTrigger>
+            <TabsTrigger value="milestones" className="flex items-center gap-2">
+              <Milestone className="h-4 w-4" />
+              אבני דרך ({filteredMilestones.length})
             </TabsTrigger>
           </TabsList>
 
@@ -314,18 +403,31 @@ export default function RFPTemplatesManagement() {
               <CardHeader>
                 <CardTitle>תבניות שכר טרחה</CardTitle>
                 <CardDescription>
-                  פריטי שכר טרחה שיופיעו כברירת מחדל ליזמים בעת יצירת RFP
+                  פריטי שכר טרחה שיופיעו כברירת מחדל ליזמים בעת יצירת בקשה
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingFeeItems ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    טוען...
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
                   </div>
                 ) : filteredFeeItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    אין תבניות שכר טרחה
-                    {selectedAdvisorType !== "all" && ` לסוג יועץ "${selectedAdvisorType}"`}
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileStack className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">אין תבניות שכר טרחה</p>
+                    {selectedAdvisorType !== "all" && (
+                      <p className="text-sm mt-1">לסוג יועץ "{selectedAdvisorType}"</p>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => setCreateFeeItemOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 ml-2" />
+                      צור תבנית ראשונה
+                    </Button>
                   </div>
                 ) : (
                   <SortableDataTable
@@ -341,26 +443,82 @@ export default function RFPTemplatesManagement() {
           <TabsContent value="services" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>רשימת שירותים</CardTitle>
+                <CardTitle>תבניות שירותים</CardTitle>
                 <CardDescription>
-                  שירותים שיופיעו כברירת מחדל ליזמים בעת יצירת RFP
+                  שירותים שיופיעו כברירת מחדל ליזמים בעת יצירת בקשה
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingServices ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    טוען...
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
                   </div>
                 ) : filteredServices.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    אין שירותים
-                    {selectedAdvisorType !== "all" && ` לסוג יועץ "${selectedAdvisorType}"`}
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">אין תבניות שירותים</p>
+                    {selectedAdvisorType !== "all" && (
+                      <p className="text-sm mt-1">לסוג יועץ "{selectedAdvisorType}"</p>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => setCreateServiceOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 ml-2" />
+                      צור תבנית ראשונה
+                    </Button>
                   </div>
                 ) : (
                   <SortableDataTable
                     data={filteredServices}
                     columns={serviceColumns}
                     onReorder={(orderedIds) => reorderServices.mutate(orderedIds)}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="milestones" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>תבניות אבני דרך לתשלום</CardTitle>
+                <CardDescription>
+                  אבני דרך שיופיעו כברירת מחדל ליזמים בעת יצירת בקשה. לניהול מלא עברו לעמוד ניהול אבני דרך.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingMilestones ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : filteredMilestones.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Milestone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">אין תבניות אבני דרך</p>
+                    {selectedAdvisorType !== "all" && (
+                      <p className="text-sm mt-1">לסוג יועץ "{selectedAdvisorType}"</p>
+                    )}
+                    <Button asChild variant="outline" className="mt-4">
+                      <Link to="/heyadmin/milestone-templates">
+                        <Settings className="h-4 w-4 ml-2" />
+                        צור אבני דרך
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <SortableDataTable
+                    data={filteredMilestones.map((item, index) => ({
+                      ...item,
+                      display_order: item.display_order ?? index,
+                    }))}
+                    columns={milestoneColumns}
+                    onReorder={() => {}} // Read-only here, manage in dedicated page
                   />
                 )}
               </CardContent>
@@ -373,7 +531,7 @@ export default function RFPTemplatesManagement() {
       <CreateFeeItemTemplateDialog
         open={createFeeItemOpen}
         onOpenChange={setCreateFeeItemOpen}
-        defaultAdvisorSpecialty={selectedAdvisorType}
+        defaultAdvisorSpecialty={selectedAdvisorType === "all" ? undefined : selectedAdvisorType}
       />
 
       <EditFeeItemTemplateDialog
@@ -385,7 +543,7 @@ export default function RFPTemplatesManagement() {
       <CreateServiceScopeTemplateDialog
         open={createServiceOpen}
         onOpenChange={setCreateServiceOpen}
-        defaultAdvisorSpecialty={selectedAdvisorType}
+        defaultAdvisorSpecialty={selectedAdvisorType === "all" ? undefined : selectedAdvisorType}
       />
 
       <EditServiceScopeTemplateDialog
@@ -405,14 +563,14 @@ export default function RFPTemplatesManagement() {
                 : "פעולה זו תמחק את השירות. לא ניתן לבטל פעולה זו."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
+          <AlertDialogFooter>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               מחק
             </AlertDialogAction>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -80,8 +80,8 @@ export function CreateServiceScopeTemplateDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="advisor_specialty">סוג יועץ *</Label>
-            <Select value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
-              <SelectTrigger>
+            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
+              <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue placeholder="בחר סוג יועץ" />
               </SelectTrigger>
               <SelectContent>
@@ -101,14 +101,15 @@ export function CreateServiceScopeTemplateDialog({
               value={taskName}
               onChange={(e) => setTaskName(e.target.value)}
               placeholder="לדוגמה: ביקורת באתר"
+              className="text-right"
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="fee_category">קטגוריית שכ"ט</Label>
-            <Select value={feeCategory} onValueChange={setFeeCategory}>
-              <SelectTrigger>
+            <Select dir="rtl" value={feeCategory} onValueChange={setFeeCategory}>
+              <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -130,19 +131,19 @@ export function CreateServiceScopeTemplateDialog({
             />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !advisorSpecialty || !taskName.trim()}
+            >
+              {createMutation.isPending ? "יוצר..." : "צור שירות"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !advisorSpecialty || !taskName.trim()}
-            >
-              {createMutation.isPending ? "יוצר..." : "צור שירות"}
             </Button>
           </DialogFooter>
         </form>
