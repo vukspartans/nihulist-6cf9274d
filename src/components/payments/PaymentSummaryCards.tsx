@@ -52,7 +52,7 @@ export function PaymentSummaryCards({ summary }: PaymentSummaryCardsProps) {
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {cards.map((card) => (
           <Card key={card.title} className="overflow-hidden">

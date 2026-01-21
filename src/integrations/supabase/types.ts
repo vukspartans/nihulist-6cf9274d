@@ -1763,8 +1763,10 @@ export type Database = {
           id: string
           is_blocked: boolean | null
           is_milestone: boolean | null
+          is_payment_critical: boolean | null
           name: string
           notes: string | null
+          payment_milestone_id: string | null
           phase: string | null
           planned_end_date: string | null
           planned_start_date: string | null
@@ -1789,8 +1791,10 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
+          is_payment_critical?: boolean | null
           name: string
           notes?: string | null
+          payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
@@ -1815,8 +1819,10 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
+          is_payment_critical?: boolean | null
           name?: string
           notes?: string | null
+          payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
@@ -1833,6 +1839,13 @@ export type Database = {
             columns: ["assigned_advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_payment_milestone_id_fkey"
+            columns: ["payment_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "payment_milestones"
             referencedColumns: ["id"]
           },
           {

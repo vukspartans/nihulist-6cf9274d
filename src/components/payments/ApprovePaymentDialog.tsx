@@ -7,18 +7,20 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Check, AlertCircle } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface ApprovePaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   request: PaymentRequest | null;
-  onApprove: (request: PaymentRequest, signature?: SignatureData) => Promise<void>;
+  onApprove: (request: PaymentRequest, signatureId?: string) => Promise<void>;
 }
 
 export function ApprovePaymentDialog({ 
@@ -27,6 +29,8 @@ export function ApprovePaymentDialog({
   request,
   onApprove 
 }: ApprovePaymentDialogProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [signature, setSignature] = useState<SignatureData | null>(null);
 
@@ -47,7 +51,46 @@ export function ApprovePaymentDialog({
   const handleApprove = async () => {
     setLoading(true);
     try {
-      await onApprove(request, signature || undefined);
+      let signatureId: string | undefined;
+      
+      // Save signature to signatures table if provided
+      if (signature && user?.id) {
+        // Generate a simple content hash based on request data
+        const contentHash = btoa(JSON.stringify({
+          request_id: request.id,
+          amount: request.amount,
+          timestamp: new Date().toISOString()
+        })).slice(0, 64);
+        
+        const { data: signatureData, error: signatureError } = await supabase
+          .from('signatures')
+          .insert({
+            entity_type: 'payment_request',
+            entity_id: request.id,
+            sign_text: 'אישור בקשת תשלום',
+            sign_png: signature.png,
+            sign_vector_json: { paths: signature.vector },
+            content_hash: contentHash,
+            signer_user_id: user.id,
+            signer_name_snapshot: user.email || 'Unknown',
+            signer_email_snapshot: user.email || 'Unknown',
+          })
+          .select()
+          .single();
+        
+        if (signatureError) {
+          console.error('Error saving signature:', signatureError);
+          toast({
+            title: "שגיאה בשמירת החתימה",
+            description: "החתימה לא נשמרה, אבל האישור יימשך",
+            variant: "destructive",
+          });
+        } else {
+          signatureId = signatureData.id;
+        }
+      }
+      
+      await onApprove(request, signatureId);
       setSignature(null);
       onOpenChange(false);
     } finally {
