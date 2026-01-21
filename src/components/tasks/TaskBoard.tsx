@@ -38,6 +38,7 @@ interface Column {
 const COLUMNS: Column[] = [
   { id: 'pending', title: 'ממתין', icon: Clock, color: 'text-muted-foreground' },
   { id: 'in_progress', title: 'בביצוע', icon: PlayCircle, color: 'text-primary' },
+  { id: 'delayed', title: 'באיחור', icon: AlertTriangle, color: 'text-orange-500' },
   { id: 'blocked', title: 'חסום', icon: AlertTriangle, color: 'text-destructive' },
   { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600' },
 ];

@@ -229,8 +229,8 @@ const LicensingPhasesManagement = () => {
             />
           </div>
 
-          <Select value={municipalityFilter} onValueChange={setMunicipalityFilter}>
-            <SelectTrigger className="w-[180px]">
+          <Select dir="rtl" value={municipalityFilter} onValueChange={setMunicipalityFilter}>
+            <SelectTrigger dir="rtl" className="w-[180px] text-right">
               <SelectValue placeholder={t.allMunicipalities} />
             </SelectTrigger>
             <SelectContent dir="rtl">
@@ -244,8 +244,8 @@ const LicensingPhasesManagement = () => {
             </SelectContent>
           </Select>
 
-          <Select value={projectTypeFilter} onValueChange={setProjectTypeFilter}>
-            <SelectTrigger className="w-[180px]">
+          <Select dir="rtl" value={projectTypeFilter} onValueChange={setProjectTypeFilter}>
+            <SelectTrigger dir="rtl" className="w-[180px] text-right">
               <SelectValue placeholder={t.allProjectTypes} />
             </SelectTrigger>
             <SelectContent dir="rtl">
