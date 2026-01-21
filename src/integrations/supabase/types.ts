@@ -667,6 +667,113 @@ export type Database = {
         }
         Relationships: []
       }
+      milestone_template_tasks: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_critical: boolean
+          milestone_template_id: string
+          task_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_critical?: boolean
+          milestone_template_id: string
+          task_template_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_critical?: boolean
+          milestone_template_id?: string
+          task_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_template_tasks_milestone_template_id_fkey"
+            columns: ["milestone_template_id"]
+            isOneToOne: false
+            referencedRelation: "milestone_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestone_template_tasks_task_template_id_fkey"
+            columns: ["task_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milestone_templates: {
+        Row: {
+          advisor_specialty: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          display_order: number
+          fixed_amount: number | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          municipality_id: string | null
+          name: string
+          name_en: string | null
+          percentage_of_total: number
+          project_type: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_specialty?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          municipality_id?: string | null
+          name: string
+          name_en?: string | null
+          percentage_of_total: number
+          project_type?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_specialty?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          municipality_id?: string | null
+          name?: string
+          name_en?: string | null
+          percentage_of_total?: number
+          project_type?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_templates_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       municipalities: {
         Row: {
           created_at: string | null

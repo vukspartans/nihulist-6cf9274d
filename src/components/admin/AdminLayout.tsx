@@ -25,6 +25,8 @@ import {
   ChevronDown,
   Wallet,
   Tags,
+  GitPullRequest,
+  Milestone,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { UserHeader } from "@/components/UserHeader";
@@ -66,6 +68,8 @@ const licensingNavigationItems = [
 
 const paymentNavigationItems = [
   { title: adminTranslations.payments.categories.title, url: "/heyadmin/payment-categories", icon: Tags },
+  { title: adminTranslations.payments.statuses.title, url: "/heyadmin/payment-statuses", icon: GitPullRequest },
+  { title: adminTranslations.payments.milestones.title, url: "/heyadmin/milestone-templates", icon: Milestone },
 ];
 
 function AdminSidebar() {
@@ -80,7 +84,8 @@ function AdminSidebar() {
                            location.pathname.includes('/heyadmin/task-templates');
   
   // Check if current route is a payment route
-  const isPaymentRoute = location.pathname.includes('/heyadmin/payment-');
+  const isPaymentRoute = location.pathname.includes('/heyadmin/payment-') || 
+                         location.pathname.includes('/heyadmin/milestone-templates');
   
   const [licensingOpen, setLicensingOpen] = useState(isLicensingRoute);
   const [paymentsOpen, setPaymentsOpen] = useState(isPaymentRoute);
