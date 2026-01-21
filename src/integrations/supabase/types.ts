@@ -521,6 +521,53 @@ export type Database = {
         }
         Relationships: []
       }
+      licensing_phases: {
+        Row: {
+          created_at: string | null
+          default_duration_days: number | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          municipality_id: string | null
+          name: string
+          project_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_duration_days?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name?: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licensing_phases_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       line_item_negotiations: {
         Row: {
           adjustment_type: string
@@ -617,6 +664,39 @@ export type Database = {
           token?: string
           used_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      municipalities: {
+        Row: {
+          created_at: string | null
+          has_special_requirements: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          region: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_special_requirements?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          region?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_special_requirements?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          region?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2343,46 +2423,89 @@ export type Database = {
         Row: {
           advisor_specialty: string | null
           created_at: string
+          created_by_user_id: string | null
           default_duration_days: number | null
+          depends_on_template_id: string | null
           description: string | null
           display_order: number | null
           id: string
           is_active: boolean | null
+          is_default: boolean | null
           is_milestone: boolean | null
+          is_user_template: boolean | null
+          licensing_phase_id: string | null
+          municipality_id: string | null
           name: string
           phase: string | null
           project_type: string
+          template_group_id: string | null
           updated_at: string
         }
         Insert: {
           advisor_specialty?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           default_duration_days?: number | null
+          depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           is_milestone?: boolean | null
+          is_user_template?: boolean | null
+          licensing_phase_id?: string | null
+          municipality_id?: string | null
           name: string
           phase?: string | null
           project_type: string
+          template_group_id?: string | null
           updated_at?: string
         }
         Update: {
           advisor_specialty?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           default_duration_days?: number | null
+          depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           is_milestone?: boolean | null
+          is_user_template?: boolean | null
+          licensing_phase_id?: string | null
+          municipality_id?: string | null
           name?: string
           phase?: string | null
           project_type?: string
+          template_group_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_depends_on_template_id_fkey"
+            columns: ["depends_on_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_licensing_phase_id_fkey"
+            columns: ["licensing_phase_id"]
+            isOneToOne: false
+            referencedRelation: "licensing_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_feedback: {
         Row: {
