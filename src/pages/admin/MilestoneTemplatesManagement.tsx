@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { DataTable } from "@/components/admin/DataTable";
+import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
 import { MilestonePercentageSummary } from "@/components/admin/MilestonePercentageSummary";
 import { CreateMilestoneTemplateDialog } from "@/components/admin/CreateMilestoneTemplateDialog";
 import { EditMilestoneTemplateDialog } from "@/components/admin/EditMilestoneTemplateDialog";
@@ -24,6 +24,7 @@ import {
   useMilestoneTemplates,
   useUpdateMilestoneTemplate,
   useDeleteMilestoneTemplate,
+  useReorderMilestoneTemplates,
 } from "@/hooks/useMilestoneTemplates";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { PROJECT_TYPE_OPTIONS } from "@/constants/project";
@@ -52,6 +53,7 @@ export default function MilestoneTemplatesManagement() {
   const { data: milestones = [], isLoading } = useMilestoneTemplates();
   const updateMilestone = useUpdateMilestoneTemplate();
   const deleteMilestone = useDeleteMilestoneTemplate();
+  const reorderMilestones = useReorderMilestoneTemplates();
 
   const filteredMilestones = milestones.filter(
     (m) =>
@@ -72,19 +74,17 @@ export default function MilestoneTemplatesManagement() {
     setDeleteConfirmId(null);
   };
 
+  const handleReorder = (orderedIds: { id: string; display_order: number }[]) => {
+    reorderMilestones.mutate(orderedIds);
+  };
+
   const getProjectTypeLabel = (value: string | null) => {
     if (!value) return t.dialog.projectTypeAll;
     const found = PROJECT_TYPE_OPTIONS.find((pt) => pt.value === value);
     return found?.label || value;
   };
 
-  const columns = [
-    {
-      header: t.columns.order,
-      cell: (m: MilestoneTemplate) => (
-        <span className="text-muted-foreground text-sm">{m.display_order}</span>
-      ),
-    },
+  const columns: Column<MilestoneTemplate>[] = [
     {
       header: t.columns.name,
       cell: (m: MilestoneTemplate) => (
@@ -158,7 +158,10 @@ export default function MilestoneTemplatesManagement() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setEditMilestoneId(m.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditMilestoneId(m.id);
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -166,7 +169,10 @@ export default function MilestoneTemplatesManagement() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setDeleteConfirmId(m.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirmId(m.id);
+              }}
               className="text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -206,9 +212,11 @@ export default function MilestoneTemplatesManagement() {
         </div>
 
         {/* Table */}
-        <DataTable
+        <SortableDataTable
           data={filteredMilestones}
           columns={columns}
+          onReorder={handleReorder}
+          isReordering={reorderMilestones.isPending}
         />
 
         {/* Dialogs */}

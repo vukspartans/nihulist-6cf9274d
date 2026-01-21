@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { DataTable, Column } from "@/components/admin/DataTable";
+import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   usePaymentCategories,
   useUpdatePaymentCategory,
   useDeletePaymentCategory,
+  useReorderPaymentCategories,
   type PaymentCategory,
 } from "@/hooks/usePaymentCategories";
 import { CreatePaymentCategoryDialog } from "@/components/admin/CreatePaymentCategoryDialog";
@@ -37,6 +38,7 @@ export default function PaymentCategoriesManagement() {
   const { data: categories, isLoading } = usePaymentCategories(true);
   const updateCategory = useUpdatePaymentCategory();
   const deleteCategory = useDeletePaymentCategory();
+  const reorderCategories = useReorderPaymentCategories();
   
   const t = adminTranslations.payments.categories;
   
@@ -77,6 +79,10 @@ export default function PaymentCategoriesManagement() {
     setDeleteDialogOpen(false);
     setSelectedCategory(null);
   };
+
+  const handleReorder = (orderedIds: { id: string; display_order: number }[]) => {
+    reorderCategories.mutate(orderedIds);
+  };
   
   const columns: Column<PaymentCategory>[] = [
     {
@@ -116,13 +122,6 @@ export default function PaymentCategoriesManagement() {
           onCheckedChange={() => handleToggleActive(cat)}
           onClick={(e) => e.stopPropagation()}
         />
-      ),
-    },
-    {
-      header: t.columns.order,
-      accessorKey: "display_order",
-      cell: (cat) => (
-        <span className="text-muted-foreground">{cat.display_order}</span>
       ),
     },
     {
@@ -195,9 +194,11 @@ export default function PaymentCategoriesManagement() {
             ))}
           </div>
         ) : (
-          <DataTable
+          <SortableDataTable
             data={filteredCategories}
             columns={columns}
+            onReorder={handleReorder}
+            isReordering={reorderCategories.isPending}
             pageSize={10}
           />
         )}
