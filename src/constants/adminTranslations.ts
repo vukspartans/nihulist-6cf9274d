@@ -467,6 +467,45 @@ export const adminTranslations = {
     },
   },
 
+  // Payments Management
+  payments: {
+    sectionTitle: "ניהול תשלומים",
+    categories: {
+      title: "קטגוריות חשבונות",
+      subtitle: "ניהול קטגוריות ברירת מחדל לסיווג חשבוניות",
+      searchPlaceholder: "חפש קטגוריה...",
+      createButton: "הוסף קטגוריה",
+      columns: {
+        name: "שם הקטגוריה",
+        nameEn: "שם באנגלית",
+        description: "תיאור",
+        type: "סוג",
+        status: "סטטוס",
+        order: "סדר תצוגה",
+        actions: "פעולות",
+      },
+      badges: {
+        system: "מערכת",
+        custom: "מותאם אישית",
+      },
+      dialog: {
+        createTitle: "הוספת קטגוריה חדשה",
+        editTitle: "עריכת קטגוריה",
+        nameLabel: "שם הקטגוריה *",
+        namePlaceholder: "לדוגמה: ייעוץ משפטי",
+        nameEnLabel: "שם באנגלית",
+        nameEnPlaceholder: "e.g., Legal Consulting",
+        descriptionLabel: "תיאור",
+        descriptionPlaceholder: "תיאור השימוש בקטגוריה זו...",
+        colorLabel: "צבע תצוגה",
+        iconLabel: "אייקון",
+      },
+      deleteConfirm: "האם אתה בטוח שברצונך למחוק קטגוריה זו?",
+      deleteWarning: "חשבוניות קיימות עם קטגוריה זו לא יושפעו.",
+      systemCategoryWarning: "קטגוריות מערכת לא ניתנות למחיקה.",
+    },
+  },
+
   // Common
   common: {
     loading: "טוען...",
@@ -491,5 +530,7 @@ export const adminTranslations = {
     results: "תוצאות",
     page: "עמוד",
     na: "לא זמין",
+    active: "פעיל",
+    create: "צור",
   },
 };
