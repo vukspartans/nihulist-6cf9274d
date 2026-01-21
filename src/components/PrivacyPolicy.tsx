@@ -16,7 +16,7 @@ const PrivacyPolicy = ({ showHeader = true, className }: PrivacyPolicyProps) => 
         </div>
       )}
       
-      <ScrollArea className="h-96 rounded-md border p-4">
+      <ScrollArea className="h-96 rounded-md border p-4" dir="rtl">
         <div className="space-y-6 text-sm leading-relaxed">
           <p className="text-muted-foreground">
             מסמך זה מנוסח, מטעמי נוחות, בלשון זכר, אך האמור בו מתייחס לנשים ולגברים כאחד.
