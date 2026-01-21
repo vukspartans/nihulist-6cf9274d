@@ -116,7 +116,7 @@ export function EditPaymentStatusDialog({
         )}
 
         <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="basic" className="w-full">
+          <Tabs defaultValue="basic" className="w-full" dir="rtl">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="notifications">{t.dialog.notificationSection}</TabsTrigger>
@@ -172,10 +172,11 @@ export function EditPaymentStatusDialog({
               <div className="space-y-2">
                 <Label htmlFor="color">{t.dialog.colorLabel}</Label>
                 <Select
+                  dir="rtl"
                   value={formData.color}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, color: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger dir="rtl">
                     <SelectValue>
                       <div className="flex items-center gap-2">
                         <div 
@@ -237,15 +238,15 @@ export function EditPaymentStatusDialog({
                   <Label>{t.dialog.notifyRolesLabel}</Label>
                   <div className="space-y-2">
                     {NOTIFY_ROLES.map((role) => (
-                      <div key={role.value} className="flex items-center gap-2">
+                      <div key={role.value} className="flex items-center justify-between">
+                        <Label htmlFor={`edit-role-${role.value}`} className="font-normal cursor-pointer">
+                          {role.label}
+                        </Label>
                         <Checkbox
                           id={`edit-role-${role.value}`}
                           checked={formData.notify_roles.includes(role.value)}
                           onCheckedChange={() => toggleNotifyRole(role.value)}
                         />
-                        <Label htmlFor={`edit-role-${role.value}`} className="font-normal">
-                          {role.label}
-                        </Label>
                       </div>
                     ))}
                   </div>
@@ -270,10 +271,11 @@ export function EditPaymentStatusDialog({
                 <div className="space-y-2">
                   <Label>{t.dialog.signatureTypeLabel}</Label>
                   <Select
+                    dir="rtl"
                     value={formData.signature_type}
                     onValueChange={(value: SignatureType) => setFormData(prev => ({ ...prev, signature_type: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger dir="rtl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
