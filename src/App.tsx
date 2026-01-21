@@ -40,6 +40,7 @@ import LicensingPhasesManagement from "./pages/admin/LicensingPhasesManagement";
 import TaskTemplatesManagement from "./pages/admin/TaskTemplatesManagement";
 import PaymentCategoriesManagement from "./pages/admin/PaymentCategoriesManagement";
 import PaymentStatusesManagement from "./pages/admin/PaymentStatusesManagement";
+import MilestoneTemplatesManagement from "./pages/admin/MilestoneTemplatesManagement";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
@@ -229,6 +230,8 @@ const AppContent = () => {
             <Route path="/heyadmin/licensing-phases" element={<AdminRoute><LicensingPhasesManagement /></AdminRoute>} />
             <Route path="/heyadmin/task-templates" element={<AdminRoute><TaskTemplatesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-categories" element={<AdminRoute><PaymentCategoriesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/payment-statuses" element={<AdminRoute><PaymentStatusesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/milestone-templates" element={<AdminRoute><MilestoneTemplatesManagement /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
