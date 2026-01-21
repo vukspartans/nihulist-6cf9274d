@@ -78,6 +78,8 @@ export function useFeeItemTemplates(advisorSpecialty?: string) {
       if (error) throw error;
       return data as FeeItemTemplate[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - templates don't change often
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -227,6 +229,8 @@ export function useServiceScopeTemplates(advisorSpecialty?: string) {
       if (error) throw error;
       return data as ServiceScopeTemplate[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - templates don't change often
+    refetchOnWindowFocus: false,
   });
 }
 

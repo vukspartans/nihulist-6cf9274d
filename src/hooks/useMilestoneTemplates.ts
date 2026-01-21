@@ -29,6 +29,8 @@ export function useMilestoneTemplates(includeInactive = true) {
       if (error) throw error;
       return data as MilestoneTemplate[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - templates don't change often
+    refetchOnWindowFocus: false,
   });
 }
 

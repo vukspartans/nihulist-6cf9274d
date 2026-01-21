@@ -1,14 +1,18 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, FileText, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, FileText, Check, AlertCircle, Loader2, Database } from 'lucide-react';
 import { PaymentTerms, MilestonePayment, PaymentTermType } from '@/types/rfpRequest';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PaymentTermsTabProps {
   paymentTerms: PaymentTerms;
   onPaymentTermsChange: (terms: PaymentTerms) => void;
+  advisorType?: string;
 }
 
 const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
@@ -20,8 +24,11 @@ const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
 
 export const PaymentTermsTab = ({
   paymentTerms,
-  onPaymentTermsChange
+  onPaymentTermsChange,
+  advisorType
 }: PaymentTermsTabProps) => {
+  const { toast } = useToast();
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   
   const updateField = <K extends keyof PaymentTerms>(field: K, value: PaymentTerms[K]) => {
     onPaymentTermsChange({
@@ -54,12 +61,62 @@ export const PaymentTermsTab = ({
     updateField('milestone_payments', newMilestones);
   };
 
-  const loadTemplate = () => {
-    updateField('milestone_payments', [
-      { description: 'בחתימה על ההסכם', percentage: 30, trigger: 'בחתימה על ההסכם' },
-      { description: 'עם קבלת היתר בנייה', percentage: 40, trigger: 'עם קבלת היתר בנייה' },
-      { description: 'עם סיום התכנון', percentage: 30, trigger: 'עם סיום התכנון' }
-    ]);
+  const loadTemplate = async () => {
+    setLoadingTemplate(true);
+    try {
+      let query = supabase
+        .from('milestone_templates')
+        .select('name, percentage_of_total, description')
+        .eq('is_active', true)
+        .order('display_order');
+      
+      // Filter by advisor specialty if provided
+      if (advisorType) {
+        query = query.or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const milestones = data.map(m => ({
+          description: m.name,
+          percentage: m.percentage_of_total,
+          trigger: m.description || m.name
+        }));
+        updateField('milestone_payments', milestones);
+        toast({ 
+          title: `נטענו ${data.length} אבני דרך מתבנית`,
+          description: 'ניתן לערוך את האחוזים והתיאורים'
+        });
+      } else {
+        // Fallback to hardcoded template
+        updateField('milestone_payments', [
+          { description: 'בחתימה על ההסכם', percentage: 30, trigger: 'בחתימה על ההסכם' },
+          { description: 'עם קבלת היתר בנייה', percentage: 40, trigger: 'עם קבלת היתר בנייה' },
+          { description: 'עם סיום התכנון', percentage: 30, trigger: 'עם סיום התכנון' }
+        ]);
+        toast({ 
+          title: 'נטענה תבנית ברירת מחדל',
+          description: 'לא נמצאו תבניות אבני דרך במערכת'
+        });
+      }
+    } catch (error) {
+      console.error('Error loading milestone templates:', error);
+      // Fallback to hardcoded template on error
+      updateField('milestone_payments', [
+        { description: 'בחתימה על ההסכם', percentage: 30, trigger: 'בחתימה על ההסכם' },
+        { description: 'עם קבלת היתר בנייה', percentage: 40, trigger: 'עם קבלת היתר בנייה' },
+        { description: 'עם סיום התכנון', percentage: 30, trigger: 'עם סיום התכנון' }
+      ]);
+      toast({ 
+        title: 'נטענה תבנית ברירת מחדל',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingTemplate(false);
+    }
   };
 
   // Calculate total percentage (milestones only)
@@ -80,10 +137,15 @@ export const PaymentTermsTab = ({
             variant="ghost"
             size="sm"
             onClick={loadTemplate}
+            disabled={loadingTemplate}
             className="h-7 text-xs gap-1"
           >
-            <FileText className="h-3 w-3" />
-            תבנית נפוצה
+            {loadingTemplate ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Database className="h-3 w-3" />
+            )}
+            {loadingTemplate ? 'טוען...' : 'טען תבנית'}
           </Button>
         </div>
         
@@ -180,11 +242,11 @@ export const PaymentTermsTab = ({
       <div className="space-y-1">
         <Label className="text-right block">תנאי תשלום</Label>
         <Select
+          dir="rtl"
           value={paymentTerms.payment_term_type || ''}
           onValueChange={(v) => updateField('payment_term_type', v as PaymentTermType)}
-          dir="rtl"
         >
-          <SelectTrigger className="w-full text-right" dir="rtl">
+          <SelectTrigger dir="rtl" className="w-full text-right">
             <SelectValue placeholder="בחרו תנאי תשלום" />
           </SelectTrigger>
           <SelectContent dir="rtl" align="end">

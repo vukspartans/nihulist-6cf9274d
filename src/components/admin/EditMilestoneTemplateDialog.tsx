@@ -174,16 +174,17 @@ export function EditMilestoneTemplateDialog({
                   <div className="space-y-2">
                     <Label>{t.dialog.projectTypeLabel}</Label>
                     <Select
+                      dir="rtl"
                       value={watch("project_type") || ""}
                       onValueChange={(val) => setValue("project_type", val)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger dir="rtl" className="text-right">
                         <SelectValue placeholder={t.dialog.projectTypeAll} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">{t.dialog.projectTypeAll}</SelectItem>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
                         {PROJECT_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
+                          <SelectItem key={type.value} value={type.value} className="text-right">
                             {type.label}
                           </SelectItem>
                         ))}
@@ -194,16 +195,17 @@ export function EditMilestoneTemplateDialog({
                   <div className="space-y-2">
                     <Label>{t.dialog.municipalityLabel}</Label>
                     <Select
+                      dir="rtl"
                       value={watch("municipality_id") || ""}
                       onValueChange={(val) => setValue("municipality_id", val)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger dir="rtl" className="text-right">
                         <SelectValue placeholder={t.dialog.municipalityAll} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">{t.dialog.municipalityAll}</SelectItem>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="" className="text-right">{t.dialog.municipalityAll}</SelectItem>
                         {municipalities.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
+                          <SelectItem key={m.id} value={m.id} className="text-right">
                             {m.name}
                           </SelectItem>
                         ))}
@@ -214,16 +216,17 @@ export function EditMilestoneTemplateDialog({
                   <div className="space-y-2">
                     <Label>{t.dialog.advisorSpecialtyLabel}</Label>
                     <Select
+                      dir="rtl"
                       value={watch("advisor_specialty") || ""}
                       onValueChange={(val) => setValue("advisor_specialty", val)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger dir="rtl" className="text-right">
                         <SelectValue placeholder={t.dialog.advisorSpecialtyAll} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">{t.dialog.advisorSpecialtyAll}</SelectItem>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
                         {EXPERTISE_OPTIONS.map((exp) => (
-                          <SelectItem key={exp.value} value={exp.value}>
+                          <SelectItem key={exp.value} value={exp.value} className="text-right">
                             {exp.label}
                           </SelectItem>
                         ))}
@@ -302,17 +305,18 @@ export function EditMilestoneTemplateDialog({
                 <div className="space-y-2">
                   <Label>{t.dialog.triggerTypeLabel}</Label>
                   <Select
+                    dir="rtl"
                     value={watch("trigger_type") || "task_completion"}
                     onValueChange={(val) =>
                       setValue("trigger_type", val as UpdateMilestoneTemplateInput["trigger_type"])
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger dir="rtl" className="text-right">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir="rtl">
                       {TRIGGER_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
+                        <SelectItem key={type.value} value={type.value} className="text-right">
                           {type.label}
                         </SelectItem>
                       ))}
