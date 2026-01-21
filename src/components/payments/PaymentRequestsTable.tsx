@@ -42,7 +42,7 @@ export function PaymentRequestsTable({
   };
 
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -52,8 +52,8 @@ export function PaymentRequestsTable({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] h-8">
+              <Select dir="rtl" value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger dir="rtl" className="w-[140px] h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

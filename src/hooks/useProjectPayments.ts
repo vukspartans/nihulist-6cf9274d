@@ -237,6 +237,9 @@ export function useProjectPayments(projectId: string) {
         updateData.submitted_at = new Date().toISOString();
       } else if (status === 'approved') {
         updateData.approved_at = new Date().toISOString();
+        if (additionalData?.approver_signature_id) {
+          updateData.approver_signature_id = additionalData.approver_signature_id;
+        }
       } else if (status === 'paid') {
         updateData.paid_at = new Date().toISOString();
       } else if (status === 'rejected') {

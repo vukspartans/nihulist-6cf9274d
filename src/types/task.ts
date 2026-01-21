@@ -5,6 +5,8 @@ export interface ProjectTask {
   project_id: string;
   template_id?: string | null;
   stage_id?: string | null;
+  payment_milestone_id?: string | null;
+  is_payment_critical?: boolean;
   name: string;
   description?: string | null;
   phase?: string | null;
@@ -29,6 +31,12 @@ export interface ProjectTask {
   advisors?: {
     id: string;
     company_name: string | null;
+  } | null;
+  // Payment milestone joined data
+  payment_milestone?: {
+    id: string;
+    name: string;
+    status: string;
   } | null;
 }
 

@@ -135,10 +135,11 @@ export function CreateMilestoneDialog({
           <div className="space-y-2">
             <Label htmlFor="advisor">יועץ</Label>
             <Select 
+              dir="rtl"
               value={formData.project_advisor_id} 
               onValueChange={(value) => setFormData(prev => ({ ...prev, project_advisor_id: value }))}
             >
-              <SelectTrigger>
+              <SelectTrigger dir="rtl">
                 <SelectValue placeholder="בחר יועץ (אופציונלי)" />
               </SelectTrigger>
               <SelectContent>
