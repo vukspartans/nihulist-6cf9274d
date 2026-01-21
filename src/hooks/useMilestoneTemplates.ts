@@ -260,27 +260,29 @@ export function useReorderMilestoneTemplates() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => ({
-        id,
-        display_order: index + 1,
-        updated_at: new Date().toISOString(),
-      }));
-
-      for (const update of updates) {
-        const { error } = await supabase
+    mutationFn: async (orderedIds: { id: string; display_order: number }[]) => {
+      const promises = orderedIds.map(({ id, display_order }) =>
+        supabase
           .from('milestone_templates')
           .update({ 
-            display_order: update.display_order,
-            updated_at: update.updated_at 
+            display_order,
+            updated_at: new Date().toISOString() 
           })
-          .eq('id', update.id);
+          .eq('id', id)
+      );
 
-        if (error) throw error;
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+      
+      if (errors.length > 0) {
+        throw new Error('Failed to reorder milestones');
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milestone-templates'] });
+      toast({
+        title: 'הסדר עודכן בהצלחה',
+      });
     },
     onError: (error: Error) => {
       toast({

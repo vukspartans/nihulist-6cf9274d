@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { DataTable } from '@/components/admin/DataTable';
+import { SortableDataTable, Column } from '@/components/admin/SortableDataTable';
 import { SearchBar } from '@/components/admin/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,11 +21,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Plus, Pencil, Trash2, Bell, PenTool, CheckSquare, Upload, Flag, GripVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Bell, PenTool, CheckSquare, Upload, Flag } from 'lucide-react';
 import { 
   usePaymentStatusDefinitions,
   useUpdatePaymentStatusDefinition,
   useDeletePaymentStatusDefinition,
+  useReorderPaymentStatuses,
 } from '@/hooks/usePaymentStatusDefinitions';
 import { CreatePaymentStatusDialog } from '@/components/admin/CreatePaymentStatusDialog';
 import { EditPaymentStatusDialog } from '@/components/admin/EditPaymentStatusDialog';
@@ -38,6 +39,7 @@ export default function PaymentStatusesManagement() {
   const { data: statuses = [], isLoading } = usePaymentStatusDefinitions();
   const updateMutation = useUpdatePaymentStatusDefinition();
   const deleteMutation = useDeletePaymentStatusDefinition();
+  const reorderMutation = useReorderPaymentStatuses();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -74,6 +76,10 @@ export default function PaymentStatusesManagement() {
       id: status.id,
       is_active: !status.is_active,
     });
+  };
+
+  const handleReorder = (orderedIds: { id: string; display_order: number }[]) => {
+    reorderMutation.mutate(orderedIds);
   };
 
   const getSignatureIcon = (type: string) => {
@@ -116,19 +122,8 @@ export default function PaymentStatusesManagement() {
     }
   };
 
-  const columns = [
+  const columns: Column<PaymentStatusDefinition>[] = [
     {
-      key: 'order',
-      header: t.columns.order,
-      cell: (status: PaymentStatusDefinition) => (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <GripVertical className="w-4 h-4" />
-          <span>{status.display_order}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'name',
       header: t.columns.name,
       cell: (status: PaymentStatusDefinition) => (
         <div className="flex items-center gap-2">
@@ -144,14 +139,12 @@ export default function PaymentStatusesManagement() {
       ),
     },
     {
-      key: 'code',
       header: t.columns.code,
       cell: (status: PaymentStatusDefinition) => (
         <code className="text-xs bg-muted px-2 py-1 rounded">{status.code}</code>
       ),
     },
     {
-      key: 'type',
       header: t.columns.type,
       cell: (status: PaymentStatusDefinition) => (
         <Badge variant={status.is_system ? 'secondary' : 'outline'}>
@@ -160,7 +153,6 @@ export default function PaymentStatusesManagement() {
       ),
     },
     {
-      key: 'terminal',
       header: t.columns.terminal,
       cell: (status: PaymentStatusDefinition) => (
         status.is_terminal ? (
@@ -172,7 +164,6 @@ export default function PaymentStatusesManagement() {
       ),
     },
     {
-      key: 'notification',
       header: t.columns.notification,
       cell: (status: PaymentStatusDefinition) => (
         status.notify_on_enter ? (
@@ -190,12 +181,10 @@ export default function PaymentStatusesManagement() {
       ),
     },
     {
-      key: 'signature',
       header: t.columns.signature,
       cell: (status: PaymentStatusDefinition) => getSignatureIcon(status.signature_type),
     },
     {
-      key: 'status',
       header: t.columns.status,
       cell: (status: PaymentStatusDefinition) => (
         <Switch
@@ -206,14 +195,16 @@ export default function PaymentStatusesManagement() {
       ),
     },
     {
-      key: 'actions',
       header: t.columns.actions,
       cell: (status: PaymentStatusDefinition) => (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleEdit(status)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(status);
+            }}
           >
             <Pencil className="w-4 h-4" />
           </Button>
@@ -221,7 +212,10 @@ export default function PaymentStatusesManagement() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDeleteClick(status)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(status);
+              }}
               className="text-destructive hover:text-destructive"
             >
               <Trash2 className="w-4 h-4" />
@@ -260,9 +254,11 @@ export default function PaymentStatusesManagement() {
         />
 
         {/* Table */}
-        <DataTable
+        <SortableDataTable
           columns={columns}
           data={filteredStatuses}
+          onReorder={handleReorder}
+          isReordering={reorderMutation.isPending}
         />
       </div>
 

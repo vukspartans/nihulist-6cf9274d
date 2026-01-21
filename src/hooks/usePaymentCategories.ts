@@ -124,3 +124,33 @@ export function useDeletePaymentCategory() {
     },
   });
 }
+
+export function useReorderPaymentCategories() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (orderedIds: { id: string; display_order: number }[]) => {
+      const promises = orderedIds.map(({ id, display_order }) =>
+        supabase
+          .from("payment_categories")
+          .update({ display_order, updated_at: new Date().toISOString() })
+          .eq("id", id)
+      );
+      
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => r.error);
+      
+      if (errors.length > 0) {
+        throw new Error("Failed to reorder categories");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-categories"] });
+      toast.success("הסדר עודכן בהצלחה");
+    },
+    onError: (error: Error) => {
+      console.error("Error reordering categories:", error);
+      toast.error("שגיאה בשינוי הסדר");
+    },
+  });
+}
