@@ -13,13 +13,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateLicensingPhase } from "@/hooks/useLicensingPhases";
 import { type Municipality } from "@/hooks/useMunicipalities";
-import { PROJECT_TYPE_OPTIONS } from "@/constants/project";
+import { PROJECT_CATEGORIES, getProjectTypesByCategory } from "@/constants/project";
 
 interface CreateLicensingPhaseDialogProps {
   open: boolean;
@@ -122,12 +124,19 @@ export function CreateLicensingPhaseDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
-                <SelectContent dir="rtl">
+                <SelectContent dir="rtl" className="max-h-80">
                   <SelectItem value="general">כללי (לכל הסוגים)</SelectItem>
-                  {PROJECT_TYPE_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
+                  {PROJECT_CATEGORIES.map((category) => (
+                    <SelectGroup key={category}>
+                      <SelectLabel className="text-right font-bold text-primary">
+                        {category}
+                      </SelectLabel>
+                      {getProjectTypesByCategory(category).map((type) => (
+                        <SelectItem key={type} value={type} className="pr-6">
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
