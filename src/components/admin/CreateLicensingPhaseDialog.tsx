@@ -105,7 +105,7 @@ export function CreateLicensingPhaseDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר עירייה" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי (לכל העיריות)</SelectItem>
                   {municipalities.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
@@ -122,7 +122,7 @@ export function CreateLicensingPhaseDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי (לכל הסוגים)</SelectItem>
                   {PROJECT_TYPE_OPTIONS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
