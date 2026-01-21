@@ -109,7 +109,7 @@ export function EditLicensingPhaseDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר עירייה" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי (לכל העיריות)</SelectItem>
                   {municipalities.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
@@ -126,7 +126,7 @@ export function EditLicensingPhaseDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי (לכל הסוגים)</SelectItem>
                   {PROJECT_TYPE_OPTIONS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
@@ -164,16 +164,16 @@ export function EditLicensingPhaseDialog({
             </div>
           </div>
 
-          <DialogFooter className="flex-row-reverse gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
+            <Button type="submit" disabled={updatePhase.isPending || !name.trim()}>
+              {updatePhase.isPending ? "שומר..." : "שמור שינויים"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button type="submit" disabled={updatePhase.isPending || !name.trim()}>
-              {updatePhase.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
           </DialogFooter>
         </form>

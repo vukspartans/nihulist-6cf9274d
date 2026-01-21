@@ -150,7 +150,7 @@ const MunicipalitiesManagement = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" dir="rtl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">{t.title}</h1>
@@ -209,14 +209,14 @@ const MunicipalitiesManagement = () => {
                 <span className="text-destructive font-medium">{t.deleteWarning}</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row-reverse gap-2">
-              <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogFooter className="gap-2">
               <AlertDialogAction
                 onClick={confirmDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 מחק
               </AlertDialogAction>
+              <AlertDialogCancel>ביטול</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
