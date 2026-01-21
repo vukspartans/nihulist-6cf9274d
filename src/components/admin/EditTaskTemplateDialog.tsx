@@ -125,7 +125,7 @@ export function EditTaskTemplateDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>עירייה</Label>
-              <Select value={municipalityId} onValueChange={setMunicipalityId}>
+              <Select dir="rtl" value={municipalityId} onValueChange={setMunicipalityId}>
                 <SelectTrigger>
                   <SelectValue placeholder="בחר עירייה" />
                 </SelectTrigger>
@@ -142,7 +142,7 @@ export function EditTaskTemplateDialog({
 
             <div className="space-y-2">
               <Label>סוג פרויקט</Label>
-              <Select value={projectType} onValueChange={setProjectType}>
+              <Select dir="rtl" value={projectType} onValueChange={setProjectType}>
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
@@ -160,7 +160,7 @@ export function EditTaskTemplateDialog({
 
           <div className="space-y-2">
             <Label>שלב רישוי</Label>
-            <Select value={phaseId} onValueChange={setPhaseId}>
+            <Select dir="rtl" value={phaseId} onValueChange={setPhaseId}>
               <SelectTrigger>
                 <SelectValue placeholder="בחר שלב" />
               </SelectTrigger>
@@ -203,7 +203,7 @@ export function EditTaskTemplateDialog({
 
           <div className="space-y-2">
             <Label>התמחות יועץ</Label>
-            <Select value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
+            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
               <SelectTrigger>
                 <SelectValue placeholder="בחר התמחות" />
               </SelectTrigger>
@@ -218,8 +218,8 @@ export function EditTaskTemplateDialog({
             </Select>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-6 flex-row-reverse justify-end">
+            <div className="flex items-center gap-2 flex-row-reverse">
               <Checkbox
                 id="edit-template-milestone"
                 checked={isMilestone}
@@ -230,7 +230,7 @@ export function EditTaskTemplateDialog({
               </Label>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-row-reverse">
               <Checkbox
                 id="edit-template-default"
                 checked={isDefault}

@@ -278,7 +278,7 @@ const TaskTemplatesManagement = () => {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs dir="rtl" value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="system">{t.systemTemplates}</TabsTrigger>
             <TabsTrigger value="user">{t.userTemplates}</TabsTrigger>
@@ -296,7 +296,7 @@ const TaskTemplatesManagement = () => {
                 />
               </div>
 
-              <Select value={municipalityFilter} onValueChange={setMunicipalityFilter}>
+              <Select dir="rtl" value={municipalityFilter} onValueChange={setMunicipalityFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t.allMunicipalities} />
                 </SelectTrigger>
@@ -311,7 +311,7 @@ const TaskTemplatesManagement = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={projectTypeFilter} onValueChange={setProjectTypeFilter}>
+              <Select dir="rtl" value={projectTypeFilter} onValueChange={setProjectTypeFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t.allProjectTypes} />
                 </SelectTrigger>
