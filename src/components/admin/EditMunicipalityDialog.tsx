@@ -11,7 +11,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUpdateMunicipality, type Municipality } from "@/hooks/useMunicipalities";
+
+const ISRAEL_REGIONS = [
+  { value: "צפון", label: "צפון" },
+  { value: "חיפה", label: "חיפה" },
+  { value: "מרכז", label: "מרכז" },
+  { value: "תל אביב", label: "תל אביב" },
+  { value: "ירושלים", label: "ירושלים" },
+  { value: "דרום", label: "דרום" },
+  { value: "יהודה ושומרון", label: "יהודה ושומרון" },
+];
 
 interface EditMunicipalityDialogProps {
   open: boolean;
@@ -76,13 +93,19 @@ export function EditMunicipalityDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-region">אזור</Label>
-            <Input
-              id="edit-region"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              placeholder="לדוגמה: מרכז"
-            />
+            <Label>אזור</Label>
+            <Select value={region} onValueChange={setRegion}>
+              <SelectTrigger>
+                <SelectValue placeholder="בחר אזור" />
+              </SelectTrigger>
+              <SelectContent dir="rtl">
+                {ISRAEL_REGIONS.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

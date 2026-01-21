@@ -1,7 +1,12 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +22,7 @@ import {
   MapPin,
   GitBranch,
   FileStack,
+  ChevronDown,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { UserHeader } from "@/components/UserHeader";
@@ -61,6 +67,18 @@ function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+
+  // Check if current route is a licensing route
+  const isLicensingRoute = location.pathname.includes('/heyadmin/municipalities') ||
+                           location.pathname.includes('/heyadmin/licensing-phases') ||
+                           location.pathname.includes('/heyadmin/task-templates');
+  
+  const [licensingOpen, setLicensingOpen] = useState(isLicensingRoute);
+
+  // Auto-expand when navigating to a licensing route
+  useEffect(() => {
+    if (isLicensingRoute) setLicensingOpen(true);
+  }, [isLicensingRoute]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -135,43 +153,55 @@ function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="px-3 py-4">
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
-            {!isCollapsed && adminTranslations.licensing.sectionTitle}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {licensingNavigationItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive}
-                      className={`
-                        relative rounded-lg transition-all duration-200
-                        ${isActive 
-                          ? 'bg-primary/10 text-primary font-medium shadow-sm' 
-                          : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
-                        }
-                      `}
-                    >
-                      <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
-                        <Icon className="h-5 w-5 shrink-0" />
-                        {!isCollapsed && <span className="text-sm">{item.title}</span>}
-                        {isActive && !isCollapsed && (
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <Collapsible open={licensingOpen} onOpenChange={setLicensingOpen}>
+          <SidebarGroup className="px-3 py-4">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2 cursor-pointer hover:text-foreground flex items-center justify-between w-full">
+                {!isCollapsed && (
+                  <>
+                    <span>{adminTranslations.licensing.sectionTitle}</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${licensingOpen ? 'rotate-180' : ''}`} />
+                  </>
+                )}
+                {isCollapsed && <MapPin className="h-5 w-5 mx-auto" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {licensingNavigationItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.url;
+                    
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton 
+                          asChild 
+                          isActive={isActive}
+                          className={`
+                            relative rounded-lg transition-all duration-200
+                            ${isActive 
+                              ? 'bg-primary/10 text-primary font-medium shadow-sm' 
+                              : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                            }
+                          `}
+                        >
+                          <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
+                            <Icon className="h-5 w-5 shrink-0" />
+                            {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                            {isActive && !isCollapsed && (
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
 
         <div className="mt-auto p-4 border-t border-border/50">
           <Button

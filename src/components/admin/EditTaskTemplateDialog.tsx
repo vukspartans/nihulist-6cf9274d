@@ -129,7 +129,7 @@ export function EditTaskTemplateDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר עירייה" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי</SelectItem>
                   {municipalities.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
@@ -146,7 +146,7 @@ export function EditTaskTemplateDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   <SelectItem value="general">כללי</SelectItem>
                   {PROJECT_TYPE_OPTIONS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
@@ -164,7 +164,7 @@ export function EditTaskTemplateDialog({
               <SelectTrigger>
                 <SelectValue placeholder="בחר שלב" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 <SelectItem value="none">ללא שיוך לשלב</SelectItem>
                 {phases?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
@@ -207,7 +207,7 @@ export function EditTaskTemplateDialog({
               <SelectTrigger>
                 <SelectValue placeholder="בחר התמחות" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 <SelectItem value="none">ללא שיוך</SelectItem>
                 {EXPERTISE_OPTIONS.map((e) => (
                   <SelectItem key={e.value} value={e.value}>
@@ -242,16 +242,16 @@ export function EditTaskTemplateDialog({
             </div>
           </div>
 
-          <DialogFooter className="flex-row-reverse gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
+            <Button type="submit" disabled={updateTemplate.isPending || !name.trim()}>
+              {updateTemplate.isPending ? "שומר..." : "שמור שינויים"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
-            </Button>
-            <Button type="submit" disabled={updateTemplate.isPending || !name.trim()}>
-              {updateTemplate.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
           </DialogFooter>
         </form>
