@@ -43,7 +43,7 @@ import { EditServiceScopeTemplateDialog } from "@/components/admin/EditServiceSc
 
 export default function RFPTemplatesManagement() {
   // Filter state
-  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>("");
+  const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("fee-items");
 
@@ -63,10 +63,10 @@ export default function RFPTemplatesManagement() {
 
   // Queries
   const { data: feeItems = [], isLoading: loadingFeeItems } = useFeeItemTemplates(
-    selectedAdvisorType || undefined
+    selectedAdvisorType === "all" ? undefined : selectedAdvisorType
   );
   const { data: services = [], isLoading: loadingServices } = useServiceScopeTemplates(
-    selectedAdvisorType || undefined
+    selectedAdvisorType === "all" ? undefined : selectedAdvisorType
   );
 
   // Mutations
@@ -273,7 +273,7 @@ export default function RFPTemplatesManagement() {
                     <SelectValue placeholder="כל סוגי היועצים" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">כל סוגי היועצים</SelectItem>
+                    <SelectItem value="all">כל סוגי היועצים</SelectItem>
                     {ADVISOR_EXPERTISE.map((expertise) => (
                       <SelectItem key={expertise} value={expertise}>
                         {expertise}
@@ -325,7 +325,7 @@ export default function RFPTemplatesManagement() {
                 ) : filteredFeeItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     אין תבניות שכר טרחה
-                    {selectedAdvisorType && ` לסוג יועץ "${selectedAdvisorType}"`}
+                    {selectedAdvisorType !== "all" && ` לסוג יועץ "${selectedAdvisorType}"`}
                   </div>
                 ) : (
                   <SortableDataTable
@@ -354,7 +354,7 @@ export default function RFPTemplatesManagement() {
                 ) : filteredServices.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     אין שירותים
-                    {selectedAdvisorType && ` לסוג יועץ "${selectedAdvisorType}"`}
+                    {selectedAdvisorType !== "all" && ` לסוג יועץ "${selectedAdvisorType}"`}
                   </div>
                 ) : (
                   <SortableDataTable
