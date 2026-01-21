@@ -36,18 +36,18 @@ export interface TaskTemplate {
 
 export interface CreateTaskTemplateInput {
   name: string;
-  description?: string;
-  project_type?: string;
-  phase?: string;
-  default_duration_days?: number;
-  advisor_specialty?: string;
+  description?: string | null;
+  project_type?: string | null;
+  phase?: string | null;
+  default_duration_days?: number | null;
+  advisor_specialty?: string | null;
   is_milestone?: boolean;
   display_order?: number;
   is_active?: boolean;
   municipality_id?: string | null;
   licensing_phase_id?: string | null;
   is_default?: boolean;
-  template_group_id?: string;
+  template_group_id?: string | null;
   depends_on_template_id?: string | null;
 }
 
@@ -148,7 +148,7 @@ export function useCreateTaskTemplate() {
     mutationFn: async (input: CreateTaskTemplateInput) => {
       const { data, error } = await supabase
         .from("task_templates")
-        .insert(input)
+        .insert(input as any)
         .select()
         .single();
 
@@ -222,7 +222,7 @@ export function useBulkCreateTaskTemplates() {
     mutationFn: async (templates: CreateTaskTemplateInput[]) => {
       const { data, error } = await supabase
         .from("task_templates")
-        .insert(templates)
+        .insert(templates as any)
         .select();
 
       if (error) throw error;

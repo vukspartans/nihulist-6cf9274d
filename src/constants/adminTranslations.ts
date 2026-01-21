@@ -395,6 +395,78 @@ export const adminTranslations = {
     deleteConfirmDesc: "האם אתה בטוח שברצונך למחוק משוב זה? פעולה זו אינה ניתנת לביטול.",
   },
 
+  // Licensing Management Section
+  licensing: {
+    sectionTitle: "ניהול רישוי",
+    
+    municipalities: {
+      title: "ניהול עיריות",
+      searchPlaceholder: "חפש עירייה...",
+      createButton: "הוסף עירייה",
+      columns: {
+        name: "שם העירייה",
+        region: "אזור",
+        specialRequirements: "דרישות מיוחדות",
+        status: "סטטוס",
+        actions: "פעולות",
+      },
+      general: "כללי",
+      deleteConfirm: "האם אתה בטוח שברצונך למחוק עירייה זו?",
+      deleteWarning: "פעולה זו תמחק את העירייה וכל התבניות המקושרות אליה.",
+    },
+    
+    phases: {
+      title: "שלבי רישוי",
+      searchPlaceholder: "חפש שלב...",
+      createButton: "הוסף שלב",
+      columns: {
+        name: "שם השלב",
+        description: "תיאור",
+        municipality: "עירייה",
+        projectType: "סוג פרויקט",
+      defaultDuration: "משך ברירת מחדל (ימים)",
+      displayOrder: "סדר",
+      status: "סטטוס",
+      actions: "פעולות",
+    },
+    general: "כללי",
+    allMunicipalities: "כל העיריות",
+    allProjectTypes: "כל סוגי הפרויקטים",
+    days: "ימים",
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק שלב זה?",
+    deleteWarning: "פעולה זו תמחק את השלב וכל המשימות המקושרות אליו.",
+  },
+    
+    templates: {
+      title: "תבניות משימות",
+      searchPlaceholder: "חפש תבנית...",
+      createButton: "צור תבנית חדשה",
+      systemTemplates: "תבניות מערכת",
+      userTemplates: "תבניות משתמשים",
+      columns: {
+        name: "שם המשימה",
+        description: "תיאור",
+        projectType: "סוג פרויקט",
+        municipality: "עירייה",
+        phase: "שלב רישוי",
+        duration: "משך (ימים)",
+        specialty: "התמחות יועץ",
+        isMilestone: "אבן דרך",
+        isDefault: "ברירת מחדל",
+        status: "סטטוס",
+        actions: "פעולות",
+      },
+    general: "כללי",
+    allMunicipalities: "כל העיריות",
+    allProjectTypes: "כל סוגי הפרויקטים",
+    days: "ימים",
+    deleteConfirm: "האם אתה בטוח שברצונך למחוק תבנית זו?",
+    deleteWarning: "פעולה זו תמחק את התבנית לצמיתות.",
+    milestone: "אבן דרך",
+      defaultTemplate: "ברירת מחדל",
+    },
+  },
+
   // Common
   common: {
     loading: "טוען...",
