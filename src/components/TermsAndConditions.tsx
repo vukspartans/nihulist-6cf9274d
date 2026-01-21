@@ -466,7 +466,7 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
         </div>
       </ScrollArea>
       
-      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-md border" dir="rtl">
+      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-md border flex-row-reverse justify-end" dir="rtl">
         <Checkbox 
           id="tos" 
           checked={accepted}
