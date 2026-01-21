@@ -207,15 +207,16 @@ export const FeeItemsTable = ({
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">יחידה</Label>
                 <Select
+                  dir="rtl"
                   value={item.unit}
                   onValueChange={(value) => updateItem(index, 'unit', value as FeeUnit, isOptional)}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger dir="rtl" className="w-full text-right">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent dir="rtl">
                     {FEE_UNITS.map((unit) => (
-                      <SelectItem key={unit.value} value={unit.value}>
+                      <SelectItem key={unit.value} value={unit.value} className="text-right">
                         {unit.label}
                       </SelectItem>
                     ))}
@@ -238,15 +239,16 @@ export const FeeItemsTable = ({
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">סוג החיוב</Label>
               <Select
+                dir="rtl"
                 value={item.charge_type}
                 onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger dir="rtl" className="w-full text-right">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   {CHARGE_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
+                    <SelectItem key={type.value} value={type.value} className="text-right">
                       {type.label}
                     </SelectItem>
                   ))}
@@ -293,15 +295,16 @@ export const FeeItemsTable = ({
                 </TableCell>
                 <TableCell>
                   <Select
+                    dir="rtl"
                     value={item.unit}
                     onValueChange={(value) => updateItem(index, 'unit', value as FeeUnit, isOptional)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger dir="rtl" className="w-full text-right">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir="rtl">
                       {FEE_UNITS.map((unit) => (
-                        <SelectItem key={unit.value} value={unit.value}>
+                        <SelectItem key={unit.value} value={unit.value} className="text-right">
                           {unit.label}
                         </SelectItem>
                       ))}
@@ -319,15 +322,16 @@ export const FeeItemsTable = ({
                 </TableCell>
                 <TableCell>
                   <Select
+                    dir="rtl"
                     value={item.charge_type}
                     onValueChange={(value) => updateItem(index, 'charge_type', value as ChargeType, isOptional)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger dir="rtl" className="w-full text-right">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir="rtl">
                       {CHARGE_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
+                        <SelectItem key={type.value} value={type.value} className="text-right">
                           {type.label}
                         </SelectItem>
                       ))}

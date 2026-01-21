@@ -1093,6 +1093,7 @@ export const RequestEditorDialog = ({
                 <PaymentTermsTab
                   paymentTerms={formData.paymentTerms || { milestone_payments: [], payment_term_type: 'net_30' }}
                   onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
+                  advisorType={advisorType}
                 />
               </TabsContent>
             </div>
