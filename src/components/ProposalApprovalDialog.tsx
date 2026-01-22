@@ -190,15 +190,11 @@ export const ProposalApprovalDialog = ({
                   <p className="font-medium text-lg">{proposal.supplier_name}</p>
                 </div>
 
-                {/* Key Metrics */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-background p-3 rounded-lg border">
-                    <span className="text-muted-foreground text-sm block mb-1">סה"כ (ללא פריטים אופציונליים)</span>
-                    <p className="font-bold text-green-600 text-xl">{formatCurrency(mandatoryTotal)}</p>
-                  </div>
-                  <div className="bg-background p-3 rounded-lg border">
-                    <span className="text-muted-foreground text-sm block mb-1">זמן ביצוע</span>
-                    <p className="font-medium text-lg">{proposal.timeline_days} ימים</p>
+                {/* Key Metrics - Total Only */}
+                <div className="mb-4">
+                  <div className="bg-background p-4 rounded-lg border">
+                    <span className="text-muted-foreground text-sm block mb-1">סה"כ לתשלום (ללא פריטים אופציונליים)</span>
+                    <p className="font-bold text-green-600 text-2xl">{formatCurrency(mandatoryTotal)}</p>
                   </div>
                 </div>
 
