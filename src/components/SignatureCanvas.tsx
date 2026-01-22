@@ -2,11 +2,13 @@ import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RotateCcw, Upload, X, Stamp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SignatureCanvasProps {
   onSign: (signatureData: SignatureData) => void;
   required?: boolean;
   className?: string;
+  compact?: boolean;
 }
 
 export interface SignatureData {
@@ -16,7 +18,7 @@ export interface SignatureData {
   stampImage?: string; // optional company stamp base64
 }
 
-export function SignatureCanvas({ onSign, required = false, className = '' }: SignatureCanvasProps) {
+export function SignatureCanvas({ onSign, required = false, className = '', compact = false }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -171,21 +173,21 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
   }, [strokes]);
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className={cn(className)}>
+      <CardHeader className={cn(compact ? "p-3 sm:p-4 pb-1 sm:pb-2" : "p-4 sm:p-6")}>
+        <CardTitle className={cn("flex items-center justify-between", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
           <span>חתימה דיגיטלית</span>
-          {required && <span className="text-sm text-destructive">*נדרש</span>}
+          {required && <span className={cn("text-destructive", compact ? "text-xs" : "text-xs sm:text-sm")}>*נדרש</span>}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className={cn(compact ? "text-xs" : "text-xs sm:text-sm")}>
           חתמו במרחב הלבן באמצעות העכבר או המגע
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={cn("space-y-3 sm:space-y-4", compact ? "p-3 sm:p-4 pt-0" : "p-4 sm:p-6 pt-0")}>
         <div className="relative border-2 border-dashed border-muted rounded-lg bg-background">
           <canvas
             ref={canvasRef}
-            className="w-full h-40 cursor-crosshair touch-none"
+            className={cn("w-full cursor-crosshair touch-none", compact ? "h-24 sm:h-32" : "h-32 sm:h-40")}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -195,18 +197,18 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
             onTouchEnd={stopDrawing}
           />
           {!hasSigned && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-muted-foreground">
+            <div className={cn("absolute inset-0 flex items-center justify-center pointer-events-none text-muted-foreground", compact ? "text-sm" : "text-sm sm:text-base")}>
               חתמו כאן
             </div>
           )}
         </div>
 
         {/* Company Stamp Upload Section */}
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Stamp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">חותמת חברה (אופציונלי)</span>
+        <div className={cn("border rounded-lg bg-muted/30", compact ? "p-2 sm:p-3" : "p-3")}>
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Stamp className={cn("text-muted-foreground", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
+              <span className={cn("font-medium", compact ? "text-xs sm:text-sm" : "text-sm")}>חותמת חברה (אופציונלי)</span>
             </div>
             <input
               ref={fileInputRef}
@@ -220,37 +222,39 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
                 type="button"
                 variant="outline"
                 size="sm"
+                className={cn(compact && "h-7 text-xs px-2 sm:h-8 sm:text-sm sm:px-3")}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="h-3 w-3 ml-1" />
+                <Upload className={cn(compact ? "h-3 w-3 ml-1" : "h-3 w-3 ml-1")} />
                 העלאה
               </Button>
             )}
           </div>
           
           {stampImage && (
-            <div className="flex items-center gap-3 p-2 bg-background rounded border">
+            <div className={cn("flex items-center gap-2 sm:gap-3 bg-background rounded border", compact ? "p-1.5 sm:p-2" : "p-2")}>
               <img 
                 src={stampImage} 
                 alt="חותמת חברה" 
-                className="h-16 w-auto object-contain"
+                className={cn("w-auto object-contain", compact ? "h-10 sm:h-14" : "h-16")}
               />
-              <div className="flex-1 text-sm text-muted-foreground">
+              <div className={cn("flex-1 text-muted-foreground", compact ? "text-xs sm:text-sm" : "text-sm")}>
                 חותמת הועלתה בהצלחה
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className={cn(compact && "h-7 w-7 p-0 sm:h-8 sm:w-8")}
                 onClick={removeStamp}
               >
-                <X className="h-4 w-4" />
+                <X className={cn(compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
               </Button>
             </div>
           )}
           
           {!stampImage && (
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-muted-foreground", compact ? "text-[10px] sm:text-xs" : "text-xs")}>
               ניתן להעלות קובץ PNG או JPG (עד 2MB)
             </p>
           )}
@@ -262,15 +266,15 @@ export function SignatureCanvas({ onSign, required = false, className = '' }: Si
             size="sm"
             onClick={clear}
             disabled={!hasSigned}
-            className="flex-1"
+            className={cn("flex-1", compact && "h-8 sm:h-9 text-xs sm:text-sm")}
           >
-            <RotateCcw className="ml-2 h-4 w-4" />
+            <RotateCcw className={cn("ml-1.5 sm:ml-2", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
             נקה
           </Button>
           <Button
             onClick={save}
             disabled={!hasSigned}
-            className="flex-1"
+            className={cn("flex-1", compact && "h-8 sm:h-9 text-xs sm:text-sm")}
           >
             שמור חתימה
           </Button>
