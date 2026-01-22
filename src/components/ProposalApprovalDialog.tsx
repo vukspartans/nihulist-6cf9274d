@@ -181,7 +181,10 @@ export const ProposalApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-2xl !max-h-[80vh] overflow-hidden flex flex-col" dir="rtl">
+      <DialogContent
+        className="w-full max-w-2xl !h-[80vh] !max-h-[80vh] min-h-0 overflow-hidden flex flex-col"
+        dir="rtl"
+      >
         <DialogHeader className="shrink-0 pb-2 sm:pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -448,7 +451,7 @@ export const ProposalApprovalDialog = ({
         </ScrollArea>
 
         {/* Fixed Footer */}
-        <div className="shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
+        <div className="mt-auto shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
           {step === 'review' ? (
             <>
               <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => handleOpenChange(false)}>
