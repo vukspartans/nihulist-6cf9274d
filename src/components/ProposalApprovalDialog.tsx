@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -198,7 +198,7 @@ export const ProposalApprovalDialog = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
-          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4 pr-4">
+          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4 pe-4">
             {step === 'review' && (
               <>
                 {/* Hero Total Card */}
@@ -338,7 +338,7 @@ export const ProposalApprovalDialog = ({
                                 "text-xs sm:text-sm font-medium shrink-0 tabular-nums",
                                 isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
                               )}>
-                                {formatCurrency(itemTotal)}+
+                                +{formatCurrency(itemTotal)}
                               </span>
                             </div>
                           );
@@ -350,13 +350,34 @@ export const ProposalApprovalDialog = ({
                             סה"כ אופציונלי נבחר:
                           </span>
                           <span className="font-bold text-blue-700 dark:text-blue-300 tabular-nums text-sm sm:text-base">
-                            {formatCurrency(selectedOptionalTotal)}+
+                            +{formatCurrency(selectedOptionalTotal)}
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
+
+                {/* Price Breakdown Summary */}
+                <div className="bg-muted/40 rounded-lg p-3 sm:p-4 space-y-2 border">
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span>פריטי חובה:</span>
+                    <span className="tabular-nums">{formatCurrency(mandatoryTotal)}</span>
+                  </div>
+                  {selectedOptionalItems.size > 0 && (
+                    <div className="flex justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
+                      <span>פריטים אופציונליים ({selectedOptionalItems.size}):</span>
+                      <span className="tabular-nums">+{formatCurrency(selectedOptionalTotal)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-sm sm:text-base">
+                    <span>סה"כ:</span>
+                    <span className="text-green-600 dark:text-green-400 tabular-nums">
+                      {formatCurrency(grandTotal)}
+                    </span>
+                  </div>
+                </div>
 
                 {/* Collapsible Notes */}
                 <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
@@ -405,7 +426,7 @@ export const ProposalApprovalDialog = ({
                   <Separator />
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-sm sm:text-base">סה"כ לתשלום:</span>
-                    <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums" dir="ltr">
+                    <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
                       {formatCurrency(grandTotal)}
                     </span>
                   </div>
@@ -425,18 +446,18 @@ export const ProposalApprovalDialog = ({
 
                 {/* Authorization Checkbox */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-start gap-2 sm:gap-3">
+                  <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                     <Checkbox
                       id="authorization"
                       checked={authorizationAccepted}
                       onCheckedChange={(checked) => setAuthorizationAccepted(checked === true)}
-                      className="mt-0.5 shrink-0"
+                      className="mt-1 shrink-0"
                     />
-                    <label htmlFor="authorization" className="text-xs sm:text-sm font-medium leading-relaxed cursor-pointer">
+                    <span className="text-xs sm:text-sm font-medium leading-relaxed">
                       אני מאשר/ת כי יש לי את הסמכות המשפטית להתחייב בשם הארגון לתנאי הצעה זו
-                      <span className="text-destructive mr-1">*</span>
-                    </label>
-                  </div>
+                      <span className="text-destructive me-1">*</span>
+                    </span>
+                  </label>
                 </div>
 
                 {/* Signature Canvas */}
@@ -445,28 +466,33 @@ export const ProposalApprovalDialog = ({
                   required
                   compact
                 />
+                
+                {/* Signature Saved Feedback */}
+                {signature && (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-xs sm:text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded-lg border border-green-200 dark:border-green-800">
+                    <Check className="h-4 w-4" />
+                    <span>החתימה נשמרה בהצלחה</span>
+                  </div>
+                )}
               </>
             )}
           </div>
         </ScrollArea>
 
         {/* Fixed Footer */}
-        <div className="mt-auto shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
+        <div className="mt-auto shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 flex-row-reverse justify-end">
           {step === 'review' ? (
             <>
+              <Button onClick={handleNext} size="sm" className="sm:h-10 sm:px-4">
+                <FileSignature className="w-3.5 h-3.5 sm:w-4 sm:h-4 me-1.5 sm:me-2" />
+                המשך לחתימה
+              </Button>
               <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => handleOpenChange(false)}>
                 ביטול
-              </Button>
-              <Button onClick={handleNext} size="sm" className="sm:h-10 sm:px-4">
-                <FileSignature className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5 sm:ml-2" />
-                המשך לחתימה
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => setStep('review')}>
-                חזור
-              </Button>
               <Button 
                 onClick={handleApprove} 
                 disabled={!signature || !authorizationAccepted || loading}
@@ -474,6 +500,9 @@ export const ProposalApprovalDialog = ({
                 size="sm"
               >
                 {loading ? 'מאשר...' : 'אשר הצעה'}
+              </Button>
+              <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => setStep('review')}>
+                חזור
               </Button>
             </>
           )}

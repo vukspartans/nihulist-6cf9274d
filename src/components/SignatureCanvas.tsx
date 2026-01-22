@@ -225,7 +225,7 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
                 className={cn(compact && "h-7 text-xs px-2 sm:h-8 sm:text-sm sm:px-3")}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className={cn(compact ? "h-3 w-3 ml-1" : "h-3 w-3 ml-1")} />
+                <Upload className={cn(compact ? "h-3 w-3 me-1" : "h-3 w-3 me-1")} />
                 העלאה
               </Button>
             )}
@@ -268,7 +268,7 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
             disabled={!hasSigned}
             className={cn("flex-1", compact && "h-8 sm:h-9 text-xs sm:text-sm")}
           >
-            <RotateCcw className={cn("ml-1.5 sm:ml-2", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
+            <RotateCcw className={cn("me-1.5 sm:me-2", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
             נקה
           </Button>
           <Button
