@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -171,7 +171,27 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   // Use version data if available, otherwise fall back to proposal data
   const displayPrice = versionData?.price ?? proposal.price;
-  const displayFeeLineItems = versionData?.feeLineItems?.length ? versionData.feeLineItems : (proposal.fee_line_items || []);
+  
+  // For line items: use version data if it has actual items, 
+  // otherwise fall back to proposal data (with warning for data gaps)
+  const displayFeeLineItems = useMemo(() => {
+    // If we have version data with actual items, use them
+    if (versionData?.feeLineItems && versionData.feeLineItems.length > 0) {
+      return versionData.feeLineItems;
+    }
+    
+    // If viewing a historical version but no line items (data gap), log warning
+    if (isViewingHistoricalVersion && versionData) {
+      console.warn(`[ProposalDetailDialog] Version ${viewVersion} has no line_items - showing proposal data`);
+    }
+    
+    return proposal.fee_line_items || [];
+  }, [versionData, proposal.fee_line_items, isViewingHistoricalVersion, viewVersion]);
+  
+  // Check if we have a data gap (viewing version but line_items missing)
+  const hasVersionDataGap = isViewingHistoricalVersion && versionData && 
+    (!versionData.feeLineItems || versionData.feeLineItems.length === 0);
+  
   const displayScopeText = versionData?.scopeText ?? proposal.scope_text;
 
   const files = proposal.files || [];
