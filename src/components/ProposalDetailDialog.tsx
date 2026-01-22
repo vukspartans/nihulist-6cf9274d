@@ -1181,7 +1181,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           ...proposal,
           price: displayPrice,
           fee_line_items: displayFeeLineItems,
-        }} 
+          current_version: viewVersion || proposal.current_version,
+          rfp_invite: proposal.rfp_invite,
+        }}
+        projectName={projectName}
         onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} 
       />
       

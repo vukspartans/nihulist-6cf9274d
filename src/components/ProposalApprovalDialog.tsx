@@ -7,7 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, FileText, AlertCircle, Building2, Calendar, Download, Eye, Image, FileSpreadsheet, File, MessageSquare } from 'lucide-react';
+import { CheckCircle, FileSignature, FileText, AlertCircle, Building2, Calendar, Download, Eye, Image, FileSpreadsheet, File, MessageSquare, Briefcase } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import FilePreviewModal from '@/components/FilePreviewModal';
 
@@ -44,7 +45,13 @@ interface ProposalApprovalDialogProps {
     consultant_request_notes?: string;
     consultant_request_files?: Array<{ name: string; path?: string; url?: string; size?: number }>;
     services_notes?: string;
+    current_version?: number;
+    rfp_invite?: {
+      advisor_type?: string | null;
+      request_title?: string | null;
+    };
   };
+  projectName?: string;
   onSuccess?: () => void;
 }
 
@@ -52,6 +59,7 @@ export const ProposalApprovalDialog = ({
   open,
   onOpenChange,
   proposal,
+  projectName,
 }: ProposalApprovalDialogProps) => {
   const [notes, setNotes] = useState('');
   const [signature, setSignature] = useState<SignatureData | null>(null);
@@ -171,38 +179,106 @@ export const ProposalApprovalDialog = ({
               <CheckCircle className="w-5 h-5 text-green-600" />
               אישור הצעת מחיר
             </DialogTitle>
-            <DialogDescription>
-              אישור הצעה של {proposal.supplier_name}
+            <DialogDescription className="flex items-center gap-2 flex-wrap">
+              {projectName && <span className="font-medium">{projectName}</span>}
+              {projectName && proposal.rfp_invite?.advisor_type && <span>•</span>}
+              {proposal.rfp_invite?.advisor_type && (
+                <span>{proposal.rfp_invite.advisor_type}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
 
           {step === 'notes' && (
             <div className="space-y-6">
               <div className="bg-muted/50 p-4 rounded-lg max-h-[400px] overflow-y-auto">
-                <h4 className="font-semibold mb-4 text-lg">סקירת ההצעה</h4>
                 
+                {/* Header Card - Project & Vendor Context with Total */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      {projectName && (
+                        <h3 className="font-bold text-lg mb-1">{projectName}</h3>
+                      )}
+                      {proposal.rfp_invite?.advisor_type && (
+                        <Badge variant="secondary" className="mb-2">
+                          <Briefcase className="h-3 w-3 ml-1" />
+                          {proposal.rfp_invite.advisor_type}
+                        </Badge>
+                      )}
+                      {proposal.current_version && proposal.current_version > 1 && (
+                        <Badge variant="outline" className="mr-2 mb-2">
+                          גרסה {proposal.current_version} (לאחר משא ומתן)
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-left shrink-0">
+                      <p className="text-2xl font-bold text-green-600">
+                        {formatCurrency(mandatoryTotal)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">סה"כ לתשלום</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Vendor Details */}
                 <div className="bg-background p-3 rounded-lg border mb-4">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <Building2 className="h-4 w-4 text-primary" />
-                    <span className="font-semibold">פרטי הספק</span>
+                    <span className="text-sm text-muted-foreground">ספק</span>
                   </div>
-                  <p className="font-medium text-lg">{proposal.supplier_name}</p>
+                  <p className="font-semibold">{proposal.supplier_name}</p>
                 </div>
 
-                {/* Key Metrics - Total Only */}
-                <div className="mb-4">
-                  <div className="bg-background p-4 rounded-lg border">
-                    <span className="text-muted-foreground text-sm block mb-1">סה"כ לתשלום (ללא פריטים אופציונליים)</span>
-                    <p className="font-bold text-green-600 text-2xl">{formatCurrency(mandatoryTotal)}</p>
+                {/* Fee Breakdown Table - Mandatory Items */}
+                {proposal.fee_line_items && proposal.fee_line_items.filter(i => !i.is_optional).length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="font-semibold mb-2 text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      פירוט שכר טרחה
+                    </h5>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-right p-2 font-medium">תיאור</th>
+                            <th className="text-center p-2 font-medium">כמות</th>
+                            <th className="text-left p-2 font-medium">סה"כ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {proposal.fee_line_items
+                            .filter(item => !item.is_optional)
+                            .map((item, idx) => (
+                              <tr key={idx} className="border-t">
+                                <td className="p-2">{item.description}</td>
+                                <td className="p-2 text-center">{item.quantity || 1}</td>
+                                <td className="p-2 text-left font-medium" dir="ltr">
+                                  {formatCurrency(item.total || (item.unit_price || 0) * (item.quantity || 1))}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-green-50 font-bold">
+                          <tr>
+                            <td colSpan={2} className="p-2 text-right">סה"כ חובה:</td>
+                            <td className="p-2 text-left text-green-600" dir="ltr">
+                              {formatCurrency(mandatoryTotal)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Submitted Date */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pb-4 border-b">
-                  <Calendar className="h-4 w-4" />
-                  <span>תאריך הגשה: {new Date(proposal.submitted_at).toLocaleDateString('he-IL')}</span>
-                </div>
+                {/* Optional Items Notice */}
+                {proposal.fee_line_items && proposal.fee_line_items.filter(i => i.is_optional).length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>פריטים אופציונליים:</strong> קיימים {proposal.fee_line_items.filter(i => i.is_optional).length} פריטים אופציונליים שאינם כלולים בסכום לעיל.
+                    </p>
+                  </div>
+                )}
 
                 {/* Consultant Response Section */}
                 {(proposal.consultant_request_notes || (proposal.consultant_request_files && proposal.consultant_request_files.length > 0)) && (
