@@ -254,10 +254,10 @@ export const ProposalApprovalDialog = ({
                 {/* Mandatory Items Table */}
                 {mandatoryItems.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
-                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
-                      פריטי חובה
-                    </h4>
+            <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-2 flex-row-reverse justify-end">
+              פריטי חובה
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
+            </h4>
                     <div className="border rounded-lg overflow-hidden bg-background">
                       <div className="overflow-x-auto">
                         <Table className="min-w-[300px]" dir="rtl">
@@ -285,7 +285,7 @@ export const ProposalApprovalDialog = ({
                           </TableBody>
                         </Table>
                       </div>
-                      <div className="p-2 sm:p-3 bg-green-50/50 dark:bg-green-950/20 border-t flex justify-between items-center">
+                      <div className="p-2 sm:p-3 bg-green-50/50 dark:bg-green-950/20 border-t flex flex-row-reverse justify-between items-center">
                         <span className="font-semibold text-xs sm:text-sm">סה"כ פריטי חובה:</span>
                         <span className="font-bold text-green-600 dark:text-green-400 tabular-nums text-sm sm:text-base">
                           {formatCurrency(mandatoryTotal)}
@@ -298,12 +298,12 @@ export const ProposalApprovalDialog = ({
                 {/* Optional Items - Interactive Selection */}
                 {optionalItems.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
-                      פריטים אופציונליים
+                    <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 flex-wrap flex-row-reverse justify-end">
                       <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">
                         (בחר כדי להוסיף)
                       </span>
+                      פריטים אופציונליים
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
                     </h4>
                     <div className="border rounded-lg overflow-hidden bg-blue-50/30 dark:bg-blue-950/20">
                       <div className="divide-y divide-blue-100 dark:divide-blue-900">
@@ -314,7 +314,7 @@ export const ProposalApprovalDialog = ({
                             <div
                               key={idx}
                               className={cn(
-                                "flex items-center gap-2 sm:gap-3 p-3 sm:p-4 cursor-pointer transition-all",
+                                "flex items-center gap-2 sm:gap-3 p-3 sm:p-4 cursor-pointer transition-all flex-row-reverse",
                                 isSelected 
                                   ? "bg-blue-100/70 dark:bg-blue-900/30" 
                                   : "hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -326,7 +326,7 @@ export const ProposalApprovalDialog = ({
                                 onCheckedChange={() => toggleOptionalItem(idx)}
                                 className="shrink-0 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                               />
-                              <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0 text-start">
                                 <p className={cn("text-xs sm:text-sm line-clamp-2", isSelected && "font-medium")}>
                                   {item.description}
                                 </p>
@@ -347,7 +347,7 @@ export const ProposalApprovalDialog = ({
                         })}
                       </div>
                       {selectedOptionalItems.size > 0 && (
-                        <div className="p-2 sm:p-3 bg-blue-100/60 dark:bg-blue-900/40 border-t border-blue-200 dark:border-blue-800 flex justify-between items-center">
+                        <div className="p-2 sm:p-3 bg-blue-100/60 dark:bg-blue-900/40 border-t border-blue-200 dark:border-blue-800 flex flex-row-reverse justify-between items-center">
                           <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300">
                             סה"כ אופציונלי נבחר:
                           </span>
@@ -362,18 +362,18 @@ export const ProposalApprovalDialog = ({
 
                 {/* Price Breakdown Summary */}
                 <div className="bg-muted/40 rounded-lg p-3 sm:p-4 space-y-2 border">
-                  <div className="flex justify-between text-xs sm:text-sm">
+                  <div className="flex flex-row-reverse justify-between text-xs sm:text-sm">
                     <span>פריטי חובה:</span>
                     <span className="tabular-nums">{formatCurrency(mandatoryTotal)}</span>
                   </div>
                   {selectedOptionalItems.size > 0 && (
-                    <div className="flex justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
+                    <div className="flex flex-row-reverse justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
                       <span>פריטים אופציונליים ({selectedOptionalItems.size}):</span>
                       <span className="tabular-nums">+{formatCurrency(selectedOptionalTotal)}</span>
                     </div>
                   )}
                   <Separator />
-                  <div className="flex justify-between font-bold text-sm sm:text-base">
+                  <div className="flex flex-row-reverse justify-between font-bold text-sm sm:text-base">
                     <span>סה"כ:</span>
                     <span className="text-green-600 dark:text-green-400 tabular-nums">
                       {formatCurrency(grandTotal)}
@@ -384,10 +384,10 @@ export const ProposalApprovalDialog = ({
                 {/* Collapsible Notes */}
                 <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-between p-2 sm:p-3 h-auto">
-                      <span className="flex items-center gap-2 text-xs sm:text-sm">
-                        <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <Button variant="ghost" className="w-full justify-between p-2 sm:p-3 h-auto flex-row-reverse">
+                      <span className="flex items-center gap-2 text-xs sm:text-sm flex-row-reverse">
                         הערות (אופציונלי)
+                        <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </span>
                       {notesOpen ? <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                     </Button>
