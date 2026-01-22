@@ -1183,6 +1183,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           fee_line_items: displayFeeLineItems,
           current_version: viewVersion || proposal.current_version,
           rfp_invite: proposal.rfp_invite,
+          advisor_logo_url: advisorInfo?.logo_url,
         }}
         projectName={projectName}
         onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} 
