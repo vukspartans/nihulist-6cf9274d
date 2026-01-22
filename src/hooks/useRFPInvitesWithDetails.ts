@@ -148,7 +148,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
           price: originalPrice,
           currency: proposalCurrency,
           status: propNegotiations.length === 0 ? proposalStatus : undefined,
-          viewData: { type: 'proposal', id: proposalId },
+          viewData: { type: 'proposal', id: proposalId, version: 1 },
         });
 
         // Build interleaved steps from negotiations and versions
@@ -192,7 +192,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
               price: ver.price,
               currency: proposalCurrency,
               status: isLast ? proposalStatus : undefined,
-              viewData: { type: 'proposal', id: proposalId },
+              viewData: { type: 'proposal', id: proposalId, version: ver.version_number },
             });
             versionIndex++;
           }

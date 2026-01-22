@@ -15,6 +15,7 @@ export interface NegotiationStep {
   viewData: {
     type: 'proposal' | 'negotiation_session';
     id: string;
+    version?: number;  // Version number to load when viewing
   };
 }
 

@@ -60,14 +60,16 @@ interface ProposalDetailDialogProps {
     consultant_request_notes?: string;
     consultant_request_files?: Array<{ name: string; path?: string; url?: string; size?: number }>;
     rfp_invite_id?: string;
+    current_version?: number;
   };
   projectId?: string;
   projectName?: string;
   onStatusChange?: () => void;
   onSuccess?: () => void;
+  viewVersion?: number;  // Version number to display (undefined = current/latest)
 }
 
-export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange, onSuccess }: ProposalDetailDialogProps) {
+export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange, onSuccess, viewVersion }: ProposalDetailDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('details');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -97,12 +99,86 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [respondedSessionId, setRespondedSessionId] = useState<string | null>(null);
   const [showNegotiationDetails, setShowNegotiationDetails] = useState(false);
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
+  
+  // Version-specific data override
+  const [versionData, setVersionData] = useState<{
+    price: number;
+    feeLineItems: FeeLineItem[];
+    scopeText?: string;
+  } | null>(null);
+  const [loadingVersion, setLoadingVersion] = useState(false);
+
+  // Determine if we're viewing a historical version
+  const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== (proposal.current_version || 1);
+
+  // Load version-specific data when viewVersion changes
+  useEffect(() => {
+    const loadVersionData = async () => {
+      if (!open || !proposal.id || viewVersion === undefined) {
+        setVersionData(null);
+        return;
+      }
+      
+      // If viewing current version, use proposal data directly
+      if (viewVersion === (proposal.current_version || 1)) {
+        setVersionData(null);
+        return;
+      }
+      
+      setLoadingVersion(true);
+      try {
+        // Fetch version data from proposal_versions
+        const { data: versionRecord } = await supabase
+          .from('proposal_versions')
+          .select('price, scope_text, line_items')
+          .eq('proposal_id', proposal.id)
+          .eq('version_number', viewVersion)
+          .maybeSingle();
+        
+        if (versionRecord) {
+          // Parse line_items from the version
+          let parsedLineItems: FeeLineItem[] = [];
+          if (versionRecord.line_items) {
+            try {
+              const items = typeof versionRecord.line_items === 'string' 
+                ? JSON.parse(versionRecord.line_items) 
+                : versionRecord.line_items;
+              parsedLineItems = Array.isArray(items) ? items : [];
+            } catch {
+              parsedLineItems = [];
+            }
+          }
+          
+          setVersionData({
+            price: versionRecord.price,
+            feeLineItems: parsedLineItems,
+            scopeText: versionRecord.scope_text || undefined,
+          });
+        } else {
+          // No version record found, use proposal data
+          setVersionData(null);
+        }
+      } catch (err) {
+        console.error('Error loading version data:', err);
+        setVersionData(null);
+      } finally {
+        setLoadingVersion(false);
+      }
+    };
+    
+    loadVersionData();
+  }, [open, proposal.id, viewVersion, proposal.current_version]);
+
+  // Use version data if available, otherwise fall back to proposal data
+  const displayPrice = versionData?.price ?? proposal.price;
+  const displayFeeLineItems = versionData?.feeLineItems?.length ? versionData.feeLineItems : (proposal.fee_line_items || []);
+  const displayScopeText = versionData?.scopeText ?? proposal.scope_text;
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
   const advisorInfo = proposal.advisors;
   const rfpContext = proposal.rfp_invite;
-  const feeLineItems = proposal.fee_line_items || [];
+  const feeLineItems = displayFeeLineItems;
   const milestoneAdjustments = proposal.milestone_adjustments || [];
   const selectedServices = proposal.selected_services || [];
   const consultantNotes = proposal.consultant_request_notes || '';
@@ -523,7 +599,18 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         <DialogContent className="max-w-3xl h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
           <DialogHeader className="p-4 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between" dir="rtl">
-              <DialogTitle className="text-lg font-bold text-right">{dialogTitle}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-bold text-right">{dialogTitle}</DialogTitle>
+                {viewVersion !== undefined && (
+                  <Badge variant={isViewingHistoricalVersion ? "secondary" : "default"} className="gap-1">
+                    {loadingVersion ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>גרסה {viewVersion}</>
+                    )}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -536,8 +623,17 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {getStatusBadge(proposal.status)}
               </div>
             </div>
-            {/* Action buttons - including Negotiation */}
-            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
+            {/* Historical version notice */}
+            {isViewingHistoricalVersion && !loadingVersion && (
+              <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-sm mt-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-800">
+                  אתה צופה בגרסה היסטורית (V{viewVersion}). הגרסה הנוכחית היא V{proposal.current_version || 1}.
+                </span>
+              </div>
+            )}
+            {/* Action buttons - including Negotiation (hidden for historical versions) */}
+            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && !isViewingHistoricalVersion && (
               <div className="flex flex-col gap-2 pt-2" dir="rtl">
                 {/* Show special banner for updated counter-offer */}
                 {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
