@@ -181,8 +181,8 @@ export const ProposalApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
-        <DialogHeader className="shrink-0 pb-2 sm:pb-4">
+      <DialogContent className="w-full max-w-2xl h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogHeader className="shrink-0 pb-2 sm:pb-3">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
             אישור הצעת מחיר
@@ -194,7 +194,7 @@ export const ProposalApprovalDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
             {step === 'review' && (
               <>
@@ -255,12 +255,12 @@ export const ProposalApprovalDialog = ({
                     </h4>
                     <div className="border rounded-lg overflow-hidden bg-background">
                       <div className="overflow-x-auto">
-                        <Table className="min-w-[300px]">
+                        <Table className="min-w-[300px]" dir="rtl">
                           <TableHeader>
                             <TableRow className="bg-muted/50">
-                              <TableHead className="text-right font-medium text-xs sm:text-sm">תיאור השירות</TableHead>
+                              <TableHead className="text-start font-medium text-xs sm:text-sm">תיאור השירות</TableHead>
                               <TableHead className="text-center font-medium w-14 sm:w-20 text-xs sm:text-sm">כמות</TableHead>
-                              <TableHead className="text-left font-medium w-20 sm:w-28 text-xs sm:text-sm">סכום</TableHead>
+                              <TableHead className="text-start font-medium w-20 sm:w-28 text-xs sm:text-sm">סכום</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -272,8 +272,8 @@ export const ProposalApprovalDialog = ({
                                 <TableCell className="py-2 sm:py-3 text-center text-muted-foreground text-xs sm:text-sm">
                                   {item.quantity || 1}
                                 </TableCell>
-                                <TableCell className="py-2 sm:py-3 text-left font-medium tabular-nums text-xs sm:text-sm" dir="ltr">
-                                  {formatCurrency(item.total || (item.unit_price || 0) * (item.quantity || 1))}
+                                <TableCell className="py-2 sm:py-3 text-start font-medium tabular-nums text-xs sm:text-sm">
+                                  <span dir="ltr">{formatCurrency(item.total || (item.unit_price || 0) * (item.quantity || 1))}</span>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -448,7 +448,7 @@ export const ProposalApprovalDialog = ({
         </ScrollArea>
 
         {/* Fixed Footer */}
-        <div className="shrink-0 pt-3 sm:pt-4 border-t flex gap-2 sm:gap-3 justify-end">
+        <div className="shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
           {step === 'review' ? (
             <>
               <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => handleOpenChange(false)}>
