@@ -174,7 +174,7 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
 
   return (
     <Card className={cn(className)}>
-      <CardHeader className={cn(compact ? "p-3 sm:p-4 pb-1 sm:pb-2" : "p-4 sm:p-6")}>
+      <CardHeader className={cn(compact ? "p-3 sm:p-4 pb-1 sm:pb-2" : "p-4 sm:p-6")} dir="rtl">
         <CardTitle className={cn("flex items-center justify-between", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
           <span>חתימה דיגיטלית</span>
           {required && <span className={cn("text-destructive", compact ? "text-xs" : "text-xs sm:text-sm")}>*נדרש</span>}
@@ -204,7 +204,7 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
         </div>
 
         {/* Company Stamp Upload Section */}
-        <div className={cn("border rounded-lg bg-muted/30", compact ? "p-2 sm:p-3" : "p-3")}>
+        <div className={cn("border rounded-lg bg-muted/30", compact ? "p-2 sm:p-3" : "p-3")} dir="rtl">
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Stamp className={cn("text-muted-foreground", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
@@ -262,6 +262,13 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
 
         <div className="flex gap-2" dir="rtl">
           <Button
+            onClick={save}
+            disabled={!hasSigned}
+            className={cn("flex-1", compact && "h-8 sm:h-9 text-xs sm:text-sm")}
+          >
+            שמור חתימה
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={clear}
@@ -270,13 +277,6 @@ export function SignatureCanvas({ onSign, required = false, className = '', comp
           >
             <RotateCcw className={cn("me-1.5 sm:me-2", compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-4 w-4")} />
             נקה
-          </Button>
-          <Button
-            onClick={save}
-            disabled={!hasSigned}
-            className={cn("flex-1", compact && "h-8 sm:h-9 text-xs sm:text-sm")}
-          >
-            שמור חתימה
           </Button>
         </div>
       </CardContent>
