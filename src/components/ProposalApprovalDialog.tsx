@@ -408,56 +408,21 @@ export const ProposalApprovalDialog = ({
             )}
 
             {step === 'signature' && (
-              <>
-                {/* Compact Summary */}
-                <div className="bg-muted/50 rounded-lg sm:rounded-xl p-3 sm:p-4 space-y-2 sm:space-y-3">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
-                      {proposal.advisor_logo_url && (
-                        <AvatarImage src={proposal.advisor_logo_url} alt={proposal.supplier_name} />
-                      )}
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">
-                        {getInitials(proposal.supplier_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm sm:text-base truncate">{proposal.supplier_name}</p>
-                      {proposal.rfp_invite?.advisor_type && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">{proposal.rfp_invite.advisor_type}</p>
-                      )}
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-sm sm:text-base">סה"כ לתשלום:</span>
-                    <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
-                      {formatCurrency(grandTotal)}
-                    </span>
-                  </div>
-                  {selectedOptionalItems.size > 0 && (
-                    <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
-                      כולל {selectedOptionalItems.size} פריטים אופציונליים
-                    </p>
-                  )}
-                </div>
-
-                {/* Warning */}
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4" dir="rtl">
+                {/* Combined Warning + Authorization */}
+                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4 space-y-3">
                   <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
                     <strong>חשוב:</strong> חתימתך מאשרת את תנאי ההצעה ומחייבת את הארגון שלך כלפי היועץ.
                   </p>
-                </div>
-
-                {/* Authorization Checkbox */}
-                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+                  <Separator className="bg-amber-200 dark:bg-amber-800" />
                   <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                     <Checkbox
                       id="authorization"
                       checked={authorizationAccepted}
                       onCheckedChange={(checked) => setAuthorizationAccepted(checked === true)}
-                      className="mt-1 shrink-0"
+                      className="mt-0.5 shrink-0"
                     />
-                    <span className="text-xs sm:text-sm font-medium leading-relaxed">
+                    <span className="text-xs sm:text-sm font-medium leading-relaxed text-amber-900 dark:text-amber-100">
                       אני מאשר/ת כי יש לי את הסמכות המשפטית להתחייב בשם הארגון לתנאי הצעה זו
                       <span className="text-destructive me-1">*</span>
                     </span>
@@ -478,7 +443,7 @@ export const ProposalApprovalDialog = ({
                     <span>החתימה נשמרה בהצלחה</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </ScrollArea>
