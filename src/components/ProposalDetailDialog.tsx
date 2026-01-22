@@ -412,10 +412,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       await generateProposalPDF({
         supplierName: proposal.supplier_name,
         projectName: projectName || 'פרויקט',
-        price: proposal.price,
+        price: displayPrice,
         timelineDays: proposal.timeline_days,
         submittedAt: proposal.submitted_at,
-        scopeText: proposal.scope_text,
+        scopeText: displayScopeText,
         conditions: proposal.conditions_json,
         feeItems: feeLineItems.map((item) => ({
           description: item.description || item.name || '',
@@ -806,7 +806,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {/* Key Metrics */}
                 <div className="grid grid-cols-2 gap-2">
                   <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(displayPrice)}</p></CardContent></Card>
                 </div>
 
                 {/* Fee Rows Display */}
@@ -1174,14 +1174,23 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         </DialogContent>
       </Dialog>
 
-      <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} />
+      <ProposalApprovalDialog 
+        open={showApprovalDialog} 
+        onOpenChange={setShowApprovalDialog} 
+        proposal={{
+          ...proposal,
+          price: displayPrice,
+          fee_line_items: displayFeeLineItems,
+        }} 
+        onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} 
+      />
       
       <NegotiationDialog
         open={showNegotiationDialog}
         onOpenChange={setShowNegotiationDialog}
         proposal={{
           id: proposal.id,
-          price: proposal.price,
+          price: displayPrice,
           supplier_name: proposal.supplier_name,
           project_id: proposal.project_id,
         }}
