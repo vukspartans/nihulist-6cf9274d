@@ -201,53 +201,55 @@ export const ProposalApprovalDialog = ({
           <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4 pe-4">
             {step === 'review' && (
               <>
-                {/* Hero Total Card */}
-                <div className="bg-gradient-to-l from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border border-green-200 dark:border-green-800 rounded-lg sm:rounded-xl p-4 sm:p-6 text-center">
-                  <p className="text-xs sm:text-sm text-green-700 dark:text-green-400 mb-0.5 sm:mb-1">סה"כ לתשלום</p>
-                  <p className="text-2xl sm:text-4xl font-bold text-green-600 dark:text-green-400 tracking-tight tabular-nums">
-                    {formatCurrency(grandTotal)}
-                  </p>
-                  {selectedOptionalItems.size > 0 && (
-                    <p className="text-[10px] sm:text-xs text-green-600/70 dark:text-green-400/70 mt-0.5 sm:mt-1">
-                      כולל {selectedOptionalItems.size} פריטים אופציונליים
-                    </p>
-                  )}
-                </div>
-
-                {/* Vendor Identity Card */}
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/30 rounded-lg border">
-                  <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-2 ring-primary/10 shrink-0">
-                    {proposal.advisor_logo_url && (
-                      <AvatarImage src={proposal.advisor_logo_url} alt={proposal.supplier_name} />
-                    )}
-                    <AvatarFallback className="text-sm sm:text-lg bg-primary/10 text-primary font-semibold">
-                      {getInitials(proposal.supplier_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-base sm:text-lg truncate">{proposal.supplier_name}</p>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                      {proposal.rfp_invite?.advisor_type && (
-                        <Badge variant="secondary" className="text-[10px] sm:text-xs">
-                          {proposal.rfp_invite.advisor_type}
-                        </Badge>
-                      )}
-                      {proposal.current_version && proposal.current_version > 1 && (
-                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700 text-[10px] sm:text-xs">
-                          גרסה {proposal.current_version}
-                        </Badge>
+                {/* Compact Unified Header: Vendor + Total */}
+                <div className="bg-gradient-to-l from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Vendor Info */}
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-green-200 dark:ring-green-700 shrink-0">
+                        {proposal.advisor_logo_url && (
+                          <AvatarImage src={proposal.advisor_logo_url} alt={proposal.supplier_name} className="object-cover" />
+                        )}
+                        <AvatarFallback className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold text-sm">
+                          {getInitials(proposal.supplier_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-sm sm:text-base truncate">{proposal.supplier_name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          {proposal.rfp_invite?.advisor_type && (
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">
+                              {proposal.rfp_invite.advisor_type}
+                            </Badge>
+                          )}
+                          {proposal.current_version && proposal.current_version > 1 && (
+                            <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[10px] sm:text-xs h-5">
+                              גרסה {proposal.current_version}
+                            </Badge>
+                          )}
+                        </div>
+                        {projectName && (
+                          <p className="text-[10px] sm:text-xs text-green-700/70 dark:text-green-400/70 truncate mt-0.5">
+                            עבור: {projectName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Total */}
+                    <div className="text-end shrink-0">
+                      <p className="text-[10px] sm:text-xs text-green-700 dark:text-green-400">סה"כ לתשלום</p>
+                      <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
+                        {formatCurrency(grandTotal)}
+                      </p>
+                      {selectedOptionalItems.size > 0 && (
+                        <p className="text-[10px] text-green-600/70 dark:text-green-400/70">
+                          +{selectedOptionalItems.size} אופציונלי
+                        </p>
                       )}
                     </div>
                   </div>
                 </div>
-
-                {/* Project Name */}
-                {projectName && (
-                  <div className="text-center py-1.5 sm:py-2 bg-muted/20 rounded-lg">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">עבור פרויקט</p>
-                    <p className="font-semibold text-sm sm:text-base">{projectName}</p>
-                  </div>
-                )}
 
                 {/* Mandatory Items Table */}
                 {mandatoryItems.length > 0 && (
