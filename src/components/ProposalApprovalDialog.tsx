@@ -98,11 +98,11 @@ export const ProposalApprovalDialog = ({
   const grandTotal = mandatoryTotal + selectedOptionalTotal;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
+    const formatted = new Intl.NumberFormat('he-IL', {
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
+    return `₪${formatted}`;
   };
 
   const getInitials = (name: string) => {
@@ -181,7 +181,7 @@ export const ProposalApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-2xl h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+      <DialogContent className="w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
         <DialogHeader className="shrink-0 pb-2 sm:pb-3">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -194,14 +194,14 @@ export const ProposalApprovalDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
-          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
+          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4">
             {step === 'review' && (
               <>
                 {/* Hero Total Card */}
                 <div className="bg-gradient-to-l from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border border-green-200 dark:border-green-800 rounded-lg sm:rounded-xl p-4 sm:p-6 text-center">
                   <p className="text-xs sm:text-sm text-green-700 dark:text-green-400 mb-0.5 sm:mb-1">סה"כ לתשלום</p>
-                  <p className="text-2xl sm:text-4xl font-bold text-green-600 dark:text-green-400 tracking-tight tabular-nums" dir="ltr">
+                  <p className="text-2xl sm:text-4xl font-bold text-green-600 dark:text-green-400 tracking-tight tabular-nums">
                     {formatCurrency(grandTotal)}
                   </p>
                   {selectedOptionalItems.size > 0 && (
@@ -260,7 +260,7 @@ export const ProposalApprovalDialog = ({
                             <TableRow className="bg-muted/50">
                               <TableHead className="text-start font-medium text-xs sm:text-sm">תיאור השירות</TableHead>
                               <TableHead className="text-center font-medium w-14 sm:w-20 text-xs sm:text-sm">כמות</TableHead>
-                              <TableHead className="text-start font-medium w-20 sm:w-28 text-xs sm:text-sm">סכום</TableHead>
+                              <TableHead className="text-end font-medium w-20 sm:w-28 text-xs sm:text-sm">סכום</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -272,8 +272,8 @@ export const ProposalApprovalDialog = ({
                                 <TableCell className="py-2 sm:py-3 text-center text-muted-foreground text-xs sm:text-sm">
                                   {item.quantity || 1}
                                 </TableCell>
-                                <TableCell className="py-2 sm:py-3 text-start font-medium tabular-nums text-xs sm:text-sm">
-                                  <span dir="ltr">{formatCurrency(item.total || (item.unit_price || 0) * (item.quantity || 1))}</span>
+                                <TableCell className="py-2 sm:py-3 text-end font-medium tabular-nums text-xs sm:text-sm">
+                                  {formatCurrency(item.total || (item.unit_price || 0) * (item.quantity || 1))}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -282,7 +282,7 @@ export const ProposalApprovalDialog = ({
                       </div>
                       <div className="p-2 sm:p-3 bg-green-50/50 dark:bg-green-950/20 border-t flex justify-between items-center">
                         <span className="font-semibold text-xs sm:text-sm">סה"כ פריטי חובה:</span>
-                        <span className="font-bold text-green-600 dark:text-green-400 tabular-nums text-sm sm:text-base" dir="ltr">
+                        <span className="font-bold text-green-600 dark:text-green-400 tabular-nums text-sm sm:text-base">
                           {formatCurrency(mandatoryTotal)}
                         </span>
                       </div>
@@ -334,8 +334,8 @@ export const ProposalApprovalDialog = ({
                               <span className={cn(
                                 "text-xs sm:text-sm font-medium shrink-0 tabular-nums",
                                 isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
-                              )} dir="ltr">
-                                +{formatCurrency(itemTotal)}
+                              )}>
+                                {formatCurrency(itemTotal)}+
                               </span>
                             </div>
                           );
@@ -346,8 +346,8 @@ export const ProposalApprovalDialog = ({
                           <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300">
                             סה"כ אופציונלי נבחר:
                           </span>
-                          <span className="font-bold text-blue-700 dark:text-blue-300 tabular-nums text-sm sm:text-base" dir="ltr">
-                            +{formatCurrency(selectedOptionalTotal)}
+                          <span className="font-bold text-blue-700 dark:text-blue-300 tabular-nums text-sm sm:text-base">
+                            {formatCurrency(selectedOptionalTotal)}+
                           </span>
                         </div>
                       )}
@@ -445,7 +445,7 @@ export const ProposalApprovalDialog = ({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Fixed Footer */}
         <div className="shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
