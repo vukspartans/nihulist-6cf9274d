@@ -181,8 +181,8 @@ export const ProposalApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
-        <DialogHeader className="shrink-0 pb-2 sm:pb-3">
+      <DialogContent className="w-full max-w-2xl !max-h-[80vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogHeader className="shrink-0 pb-2 sm:pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
             אישור הצעת מחיר
@@ -194,8 +194,8 @@ export const ProposalApprovalDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
-          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 pb-4 pr-4">
             {step === 'review' && (
               <>
                 {/* Hero Total Card */}
@@ -445,7 +445,7 @@ export const ProposalApprovalDialog = ({
               </>
             )}
           </div>
-        </div>
+        </ScrollArea>
 
         {/* Fixed Footer */}
         <div className="shrink-0 pt-2 sm:pt-3 border-t flex gap-2 sm:gap-3 justify-end">
