@@ -3,39 +3,77 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface EvaluationResult {
-  batch_summary: {
-    total_proposals: number;
-    project_type_detected: 'STANDARD' | 'LARGE_SCALE';
-    price_benchmark_used: number | null; // null for single proposal
-    evaluation_mode: 'SINGLE' | 'BATCH';
-    market_context?: string; // Brief note about Israeli market context
-  };
-  ranked_proposals: Array<{
-    proposal_id: string;
-    vendor_name: string;
-    final_score: number;
-    rank: number;
-    data_completeness: number; // 0.0-1.0, confidence in score based on available data
-    recommendation_level: 'Highly Recommended' | 'Recommended' | 'Review Required' | 'Not Recommended';
-    individual_analysis: {
-      requirements_alignment: string; // Detailed assessment
-      price_assessment: string;
-      timeline_assessment: string;
-      experience_assessment: string;
-      scope_quality: string;
-      strengths: string[];
-      weaknesses: string[];
-      missing_requirements: string[]; // What was requested but not included
-      extra_offerings: string[]; // What was offered beyond requirements
-    };
-    flags: {
-      red_flags: string[];
-      green_flags: string[];
-      knockout_triggered: boolean;
-      knockout_reason: string | null;
-    };
-    comparative_notes: string | null; // Only if batch mode, how this compares to others
-  }>;
+  batch_summary:
+    | {
+        total_proposals: number;
+        project_type_detected: 'STANDARD' | 'LARGE_SCALE';
+        price_benchmark_used: null;
+        evaluation_mode: 'SINGLE';
+        market_context?: string;
+      }
+    | {
+        total_proposals: number;
+        project_type_detected: 'STANDARD' | 'LARGE_SCALE';
+        price_benchmark_used: number | null;
+        evaluation_mode: 'COMPARE';
+        market_context?: string;
+      };
+  ranked_proposals:
+    | Array<{
+        proposal_id: string;
+        vendor_name: string;
+        final_score: number;
+        rank: number;
+        data_completeness: number;
+        recommendation_level: 'Highly Recommended' | 'Recommended' | 'Review Required' | 'Not Recommended';
+        individual_analysis: {
+          requirements_alignment: string;
+          timeline_assessment: string;
+          experience_assessment: string;
+          scope_quality: string;
+          fee_structure_assessment?: string;
+          payment_terms_assessment?: string;
+          strengths: string[];
+          weaknesses: string[];
+          missing_requirements: string[];
+          extra_offerings: string[];
+        };
+        flags: {
+          red_flags: string[];
+          green_flags: string[];
+          knockout_triggered: boolean;
+          knockout_reason: string | null;
+        };
+        comparative_notes: null;
+      }>
+    | Array<{
+        proposal_id: string;
+        vendor_name: string;
+        final_score: number;
+        rank: number;
+        data_completeness: number;
+        recommendation_level: 'Highly Recommended' | 'Recommended' | 'Review Required' | 'Not Recommended';
+        individual_analysis: {
+          requirements_alignment: string;
+          price_assessment: string;
+          timeline_assessment: string;
+          experience_assessment: string;
+          scope_quality: string;
+          fee_structure_assessment?: string;
+          payment_terms_assessment?: string;
+          strengths: string[];
+          weaknesses: string[];
+          missing_requirements: string[];
+          extra_offerings: string[];
+        };
+        flags: {
+          red_flags: string[];
+          green_flags: string[];
+          knockout_triggered: boolean;
+          knockout_reason: string | null;
+        };
+        comparative_notes: string | null;
+      }>;
   evaluation_metadata?: {
     model_used: string;
     provider: string;

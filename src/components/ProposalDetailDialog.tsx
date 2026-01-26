@@ -803,10 +803,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   </Card>
                 )}
 
-                {/* Key Metrics */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Key Metrics (single view: hide price/timeline cards) */}
+                <div className="grid grid-cols-1 gap-2">
                   <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(displayPrice)}</p></CardContent></Card>
                 </div>
 
                 {/* Fee Rows Display */}
@@ -879,7 +878,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       <div className="text-center py-8 text-muted-foreground" dir="rtl">
                         <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
                         <p className="text-sm">לחץ על "ייצר ניתוח" לקבלת ניתוח AI מקיף של ההצעה</p>
-                        <p className="text-xs mt-1">הניתוח יכלול הערכת מחיר, זמנים, וחוזקות/חולשות</p>
+                        <p className="text-xs mt-1">הניתוח יתמקד בהתאמה לדרישות, חוסרים, וחוזקות/חולשות</p>
                       </div>
                     )}
                   </CardContent>

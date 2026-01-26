@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -7,30 +8,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Enhanced system prompt optimized for proposal analysis
-const SYSTEM_PROMPT = `אתה יועץ בכיר לניהול פרויקטי בנייה בישראל עם 20+ שנות ניסיון. 
-אתה מייעץ ליזמי נדל"ן בהערכת הצעות מחיר מספקים ויועצים.
+// System prompt for SINGLE proposal analysis (no price/timeline sections)
+const SYSTEM_PROMPT = `אתה מעריך הצעות בצורה קפדנית ושמרנית.
 
-## כללי ניתוח
-1. **השווה בקפדנות** את ההצעה לדרישות המקוריות
-2. **זהה פערים** - מה נדרש אך לא נכלל בהצעה
-3. **העריך סבירות** - מחיר, לוחות זמנים, היקף ביחס לשוק הישראלי
-4. **סמן סיכונים** - תנאים חריגים, הנחות בעייתיות, החרגות
+## כללי בסיס (קריטי)
+1. אתה משתמש **רק** במידע שמופיע בנתונים שסופקו לך.
+2. אסור להסיק/להמציא. אם נתון חסר/ריק/לא מופיע — כתוב בדיוק: Not provided
+3. **אין ניתוח מחיר** ואין השוואות לשוק/סטנדרטים/ממוצעים (אין לך סט השוואה).
+4. התמקד ב: התאמה לדרישות חובה, חוסרים, אי-בהירויות, וסיכונים מהטקסט/תנאים.
 
-## מבנה תשובה
-השתמש במבנה הבא בדיוק:
+## מבנה תשובה (השתמש בדיוק בכותרות הללו)
 
 ### 📋 TL;DR
-[2-3 משפטים - תמצית ההצעה והמלצה ראשונית]
+[2-3 משפטים תמציתיים]
 
-### 📐 התאמה לדרישות
-[האם ההצעה עונה על הדרישות? פערים?]
+### 📐 התאמה לדרישות חובה
+[ציין את ציון הכיסוי (0-100) שסופק לך, ומה חסר. אל תשנה מספרים.]
 
-### 💰 ניתוח מחיר
-[האם המחיר סביר? השוואה לשוק]
-
-### 📅 לוח זמנים
-[האם ריאלי? תלויות וסיכונים]
+### ❓ מה חסר / שאלות חובה ליועץ
+• [שאלה 1]
+• [שאלה 2]
+• [שאלה 3]
 
 ### ⚠️ נקודות לתשומת לב
 • [נקודה 1]
@@ -45,6 +43,67 @@ const SYSTEM_PROMPT = `אתה יועץ בכיר לניהול פרויקטי בנ
 - עברית מקצועית וברורה
 - ישיר ותמציתי
 - מקסימום 350 מילים`;
+
+function normalizeText(s: string): string {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function extractFeeLineItems(raw: any): Array<{ item_id?: string; description?: string }> {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr
+    .map((x) => (x && typeof x === "object" ? x : null))
+    .filter(Boolean)
+    .map((x: any) => ({
+      item_id: typeof x.item_id === "string" ? x.item_id : typeof x.id === "string" ? x.id : undefined,
+      description: typeof x.description === "string" ? x.description : typeof x.name === "string" ? x.name : undefined,
+    }));
+}
+
+function extractSelectedServices(raw: any): string[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr.filter((x) => typeof x === "string");
+}
+
+function computeMandatoryCoverage(args: {
+  rfpFeeItems: Array<{ id: string; description: string; is_optional: boolean }>;
+  rfpScopeItems: Array<{ id: string; task_name: string; is_optional: boolean }>;
+  proposalFeeLineItems: any;
+  proposalSelectedServices: any;
+}): {
+  coverage_score: number;
+  missing_fee: string[];
+  missing_scope: string[];
+  total_mandatory: number;
+  covered_mandatory: number;
+} {
+  const mandatoryFee = (args.rfpFeeItems || []).filter((i) => !i.is_optional);
+  const mandatoryScope = (args.rfpScopeItems || []).filter((i) => !i.is_optional);
+
+  const feeLineItems = extractFeeLineItems(args.proposalFeeLineItems);
+  const selectedServices = new Set(extractSelectedServices(args.proposalSelectedServices));
+
+  const feeItemIds = new Set(feeLineItems.map((i) => i.item_id).filter(Boolean));
+  const feeItemDesc = new Set(feeLineItems.map((i) => i.description).filter(Boolean).map((d) => normalizeText(d)));
+
+  const missingFee: string[] = [];
+  for (const item of mandatoryFee) {
+    const byId = item.id ? feeItemIds.has(item.id) : false;
+    const byDesc = feeItemDesc.has(normalizeText(item.description));
+    if (!byId && !byDesc) missingFee.push(item.description);
+  }
+
+  const missingScope: string[] = [];
+  for (const item of mandatoryScope) {
+    if (!selectedServices.has(item.id)) missingScope.push(item.task_name);
+  }
+
+  const total = mandatoryFee.length + mandatoryScope.length;
+  const missing = missingFee.length + missingScope.length;
+  const covered = Math.max(0, total - missing);
+  const score = total === 0 ? 100 : Math.max(0, Math.min(100, Math.round((covered / total) * 100)));
+
+  return { coverage_score: score, missing_fee: missingFee, missing_scope: missingScope, total_mandatory: total, covered_mandatory: covered };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -104,35 +163,67 @@ serve(async (req) => {
       });
     }
 
-    // Get the RFP invite with request details - filter by BOTH advisor_id AND project_id
-    // to ensure we get the correct invite for this specific proposal
-    const { data: invite, error: inviteError } = await supabaseClient
-      .from('rfp_invites')
-      .select(`
-        request_title,
-        request_content,
-        advisor_type,
-        rfp_id,
-        rfps!inner(
-          subject,
-          body_html,
-          project_id
-        )
-      `)
-      .eq('advisor_id', proposal.advisor_id)
-      .eq('rfps.project_id', proposal.project_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (inviteError) {
-      console.log('[analyze-proposal] Invite not found:', inviteError, 'for advisor:', proposal.advisor_id, 'project:', proposal.project_id);
+    // Fetch the canonical RFP invite via proposals.rfp_invite_id (fallback to legacy advisor_id+project_id if missing)
+    let invite: any = null;
+    if (proposal.rfp_invite_id) {
+      const { data: inviteById, error: inviteByIdError } = await supabaseClient
+        .from('rfp_invites')
+        .select('id, rfp_id, advisor_id, advisor_type, status, request_title, request_content, payment_terms, service_details_text')
+        .eq('id', proposal.rfp_invite_id)
+        .maybeSingle();
+      if (!inviteByIdError && inviteById) invite = inviteById;
     }
 
-    // Get project details
+    if (!invite) {
+      const { data: legacyInvite, error: inviteError } = await supabaseClient
+        .from('rfp_invites')
+        .select(`
+          id,
+          request_title,
+          request_content,
+          advisor_type,
+          rfp_id,
+          status,
+          payment_terms,
+          service_details_text,
+          rfps!inner(project_id)
+        `)
+        .eq('advisor_id', proposal.advisor_id)
+        .eq('rfps.project_id', proposal.project_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (inviteError) {
+        console.log('[analyze-proposal] Invite not found:', inviteError, 'for advisor:', proposal.advisor_id, 'project:', proposal.project_id);
+      } else {
+        invite = legacyInvite;
+      }
+    }
+
+    // Fetch RFP structured requirements (fee items + scope items)
+    const inviteId = invite?.id || null;
+    let rfpFeeItems: any[] = [];
+    let rfpScopeItems: any[] = [];
+    if (inviteId) {
+      const [{ data: feeItems }, { data: scopeItems }] = await Promise.all([
+        supabaseClient
+          .from('rfp_request_fee_items')
+          .select('id, description, is_optional')
+          .eq('rfp_invite_id', inviteId),
+        supabaseClient
+          .from('rfp_service_scope_items')
+          .select('id, task_name, is_optional')
+          .eq('rfp_invite_id', inviteId),
+      ]);
+      rfpFeeItems = feeItems || [];
+      rfpScopeItems = scopeItems || [];
+    }
+
+    // Get project details (+ owner_id for org context)
     const { data: project, error: projectError } = await supabaseClient
       .from('projects')
-      .select('name, type, location, description, phase, budget')
+      .select('id, owner_id, name, type, location, description, phase, budget, advisors_budget, units')
       .eq('id', proposal.project_id)
       .single();
 
@@ -140,42 +231,88 @@ serve(async (req) => {
       console.error('[analyze-proposal] Project not found:', projectError);
     }
 
-    // Build analysis prompt
-    const rfpRequest = invite ? {
-      title: invite.request_title || invite.rfps?.subject || 'לא צוין',
-      content: invite.request_content || 'לא צוין',
-      advisorType: invite.advisor_type || 'לא צוין'
-    } : { title: 'לא נמצא', content: 'לא נמצא', advisorType: 'לא נמצא' };
+    // Org context (entrepreneur company)
+    let entrepreneurProfile: any = null;
+    let entrepreneurCompany: any = null;
+    if (project?.owner_id) {
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('user_id, name, company_name, organization_id')
+        .eq('user_id', project.owner_id)
+        .maybeSingle();
+      entrepreneurProfile = profile;
 
-    const conditionsJson = proposal.conditions_json || {};
+      const orgId = profile?.organization_id || null;
+      if (orgId) {
+        const { data: company } = await supabaseClient
+          .from('companies')
+          .select('id, name, type, location, website, description')
+          .eq('id', orgId)
+          .maybeSingle();
+        entrepreneurCompany = company;
+      }
+    }
 
-    const analysisPrompt = `נתח הצעת מחיר זו מול הדרישות שהוגדרו בבקשה:
+    const coverage = computeMandatoryCoverage({
+      rfpFeeItems,
+      rfpScopeItems,
+      proposalFeeLineItems: proposal.fee_line_items,
+      proposalSelectedServices: proposal.selected_services,
+    });
 
-=== פרטי הבקשה המקורית ===
-כותרת: ${rfpRequest.title}
-סוג יועץ: ${rfpRequest.advisorType}
-תוכן הבקשה: ${rfpRequest.content}
+    const rfpTitle = invite?.request_title ?? 'Not provided';
+    const rfpContent = invite?.request_content ?? 'Not provided';
+    const advisorType = invite?.advisor_type ?? 'Not provided';
+    const serviceDetails = invite?.service_details_text ?? 'Not provided';
+    const paymentTerms = invite?.payment_terms ?? 'Not provided';
 
-=== פרטי הפרויקט ===
-שם: ${project?.name || 'לא צוין'}
-סוג: ${project?.type || 'לא צוין'}
-מיקום: ${project?.location || 'לא צוין'}
-שלב: ${project?.phase || 'לא צוין'}
-תקציב: ${project?.budget ? `₪${project.budget.toLocaleString()}` : 'לא צוין'}
-תיאור: ${project?.description || 'לא סופק'}
+    const analysisPayload = {
+      organization: {
+        entrepreneur_name: entrepreneurProfile?.name ?? 'Not provided',
+        company_name: entrepreneurCompany?.name ?? entrepreneurProfile?.company_name ?? 'Not provided',
+        company_location: entrepreneurCompany?.location ?? 'Not provided',
+      },
+      project: {
+        name: project?.name ?? 'Not provided',
+        type: project?.type ?? 'Not provided',
+        location: project?.location ?? 'Not provided',
+        phase: project?.phase ?? 'Not provided',
+        budget: project?.budget ?? 'Not provided',
+        advisors_budget: project?.advisors_budget ?? 'Not provided',
+        units: project?.units ?? 'Not provided',
+        description: project?.description ?? 'Not provided',
+      },
+      rfp_requirements: {
+        title: rfpTitle,
+        advisor_type: advisorType,
+        content: rfpContent,
+        service_details_text: serviceDetails,
+        payment_terms: paymentTerms,
+        mandatory_fee_items: rfpFeeItems.filter((i) => !i.is_optional).map((i) => ({ id: i.id, description: i.description })),
+        mandatory_scope_items: rfpScopeItems.filter((i) => !i.is_optional).map((i) => ({ id: i.id, task_name: i.task_name })),
+      },
+      proposal: {
+        supplier_name: proposal.supplier_name ?? 'Not provided',
+        scope_text: proposal.scope_text ?? 'Not provided',
+        terms: proposal.terms ?? 'Not provided',
+        conditions_json: proposal.conditions_json ?? {},
+        fee_line_items: proposal.fee_line_items ?? [],
+        selected_services: proposal.selected_services ?? [],
+        milestone_adjustments: proposal.milestone_adjustments ?? [],
+        consultant_request_notes: proposal.consultant_request_notes ?? proposal.services_notes ?? 'Not provided',
+      },
+      deterministic: {
+        requirement_coverage_score: coverage.coverage_score,
+        total_mandatory: coverage.total_mandatory,
+        covered_mandatory: coverage.covered_mandatory,
+        missing_mandatory_fee_items: coverage.missing_fee.length ? coverage.missing_fee : ['Not provided'],
+        missing_mandatory_scope_items: coverage.missing_scope.length ? coverage.missing_scope : ['Not provided'],
+      },
+    };
 
-=== פרטי ההצעה ===
-ספק: ${proposal.supplier_name}
-מחיר: ₪${proposal.price?.toLocaleString() || 0}
-זמן ביצוע: ${proposal.timeline_days} ימים
-היקף עבודה: ${proposal.scope_text || 'לא צוין'}
-
-תנאי תשלום: ${conditionsJson.payment_terms || 'לא צוינו'}
-הנחות יסוד: ${conditionsJson.assumptions || 'לא צוינו'}
-לא כלול: ${conditionsJson.exclusions || 'לא צוין'}
-תוקף ההצעה: ${conditionsJson.validity_days || 'לא צוין'} ימים
-
-נתח את ההצעה על פי המבנה שהוגדר.`;
+    const analysisPrompt = `נתונים לניתוח (JSON). השתמש רק במה שמופיע פה. אם חסר משהו כתוב Not provided.
+\n\n${JSON.stringify(analysisPayload, null, 2)}
+\n\nהפק ניתוח לפי מבנה הכותרות שהוגדר ב-System Prompt.`;
 
     let analysis = '';
     const modelUsed = 'gpt-5.2';
