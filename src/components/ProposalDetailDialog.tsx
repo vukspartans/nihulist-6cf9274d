@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -60,14 +60,16 @@ interface ProposalDetailDialogProps {
     consultant_request_notes?: string;
     consultant_request_files?: Array<{ name: string; path?: string; url?: string; size?: number }>;
     rfp_invite_id?: string;
+    current_version?: number;
   };
   projectId?: string;
   projectName?: string;
   onStatusChange?: () => void;
   onSuccess?: () => void;
+  viewVersion?: number;  // Version number to display (undefined = current/latest)
 }
 
-export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange, onSuccess }: ProposalDetailDialogProps) {
+export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, projectName, onStatusChange, onSuccess, viewVersion }: ProposalDetailDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('details');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -97,12 +99,106 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [respondedSessionId, setRespondedSessionId] = useState<string | null>(null);
   const [showNegotiationDetails, setShowNegotiationDetails] = useState(false);
   const [isAcceptingOffer, setIsAcceptingOffer] = useState(false);
+  
+  // Version-specific data override
+  const [versionData, setVersionData] = useState<{
+    price: number;
+    feeLineItems: FeeLineItem[];
+    scopeText?: string;
+  } | null>(null);
+  const [loadingVersion, setLoadingVersion] = useState(false);
+
+  // Determine if we're viewing a historical version
+  const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== (proposal.current_version || 1);
+
+  // Load version-specific data when viewVersion changes
+  useEffect(() => {
+    const loadVersionData = async () => {
+      if (!open || !proposal.id || viewVersion === undefined) {
+        setVersionData(null);
+        return;
+      }
+      
+      // If viewing current version, use proposal data directly
+      if (viewVersion === (proposal.current_version || 1)) {
+        setVersionData(null);
+        return;
+      }
+      
+      setLoadingVersion(true);
+      try {
+        // Fetch version data from proposal_versions
+        const { data: versionRecord } = await supabase
+          .from('proposal_versions')
+          .select('price, scope_text, line_items')
+          .eq('proposal_id', proposal.id)
+          .eq('version_number', viewVersion)
+          .maybeSingle();
+        
+        if (versionRecord) {
+          // Parse line_items from the version
+          let parsedLineItems: FeeLineItem[] = [];
+          if (versionRecord.line_items) {
+            try {
+              const items = typeof versionRecord.line_items === 'string' 
+                ? JSON.parse(versionRecord.line_items) 
+                : versionRecord.line_items;
+              parsedLineItems = Array.isArray(items) ? items : [];
+            } catch {
+              parsedLineItems = [];
+            }
+          }
+          
+          setVersionData({
+            price: versionRecord.price,
+            feeLineItems: parsedLineItems,
+            scopeText: versionRecord.scope_text || undefined,
+          });
+        } else {
+          // No version record found, use proposal data
+          setVersionData(null);
+        }
+      } catch (err) {
+        console.error('Error loading version data:', err);
+        setVersionData(null);
+      } finally {
+        setLoadingVersion(false);
+      }
+    };
+    
+    loadVersionData();
+  }, [open, proposal.id, viewVersion, proposal.current_version]);
+
+  // Use version data if available, otherwise fall back to proposal data
+  const displayPrice = versionData?.price ?? proposal.price;
+  
+  // For line items: use version data if it has actual items, 
+  // otherwise fall back to proposal data (with warning for data gaps)
+  const displayFeeLineItems = useMemo(() => {
+    // If we have version data with actual items, use them
+    if (versionData?.feeLineItems && versionData.feeLineItems.length > 0) {
+      return versionData.feeLineItems;
+    }
+    
+    // If viewing a historical version but no line items (data gap), log warning
+    if (isViewingHistoricalVersion && versionData) {
+      console.warn(`[ProposalDetailDialog] Version ${viewVersion} has no line_items - showing proposal data`);
+    }
+    
+    return proposal.fee_line_items || [];
+  }, [versionData, proposal.fee_line_items, isViewingHistoricalVersion, viewVersion]);
+  
+  // Check if we have a data gap (viewing version but line_items missing)
+  const hasVersionDataGap = isViewingHistoricalVersion && versionData && 
+    (!versionData.feeLineItems || versionData.feeLineItems.length === 0);
+  
+  const displayScopeText = versionData?.scopeText ?? proposal.scope_text;
 
   const files = proposal.files || [];
   const conditions = proposal.conditions_json || {};
   const advisorInfo = proposal.advisors;
   const rfpContext = proposal.rfp_invite;
-  const feeLineItems = proposal.fee_line_items || [];
+  const feeLineItems = displayFeeLineItems;
   const milestoneAdjustments = proposal.milestone_adjustments || [];
   const selectedServices = proposal.selected_services || [];
   const consultantNotes = proposal.consultant_request_notes || '';
@@ -316,10 +412,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       await generateProposalPDF({
         supplierName: proposal.supplier_name,
         projectName: projectName || 'פרויקט',
-        price: proposal.price,
+        price: displayPrice,
         timelineDays: proposal.timeline_days,
         submittedAt: proposal.submitted_at,
-        scopeText: proposal.scope_text,
+        scopeText: displayScopeText,
         conditions: proposal.conditions_json,
         feeItems: feeLineItems.map((item) => ({
           description: item.description || item.name || '',
@@ -523,7 +619,18 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         <DialogContent className="max-w-3xl h-[90vh] overflow-hidden p-0 flex flex-col" dir="rtl">
           <DialogHeader className="p-4 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between" dir="rtl">
-              <DialogTitle className="text-lg font-bold text-right">{dialogTitle}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-bold text-right">{dialogTitle}</DialogTitle>
+                {viewVersion !== undefined && (
+                  <Badge variant={isViewingHistoricalVersion ? "secondary" : "default"} className="gap-1">
+                    {loadingVersion ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>גרסה {viewVersion}</>
+                    )}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -536,8 +643,17 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {getStatusBadge(proposal.status)}
               </div>
             </div>
-            {/* Action buttons - including Negotiation */}
-            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && (
+            {/* Historical version notice */}
+            {isViewingHistoricalVersion && !loadingVersion && (
+              <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-sm mt-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-800">
+                  אתה צופה בגרסה היסטורית (V{viewVersion}). הגרסה הנוכחית היא V{proposal.current_version || 1}.
+                </span>
+              </div>
+            )}
+            {/* Action buttons - including Negotiation (hidden for historical versions) */}
+            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && !isViewingHistoricalVersion && (
               <div className="flex flex-col gap-2 pt-2" dir="rtl">
                 {/* Show special banner for updated counter-offer */}
                 {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
@@ -690,7 +806,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 {/* Key Metrics */}
                 <div className="grid grid-cols-2 gap-2">
                   <Card><CardContent className="p-3 text-center"><Calendar className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">הוגש</p><p className="font-bold text-sm">{formatDate(proposal.submitted_at)}</p></CardContent></Card>
-                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(proposal.price)}</p></CardContent></Card>
+                  <Card><CardContent className="p-3 text-center"><Banknote className="w-4 h-4 mx-auto mb-1 text-primary" /><p className="text-xs text-muted-foreground">מחיר כולל</p><p className="font-bold text-sm">{formatCurrency(displayPrice)}</p></CardContent></Card>
                 </div>
 
                 {/* Fee Rows Display */}
@@ -1058,14 +1174,27 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         </DialogContent>
       </Dialog>
 
-      <ProposalApprovalDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog} proposal={proposal} onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} />
+      <ProposalApprovalDialog 
+        open={showApprovalDialog} 
+        onOpenChange={setShowApprovalDialog} 
+        proposal={{
+          ...proposal,
+          price: displayPrice,
+          fee_line_items: displayFeeLineItems,
+          current_version: viewVersion || proposal.current_version,
+          rfp_invite: proposal.rfp_invite,
+          advisor_logo_url: advisorInfo?.logo_url,
+        }}
+        projectName={projectName}
+        onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }} 
+      />
       
       <NegotiationDialog
         open={showNegotiationDialog}
         onOpenChange={setShowNegotiationDialog}
         proposal={{
           id: proposal.id,
-          price: proposal.price,
+          price: displayPrice,
           supplier_name: proposal.supplier_name,
           project_id: proposal.project_id,
         }}

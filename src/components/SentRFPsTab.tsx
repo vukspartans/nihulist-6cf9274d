@@ -25,6 +25,9 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [loadingProposalId, setLoadingProposalId] = useState<string | null>(null);
   
+  // Track which version to view (undefined = current/latest)
+  const [viewVersion, setViewVersion] = useState<number | undefined>(undefined);
+  
   // Negotiation view state
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   
@@ -106,7 +109,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     }
   };
 
-  const handleViewProposal = async (proposalId: string) => {
+  const handleViewProposal = async (proposalId: string, version?: number) => {
     setLoadingProposalId(proposalId);
     try {
       const { data: proposalData, error: fetchError } = await supabase
@@ -127,6 +130,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
       if (fetchError) throw fetchError;
       
       setSelectedProposal(proposalData);
+      setViewVersion(version);
       setDetailDialogOpen(true);
     } catch (err) {
       console.error('Error fetching proposal:', err);
@@ -139,7 +143,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   // Handle viewing a negotiation step
   const handleViewStep = (step: NegotiationStep) => {
     if (step.viewData.type === 'proposal') {
-      handleViewProposal(step.viewData.id);
+      handleViewProposal(step.viewData.id, step.viewData.version);
     } else if (step.viewData.type === 'negotiation_session') {
       setViewingSessionId(step.viewData.id);
     }
@@ -416,10 +420,14 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           open={detailDialogOpen}
           onOpenChange={(open) => {
             setDetailDialogOpen(open);
-            if (!open) setSelectedProposal(null);
+            if (!open) {
+              setSelectedProposal(null);
+              setViewVersion(undefined);
+            }
           }}
           proposal={selectedProposal}
           projectId={projectId}
+          viewVersion={viewVersion}
         />
       )}
 
