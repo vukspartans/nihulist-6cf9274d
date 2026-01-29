@@ -53,6 +53,7 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
     // Phase 1 - Must have
     'אדריכל': 1,
     'עורך דין מקרקעין': 1,
+    'יועץ בדיקות (TEST)': 1,
     
     // Phase 2 - Important
     'אגרונום': 2,
@@ -84,6 +85,7 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
     // Phase 1 - Must have
     'אדריכל': 1,
     'עורך דין מקרקעין': 1,
+    'יועץ בדיקות (TEST)': 1,
     
     // Phase 2 - Important
     'אגרונום': 2,
@@ -114,6 +116,7 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
     // Phase 1 - Must have
     'אדריכל': 1,
     'עורך דין מקרקעין': 1,
+    'יועץ בדיקות (TEST)': 1,
     
     // Phase 2 - Important
     'אגרונום': 2,
@@ -144,6 +147,7 @@ export const ADVISOR_PHASES_BY_PROJECT_TYPE: Record<string, Record<string, numbe
     // Phase 1 - Must have
     'אדריכל': 1,
     'עורך דין מקרקעין': 1,
+    'יועץ בדיקות (TEST)': 1,
     
     // Phase 2 - Important
     'אגרונום': 2,
