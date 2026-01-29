@@ -1,94 +1,104 @@
 
+# Add Test Advisor Expertise to RFP Wizard
 
-# Add Test-Only Expertise Type for Isolated Testing
-
-## The Problem
-When sending an RFP, the system shows ALL active, approved advisors with matching expertise. Currently there are 6 advisors with `אדריכל` expertise, so selecting that type would show all 6 - not just your test advisor.
-
-## The Solution
-Add a unique expertise type that ONLY the test advisor will have. This ensures RFPs sent for this expertise will only go to the test advisor.
+## Summary
+Add `יועץ בדיקות (TEST)` to appear in the RFP wizard advisor selection list by updating two configuration sources:
+1. **Supabase Storage JSON** - Add to `required_categories` so it appears for all project types
+2. **Phase Mapping** - Add to `advisorPhases.ts` so it appears in a proper phase section (not "optional")
 
 ---
 
-## Implementation Steps
-
-### Step 1: Add Test Expertise to Constants
-**File:** `src/constants/advisor.ts`
-
-Add a new expertise type at the end of the list:
-```
-'יועץ בדיקות (TEST)'
-```
-
-Also add it to a new test category in `ADVISOR_EXPERTISE_CATEGORIES`:
-```
-'בדיקות': [
-  'יועץ בדיקות (TEST)'
-]
-```
-
-### Step 2: Update Test Advisor in Database
-Run this SQL in Supabase SQL Editor to set the test advisor's expertise:
-
-```sql
-UPDATE public.advisors 
-SET 
-    expertise = ARRAY['יועץ בדיקות (TEST)'],
-    admin_approved = true,
-    is_active = true
-WHERE company_name LIKE 'TEST_ONLY__%';
-```
-
----
-
-## How It Will Work
+## Current Data Flow
 
 ```text
-+------------------+     +-------------------+     +------------------+
-|  Entrepreneur    |     |   RFP Wizard      |     |  Test Advisor    |
-|  selects         | --> |   shows only      | --> |  receives RFP    |
-|  'יועץ בדיקות    |     |   advisors with   |     |  notification    |
-|   (TEST)'        |     |   this expertise  |     |                  |
-+------------------+     +-------------------+     +------------------+
-                                  |
-                                  v
-                         Only TEST_ONLY__ advisor
-                         has this expertise!
++------------------------+      +----------------------+      +-------------------------+
+| Supabase Storage       |      | Edge Function        |      | PhasedAdvisorSelection  |
+| json/advisors_         | ---> | get-advisors-data    | ---> | Component               |
+| projects_full.json     |      |                      |      |                         |
++------------------------+      +----------------------+      +-------------------------+
+         |                                                              |
+         v                                                              v
+  required_categories[]  ----+                              displayedAdvisors = union of:
+  projects[].Advisors    ----+---> Combined advisor list    - required_categories
+                                                            - project-specific advisors
+                                                                        |
+                                                                        v
+                                                            getAdvisorPhase() assigns phase
+                                                            - Phase 1/2/3 = shown in phase
+                                                            - undefined = "Optional" section
 ```
 
 ---
 
-## Files to Modify
+## Changes Required
+
+### 1. Update Supabase Storage JSON
+
+**File:** `json/advisors_projects_full.json` in Supabase Storage bucket
+
+**Action:** Add `יועץ בדיקות (TEST)` to the `required_categories` array
+
+This ensures the test advisor expertise appears in the global list for ALL project types.
+
+**Manual step required:** Update the JSON file in Supabase Storage:
+- Go to Supabase Dashboard > Storage > `json` bucket
+- Download `advisors_projects_full.json`
+- Add `"יועץ בדיקות (TEST)"` to the `required_categories` array
+- Upload the modified file back
+
+---
+
+### 2. Update Phase Mapping
+
+**File:** `src/constants/advisorPhases.ts`
+
+**Action:** Add `'יועץ בדיקות (TEST)': 1` to ALL project type mappings in `ADVISOR_PHASES_BY_PROJECT_TYPE`
+
+This ensures the test advisor appears in Phase 1 ("Must Have") section rather than the "Optional" section at the bottom.
+
+**Code change:**
+```typescript
+// Add to each project type mapping:
+'יועץ בדיקות (TEST)': 1,
+```
+
+Project types to update:
+- `'תמ"א 38 - פינוי ובינוי'`
+- `'פינוי־בינוי (מתחמים)'`
+- `'תמ"א 38/1 – חיזוק ותוספות'`
+- `'תמ"א 38/2 – הריסה ובנייה מחדש'`
+
+---
+
+## Why Phase 1?
+
+Phase 1 is the "Must Have" phase that is expanded by default (`openPhases` defaults to `{ 1: true }`). Placing the test advisor here ensures maximum visibility during testing.
+
+---
+
+## Testing Checklist
+
+After implementation:
+- [ ] Navigate to RFP wizard
+- [ ] Select any project type (e.g., תמ"א 38)
+- [ ] Verify `יועץ בדיקות (TEST)` appears in Phase 1 section
+- [ ] Select the test advisor
+- [ ] Confirm only TEST_ONLY__ advisor appears in recommendations
+
+---
+
+## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/constants/advisor.ts` | Add `'יועץ בדיקות (TEST)'` to `ADVISOR_EXPERTISE` array and create new `'בדיקות'` category |
-
-## Database Update (via SQL Editor)
-
-Update test advisor expertise to match the new constant.
+| `src/constants/advisorPhases.ts` | Add phase mapping for test expertise to all project types |
+| `json/advisors_projects_full.json` (Supabase Storage) | Add to `required_categories` array (manual) |
 
 ---
 
-## Benefits
+## Note on Cache
 
-- **Complete isolation**: Only the test advisor has this expertise
-- **No impact on production**: Real advisors are unaffected
-- **Clear labeling**: The `(TEST)` suffix makes it obvious this is for testing
-- **Easily reversible**: Just remove the constant and update the advisor
-
----
-
-## Technical Details
-
-### Advisor Matching Logic
-The system uses this flow (from `useAdvisorsByExpertise.ts`):
-1. Query advisors where `is_active = true` AND `admin_approved = true`
-2. Filter by `expertise` array containing the selected type
-3. Since only test advisor has `'יועץ בדיקות (TEST)'`, only they will appear
-
-### Where Test Expertise Will Appear
-- RFP Wizard advisor type selection
-- Admin panel template management
-- Advisor profile expertise selection
-
+The `useAdvisorsValidation` hook caches data for 30 minutes. After updating the JSON file, either:
+- Wait 30 minutes, OR
+- Clear localStorage key `advisors-data-cache`, OR  
+- Increment `CACHE_VERSION` in `useAdvisorsValidation.ts` (not recommended for this change)
