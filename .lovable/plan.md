@@ -1,104 +1,122 @@
 
-# Add Test Advisor Expertise to RFP Wizard
 
-## Summary
-Add `יועץ בדיקות (TEST)` to appear in the RFP wizard advisor selection list by updating two configuration sources:
-1. **Supabase Storage JSON** - Add to `required_categories` so it appears for all project types
-2. **Phase Mapping** - Add to `advisorPhases.ts` so it appears in a proper phase section (not "optional")
+# Fix Test Advisor Visibility in RFP Wizard
 
----
+## Problem Diagnosis
 
-## Current Data Flow
+After investigating the database and code, I found **two issues**:
+
+### Issue 1: No RFP Was Actually Sent
 
 ```text
-+------------------------+      +----------------------+      +-------------------------+
-| Supabase Storage       |      | Edge Function        |      | PhasedAdvisorSelection  |
-| json/advisors_         | ---> | get-advisors-data    | ---> | Component               |
-| projects_full.json     |      |                      |      |                         |
-+------------------------+      +----------------------+      +-------------------------+
-         |                                                              |
-         v                                                              v
-  required_categories[]  ----+                              displayedAdvisors = union of:
-  projects[].Advisors    ----+---> Combined advisor list    - required_categories
-                                                            - project-specific advisors
-                                                                        |
-                                                                        v
-                                                            getAdvisorPhase() assigns phase
-                                                            - Phase 1/2/3 = shown in phase
-                                                            - undefined = "Optional" section
+Database Query Result:
+┌─────────────────────────────────────────┬───────────────┐
+│ Test Advisor                            │ Invite Count  │
+├─────────────────────────────────────────┼───────────────┤
+│ TEST_ONLY__Vendor Consulting Ltd        │ 0             │
+└─────────────────────────────────────────┴───────────────┘
 ```
 
----
+The `rfp_invites` table shows **zero invitations** sent to the test advisor. The RFP was never actually created in the database.
 
-## Changes Required
+### Issue 2: Project Type Mismatch
 
-### 1. Update Supabase Storage JSON
-
-**File:** `json/advisors_projects_full.json` in Supabase Storage bucket
-
-**Action:** Add `יועץ בדיקות (TEST)` to the `required_categories` array
-
-This ensures the test advisor expertise appears in the global list for ALL project types.
-
-**Manual step required:** Update the JSON file in Supabase Storage:
-- Go to Supabase Dashboard > Storage > `json` bucket
-- Download `advisors_projects_full.json`
-- Add `"יועץ בדיקות (TEST)"` to the `required_categories` array
-- Upload the modified file back
-
----
-
-### 2. Update Phase Mapping
-
-**File:** `src/constants/advisorPhases.ts`
-
-**Action:** Add `'יועץ בדיקות (TEST)': 1` to ALL project type mappings in `ADVISOR_PHASES_BY_PROJECT_TYPE`
-
-This ensures the test advisor appears in Phase 1 ("Must Have") section rather than the "Optional" section at the bottom.
-
-**Code change:**
-```typescript
-// Add to each project type mapping:
-'יועץ בדיקות (TEST)': 1,
-```
-
-Project types to update:
+The test project has type `"מגורים"` but the phase mappings in `advisorPhases.ts` only cover:
 - `'תמ"א 38 - פינוי ובינוי'`
 - `'פינוי־בינוי (מתחמים)'`
 - `'תמ"א 38/1 – חיזוק ותוספות'`
 - `'תמ"א 38/2 – הריסה ובנייה מחדש'`
 
----
-
-## Why Phase 1?
-
-Phase 1 is the "Must Have" phase that is expanded by default (`openPhases` defaults to `{ 1: true }`). Placing the test advisor here ensures maximum visibility during testing.
+The test expertise `'יועץ בדיקות (TEST)'` is **NOT mapped** for the `"מגורים"` project type.
 
 ---
 
-## Testing Checklist
+## Solution
 
-After implementation:
-- [ ] Navigate to RFP wizard
-- [ ] Select any project type (e.g., תמ"א 38)
-- [ ] Verify `יועץ בדיקות (TEST)` appears in Phase 1 section
-- [ ] Select the test advisor
-- [ ] Confirm only TEST_ONLY__ advisor appears in recommendations
+### Option A: Add Phase Mapping for "מגורים" Project Type (Recommended)
+
+Add the test expertise to a new `"מגורים"` phase mapping in `advisorPhases.ts`:
+
+```typescript
+// Add new mapping for מגורים project type
+'מגורים': {
+  'אדריכל': 1,
+  'עורך דין מקרקעין': 1,
+  'יועץ בדיקות (TEST)': 1,
+  // ... other advisors
+},
+'מגורים בבנייה רוויה (5–8 קומות)': {
+  'אדריכל': 1,
+  'עורך דין מקרקעין': 1,
+  'יועץ בדיקות (TEST)': 1,
+  // ... other advisors
+}
+```
+
+### Option B: Update Test Project Type
+
+Change the test project's type in the database to match one of the existing mappings:
+
+```sql
+UPDATE public.projects 
+SET type = 'תמ"א 38 - פינוי ובינוי'
+WHERE name LIKE 'TEST_ONLY__%';
+```
 
 ---
 
-## Files Modified
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/constants/advisorPhases.ts` | Add phase mapping for test expertise to all project types |
-| `json/advisors_projects_full.json` (Supabase Storage) | Add to `required_categories` array (manual) |
+| `src/constants/advisorPhases.ts` | Add phase mappings for `מגורים` and `מגורים בבנייה רוויה (5–8 קומות)` project types |
 
 ---
 
-## Note on Cache
+## What Happens After the Fix
 
-The `useAdvisorsValidation` hook caches data for 30 minutes. After updating the JSON file, either:
-- Wait 30 minutes, OR
-- Clear localStorage key `advisors-data-cache`, OR  
-- Increment `CACHE_VERSION` in `useAdvisorsValidation.ts` (not recommended for this change)
+1. Entrepreneur opens RFP wizard for the test project
+2. Wizard loads advisor list from JSON (includes `יועץ בדיקות (TEST)` in `required_categories`)
+3. `getAdvisorPhase()` finds the mapping for the project type `מגורים`
+4. Test expertise appears in Phase 1 ("Must Have") section
+5. Entrepreneur selects the test advisor and sends RFP
+6. `rfp_invites` record is created
+7. Test advisor sees the RFP on their dashboard
+
+---
+
+## Technical Details
+
+### Current Phase Mapping Flow
+
+```text
+projectType = "מגורים"
+         │
+         ▼
+getAdvisorPhase("מגורים", "יועץ בדיקות (TEST)")
+         │
+         ▼
+ADVISOR_PHASES_BY_PROJECT_TYPE["מגורים"] → undefined ❌
+         │
+         ▼
+normalizeLegacyProjectType("מגורים") → "מגורים בבנייה רוויה (5–8 קומות)"
+         │
+         ▼
+ADVISOR_PHASES_BY_PROJECT_TYPE["מגורים בבנייה רוויה..."] → undefined ❌
+         │
+         ▼
+Phase = undefined → Falls to "Optional" section (or not shown)
+```
+
+### After Fix
+
+```text
+projectType = "מגורים"
+         │
+         ▼
+ADVISOR_PHASES_BY_PROJECT_TYPE["מגורים"] → { 'יועץ בדיקות (TEST)': 1 } ✅
+         │
+         ▼
+Phase = 1 → Appears in Phase 1 "Must Have" section
+```
+
