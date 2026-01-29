@@ -57,7 +57,8 @@ export const ADVISOR_EXPERTISE = [
   'מכון העתקות',
   'משווק נדל"ן',
   'מכון התעדה (בניה ירוקה)',
-  'מכון בקרה'
+  'מכון בקרה',
+  'יועץ בדיקות (TEST)'
 ] as const;
 
 export type AdvisorExpertise = typeof ADVISOR_EXPERTISE[number];
@@ -139,6 +140,9 @@ export const ADVISOR_EXPERTISE_CATEGORIES = {
     'יועץ מערכות אבטחה',
     'יועץ אשפה',
     'יועץ אלומיניום'
+  ],
+  'בדיקות': [
+    'יועץ בדיקות (TEST)'
   ]
 } as const;
 
