@@ -65,16 +65,23 @@ const SERVICE_SCOPE_QUERY_KEY = "service-scope-templates-admin";
 
 // ============ FEE ITEM TEMPLATES HOOKS ============
 
-export function useFeeItemTemplates(advisorSpecialty?: string) {
+export function useFeeItemTemplates(
+  advisorSpecialty?: string,
+  submissionMethodId?: string
+) {
   return useQuery({
-    queryKey: [FEE_ITEM_QUERY_KEY, advisorSpecialty],
+    queryKey: [FEE_ITEM_QUERY_KEY, advisorSpecialty, submissionMethodId],
     queryFn: async () => {
       let query = supabase
         .from("default_fee_item_templates")
         .select("*")
         .order("display_order", { ascending: true });
 
-      if (advisorSpecialty) {
+      // Filter by submission method if provided (most specific)
+      if (submissionMethodId) {
+        query = query.eq("submission_method_id", submissionMethodId);
+      } else if (advisorSpecialty) {
+        // Fallback to advisor specialty filter
         query = query.eq("advisor_specialty", advisorSpecialty);
       }
 
