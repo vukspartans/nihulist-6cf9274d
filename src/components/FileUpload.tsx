@@ -29,7 +29,7 @@ export interface UploadedFile {
 
 export function FileUpload({
   maxFiles = 10,
-  maxSize = 10 * 1024 * 1024, // 10 MB
+  maxSize = 20 * 1024 * 1024, // 20 MB
   accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip',
   onUpload,
   proposalId,
