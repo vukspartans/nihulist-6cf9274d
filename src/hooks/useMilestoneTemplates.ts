@@ -9,9 +9,9 @@ import type {
 } from '@/types/milestoneTemplate';
 
 // Fetch all milestone templates
-export function useMilestoneTemplates(includeInactive = true) {
+export function useMilestoneTemplates(includeInactive = true, categoryId?: string) {
   return useQuery({
-    queryKey: ['milestone-templates', { includeInactive }],
+    queryKey: ['milestone-templates', { includeInactive, categoryId }],
     queryFn: async () => {
       let query = supabase
         .from('milestone_templates')
@@ -23,6 +23,10 @@ export function useMilestoneTemplates(includeInactive = true) {
 
       if (!includeInactive) {
         query = query.eq('is_active', true);
+      }
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
       }
 
       const { data, error } = await query;

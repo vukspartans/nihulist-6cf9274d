@@ -102,3 +102,64 @@ export const METHOD_TYPE_LABELS: Record<string, string> = {
 };
 
 export const METHOD_TYPES = ['lump_sum', 'quantity', 'hourly'] as const;
+
+// Extended Service Scope Template with category support
+export interface ServiceScopeTemplateExtended {
+  id: string;
+  advisor_specialty: string;
+  task_name: string;
+  default_fee_category: string | null;
+  is_optional: boolean;
+  display_order: number;
+  category_id: string | null;
+  project_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended Milestone Template with category support
+export interface MilestoneTemplateExtended {
+  id: string;
+  name: string;
+  name_en: string | null;
+  description: string | null;
+  project_type: string | null;
+  municipality_id: string | null;
+  advisor_specialty: string | null;
+  category_id: string | null;
+  percentage_of_total: number;
+  fixed_amount: number | null;
+  currency: string;
+  trigger_type: 'task_completion' | 'manual' | 'date_based';
+  display_order: number;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  municipalities?: { id: string; name: string } | null;
+}
+
+// Input types for category-linked templates
+export interface CreateCategoryServiceInput {
+  advisor_specialty: string;
+  task_name: string;
+  category_id: string;
+  project_type?: string;
+  default_fee_category?: string;
+  is_optional?: boolean;
+  display_order?: number;
+}
+
+export interface CreateCategoryMilestoneInput {
+  name: string;
+  category_id: string;
+  advisor_specialty?: string;
+  project_type?: string;
+  percentage_of_total: number;
+  fixed_amount?: number;
+  currency?: string;
+  trigger_type?: 'task_completion' | 'manual' | 'date_based';
+  description?: string;
+  is_active?: boolean;
+  display_order?: number;
+}

@@ -29,11 +29,17 @@ import { adminTranslations } from "@/constants/adminTranslations";
 interface CreateMilestoneTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultAdvisorSpecialty?: string;
+  defaultProjectType?: string;
+  defaultCategoryId?: string;
 }
 
 export function CreateMilestoneTemplateDialog({
   open,
   onOpenChange,
+  defaultAdvisorSpecialty,
+  defaultProjectType,
+  defaultCategoryId,
 }: CreateMilestoneTemplateDialogProps) {
   const t = adminTranslations.payments.milestones;
   const [activeTab, setActiveTab] = useState("basic");
@@ -48,14 +54,14 @@ export function CreateMilestoneTemplateDialog({
     setValue,
     reset,
     formState: { errors },
-  } = useForm<CreateMilestoneTemplateInput>({
+  } = useForm<CreateMilestoneTemplateInput & { category_id?: string }>({
     defaultValues: {
       name: "",
       name_en: "",
       description: "",
-      project_type: "",
+      project_type: defaultProjectType || "",
       municipality_id: "",
-      advisor_specialty: "",
+      advisor_specialty: defaultAdvisorSpecialty || "",
       percentage_of_total: 0,
       fixed_amount: undefined,
       currency: "ILS",
@@ -63,16 +69,17 @@ export function CreateMilestoneTemplateDialog({
     },
   });
 
-  const onSubmit = async (data: CreateMilestoneTemplateInput) => {
+  const onSubmit = async (data: CreateMilestoneTemplateInput & { category_id?: string }) => {
     const submitData = {
       ...data,
-      project_type: data.project_type || null,
+      project_type: data.project_type || defaultProjectType || null,
       municipality_id: data.municipality_id || null,
-      advisor_specialty: data.advisor_specialty || null,
+      advisor_specialty: data.advisor_specialty || defaultAdvisorSpecialty || null,
       fixed_amount: data.fixed_amount || null,
+      category_id: defaultCategoryId || null,
     };
 
-    await createMilestone.mutateAsync(submitData);
+    await createMilestone.mutateAsync(submitData as any);
     reset();
     onOpenChange(false);
   };

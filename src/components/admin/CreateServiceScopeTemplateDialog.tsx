@@ -25,12 +25,16 @@ interface CreateServiceScopeTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultAdvisorSpecialty?: string;
+  defaultCategoryId?: string;
+  defaultProjectType?: string;
 }
 
 export function CreateServiceScopeTemplateDialog({
   open,
   onOpenChange,
   defaultAdvisorSpecialty,
+  defaultCategoryId,
+  defaultProjectType,
 }: CreateServiceScopeTemplateDialogProps) {
   const [advisorSpecialty, setAdvisorSpecialty] = useState(defaultAdvisorSpecialty || "");
   const [taskName, setTaskName] = useState("");
@@ -51,6 +55,8 @@ export function CreateServiceScopeTemplateDialog({
       task_name: taskName.trim(),
       default_fee_category: feeCategory,
       is_optional: isOptional,
+      category_id: defaultCategoryId,
+      project_type: defaultProjectType,
     });
 
     // Reset form
