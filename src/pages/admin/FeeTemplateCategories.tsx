@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -11,10 +11,12 @@ import {
   useCreateFeeCategory,
   useUpdateFeeCategory,
   useDeleteFeeCategory,
-  useFeeSubmissionMethods,
 } from "@/hooks/useFeeTemplateHierarchy";
 import { CreateFeeCategoryDialog } from "@/components/admin/CreateFeeCategoryDialog";
-import { Layers, ChevronLeft, ChevronRight, Plus, Trash2, Star } from "lucide-react";
+import { EditFeeCategoryDialog } from "@/components/admin/EditFeeCategoryDialog";
+import { Layers, ChevronLeft, ChevronRight, Plus, Trash2, Star, Pencil, TrendingUp } from "lucide-react";
+import { getIndexLabel } from "@/constants/indexTypes";
+import type { FeeTemplateCategory } from "@/types/feeTemplateHierarchy";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,7 @@ export default function FeeTemplateCategories() {
   const decodedProjectType = decodeURIComponent(projectType || "");
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState<FeeTemplateCategory | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: categories, isLoading } = useFeeTemplateCategories(
@@ -132,7 +135,11 @@ export default function FeeTemplateCategories() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>מדד: {getIndexLabel(category.default_index_type)}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
                           לחץ לצפייה בשיטות הגשה
                         </p>
                       </div>
@@ -151,6 +158,16 @@ export default function FeeTemplateCategories() {
                           disabled={updateMutation.isPending}
                         />
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditCategory(category);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -196,6 +213,19 @@ export default function FeeTemplateCategories() {
           });
         }}
         isLoading={createMutation.isPending}
+      />
+
+      {/* Edit Dialog */}
+      <EditFeeCategoryDialog
+        open={!!editCategory}
+        onOpenChange={(open) => !open && setEditCategory(null)}
+        category={editCategory}
+        onSubmit={(data) => {
+          updateMutation.mutate(data, {
+            onSuccess: () => setEditCategory(null),
+          });
+        }}
+        isLoading={updateMutation.isPending}
       />
 
       {/* Delete Confirmation */}

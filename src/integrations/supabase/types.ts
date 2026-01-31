@@ -610,6 +610,7 @@ export type Database = {
         Row: {
           advisor_specialty: string
           created_at: string | null
+          default_index_type: string | null
           display_order: number | null
           id: string
           is_active: boolean | null
@@ -621,6 +622,7 @@ export type Database = {
         Insert: {
           advisor_specialty: string
           created_at?: string | null
+          default_index_type?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
@@ -632,6 +634,7 @@ export type Database = {
         Update: {
           advisor_specialty?: string
           created_at?: string | null
+          default_index_type?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
