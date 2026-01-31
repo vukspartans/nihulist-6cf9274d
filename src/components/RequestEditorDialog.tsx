@@ -36,6 +36,7 @@ interface RequestEditorDialogProps {
   advisorType: string;
   projectName: string;
   projectId: string;
+  projectType?: string;
   rfpId?: string;
   recipientCount: number;
   initialData?: Partial<AdvisorTypeRequestData>;
@@ -77,6 +78,7 @@ export const RequestEditorDialog = ({
   advisorType,
   projectName,
   projectId,
+  projectType,
   rfpId,
   recipientCount,
   initialData,
@@ -90,7 +92,7 @@ export const RequestEditorDialog = ({
   const [canAutoClose, setCanAutoClose] = useState(true);
   const [extracting, setExtracting] = useState(false);
   const [rfpDocumentFile, setRfpDocumentFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState('main');
+  const [activeTab, setActiveTab] = useState('services');
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -713,10 +715,6 @@ export const RequestEditorDialog = ({
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 min-h-0 flex flex-col" dir="rtl">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 flex-row-reverse h-auto">
-            <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">ראשי</span>
-            </TabsTrigger>
             <TabsTrigger value="services" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <List className="h-4 w-4" />
               <span className="hidden sm:inline">פירוט שירותים</span>
@@ -728,6 +726,10 @@ export const RequestEditorDialog = ({
             <TabsTrigger value="payment" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">תשלום</span>
+            </TabsTrigger>
+            <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">ראשי</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1074,6 +1076,7 @@ export const RequestEditorDialog = ({
                   feeItems={formData.feeItems || []}
                   advisorType={advisorType}
                   projectId={projectId}
+                  projectType={projectType}
                 />
               </TabsContent>
 
