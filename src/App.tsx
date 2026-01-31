@@ -50,7 +50,15 @@ import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import { supabase } from "@/integrations/supabase/client";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
 // Scroll to top component for route changes
 const ScrollToTop = () => {

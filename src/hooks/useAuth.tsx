@@ -161,6 +161,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       (event, session) => {
         console.log('[useAuth] Auth event:', event, 'session:', !!session, 'timestamp:', new Date().toISOString());
         
+        // Skip loading states for token refresh - session is still valid, no need to reload profile/roles
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('[useAuth] Token refreshed silently, skipping reload');
+          setSession(session);
+          setUser(session?.user ?? null);
+          return;
+        }
+        
         // Log session expiry information
         if (session) {
           const expiresAt = new Date(session.expires_at! * 1000);

@@ -79,8 +79,45 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
   const { loadAllDrafts, deleteAllDrafts, loading: draftsLoading } = useRFPDraft(projectId);
   const { toast } = useToast();
 
-  // Load existing RFP and drafts from database
+  // Session storage key for wizard state persistence
+  const WIZARD_STORAGE_KEY = `rfp-wizard-${projectId}`;
+
+  // Save wizard state to sessionStorage on changes
   useEffect(() => {
+    const stateToSave = {
+      currentStep,
+      selectedAdvisors,
+      selectedRecommendedAdvisors,
+      requestDataByType,
+      savedDraftTypes,
+      selectedProjectType
+    };
+    sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [currentStep, selectedAdvisors, selectedRecommendedAdvisors, requestDataByType, savedDraftTypes, selectedProjectType, WIZARD_STORAGE_KEY]);
+
+  // Load existing RFP and drafts from database (and restore session state)
+  useEffect(() => {
+    // First, try to restore from sessionStorage (for tab-switch recovery)
+    const savedState = sessionStorage.getItem(WIZARD_STORAGE_KEY);
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.currentStep) setCurrentStep(state.currentStep);
+        if (state.selectedAdvisors?.length) setSelectedAdvisors(state.selectedAdvisors);
+        if (state.selectedRecommendedAdvisors && Object.keys(state.selectedRecommendedAdvisors).length) {
+          setSelectedRecommendedAdvisors(state.selectedRecommendedAdvisors);
+        }
+        if (state.requestDataByType && Object.keys(state.requestDataByType).length) {
+          setRequestDataByType(state.requestDataByType);
+        }
+        if (state.savedDraftTypes?.length) setSavedDraftTypes(state.savedDraftTypes);
+        if (state.selectedProjectType) setSelectedProjectType(state.selectedProjectType);
+        console.log('[RFPWizard] Restored state from sessionStorage');
+      } catch (e) {
+        console.warn('[RFPWizard] Failed to parse saved state:', e);
+      }
+    }
+
     const loadExistingData = async () => {
       // Load existing RFP
       const { data, error } = await supabase
@@ -108,21 +145,23 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
         }));
       }
 
-      // Load saved drafts
-      const drafts = await loadAllDrafts();
-      const draftTypes = Object.keys(drafts);
-      if (draftTypes.length > 0) {
-        setRequestDataByType(drafts);
-        setSavedDraftTypes(draftTypes);
-        toast({
-          title: "טיוטות נטענו",
-          description: `נמצאו ${draftTypes.length} טיוטות שמורות`,
-        });
+      // Load saved drafts (only if we didn't restore from sessionStorage)
+      if (!savedState) {
+        const drafts = await loadAllDrafts();
+        const draftTypes = Object.keys(drafts);
+        if (draftTypes.length > 0) {
+          setRequestDataByType(drafts);
+          setSavedDraftTypes(draftTypes);
+          toast({
+            title: "טיוטות נטענו",
+            description: `נמצאו ${draftTypes.length} טיוטות שמורות`,
+          });
+        }
       }
     };
 
     loadExistingData();
-  }, [projectId]);
+  }, [projectId, WIZARD_STORAGE_KEY]);
 
   const totalSteps = 2;
 
