@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,37 +18,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { INDEX_TYPES, DEFAULT_INDEX_TYPE } from "@/constants/indexTypes";
-import type { CreateFeeCategoryInput } from "@/types/feeTemplateHierarchy";
+import type { FeeTemplateCategory, UpdateFeeCategoryInput } from "@/types/feeTemplateHierarchy";
 
-interface CreateFeeCategoryDialogProps {
+interface EditFeeCategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  advisorSpecialty: string;
-  projectType: string;
-  onSubmit: (data: CreateFeeCategoryInput) => void;
+  category: FeeTemplateCategory | null;
+  onSubmit: (data: UpdateFeeCategoryInput) => void;
   isLoading?: boolean;
 }
 
-export function CreateFeeCategoryDialog({
+export function EditFeeCategoryDialog({
   open,
   onOpenChange,
-  advisorSpecialty,
-  projectType,
+  category,
   onSubmit,
   isLoading,
-}: CreateFeeCategoryDialogProps) {
+}: EditFeeCategoryDialogProps) {
   const [name, setName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [indexType, setIndexType] = useState<string>(DEFAULT_INDEX_TYPE);
 
+  useEffect(() => {
+    if (category) {
+      setName(category.name);
+      setIsDefault(category.is_default);
+      setIndexType(category.default_index_type || DEFAULT_INDEX_TYPE);
+    }
+  }, [category]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !category) return;
 
     onSubmit({
+      id: category.id,
       name: name.trim(),
-      advisor_specialty: advisorSpecialty,
-      project_type: projectType,
       is_default: isDefault,
       default_index_type: indexType,
     });
@@ -67,13 +72,13 @@ export function CreateFeeCategoryDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent dir="rtl" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>הוספת קטגוריה חדשה</DialogTitle>
+          <DialogTitle>עריכת קטגוריה</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">שם הקטגוריה</Label>
+            <Label htmlFor="edit-name">שם הקטגוריה</Label>
             <Input
-              id="name"
+              id="edit-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="לדוגמה: רישוי, הכנת תב״ע"
@@ -82,9 +87,9 @@ export function CreateFeeCategoryDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="index-type">מדד ברירת מחדל</Label>
+            <Label htmlFor="edit-index-type">מדד ברירת מחדל</Label>
             <Select value={indexType} onValueChange={setIndexType}>
-              <SelectTrigger id="index-type">
+              <SelectTrigger id="edit-index-type">
                 <SelectValue placeholder="בחר מדד" />
               </SelectTrigger>
               <SelectContent>
@@ -98,21 +103,17 @@ export function CreateFeeCategoryDialog({
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="is-default">הגדר כברירת מחדל</Label>
+            <Label htmlFor="edit-is-default">הגדר כברירת מחדל</Label>
             <Switch
-              id="is-default"
+              id="edit-is-default"
               checked={isDefault}
               onCheckedChange={setIsDefault}
             />
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            קטגוריה זו תשויך ל{advisorSpecialty} בפרויקטים מסוג {projectType}
-          </p>
-
           <DialogFooter className="flex-row-reverse gap-2 pt-4">
             <Button type="submit" disabled={isLoading || !name.trim()}>
-              {isLoading ? "יוצר..." : "צור קטגוריה"}
+              {isLoading ? "שומר..." : "שמור שינויים"}
             </Button>
             <Button
               type="button"

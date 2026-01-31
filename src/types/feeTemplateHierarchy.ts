@@ -10,6 +10,8 @@ export interface FeeTemplateCategory {
   is_default: boolean;
   display_order: number;
   is_active: boolean;
+  default_index_type: 'none' | 'cpi' | 'construction_wage' | 'hourly_labor_cost' | 
+                      'residential_construction_input' | 'non_residential_construction_input';
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +52,14 @@ export interface CreateFeeCategoryInput {
   project_type?: string | null;
   is_default?: boolean;
   display_order?: number;
+  default_index_type?: string;
+}
+
+export interface UpdateFeeCategoryInput {
+  id: string;
+  name?: string;
+  is_default?: boolean;
+  default_index_type?: string;
 }
 
 export interface UpdateFeeCategoryInput extends Partial<CreateFeeCategoryInput> {
