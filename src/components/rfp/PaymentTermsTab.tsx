@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, FileText, Check, AlertCircle, Loader2, Database } from 'lucide-react';
-import { PaymentTerms, MilestonePayment, PaymentTermType } from '@/types/rfpRequest';
+import { Plus, Trash2, Check, AlertCircle, Loader2, Database, TrendingUp } from 'lucide-react';
+import { PaymentTerms, MilestonePayment, PaymentTermType, IndexType } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { INDEX_TYPES, DEFAULT_INDEX_TYPE, getIndexLabel } from '@/constants/indexTypes';
 
 interface PaymentTermsTabProps {
   paymentTerms: PaymentTerms;
   onPaymentTermsChange: (terms: PaymentTerms) => void;
   advisorType?: string;
+  defaultIndexType?: string;
 }
 
 const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
@@ -22,13 +24,31 @@ const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
   { value: 'net_90', label: 'שוטף + 90' },
 ];
 
+// Get current month in YYYY-MM format
+const getCurrentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
 export const PaymentTermsTab = ({
   paymentTerms,
   onPaymentTermsChange,
-  advisorType
+  advisorType,
+  defaultIndexType
 }: PaymentTermsTabProps) => {
   const { toast } = useToast();
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  
+  // Set default index type when component mounts or defaultIndexType changes
+  useEffect(() => {
+    if (!paymentTerms.index_type) {
+      onPaymentTermsChange({
+        ...paymentTerms,
+        index_type: (defaultIndexType as IndexType) || DEFAULT_INDEX_TYPE,
+        index_base_month: getCurrentMonth()
+      });
+    }
+  }, [defaultIndexType]);
   
   const updateField = <K extends keyof PaymentTerms>(field: K, value: PaymentTerms[K]) => {
     onPaymentTermsChange({
@@ -257,6 +277,60 @@ export const PaymentTermsTab = ({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Index Type Section */}
+      <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          הצמדת מדד
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Index Type Selection */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">סוג המדד</Label>
+            <Select
+              dir="rtl"
+              value={paymentTerms.index_type || DEFAULT_INDEX_TYPE}
+              onValueChange={(v) => updateField('index_type', v as IndexType)}
+            >
+              <SelectTrigger dir="rtl" className="text-right">
+                <SelectValue placeholder="בחר מדד" />
+              </SelectTrigger>
+              <SelectContent dir="rtl">
+                {INDEX_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value} className="text-right">
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Index Base Value */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">ערך מדד בסיס</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                step="0.01"
+                value={paymentTerms.index_base_value || ''}
+                onChange={(e) => updateField('index_base_value', Number(e.target.value) || undefined)}
+                placeholder="לדוגמה: 108.5"
+                className="text-right"
+                dir="ltr"
+              />
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {paymentTerms.index_base_month || getCurrentMonth()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          ערך המדד הוא ערך המדד של חודש הגשת ההצעה. בעת הגשת חשבון, המערכת תחשב את ההפרש בין מדד הבסיס למדד החודש הנוכחי.
+        </p>
       </div>
 
       {/* Notes */}

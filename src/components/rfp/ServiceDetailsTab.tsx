@@ -27,6 +27,13 @@ interface ServiceDetailsTabProps {
   advisorType: string;
   projectId: string;
   projectType?: string;
+  // Category selection callbacks
+  selectedCategoryId?: string;
+  selectedCategoryName?: string;
+  selectedMethodId?: string;
+  selectedMethodLabel?: string;
+  onCategoryChange?: (categoryId: string | null, categoryName: string | null) => void;
+  onMethodChange?: (methodId: string | null, methodLabel: string | null) => void;
 }
 
 export const ServiceDetailsTab = ({
@@ -41,16 +48,22 @@ export const ServiceDetailsTab = ({
   feeItems,
   advisorType,
   projectId,
-  projectType
+  projectType,
+  selectedCategoryId: propCategoryId,
+  selectedCategoryName: propCategoryName,
+  selectedMethodId: propMethodId,
+  selectedMethodLabel: propMethodLabel,
+  onCategoryChange,
+  onMethodChange
 }: ServiceDetailsTabProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
   
-  // Template hierarchy selection
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
+  // Template hierarchy selection - use props if provided
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(propCategoryId || null);
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(propMethodId || null);
 
   // Fetch categories for this advisor type and project type
   const { data: categories, isLoading: loadingCategories } = useFeeTemplateCategories(
@@ -71,11 +84,25 @@ export const ServiceDetailsTab = ({
       .map(item => item.description)
   ];
 
+  // Handle category change and notify parent
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    const category = categories?.find(c => c.id === categoryId);
+    onCategoryChange?.(categoryId, category?.name || null);
+  };
+
+  // Handle method change and notify parent
+  const handleMethodChange = (methodId: string) => {
+    setSelectedMethodId(methodId);
+    const method = submissionMethods?.find(m => m.id === methodId);
+    onMethodChange?.(methodId, method?.method_label || null);
+  };
+
   // Auto-select default category when categories load
   useEffect(() => {
     if (categories && categories.length > 0 && !selectedCategoryId) {
       const defaultCat = categories.find(c => c.is_default) || categories[0];
-      setSelectedCategoryId(defaultCat.id);
+      handleCategoryChange(defaultCat.id);
     }
   }, [categories, selectedCategoryId]);
 
@@ -83,13 +110,14 @@ export const ServiceDetailsTab = ({
   useEffect(() => {
     if (submissionMethods && submissionMethods.length > 0 && !selectedMethodId) {
       const defaultMethod = submissionMethods.find(m => m.is_default) || submissionMethods[0];
-      setSelectedMethodId(defaultMethod.id);
+      handleMethodChange(defaultMethod.id);
     }
   }, [submissionMethods, selectedMethodId]);
 
   // Reset submission method when category changes
   useEffect(() => {
     setSelectedMethodId(null);
+    onMethodChange?.(null, null);
   }, [selectedCategoryId]);
 
   // Load templates when category is selected and mode is checklist
@@ -387,7 +415,7 @@ export const ServiceDetailsTab = ({
                       <Select
                         dir="rtl"
                         value={selectedCategoryId || ''}
-                        onValueChange={(value) => setSelectedCategoryId(value)}
+                        onValueChange={handleCategoryChange}
                         disabled={loadingCategories}
                       >
                         <SelectTrigger className="text-right">
@@ -414,7 +442,7 @@ export const ServiceDetailsTab = ({
                       <Select
                         dir="rtl"
                         value={selectedMethodId || ''}
-                        onValueChange={(value) => setSelectedMethodId(value)}
+                        onValueChange={handleMethodChange}
                         disabled={!selectedCategoryId || loadingMethods}
                       >
                         <SelectTrigger className="text-right">

@@ -44,8 +44,10 @@ interface RequestEditorDialogProps {
   hasBeenReviewed?: boolean;
 }
 
-const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRequestData => ({
-  requestTitle: `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי תכנון ${advisorType}`,
+const getDefaultData = (projectName: string, advisorType: string, categoryName?: string): AdvisorTypeRequestData => ({
+  requestTitle: categoryName 
+    ? `${projectName} – בקשה להצעת מחיר עבור ${categoryName}`
+    : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`,
   requestContent: `שלום,
 
 אנו מעוניינים לקבל הצעת מחיר עבור הפרויקט "${projectName}".
@@ -56,11 +58,15 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
   requestAttachments: [],
   hasBeenReviewed: false,
   
-  // Service details
-  serviceDetailsMode: 'free_text',
+  // Service details - default to checklist mode
+  serviceDetailsMode: 'checklist',
   serviceDetailsFreeText: '',
   serviceDetailsFile: undefined,
   serviceScopeItems: [],
+  selectedCategoryId: undefined,
+  selectedCategoryName: undefined,
+  selectedMethodId: undefined,
+  selectedMethodLabel: undefined,
   
   // Fee items
   feeItems: [],
@@ -70,7 +76,8 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
   paymentTerms: {
     milestone_payments: [],
     payment_term_type: 'net_30',
-    notes: ''
+    notes: '',
+    index_type: 'cpi'
   }
 });
 
@@ -1077,6 +1084,28 @@ export const RequestEditorDialog = ({
                   advisorType={advisorType}
                   projectId={projectId}
                   projectType={projectType}
+                  selectedCategoryId={formData.selectedCategoryId}
+                  selectedCategoryName={formData.selectedCategoryName}
+                  selectedMethodId={formData.selectedMethodId}
+                  selectedMethodLabel={formData.selectedMethodLabel}
+                  onCategoryChange={(categoryId, categoryName) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedCategoryId: categoryId || undefined,
+                      selectedCategoryName: categoryName || undefined,
+                      // Update request title with category name
+                      requestTitle: categoryName 
+                        ? `${projectName} – בקשה להצעת מחיר עבור ${categoryName}`
+                        : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`
+                    }));
+                  }}
+                  onMethodChange={(methodId, methodLabel) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedMethodId: methodId || undefined,
+                      selectedMethodLabel: methodLabel || undefined
+                    }));
+                  }}
                 />
               </TabsContent>
 
