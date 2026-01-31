@@ -209,6 +209,16 @@ export function useOrganization() {
       return false;
     }
     
+    // Check sessionStorage - user just completed onboarding in this session
+    if (typeof window !== 'undefined' && sessionStorage.getItem('onboarding_just_completed') === 'true') {
+      return false;
+    }
+    
+    // Still loading organization - don't redirect yet
+    if (loading) {
+      return false;
+    }
+    
     if (!organization) {
       return true;
     }

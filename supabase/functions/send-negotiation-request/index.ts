@@ -472,7 +472,22 @@ serve(async (req) => {
         });
       }
     } else {
-      console.warn("[Negotiation Request] No advisor email found, skipping notification");
+      console.warn("[Negotiation Request] No advisor email found, skipping email notification");
+      // Log missing email for debugging
+      await supabase.from("activity_log").insert({
+        actor_id: user.id,
+        actor_type: "system",
+        action: "negotiation_request_email_skipped",
+        entity_type: "proposal",
+        entity_id: proposal_id,
+        project_id,
+        meta: {
+          session_id: session.id,
+          reason: "no_advisor_email",
+          advisor_id: advisor.id,
+          advisor_user_id: advisor.user_id,
+        },
+      });
     }
 
     // Log activity

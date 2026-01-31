@@ -258,6 +258,8 @@ const OrganizationOnboarding = () => {
       if (success) {
         // Clear skip flag on successful completion
         localStorage.removeItem('onboarding_skipped');
+        // Mark as just completed to prevent redirect loop
+        sessionStorage.setItem('onboarding_just_completed', 'true');
         toast({
           title: 'הארגון נוצר בהצלחה!',
           description: 'ברוכים הבאים לניהוליסט'
