@@ -1,71 +1,232 @@
 
-# תיקון רוחב שדה אחוז ושינוי שם טאב
 
-## שינויים נדרשים
+# אבחון ותיקון 4 בעיות שזוהו על ידי הלקוח
 
-### 1. הרחבת שדה אחוז בטאב תשלום
-**קובץ:** `src/components/rfp/PaymentTermsTab.tsx`
+## סיכום הבעיות והפתרונות
 
-**הבעיה:** השדה של אחוז (%) חתוך - המספרים לא נראים במלואם
-**הפתרון:** הרחבת רוחב העמודה והשדה
-
-שינויים:
-- שורה 179: שינוי grid מ-`grid-cols-[1fr_80px_40px]` ל-`grid-cols-[1fr_100px_40px]`
-- שורה 193: שינוי grid מ-`grid-cols-[1fr_80px_40px]` ל-`grid-cols-[1fr_100px_40px]`
-- שורה 209: שינוי רוחב Input מ-`w-14` ל-`w-16`
-- שורה 231: שינוי grid מ-`grid-cols-[1fr_80px_40px]` ל-`grid-cols-[1fr_100px_40px]`
-
-### 2. שינוי שם טאב "ראשי" ל"מידע וקבצים"
-**קובץ:** `src/components/RequestEditorDialog.tsx`
-
-**הבעיה:** שם הטאב "ראשי" לא מתאר את התוכן בצורה ברורה
-**הפתרון:** שינוי לשם "מידע וקבצים" ואייקון מתאים
-
-שינויים:
-- שורה 816-819: 
-  - החלפת אייקון מ-`Home` ל-`FolderOpen`
-  - החלפת טקסט מ-"ראשי" ל-"מידע וקבצים"
+| # | בעיה | סיבת שורש | פתרון |
+|---|------|----------|-------|
+| 1 | הגדרת פרופיל ביזם - נדרש לעדכן שוב | `needsOnboarding()` מחזיר `true` כי `organization_id` לא נטען מהפרופיל | תיקון לוגיקת הבדיקה והוספת מנגנון fallback |
+| 2 | העלאת קבצים עד 10MB במקום 20MB | `FileUpload.tsx` משתמש ב-default של `10 * 1024 * 1024` | שינוי default ל-20MB |
+| 3 | סימני שאלה במייל ליועץ | בעיית encoding של הטקסט `advisor_type` מבסיס הנתונים | הוספת fallback עם UTF-8 encoding |
+| 4 | יועץ לא מקבל מייל על בקשה לתיקון הצעה (מו"מ) | אימייל נשלח! הבעיה כנראה בתיבה או spam | אימות והוספת logging מפורט |
 
 ---
 
-## קוד לפני ואחרי
+## פירוט הבעיות והפתרונות
 
-### PaymentTermsTab.tsx - רוחב grid
+### בעיה 1: הגדרת פרופיל ביזם נדרשת שוב
 
-**לפני:**
+**מה קורה?**
+אחרי שהיזם משלים את תהליך ה-onboarding ב-`OrganizationOnboarding.tsx`, הוא מופנה ל-Dashboard, אבל שם הוא שוב מופנה ל-onboarding.
+
+**סיבת השורש:**
+ב-`useOrganization.ts` שורה 202-217, הפונקציה `needsOnboarding()` בודקת:
 ```typescript
-<div className="grid grid-cols-[1fr_80px_40px] gap-2 ...">
-  <Input ... className="text-center h-8 w-14" />
+const needsOnboarding = (): boolean => {
+  if (!organization) {
+    return true;  // <-- אם organization לא נטען עדיין, מחזיר true!
+  }
+  return !organization.onboarding_completed_at && !organization.onboarding_skipped_at;
+};
 ```
 
-**אחרי:**
+**הבעיה:** 
+1. אחרי יצירת ארגון, ה-`organization` state לא מתעדכן מיד
+2. ה-`profile.organization_id` לא נטען מספיק מהר
+3. בין הרענון לטעינת הארגון, `needsOnboarding()` מחזיר `true` ושולח את המשתמש בחזרה
+
+**פתרון:**
+- הוספת בדיקה שממתינה לסיום loading לפני הפנייה
+- שימוש ב-`sessionStorage` לסמן שהמשתמש סיים onboarding בסשן הנוכחי
+- עדכון `useOrganization` לעשות refetch אחרי יצירת ארגון
+
+**קבצים לעדכון:**
+- `src/hooks/useOrganization.ts`
+- `src/pages/Dashboard.tsx`
+- `src/pages/OrganizationOnboarding.tsx`
+
+---
+
+### בעיה 2: העלאת קבצים מוגבלת ל-10MB במקום 20MB
+
+**מה קורה?**
+המשתמש לא יכול להעלות קבצים מעל 10MB למרות שרשום "עד 20MB".
+
+**סיבת השורש:**
+ב-`FileUpload.tsx` שורה 31-32:
 ```typescript
-<div className="grid grid-cols-[1fr_100px_40px] gap-2 ...">
-  <Input ... className="text-center h-8 w-16" />
+export function FileUpload({
+  maxSize = 10 * 1024 * 1024, // 10 MB  <-- כאן הבעיה!
 ```
 
-### RequestEditorDialog.tsx - שם טאב
-
-**לפני:**
-```tsx
-<TabsTrigger value="main" className="...">
-  <Home className="h-4 w-4" />
-  <span className="hidden sm:inline">ראשי</span>
-</TabsTrigger>
+למרות ש-`securityValidation.ts` מאפשר 20MB (שורה 139):
+```typescript
+const maxFileSize = 20 * 1024 * 1024; // 20MB per file
 ```
 
-**אחרי:**
+**פתרון:**
+שינוי ה-default ל-20MB ועדכון כל המקומות שמשתמשים ברכיב.
+
+**קבצים לעדכון:**
+- `src/components/FileUpload.tsx` - שינוי default מ-10MB ל-20MB
+- `src/components/negotiation/NegotiationDialog.tsx` - כבר משתמש ב-10MB, צריך עדכון
+
+---
+
+### בעיה 3: סימני שאלה במייל על הצעה ("ביועץ")
+
+**מה קורה?**
+כשהיזם מקבל מייל על הצעה חדשה, יש סימני שאלה במקום הטקסט "יועץ".
+
+**סיבת השורש:**
+ב-`notify-proposal-submitted/index.ts` שורות 88-99:
+```typescript
+let advisorType = 'יועץ';  // Fallback בעברית
+if (proposal.rfp_invite_id) {
+  const { data: rfpInvite } = await supabase
+    .from('rfp_invites')
+    .select('advisor_type')
+    .eq('id', proposal.rfp_invite_id)
+    .single();
+  if (rfpInvite?.advisor_type) {
+    advisorType = rfpInvite.advisor_type;  // ערך מבסיס הנתונים
+  }
+}
+```
+
+**אפשרויות:**
+1. הערך `advisor_type` בבסיס הנתונים מכיל תו פגום
+2. ה-email template לא מטפל נכון ב-UTF-8
+3. Resend חותך את התווים
+
+**בדיקת הטמפלייט:**
+ב-`proposal-submitted.tsx` שורה 37:
 ```tsx
-<TabsTrigger value="main" className="...">
-  <FolderOpen className="h-4 w-4" />
-  <span className="hidden sm:inline">מידע וקבצים</span>
-</TabsTrigger>
+<Text style={paragraph}>
+  קיבלת הצעת מחיר חדשה לפרויקט "{projectName}" מאת {advisorCompany} ({advisorType}).
+</Text>
+```
+
+**פתרון:**
+1. הוספת logging של הערך לפני שליחה
+2. וידוא שה-`advisor_type` מגיע עם encoding נכון
+3. ברירת מחדל אם הערך ריק או פגום
+
+**קבצים לעדכון:**
+- `supabase/functions/notify-proposal-submitted/index.ts`
+
+---
+
+### בעיה 4: יועץ לא מקבל מייל על בקשה לתיקון הצעה (מו"מ)
+
+**מה קורה?**
+כשהיזם מבקש מהיועץ לתקן את ההצעה (משא ומתן), היועץ לא מקבל מייל.
+
+**בדיקת הקוד:**
+ב-`send-negotiation-request/index.ts` שורות 386-476, **האימייל כן נשלח!**:
+```typescript
+// Send email to consultant (non-blocking)
+if (advisorEmail) {
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: "Billding <notifications@billding.ai>",
+      to: advisorEmail,
+      subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+      html: emailHtml,
+    });
+    console.log("[Negotiation Request] Email sent to:", advisorEmail);
+```
+
+**אפשרויות לבעיה:**
+1. האימייל הולך ל-spam
+2. `advisorProfile?.email` הוא `null` אז הלוגיקה לא נכנסת
+3. יש שגיאה שנתפסת ב-catch אבל לא מוצגת למשתמש
+
+**פתרון:**
+1. בדיקת לוגים ב-`activity_log` לאירועים:
+   - `negotiation_request_email_sent` - אם קיים, האימייל נשלח
+   - `negotiation_request_email_failed` - אם קיים, יש שגיאה
+2. הוספת התראה למשתמש אם שליחת האימייל נכשלת
+3. שיפור הלוגים
+
+**קבצים לעדכון:**
+- `supabase/functions/send-negotiation-request/index.ts` - שיפור logging
+
+---
+
+## סדר עדיפות למימוש
+
+| עדיפות | בעיה | סיבה |
+|--------|------|------|
+| 🔴 גבוהה | 2 - מגבלת 10MB | השפעה ישירה על UX, תיקון פשוט |
+| 🔴 גבוהה | 1 - Redirect loop | חווית משתמש שבורה לחלוטין |
+| 🟡 בינונית | 3 - סימני שאלה | בעיה ויזואלית במייל |
+| 🟡 בינונית | 4 - מייל מו"מ | דורש חקירה נוספת |
+
+---
+
+## שינויים טכניים
+
+### 1. FileUpload.tsx - הגדלת מגבלה ל-20MB
+```typescript
+// שורה 31-32
+export function FileUpload({
+  maxSize = 20 * 1024 * 1024, // 20 MB (במקום 10)
+```
+
+### 2. useOrganization.ts - מניעת Redirect מוקדם
+```typescript
+// הוספה בשורה ~70
+// Add session storage check for just-completed onboarding
+const justCompletedOnboarding = sessionStorage.getItem('onboarding_just_completed') === 'true';
+
+const needsOnboarding = (): boolean => {
+  if (!profile || (profile as any).role !== 'entrepreneur') {
+    return false;
+  }
+  
+  // User just completed onboarding in this session
+  if (justCompletedOnboarding) {
+    return false;
+  }
+  // ... rest of logic
+};
+```
+
+### 3. OrganizationOnboarding.tsx - סימון סיום onboarding
+```typescript
+// בתוך handleComplete, לפני navigate:
+sessionStorage.setItem('onboarding_just_completed', 'true');
+navigate('/profile', { replace: true });
+```
+
+### 4. notify-proposal-submitted - טיפול בencoding
+```typescript
+// שורה 88-99
+let advisorType = 'יועץ';
+if (proposal.rfp_invite_id) {
+  const { data: rfpInvite } = await supabase
+    .from('rfp_invites')
+    .select('advisor_type')
+    .eq('id', proposal.rfp_invite_id)
+    .single();
+  
+  // Validate the advisor_type is a valid string
+  if (rfpInvite?.advisor_type && typeof rfpInvite.advisor_type === 'string' && rfpInvite.advisor_type.trim()) {
+    advisorType = rfpInvite.advisor_type;
+  }
+  console.log('[Proposal Submitted] advisorType:', advisorType);
+}
 ```
 
 ---
 
-## תוצאה צפויה
+## בדיקות לאחר התיקון
 
-1. מספרי האחוזים יוצגו במלואם ללא חיתוך
-2. שם הטאב ישקף טוב יותר את תוכנו (כותרת, תיאור, קבצים מצורפים)
-3. אייקון התיקייה מתאים יותר לתוכן של מידע וקבצים
+1. ✅ בעיה 1: יצירת יזם חדש → השלמת onboarding → וידוא שלא מופנה שוב
+2. ✅ בעיה 2: העלאת קובץ של 15MB → וידוא שהעלאה מצליחה
+3. ✅ בעיה 3: שליחת הצעה → בדיקת מייל שאין בו סימני שאלה
+4. ✅ בעיה 4: שליחת בקשת מו"מ → בדיקת לוגים + קבלת מייל
+
