@@ -1088,7 +1088,7 @@ export const RequestEditorDialog = ({
                   selectedCategoryName={formData.selectedCategoryName}
                   selectedMethodId={formData.selectedMethodId}
                   selectedMethodLabel={formData.selectedMethodLabel}
-                  onCategoryChange={(categoryId, categoryName) => {
+                  onCategoryChange={(categoryId, categoryName, defaultIndexType) => {
                     setFormData(prev => ({
                       ...prev,
                       selectedCategoryId: categoryId || undefined,
@@ -1096,7 +1096,12 @@ export const RequestEditorDialog = ({
                       // Update request title with category name
                       requestTitle: categoryName 
                         ? `${projectName} – בקשה להצעת מחיר עבור ${categoryName}`
-                        : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`
+                        : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`,
+                      // Set index type from category default if provided
+                      paymentTerms: defaultIndexType ? {
+                        ...prev.paymentTerms,
+                        index_type: defaultIndexType as any
+                      } : prev.paymentTerms
                     }));
                   }}
                   onMethodChange={(methodId, methodLabel) => {
@@ -1126,6 +1131,8 @@ export const RequestEditorDialog = ({
                   paymentTerms={formData.paymentTerms || { milestone_payments: [], payment_term_type: 'net_30' }}
                   onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
                   advisorType={advisorType}
+                  categoryId={formData.selectedCategoryId}
+                  defaultIndexType={formData.paymentTerms?.index_type}
                 />
               </TabsContent>
             </div>

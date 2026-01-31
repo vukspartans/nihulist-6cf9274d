@@ -37,10 +37,10 @@
 | כותרת דינמית: `{פרויקט} – בקשה ל...` | ✅ מומש | עם callback `onCategoryChange` |
 | בחירת מדד בתשלום | ✅ מומש | `PaymentTermsTab.tsx` |
 | ערך מדד בסיס + חודש | ✅ מומש | שדות קלט |
-| **פערים שנמצאו** |
-| שורות סעיפים לא מסוננות לפי `submission_method_id` | ⚠️ חלקי | הקוד מסנן לפי advisor רק |
-| טעינת אבני דרך מתבנית לפי `category_id` ב-`PaymentTermsTab` | ⚠️ חסר | נטען לפי advisor בלבד |
-| מדד ברירת מחדל מהקטגוריה לא מועבר ל-`PaymentTermsTab` | ⚠️ חסר | צריך להעביר מ-`ServiceDetailsTab` |
+| **פערים שתוקנו** |
+| שורות סעיפים מסוננות לפי `submission_method_id` | ✅ תוקן | `useFeeItemTemplates()` עם פרמטר נוסף |
+| טעינת אבני דרך מתבנית לפי `category_id` | ✅ תוקן | `PaymentTermsTab.tsx` עם prop `categoryId` |
+| מדד ברירת מחדל מהקטגוריה מועבר ל-`PaymentTermsTab` | ✅ תוקן | `onCategoryChange` מעביר `defaultIndexType` |
 
 ---
 

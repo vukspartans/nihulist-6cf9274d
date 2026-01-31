@@ -69,15 +69,18 @@ export default function FeeTemplateSubmissionMethods() {
   const updateMethodMutation = useUpdateSubmissionMethod();
   const deleteMethodMutation = useDeleteSubmissionMethod();
 
-  // Fetch fee items for selected method
-  const { data: feeItems, isLoading: itemsLoading } = useFeeItemTemplates(decodedAdvisorType);
+  // Set first method as selected if none selected (must be defined before use in hook)
+  const activeMethodId = selectedMethodId || methods?.[0]?.id;
+
+  // Fetch fee items for selected method (filter by submission_method_id when available)
+  const { data: feeItems, isLoading: itemsLoading } = useFeeItemTemplates(
+    decodedAdvisorType,
+    activeMethodId || undefined
+  );
   const deleteItemMutation = useDeleteFeeItemTemplate();
 
-  // Filter items by selected method (for now, filter by advisor_specialty)
-  // TODO: When items have submission_method_id, filter by that
-  const filteredItems = feeItems?.filter((item) => 
-    item.advisor_specialty === decodedAdvisorType
-  ) || [];
+  // Items are now pre-filtered by the hook, no additional filtering needed
+  const filteredItems = feeItems || [];
 
   const handleBack = () => {
     navigate(
@@ -108,9 +111,6 @@ export default function FeeTemplateSubmissionMethods() {
       });
     }
   };
-
-  // Set first method as selected if none selected
-  const activeMethodId = selectedMethodId || methods?.[0]?.id;
 
   return (
     <AdminLayout>

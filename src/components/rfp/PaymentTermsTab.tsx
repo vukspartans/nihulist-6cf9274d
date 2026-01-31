@@ -15,6 +15,7 @@ interface PaymentTermsTabProps {
   onPaymentTermsChange: (terms: PaymentTerms) => void;
   advisorType?: string;
   defaultIndexType?: string;
+  categoryId?: string;
 }
 
 const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
@@ -34,7 +35,8 @@ export const PaymentTermsTab = ({
   paymentTerms,
   onPaymentTermsChange,
   advisorType,
-  defaultIndexType
+  defaultIndexType,
+  categoryId
 }: PaymentTermsTabProps) => {
   const { toast } = useToast();
   const [loadingTemplate, setLoadingTemplate] = useState(false);
@@ -90,8 +92,11 @@ export const PaymentTermsTab = ({
         .eq('is_active', true)
         .order('display_order');
       
-      // Filter by advisor specialty if provided
-      if (advisorType) {
+      // Filter by category_id first if provided (most specific)
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      } else if (advisorType) {
+        // Fallback to advisor specialty filter
         query = query.or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`);
       }
       

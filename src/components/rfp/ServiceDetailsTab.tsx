@@ -32,7 +32,7 @@ interface ServiceDetailsTabProps {
   selectedCategoryName?: string;
   selectedMethodId?: string;
   selectedMethodLabel?: string;
-  onCategoryChange?: (categoryId: string | null, categoryName: string | null) => void;
+  onCategoryChange?: (categoryId: string | null, categoryName: string | null, defaultIndexType: string | null) => void;
   onMethodChange?: (methodId: string | null, methodLabel: string | null) => void;
 }
 
@@ -84,11 +84,11 @@ export const ServiceDetailsTab = ({
       .map(item => item.description)
   ];
 
-  // Handle category change and notify parent
+  // Handle category change and notify parent (includes default index type)
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
     const category = categories?.find(c => c.id === categoryId);
-    onCategoryChange?.(categoryId, category?.name || null);
+    onCategoryChange?.(categoryId, category?.name || null, category?.default_index_type || null);
   };
 
   // Handle method change and notify parent
