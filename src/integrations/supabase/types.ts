@@ -449,41 +449,71 @@ export type Database = {
       default_fee_item_templates: {
         Row: {
           advisor_specialty: string
+          category_id: string | null
           charge_type: string | null
           created_at: string | null
+          created_by_user_id: string | null
           default_quantity: number | null
           description: string
           display_order: number
           id: string
           is_optional: boolean | null
+          is_user_template: boolean | null
+          project_type: string | null
+          submission_method_id: string | null
           unit: string
           updated_at: string | null
         }
         Insert: {
           advisor_specialty: string
+          category_id?: string | null
           charge_type?: string | null
           created_at?: string | null
+          created_by_user_id?: string | null
           default_quantity?: number | null
           description: string
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          is_user_template?: boolean | null
+          project_type?: string | null
+          submission_method_id?: string | null
           unit?: string
           updated_at?: string | null
         }
         Update: {
           advisor_specialty?: string
+          category_id?: string | null
           charge_type?: string | null
           created_at?: string | null
+          created_by_user_id?: string | null
           default_quantity?: number | null
           description?: string
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          is_user_template?: boolean | null
+          project_type?: string | null
+          submission_method_id?: string | null
           unit?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "default_fee_item_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "default_fee_item_templates_submission_method_id_fkey"
+            columns: ["submission_method_id"]
+            isOneToOne: false
+            referencedRelation: "fee_submission_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       default_service_scope_templates: {
         Row: {
@@ -517,6 +547,83 @@ export type Database = {
           id?: string
           is_optional?: boolean | null
           task_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      fee_submission_methods: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          method_label: string
+          method_type: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_label: string
+          method_type: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_label?: string
+          method_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_submission_methods_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_template_categories: {
+        Row: {
+          advisor_specialty: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          project_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_specialty: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_specialty?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          project_type?: string | null
           updated_at?: string | null
         }
         Relationships: []
