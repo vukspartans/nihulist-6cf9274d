@@ -94,6 +94,10 @@ export const RequestEditorDialog = ({
 }: RequestEditorDialogProps) => {
   const { toast } = useToast();
   const { saveDraft, loadDraft, saving } = useRFPDraft(projectId);
+  
+  // Session storage key for persisting dialog state across tab switches
+  const DIALOG_STORAGE_KEY = `request-editor-${projectId}-${advisorType}`;
+  
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [canAutoClose, setCanAutoClose] = useState(true);
@@ -103,6 +107,7 @@ export const RequestEditorDialog = ({
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [restoredFromSession, setRestoredFromSession] = useState(false);
   
   // Project files state
   interface ProjectFile {
@@ -181,10 +186,73 @@ export const RequestEditorDialog = ({
   };
   
   const defaultData = getDefaultData(projectName, advisorType);
-  const [formData, setFormData] = useState<AdvisorTypeRequestData>({
-    ...defaultData,
-    ...initialData
+  const [formData, setFormData] = useState<AdvisorTypeRequestData>(() => {
+    // Try to restore from sessionStorage on initial mount
+    try {
+      const saved = sessionStorage.getItem(DIALOG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) {
+          console.log('[RequestEditor] Restored form data from sessionStorage');
+          return parsed.formData;
+        }
+      }
+    } catch (e) {
+      console.error('[RequestEditor] Error parsing sessionStorage:', e);
+    }
+    return {
+      ...defaultData,
+      ...initialData
+    };
   });
+
+  // Restore dialog open state from sessionStorage (defense in depth for tab switches)
+  useEffect(() => {
+    if (restoredFromSession) return;
+    
+    try {
+      const saved = sessionStorage.getItem(DIALOG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.isOpen) {
+          console.log('[RequestEditor] Restoring open state from sessionStorage');
+          setIsOpen(true);
+          setActiveTab(parsed.activeTab || 'services');
+          if (parsed.formData) {
+            setFormData(parsed.formData);
+          }
+          setRestoredFromSession(true);
+        }
+      }
+    } catch (e) {
+      console.error('[RequestEditor] Error restoring from sessionStorage:', e);
+    }
+  }, [DIALOG_STORAGE_KEY, restoredFromSession]);
+
+  // Save dialog state to sessionStorage whenever it changes (for tab-switch persistence)
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        sessionStorage.setItem(DIALOG_STORAGE_KEY, JSON.stringify({
+          formData,
+          isOpen: true,
+          activeTab
+        }));
+      } catch (e) {
+        console.error('[RequestEditor] Error saving to sessionStorage:', e);
+      }
+    }
+  }, [formData, isOpen, activeTab, DIALOG_STORAGE_KEY]);
+
+  // Clear sessionStorage when dialog is explicitly closed
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Clear session storage on explicit close
+      sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+      setRestoredFromSession(false);
+    }
+  };
 
   // Initialize form data and load draft when dialog opens
   useEffect(() => {
@@ -652,6 +720,10 @@ export const RequestEditorDialog = ({
     const saved = await saveDraft(advisorType, dataToSave);
     
     if (saved) {
+      // Clear sessionStorage on successful save
+      sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+      setRestoredFromSession(false);
+      
       // Then update parent state
       onSave(dataToSave);
       setIsOpen(false);
@@ -663,6 +735,10 @@ export const RequestEditorDialog = ({
   };
 
   const handleCancel = () => {
+    // Clear sessionStorage on cancel
+    sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+    setRestoredFromSession(false);
+    
     setFormData({
       ...defaultData,
       ...initialData
@@ -677,6 +753,9 @@ export const RequestEditorDialog = ({
       open={isOpen} 
       onOpenChange={(open) => {
         if (!open && canAutoClose) {
+          // Clear sessionStorage when dialog is closed via X or outside click
+          sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+          setRestoredFromSession(false);
           setIsOpen(false);
         } else if (open) {
           setIsOpen(true);
