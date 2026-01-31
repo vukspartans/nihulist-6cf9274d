@@ -34,14 +34,17 @@ import { MilestoneTaskLinker } from "./MilestoneTaskLinker";
 interface EditMilestoneTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  milestoneId: string | null;
+  milestoneId?: string | null;
+  template?: { id: string; [key: string]: any } | null;
 }
 
 export function EditMilestoneTemplateDialog({
   open,
   onOpenChange,
-  milestoneId,
+  milestoneId: propMilestoneId,
+  template,
 }: EditMilestoneTemplateDialogProps) {
+  const milestoneId = propMilestoneId || template?.id || null;
   const t = adminTranslations.payments.milestones;
   const [activeTab, setActiveTab] = useState("basic");
 

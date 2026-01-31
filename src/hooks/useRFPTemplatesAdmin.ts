@@ -24,6 +24,8 @@ export interface ServiceScopeTemplate {
   default_fee_category: string | null;
   is_optional: boolean;
   display_order: number;
+  category_id: string | null;
+  project_type: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +50,8 @@ export interface CreateServiceScopeTemplateInput {
   default_fee_category?: string;
   is_optional?: boolean;
   display_order?: number;
+  category_id?: string;
+  project_type?: string;
 }
 
 export interface UpdateServiceScopeTemplateInput extends Partial<CreateServiceScopeTemplateInput> {
@@ -212,16 +216,18 @@ export function useReorderFeeItemTemplates() {
 
 // ============ SERVICE SCOPE TEMPLATES HOOKS ============
 
-export function useServiceScopeTemplates(advisorSpecialty?: string) {
+export function useServiceScopeTemplates(advisorSpecialty?: string, categoryId?: string) {
   return useQuery({
-    queryKey: [SERVICE_SCOPE_QUERY_KEY, advisorSpecialty],
+    queryKey: [SERVICE_SCOPE_QUERY_KEY, advisorSpecialty, categoryId],
     queryFn: async () => {
       let query = supabase
         .from("default_service_scope_templates")
         .select("*")
         .order("display_order", { ascending: true });
 
-      if (advisorSpecialty) {
+      if (categoryId) {
+        query = query.eq("category_id", categoryId);
+      } else if (advisorSpecialty) {
         query = query.eq("advisor_specialty", advisorSpecialty);
       }
 

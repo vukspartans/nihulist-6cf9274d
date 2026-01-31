@@ -518,38 +518,52 @@ export type Database = {
       default_service_scope_templates: {
         Row: {
           advisor_specialty: string
+          category_id: string | null
           created_at: string | null
           created_by: string | null
           default_fee_category: string | null
           display_order: number
           id: string
           is_optional: boolean | null
+          project_type: string | null
           task_name: string
           updated_at: string | null
         }
         Insert: {
           advisor_specialty: string
+          category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_fee_category?: string | null
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          project_type?: string | null
           task_name: string
           updated_at?: string | null
         }
         Update: {
           advisor_specialty?: string
+          category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_fee_category?: string | null
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          project_type?: string | null
           task_name?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "default_service_scope_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fee_submission_methods: {
         Row: {
@@ -819,6 +833,7 @@ export type Database = {
       milestone_templates: {
         Row: {
           advisor_specialty: string | null
+          category_id: string | null
           created_at: string
           currency: string | null
           description: string | null
@@ -837,6 +852,7 @@ export type Database = {
         }
         Insert: {
           advisor_specialty?: string | null
+          category_id?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
@@ -855,6 +871,7 @@ export type Database = {
         }
         Update: {
           advisor_specialty?: string | null
+          category_id?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
@@ -872,6 +889,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "milestone_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "milestone_templates_municipality_id_fkey"
             columns: ["municipality_id"]

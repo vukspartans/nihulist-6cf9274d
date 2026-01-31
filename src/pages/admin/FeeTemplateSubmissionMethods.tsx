@@ -13,9 +13,11 @@ import {
   useUpdateSubmissionMethod,
   useDeleteSubmissionMethod,
 } from "@/hooks/useFeeTemplateHierarchy";
-import { useFeeItemTemplates, useCreateFeeItemTemplate, useDeleteFeeItemTemplate } from "@/hooks/useRFPTemplatesAdmin";
+import { useFeeItemTemplates, useDeleteFeeItemTemplate } from "@/hooks/useRFPTemplatesAdmin";
 import { CreateSubmissionMethodDialog } from "@/components/admin/CreateSubmissionMethodDialog";
 import { CreateFeeItemTemplateDialog } from "@/components/admin/CreateFeeItemTemplateDialog";
+import { CategoryServicesTab } from "@/components/admin/CategoryServicesTab";
+import { CategoryMilestonesTab } from "@/components/admin/CategoryMilestonesTab";
 import { METHOD_TYPE_LABELS } from "@/types/feeTemplateHierarchy";
 import {
   Table,
@@ -25,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Star, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Star, Pencil, FileText, Briefcase, Milestone } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +54,7 @@ export default function FeeTemplateSubmissionMethods() {
   const [deleteMethodId, setDeleteMethodId] = useState<string | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
+  const [contentTab, setContentTab] = useState<string>("fee-items");
 
   // Fetch category details
   const { data: categories } = useFeeTemplateCategories(
@@ -68,7 +71,6 @@ export default function FeeTemplateSubmissionMethods() {
 
   // Fetch fee items for selected method
   const { data: feeItems, isLoading: itemsLoading } = useFeeItemTemplates(decodedAdvisorType);
-  const createItemMutation = useCreateFeeItemTemplate();
   const deleteItemMutation = useDeleteFeeItemTemplate();
 
   // Filter items by selected method (for now, filter by advisor_specialty)
@@ -145,7 +147,7 @@ export default function FeeTemplateSubmissionMethods() {
           </div>
         </div>
 
-        {/* Methods Tabs */}
+        {/* Methods Tabs (Submission Methods) */}
         {methodsLoading ? (
           <Skeleton className="h-48" />
         ) : methods && methods.length > 0 ? (
@@ -201,75 +203,126 @@ export default function FeeTemplateSubmissionMethods() {
 
             {methods.map((method) => (
               <TabsContent key={method.id} value={method.id} className="space-y-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg">שורות סעיפים</CardTitle>
-                    <Button
-                      size="sm"
-                      onClick={() => setCreateItemDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      הוסף שורה
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    {itemsLoading ? (
-                      <Skeleton className="h-32" />
-                    ) : filteredItems.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-right">תיאור</TableHead>
-                            <TableHead className="text-right">יחידה</TableHead>
-                            <TableHead className="text-right">כמות ברירת מחדל</TableHead>
-                            <TableHead className="text-right">סוג חיוב</TableHead>
-                            <TableHead className="text-right">אופציונלי</TableHead>
-                            <TableHead className="w-24"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-medium">
-                                {item.description}
-                              </TableCell>
-                              <TableCell>{item.unit}</TableCell>
-                              <TableCell>{item.default_quantity || "-"}</TableCell>
-                              <TableCell>{item.charge_type || "-"}</TableCell>
-                              <TableCell>
-                                {item.is_optional ? (
-                                  <Badge variant="secondary">אופציונלי</Badge>
-                                ) : (
-                                  <Badge variant="default">חובה</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive"
-                                    onClick={() => setDeleteItemId(item.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>אין שורות סעיפים. הוסף שורה ראשונה כדי להתחיל.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* Content Tabs: Fee Items, Services, Milestones */}
+                <Tabs value={contentTab} onValueChange={setContentTab}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="fee-items" className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      שורות סעיפים
+                    </TabsTrigger>
+                    <TabsTrigger value="services" className="gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      שירותים
+                    </TabsTrigger>
+                    <TabsTrigger value="milestones" className="gap-2">
+                      <Milestone className="h-4 w-4" />
+                      אבני דרך
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Fee Items Tab */}
+                  <TabsContent value="fee-items">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-lg">שורות סעיפים</CardTitle>
+                        <Button
+                          size="sm"
+                          onClick={() => setCreateItemDialogOpen(true)}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          הוסף שורה
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        {itemsLoading ? (
+                          <Skeleton className="h-32" />
+                        ) : filteredItems.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-right">תיאור</TableHead>
+                                <TableHead className="text-right">יחידה</TableHead>
+                                <TableHead className="text-right">כמות ברירת מחדל</TableHead>
+                                <TableHead className="text-right">סוג חיוב</TableHead>
+                                <TableHead className="text-right">אופציונלי</TableHead>
+                                <TableHead className="w-24"></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="font-medium">
+                                    {item.description}
+                                  </TableCell>
+                                  <TableCell>{item.unit}</TableCell>
+                                  <TableCell>{item.default_quantity || "-"}</TableCell>
+                                  <TableCell>{item.charge_type || "-"}</TableCell>
+                                  <TableCell>
+                                    {item.is_optional ? (
+                                      <Badge variant="secondary">אופציונלי</Badge>
+                                    ) : (
+                                      <Badge variant="default">חובה</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Button variant="ghost" size="icon">
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive"
+                                        onClick={() => setDeleteItemId(item.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <p>אין שורות סעיפים. הוסף שורה ראשונה כדי להתחיל.</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Services Tab */}
+                  <TabsContent value="services">
+                    <Card>
+                      <CardContent className="pt-6">
+                        {categoryId && (
+                          <CategoryServicesTab
+                            categoryId={categoryId}
+                            advisorSpecialty={decodedAdvisorType}
+                            projectType={decodedProjectType}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Milestones Tab */}
+                  <TabsContent value="milestones">
+                    <Card>
+                      <CardContent className="pt-6">
+                        {categoryId && (
+                          <CategoryMilestonesTab
+                            categoryId={categoryId}
+                            advisorSpecialty={decodedAdvisorType}
+                            projectType={decodedProjectType}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
             ))}
           </Tabs>
