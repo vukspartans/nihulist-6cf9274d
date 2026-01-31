@@ -1894,12 +1894,15 @@ export type Database = {
           description: string | null
           display_order: number | null
           duration_days: number | null
+          hierarchy_level: number | null
+          hierarchy_path: string | null
           id: string
           is_blocked: boolean | null
           is_milestone: boolean | null
           is_payment_critical: boolean | null
           name: string
           notes: string | null
+          parent_task_id: string | null
           payment_milestone_id: string | null
           phase: string | null
           planned_end_date: string | null
@@ -1910,6 +1913,7 @@ export type Database = {
           status: string
           template_id: string | null
           updated_at: string
+          wbs_code: string | null
         }
         Insert: {
           actual_end_date?: string | null
@@ -1922,12 +1926,15 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           duration_days?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
           is_payment_critical?: boolean | null
           name: string
           notes?: string | null
+          parent_task_id?: string | null
           payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
@@ -1938,6 +1945,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Update: {
           actual_end_date?: string | null
@@ -1950,12 +1958,15 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           duration_days?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
           is_payment_critical?: boolean | null
           name?: string
           notes?: string | null
+          parent_task_id?: string | null
           payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
@@ -1966,6 +1977,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Relationships: [
           {
@@ -1973,6 +1985,13 @@ export type Database = {
             columns: ["assigned_advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -2946,6 +2965,8 @@ export type Database = {
           depends_on_template_id: string | null
           description: string | null
           display_order: number | null
+          hierarchy_level: number | null
+          hierarchy_path: string | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
@@ -2954,10 +2975,12 @@ export type Database = {
           licensing_phase_id: string | null
           municipality_id: string | null
           name: string
+          parent_template_id: string | null
           phase: string | null
           project_type: string
           template_group_id: string | null
           updated_at: string
+          wbs_code: string | null
         }
         Insert: {
           advisor_specialty?: string | null
@@ -2967,6 +2990,8 @@ export type Database = {
           depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
@@ -2975,10 +3000,12 @@ export type Database = {
           licensing_phase_id?: string | null
           municipality_id?: string | null
           name: string
+          parent_template_id?: string | null
           phase?: string | null
           project_type: string
           template_group_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Update: {
           advisor_specialty?: string | null
@@ -2988,6 +3015,8 @@ export type Database = {
           depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
@@ -2996,10 +3025,12 @@ export type Database = {
           licensing_phase_id?: string | null
           municipality_id?: string | null
           name?: string
+          parent_template_id?: string | null
           phase?: string | null
           project_type?: string
           template_group_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Relationships: [
           {
@@ -3021,6 +3052,55 @@ export type Database = {
             columns: ["municipality_id"]
             isOneToOne: false
             referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_parent_template_id_fkey"
+            columns: ["parent_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_dependencies: {
+        Row: {
+          created_at: string | null
+          dependency_type: string
+          depends_on_template_id: string
+          id: string
+          lag_days: number | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_template_id: string
+          id?: string
+          lag_days?: number | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_template_id?: string
+          id?: string
+          lag_days?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_dependencies_depends_on_template_id_fkey"
+            columns: ["depends_on_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_dependencies_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
             referencedColumns: ["id"]
           },
         ]

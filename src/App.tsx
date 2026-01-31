@@ -48,6 +48,7 @@ import FeeTemplateCategories from "./pages/admin/FeeTemplateCategories";
 import FeeTemplateSubmissionMethods from "./pages/admin/FeeTemplateSubmissionMethods";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
+import LicensingManagement from "./pages/admin/LicensingManagement";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
@@ -246,6 +247,7 @@ const AppContent = () => {
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
             <Route path="/heyadmin/municipalities" element={<AdminRoute><MunicipalitiesManagement /></AdminRoute>} />
             <Route path="/heyadmin/licensing-phases" element={<AdminRoute><LicensingPhasesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/licensing" element={<AdminRoute><LicensingManagement /></AdminRoute>} />
             <Route path="/heyadmin/task-templates" element={<AdminRoute><TaskTemplatesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-categories" element={<AdminRoute><PaymentCategoriesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-statuses" element={<AdminRoute><PaymentStatusesManagement /></AdminRoute>} />
