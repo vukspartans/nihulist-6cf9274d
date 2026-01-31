@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2, Database, FolderOpen, Download, ExternalLink } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, List, Coins, CreditCard, Wand2, Edit2, Database, FolderOpen, Download, ExternalLink } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -814,8 +814,8 @@ export const RequestEditorDialog = ({
               <span className="hidden sm:inline">תשלום</span>
             </TabsTrigger>
             <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">ראשי</span>
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">מידע וקבצים</span>
             </TabsTrigger>
           </TabsList>
 

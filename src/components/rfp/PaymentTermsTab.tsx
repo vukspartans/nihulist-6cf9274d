@@ -176,7 +176,7 @@ export const PaymentTermsTab = ({
         
         <div className="border rounded-lg overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-[1fr_80px_40px] gap-2 p-2 bg-muted/50 border-b text-sm font-medium">
+          <div className="grid grid-cols-[1fr_100px_40px] gap-2 p-2 bg-muted/50 border-b text-sm font-medium">
             <div className="text-right">אבן דרך</div>
             <div className="text-center">אחוז</div>
             <div></div>
@@ -190,7 +190,7 @@ export const PaymentTermsTab = ({
           ) : (
             <div className="divide-y">
               {milestones.map((milestone, index) => (
-                <div key={index} className="grid grid-cols-[1fr_80px_40px] gap-2 p-2 items-center">
+                <div key={index} className="grid grid-cols-[1fr_100px_40px] gap-2 p-2 items-center">
                   <Input
                     value={milestone.trigger || milestone.description || ''}
                     onChange={(e) => {
@@ -206,7 +206,7 @@ export const PaymentTermsTab = ({
                       type="number"
                       value={milestone.percentage || ''}
                       onChange={(e) => updateMilestone(index, 'percentage', Number(e.target.value) || 0)}
-                      className="text-center h-8 w-14"
+                      className="text-center h-8 w-16"
                       min={0}
                       max={100}
                       dir="ltr"
@@ -228,7 +228,7 @@ export const PaymentTermsTab = ({
           )}
           
           {/* Footer with Add Button and Total */}
-          <div className="grid grid-cols-[1fr_80px_40px] gap-2 p-2 bg-muted/30 border-t items-center">
+          <div className="grid grid-cols-[1fr_100px_40px] gap-2 p-2 bg-muted/30 border-t items-center">
             <Button
               type="button"
               variant="ghost"
