@@ -1,191 +1,141 @@
 
 
-# הוספת מדד (Index Type) לתבניות שכר טרחה
+# סקירת מימוש - מערכת תבניות שכר טרחה היררכית
 
-## סיכום הבקשה
+## סיכום מנהלים
 
-הלקוח מבקש להוסיף **מדד הצמדה** לכל קטגוריית תבנית (Level 3 - `fee_template_categories`). המדד יקבע כיצד סכומים יוצמדו לאורך זמן.
-
-### רשימת המדדים הנדרשים:
-| מדד | קוד מוצע |
-|-----|----------|
-| ללא הצמדה | `none` |
-| מדד המחירים לצרכן | `cpi` |
-| מדד שכר העבודה בענף הבנייה | `construction_wage` |
-| מדד עלות שעת עבודה | `hourly_labor_cost` |
-| מדד תשומות הבנייה למגורים | `residential_construction_input` |
-| מדד תשומות הבנייה שלא למגורים | `non_residential_construction_input` |
-
-### התנהגות ברירת מחדל:
-- לכל קטגוריית תבנית יש לבחור מדד ברירת מחדל
-- ערך המדד הוא מדד החודש הנוכחי (לא מדד בסיס קבוע)
+סקרתי את כל המערכת לעומק ומצאתי שהיא **כמעט מלאה**, עם מספר פערים קטנים שדורשים השלמה.
 
 ---
 
-## מצב נוכחי
+## טבלת השוואה: דרישות מול מימוש
 
-| רכיב | מצב |
-|------|------|
-| טבלת `fee_template_categories` | קיימת, ללא שדה מדד |
-| בחירת מדד בקטגוריה | **לא קיים** |
-| ממשק ניהול | קיים ב-`FeeTemplateCategories.tsx` |
+| דרישה | סטטוס | הערות |
+|--------|--------|--------|
+| **היררכיית צד מנהל** |
+| Level 1: רשימת סוגי יועצים | ✅ מומש | `FeeTemplatesHierarchy.tsx` |
+| Level 2: סוגי פרויקטים (תמ"א 38/1, 38/2...) | ✅ מומש | `FeeTemplatesByProject.tsx` |
+| Level 3: קטגוריות (רישוי, הכנת מצגת...) | ✅ מומש | `FeeTemplateCategories.tsx` |
+| Level 3: כפתור "ברירת מחדל" | ✅ מומש | `is_default` switch בכרטיס |
+| Level 4: שיטות הגשה (פאושלי, כמותי, שעתי) | ✅ מומש | `FeeTemplateSubmissionMethods.tsx` |
+| Level 4: כפתור "ברירת מחדל" לשיטה | ✅ מומש | כפתור toggle בממשק |
+| Level 5: שורות סעיפים | ✅ מומש | טבלת Fee Items |
+| **שירותים ואבני דרך** |
+| שירותים תחת קטגוריה | ✅ מומש | `CategoryServicesTab.tsx` |
+| אבני דרך תחת קטגוריה | ✅ מומש | `CategoryMilestonesTab.tsx` |
+| DB: `category_id` על services/milestones | ✅ מומש | מיגרציה קיימת |
+| **מדד (Index)** |
+| רשימת 6 סוגי מדדים | ✅ מומש | `indexTypes.ts` |
+| מדד ברירת מחדל לכל קטגוריה | ✅ מומש | `default_index_type` בDB |
+| תצוגת מדד בכרטיס קטגוריה | ✅ מומש | עם אייקון TrendingUp |
+| עריכת מדד קטגוריה | ✅ מומש | `EditFeeCategoryDialog.tsx` |
+| **צד יזם - עריכת בקשה** |
+| סדר טאבים: שירותים → שכ"ט → תשלום → ראשי | ✅ מומש | בקוד |
+| ברירת מחדל "רשימת שירותים" (checklist) | ✅ מומש | בקוד |
+| בחירת תבנית (קטגוריה) + שיטת הגשה | ✅ מומש | `ServiceDetailsTab.tsx` |
+| טעינה אוטומטית של שירותים לפי קטגוריה | ✅ מומש | `loadTemplatesForCategory()` |
+| כותרת דינמית: `{פרויקט} – בקשה ל...` | ✅ מומש | עם callback `onCategoryChange` |
+| בחירת מדד בתשלום | ✅ מומש | `PaymentTermsTab.tsx` |
+| ערך מדד בסיס + חודש | ✅ מומש | שדות קלט |
+| **פערים שנמצאו** |
+| שורות סעיפים לא מסוננות לפי `submission_method_id` | ⚠️ חלקי | הקוד מסנן לפי advisor רק |
+| טעינת אבני דרך מתבנית לפי `category_id` ב-`PaymentTermsTab` | ⚠️ חסר | נטען לפי advisor בלבד |
+| מדד ברירת מחדל מהקטגוריה לא מועבר ל-`PaymentTermsTab` | ⚠️ חסר | צריך להעביר מ-`ServiceDetailsTab` |
 
 ---
 
-## שינויים נדרשים
+## פערים ותיקונים נדרשים
 
-### 1. מסד נתונים - מיגרציה
+### 1. סינון שורות סעיפים לפי `submission_method_id`
 
-```sql
--- Add index_type column to fee_template_categories
-ALTER TABLE public.fee_template_categories
-  ADD COLUMN IF NOT EXISTS default_index_type TEXT DEFAULT 'cpi';
-
--- Add constraint for valid index types
-ALTER TABLE public.fee_template_categories
-  ADD CONSTRAINT valid_index_type CHECK (
-    default_index_type IN (
-      'none',
-      'cpi',
-      'construction_wage',
-      'hourly_labor_cost',
-      'residential_construction_input',
-      'non_residential_construction_input'
-    )
-  );
-
--- Add comment for documentation
-COMMENT ON COLUMN public.fee_template_categories.default_index_type IS 
-  'Default index type for price linkage: none, cpi, construction_wage, hourly_labor_cost, residential_construction_input, non_residential_construction_input';
+**מצב נוכחי:** בדף `FeeTemplateSubmissionMethods.tsx` (שורה 73-80):
+```typescript
+const { data: feeItems } = useFeeItemTemplates(decodedAdvisorType);
+// TODO: When items have submission_method_id, filter by that
+const filteredItems = feeItems?.filter((item) => 
+  item.advisor_specialty === decodedAdvisorType
+) || [];
 ```
 
----
+**נדרש:** סינון לפי `submission_method_id` במקום `advisor_specialty` בלבד.
 
-### 2. קבועים - קובץ חדש
-
-**קובץ: `src/constants/indexTypes.ts`**
-
-```typescript
-export const INDEX_TYPES = [
-  { value: 'none', label: 'ללא הצמדה' },
-  { value: 'cpi', label: 'מדד המחירים לצרכן' },
-  { value: 'construction_wage', label: 'מדד שכר העבודה בענף הבנייה' },
-  { value: 'hourly_labor_cost', label: 'מדד עלות שעת עבודה' },
-  { value: 'residential_construction_input', label: 'מדד תשומות הבנייה למגורים' },
-  { value: 'non_residential_construction_input', label: 'מדד תשומות הבנייה שלא למגורים' },
-] as const;
-
-export type IndexType = typeof INDEX_TYPES[number]['value'];
-
-export const DEFAULT_INDEX_TYPE: IndexType = 'cpi';
-```
+**קבצים לעדכון:**
+- `src/hooks/useRFPTemplatesAdmin.ts` - הוספת פרמטר `submissionMethodId`
+- `src/pages/admin/FeeTemplateSubmissionMethods.tsx` - העברת `activeMethodId`
 
 ---
 
-### 3. טיפוסים - עדכון
+### 2. טעינת אבני דרך מתבנית לפי קטגוריה
 
-**קובץ: `src/types/feeTemplateHierarchy.ts`**
-
-הוספת שדה לממשק:
-
+**מצב נוכחי:** `PaymentTermsTab.tsx` שורות 84-98 טוען אבני דרך לפי `advisor_specialty` בלבד:
 ```typescript
-export interface FeeTemplateCategory {
-  // ... existing fields
-  default_index_type: 'none' | 'cpi' | 'construction_wage' | 'hourly_labor_cost' | 
-                      'residential_construction_input' | 'non_residential_construction_input';
-}
-
-export interface CreateFeeCategoryInput {
-  // ... existing fields
-  default_index_type?: string;
+if (advisorType) {
+  query = query.or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`);
 }
 ```
 
----
+**נדרש:** הוספת פרמטר `categoryId` וטעינה לפיו.
 
-### 4. ממשק - דף קטגוריות
-
-**קובץ: `src/pages/admin/FeeTemplateCategories.tsx`**
-
-הוספת תצוגת המדד בכרטיס הקטגוריה:
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ רישוי                                  [ברירת מחדל ✓]      │
-│ מדד: מדד המחירים לצרכן                                      │
-│ לחץ לצפייה בשיטות הגשה                                      │
-└──────────────────────────────────────────────────────────────┘
-```
-
-שינויים:
-- הצגת סוג המדד מתחת לשם הקטגוריה
-- כפתור עריכה לשינוי המדד
+**קבצים לעדכון:**
+- `src/components/rfp/PaymentTermsTab.tsx` - הוספת prop `categoryId` ושימוש ב-`.eq('category_id', categoryId)`
 
 ---
 
-### 5. דיאלוג יצירת קטגוריה
+### 3. העברת מדד ברירת מחדל מקטגוריה לטאב תשלום
 
-**קובץ: `src/components/admin/CreateFeeCategoryDialog.tsx`**
-
-הוספת שדה בחירת מדד:
-
-```
-┌──────────────────────────────────────┐
-│ הוספת קטגוריה חדשה                   │
-├──────────────────────────────────────┤
-│ שם הקטגוריה                          │
-│ [                                  ] │
-│                                      │
-│ מדד ברירת מחדל                       │
-│ [ מדד המחירים לצרכן            ▼]   │
-│                                      │
-│ [○] הגדר כברירת מחדל                 │
-│                                      │
-│ [ביטול]              [צור קטגוריה]  │
-└──────────────────────────────────────┘
+**מצב נוכחי:** ב-`RequestEditorDialog.tsx` קיים:
+```typescript
+<PaymentTermsTab
+  paymentTerms={formData.paymentTerms || {}}
+  onPaymentTermsChange={...}
+  advisorType={advisorType}
+  // defaultIndexType לא מועבר!
+/>
 ```
 
----
+**נדרש:** 
+1. כאשר נבחרת קטגוריה ב-`ServiceDetailsTab`, יש לשמור את `default_index_type` שלה
+2. להעביר אותו ל-`PaymentTermsTab` דרך prop `defaultIndexType`
 
-### 6. דיאלוג עריכת קטגוריה (חדש)
-
-**קובץ חדש: `src/components/admin/EditFeeCategoryDialog.tsx`**
-
-דיאלוג לעריכת פרטי קטגוריה קיימת, כולל אפשרות לשנות את המדד.
-
----
-
-## קבצים לשינוי/יצירה
-
-| קובץ | פעולה | תיאור |
-|------|-------|-------|
-| `supabase/migrations/xxx_add_index_type.sql` | חדש | הוספת עמודה `default_index_type` |
-| `src/constants/indexTypes.ts` | חדש | קבועי המדדים |
-| `src/types/feeTemplateHierarchy.ts` | עדכון | הוספת שדה `default_index_type` |
-| `src/pages/admin/FeeTemplateCategories.tsx` | עדכון | הצגת המדד + כפתור עריכה |
-| `src/components/admin/CreateFeeCategoryDialog.tsx` | עדכון | הוספת בחירת מדד |
-| `src/components/admin/EditFeeCategoryDialog.tsx` | חדש | דיאלוג עריכה |
-| `src/hooks/useFeeTemplateHierarchy.ts` | עדכון | תמיכה בשדה החדש |
+**קבצים לעדכון:**
+- `src/components/rfp/ServiceDetailsTab.tsx` - להחזיר גם `default_index_type` ב-`onCategoryChange`
+- `src/components/RequestEditorDialog.tsx` - לשמור את ה-`indexType` ולהעביר ל-`PaymentTermsTab`
 
 ---
 
-## סדר ביצוע
+## סיכום ביצוע
 
-1. **מיגרציה** - הוספת עמודה `default_index_type` עם ברירת מחדל `cpi`
-2. **קבועים** - יצירת `indexTypes.ts`
-3. **טיפוסים** - עדכון interfaces
-4. **דיאלוג יצירה** - הוספת Select למדד
-5. **דיאלוג עריכה** - יצירת דיאלוג חדש
-6. **דף קטגוריות** - הצגת המדד + כפתור עריכה
+| משימה | קבצים | מורכבות |
+|--------|--------|----------|
+| סינון fee items לפי submission_method | `useRFPTemplatesAdmin.ts`, `FeeTemplateSubmissionMethods.tsx` | נמוכה |
+| טעינת milestones לפי category | `PaymentTermsTab.tsx` | נמוכה |
+| העברת defaultIndexType מקטגוריה | `ServiceDetailsTab.tsx`, `RequestEditorDialog.tsx` | נמוכה |
 
 ---
 
-## שימוש במדד בעתיד
+## מה כבר עובד
 
-השדה `default_index_type` יהיה זמין לשימוש ב:
-- הצעות מחיר - הצמדת סכומים לפי סוג המדד
-- חוזים - סעיף הצמדה אוטומטי
-- תשלומים - חישוב הפרשי הצמדה
+### צד מנהל
+- ✅ 5 רמות היררכיה מלאות
+- ✅ יצירה, עריכה, מחיקה של קטגוריות
+- ✅ יצירה ומחיקה של שיטות הגשה
+- ✅ ניהול שירותים ואבני דרך לכל קטגוריה
+- ✅ הגדרת מדד ברירת מחדל לכל קטגוריה
+- ✅ סימון ברירת מחדל לקטגוריות ושיטות
 
-הערך "מדד החודש הנוכחי" יחושב בזמן יצירת הצעה/חוזה לפי תאריך המסמך.
+### צד יזם
+- ✅ סדר טאבים נכון (שירותים → שכ"ט → תשלום → ראשי)
+- ✅ בחירת תבנית היררכית (קטגוריה → שיטה)
+- ✅ טעינה אוטומטית של שירותים מהתבנית
+- ✅ כותרת דינמית לפי שם הקטגוריה
+- ✅ בחירת מדד ידנית בטאב תשלום
+- ✅ הזנת ערך מדד בסיס
+
+---
+
+## סדר עבודה מומלץ
+
+1. **תיקון סינון Fee Items** - כדי שמנהל יראה רק סעיפים ששייכים לשיטה הנבחרת
+2. **העברת defaultIndexType** - כדי שהמדד יוגדר אוטומטית לפי הקטגוריה
+3. **טעינת Milestones לפי Category** - כדי שאבני הדרך ייטענו מהתבנית הנכונה
 
