@@ -72,6 +72,7 @@ export const ProposalApprovalDialog = ({
   onOpenChange,
   proposal,
   projectName,
+  onSuccess,
 }: ProposalApprovalDialogProps) => {
   const [notes, setNotes] = useState('');
   const [signature, setSignature] = useState<SignatureData | null>(null);
@@ -140,6 +141,7 @@ export const ProposalApprovalDialog = ({
 
     if (result.success) {
       onOpenChange(false);
+      onSuccess?.(); // Call onSuccess callback to refresh parent data
       // Reset state
       setNotes('');
       setSignature(null);
