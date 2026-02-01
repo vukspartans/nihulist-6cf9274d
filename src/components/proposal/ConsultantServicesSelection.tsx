@@ -12,13 +12,6 @@ import type { ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest'
 import FilePreviewModal from '@/components/FilePreviewModal';
 import { safeOpenFile, canPreviewFile } from '@/utils/safeFileOpen';
 
-interface ProjectFile {
-  id: string;
-  file_name: string;
-  url: string;
-  description?: string;
-}
-
 interface ConsultantServicesSelectionProps {
   mode: 'free_text' | 'file' | 'checklist';
   serviceItems: ServiceScopeItem[];
@@ -28,8 +21,6 @@ interface ConsultantServicesSelectionProps {
   onSelectionChange: (selectedIds: string[]) => void;
   consultantNotes: string;
   onNotesChange: (notes: string) => void;
-  projectFiles?: ProjectFile[];
-  requestFiles?: UploadedFileMetadata[];
 }
 
 export function ConsultantServicesSelection({
@@ -41,8 +32,6 @@ export function ConsultantServicesSelection({
   onSelectionChange,
   consultantNotes,
   onNotesChange,
-  projectFiles = [],
-  requestFiles = [],
 }: ConsultantServicesSelectionProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['כללי']));
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
@@ -106,7 +95,7 @@ export function ConsultantServicesSelection({
     );
   };
 
-  // Combine all files for display in services section
+  // Only show service-related files (not project/request files - those are in Request Details tab)
   const allFiles = useMemo(() => {
     const files: Array<{ url: string; name: string; description?: string; source: string }> = [];
     
@@ -114,16 +103,8 @@ export function ConsultantServicesSelection({
       files.push({ url: serviceFile.url, name: serviceFile.name, source: 'service' });
     }
     
-    requestFiles.forEach((f, i) => {
-      files.push({ url: f.url, name: f.name, source: 'request' });
-    });
-    
-    projectFiles.forEach((f) => {
-      files.push({ url: f.url, name: f.file_name, description: f.description, source: 'project' });
-    });
-    
     return files;
-  }, [serviceFile, requestFiles, projectFiles]);
+  }, [serviceFile]);
 
   // Group items by category
   const groupedItems = useMemo(() => {
