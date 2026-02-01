@@ -1,158 +1,130 @@
 
-# תיקון ניווט בפרופיל והסרת קבצים מלשונית השירותים
 
-## סיכום הבעיות
+# תיקון קריטי: שינויי אבני דרך לא מועברים ליועץ
 
-| # | בעיה | סיבה | פתרון |
-|---|------|------|-------|
-| 1 | דף הפרופיל - אין כפתור חזרה ברור | רק לוגו מאפשר ניווט | הוספת כפתור "חזרה לדאשבורד" בולט |
-| 2 | לשונית שירותים מציגה קבצים שלא קשורים | `allFiles` כולל את כל הקבצים | הצגת רק `serviceFile` בלשונית שירותים |
+## אבחון הבעיה
+
+### זרימת הנתונים הנוכחית (עם הבאג)
+
+```
+יזם → NegotiationDialog.tsx
+       ↓
+       milestoneAdjustments = [{ milestone_id, original_percentage, target_percentage }]
+       ↓
+Edge Function → נשמר ב-negotiation_sessions.milestone_adjustments ✅
+       ↓
+יועץ → NegotiationResponseView.tsx
+       ↓
+       קורא מ-proposal.milestone_adjustments (הערכים המקוריים!) ❌
+       לא ממזג עם session.milestone_adjustments!
+```
+
+### הוכחה מהדאטאבייס
+
+**`negotiation_sessions.milestone_adjustments`** (שינויי היזם - נשמרים נכון):
+```json
+[
+  {"milestone_id": "ent-milestone-0", "original_percentage": 10, "target_percentage": 5},
+  {"milestone_id": "ent-milestone-2", "original_percentage": 30, "target_percentage": 35}
+]
+```
+
+**`proposals.milestone_adjustments`** (הנתונים המקוריים - לא מעודכנים):
+```json
+[
+  {"id": "ent-milestone-0", "consultant_percentage": 10, "entrepreneur_percentage": 10},
+  {"id": "ent-milestone-2", "consultant_percentage": 30, "entrepreneur_percentage": 30}
+]
+```
+
+### הקוד הבעייתי (`NegotiationResponseView.tsx` שורות 155-176)
+
+```typescript
+// Initialize milestone responses from proposal milestones ❌
+if (data.proposal?.milestone_adjustments) {
+  const milestones = data.proposal.milestone_adjustments as any[];
+  
+  const responses = milestones.map((milestone) => {
+    const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
+    // ❌ קורא entrepreneur_percentage מההצעה במקום target_percentage מהסשן!
+    const entrepreneurPercentage = milestone.entrepreneur_percentage ?? originalPercentage;
+    ...
+  });
+}
+```
 
 ---
 
-## בעיה 1: דף הפרופיל - אין כפתור חזרה
+## פתרון
 
-### מצב נוכחי
-```tsx
-// src/pages/Profile.tsx - שורות 758-764
-<div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
-  <div className="flex items-center justify-between gap-2">
-    <NavigationLogo size="sm" className="flex-shrink-0" />
-    <UserHeader />
-  </div>
-</div>
-```
+### 1. מיזוג נתוני הסשן עם נתוני ההצעה
 
-### פתרון
-הוספת כפתור "חזרה לדאשבורד" בולט ליד הלוגו, בסגנון זהה לדף ה-Onboarding:
-
-**שינויים:**
-- ייבוא `ArrowRight` מ-lucide-react (שורה 14)
-- עדכון ה-header להוספת כפתור (שורות 758-764)
-
-**קוד חדש:**
-```tsx
-<div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
-  <div className="flex items-center justify-between gap-2">
-    <div className="flex items-center gap-3">
-      <NavigationLogo size="sm" className="flex-shrink-0" />
-      <div className="h-6 w-px bg-border hidden sm:block" />
-      <Button 
-        variant="outline" 
-        size="sm"
-        onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
-        className="gap-2"
-      >
-        <ArrowRight className="h-4 w-4" />
-        <span className="hidden sm:inline">חזרה לדאשבורד</span>
-        <span className="sm:hidden">חזרה</span>
-      </Button>
-    </div>
-    <UserHeader />
-  </div>
-</div>
-```
-
-**הערה:** הכפתור משתמש ב-`getDashboardRouteForRole(primaryRole)` כדי לנווט לדאשבורד המתאים - `/dashboard` ליזם או `/advisor-dashboard` ליועץ.
-
----
-
-## בעיה 2: לשונית שירותים מציגה קבצים לא רלוונטיים
-
-### מצב נוכחי
-ב-`ConsultantServicesSelection.tsx` שורות 110-126:
-```tsx
-const allFiles = useMemo(() => {
-  const files = [];
+```typescript
+// Initialize milestone responses - MERGE session adjustments with proposal milestones
+if (data.proposal?.milestone_adjustments) {
+  const milestones = data.proposal.milestone_adjustments as any[];
   
-  if (serviceFile) {
-    files.push({ url: serviceFile.url, name: serviceFile.name, source: 'service' });
-  }
-  
-  requestFiles.forEach((f, i) => {
-    files.push({ url: f.url, name: f.name, source: 'request' }); // ❌ לא שייך לשירותים
+  // Get entrepreneur's requested changes from SESSION (not proposal!)
+  const sessionMilestoneAdjs = (data.milestone_adjustments as any[]) || [];
+  const adjMap = new Map<string, any>();
+  sessionMilestoneAdjs.forEach((adj: any) => {
+    adjMap.set(adj.milestone_id, adj);
   });
   
-  projectFiles.forEach((f) => {
-    files.push({ url: f.url, name: f.file_name, description: f.description, source: 'project' }); // ❌ לא שייך לשירותים
+  const responses: MilestoneResponse[] = milestones.map((milestone: any) => {
+    const milestoneId = milestone.id || milestone.description;
+    const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
+    
+    // Check for session adjustment (entrepreneur's NEW requested change)
+    const sessionAdj = adjMap.get(milestoneId);
+    const entrepreneurPercentage = sessionAdj
+      ? sessionAdj.target_percentage
+      : (milestone.entrepreneur_percentage ?? originalPercentage);
+    
+    return {
+      description: milestone.description || milestone.trigger || 'אבן דרך',
+      originalPercentage: originalPercentage,
+      entrepreneurPercentage: entrepreneurPercentage,  // Now uses session data!
+      advisorResponsePercentage: originalPercentage,
+      accepted: false,
+    };
   });
   
-  return files;
-}, [serviceFile, requestFiles, projectFiles]);
-```
-
-### פתרון
-הקבצים `requestFiles` ו-`projectFiles` כבר מוצגים בלשונית "פרטי הבקשה" (request tab). לכן בלשונית השירותים צריך להציג רק את `serviceFile`:
-
-**שינויים ב-`ConsultantServicesSelection.tsx`:**
-
-1. הסרת `projectFiles` ו-`requestFiles` מה-props (לא נדרשים יותר)
-2. עדכון `allFiles` להכיל רק `serviceFile`
-
-**קוד מעודכן:**
-```tsx
-// שורות 31-32 - הסרת props
-// projectFiles?: ProjectFile[];  // הסרה
-// requestFiles?: UploadedFileMetadata[];  // הסרה
-
-// שורות 110-126 - עדכון allFiles
-const allFiles = useMemo(() => {
-  const files: Array<{ url: string; name: string; description?: string; source: string }> = [];
-  
-  if (serviceFile) {
-    files.push({ url: serviceFile.url, name: serviceFile.name, source: 'service' });
-  }
-  
-  // הוסרו requestFiles ו-projectFiles - הם מוצגים בלשונית "פרטי הבקשה"
-  
-  return files;
-}, [serviceFile]);
-```
-
-**שינויים ב-`SubmitProposal.tsx`:**
-- הסרת ה-props `projectFiles` ו-`requestFiles` מהקריאה ל-`ConsultantServicesSelection` (שורות 1195-1196)
-
-**קוד מעודכן:**
-```tsx
-<ConsultantServicesSelection
-  mode={entrepreneurData?.service_details_mode || 'free_text'}
-  serviceItems={entrepreneurData?.service_scope_items || []}
-  serviceText={entrepreneurData?.service_details_text || null}
-  serviceFile={entrepreneurData?.service_details_file || null}
-  selectedServices={selectedServices}
-  onSelectionChange={setSelectedServices}
-  consultantNotes={servicesNotes}
-  onNotesChange={setServicesNotes}
-  // הוסרו: projectFiles ו-requestFiles
-/>
+  setMilestoneResponses(responses);
+}
 ```
 
 ---
 
-## סיכום השינויים
+## שינויים נדרשים
 
-### קובץ 1: `src/pages/Profile.tsx`
-1. הוספת `ArrowRight` לייבוא (שורה 14)
-2. עדכון ה-header עם כפתור חזרה (שורות 758-764)
-3. עדכון גם ה-loading state header (שורות 729-734)
+### קובץ: `src/components/negotiation/NegotiationResponseView.tsx`
 
-### קובץ 2: `src/components/proposal/ConsultantServicesSelection.tsx`
-1. הסרת props: `projectFiles` ו-`requestFiles`
-2. עדכון `allFiles` memo להכיל רק `serviceFile`
+**שורות 155-177 - עדכון לוגיקת טעינת אבני הדרך:**
 
-### קובץ 3: `src/pages/SubmitProposal.tsx`
-1. הסרת props `projectFiles` ו-`requestFiles` מ-`ConsultantServicesSelection`
+| לפני | אחרי |
+|------|------|
+| קריאה רק מ-`proposal.milestone_adjustments` | מיזוג עם `session.milestone_adjustments` |
+| שימוש ב-`entrepreneur_percentage` מההצעה | שימוש ב-`target_percentage` מהסשן |
 
 ---
 
-## תוצאה צפויה
+## בדיקות לאחר התיקון
 
-### בעיה 1 - פרופיל:
-- כפתור "חזרה לדאשבורד" בולט ונגיש
-- ניווט מותאם לתפקיד (יזם/יועץ)
-- עיצוב עקבי עם שאר הדפים
+1. **יזם** מבקש שינוי באבני דרך (למשל: 10% → 5%)
+2. **יועץ** פותח את דף המשא ומתן
+3. **וידוא**: היועץ רואה את הערכים המבוקשים (5% ולא 10%)
+4. **וידוא**: טבלת ההשוואה מציגה נכון:
+   - עמודת "יועץ (מקורי)": 10%
+   - עמודת "יזם (מבוקש)": 5%
+   - עמודת "שינוי": -5%
 
-### בעיה 2 - שירותים:
-- לשונית "בחירת שירותים" מציגה רק תוכן הקשור לשירותים
-- קבצי הבקשה וקבצי הפרויקט נשארים בלשונית "פרטי הבקשה"
-- הפרדה ברורה בין סוגי המידע
+---
+
+## סיכום הבאג
+
+| מיקום | בעיה | תיקון |
+|-------|------|-------|
+| `NegotiationResponseView.tsx` | קורא `entrepreneur_percentage` מההצעה | למזג עם `target_percentage` מהסשן |
+| שורות 155-177 | מתעלם מ-`session.milestone_adjustments` | לבנות map ולהשתמש בו |
+
