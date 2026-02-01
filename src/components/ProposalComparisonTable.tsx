@@ -132,18 +132,28 @@ export const ProposalComparisonTable = ({
     return { mandatory, optional };
   };
 
-  // Sort proposals based on selected criteria
-  const sortedProposals = useMemo(() => {
-    return [...proposals].sort((a, b) => {
+  // Group proposals by vendor type first (without sorting)
+  const groupedProposals = useMemo(() => {
+    const groups: Record<string, Proposal[]> = {};
+    
+    proposals.forEach(proposal => {
+      const type = proposal.rfp_invite?.advisor_type || 'אחר';
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(proposal);
+    });
+    
+    return groups;
+  }, [proposals]);
+
+  // Sort function for proposals within a group
+  const sortProposals = (proposalList: Proposal[]) => {
+    return [...proposalList].sort((a, b) => {
       switch (sortBy) {
         case 'price_asc':
-          // Sort by price ascending (cheapest first)
           return a.price - b.price;
         case 'price_desc':
-          // Sort by price descending (most expensive first)
           return b.price - a.price;
         case 'status':
-          // Sort by status priority
           const statusOrder: Record<string, number> = { 
             'accepted': 0, 
             'resubmitted': 1, 
@@ -156,20 +166,7 @@ export const ProposalComparisonTable = ({
           return 0;
       }
     });
-  }, [proposals, sortBy]);
-
-  // Group proposals by vendor type
-  const groupedProposals = useMemo(() => {
-    const groups: Record<string, Proposal[]> = {};
-    
-    sortedProposals.forEach(proposal => {
-      const type = proposal.rfp_invite?.advisor_type || 'אחר';
-      if (!groups[type]) groups[type] = [];
-      groups[type].push(proposal);
-    });
-    
-    return groups;
-  }, [sortedProposals]);
+  };
 
   const vendorTypes = Object.keys(groupedProposals);
 
@@ -197,7 +194,9 @@ export const ProposalComparisonTable = ({
 
   // Render table for a group of proposals
   const renderProposalTable = (typeProposals: Proposal[]) => {
-    const typeLowestPrice = Math.min(...typeProposals.map(p => p.price));
+    // Sort proposals within this group only
+    const sortedTypeProposals = sortProposals(typeProposals);
+    const typeLowestPrice = Math.min(...sortedTypeProposals.map(p => p.price));
 
     return (
       <>
@@ -229,7 +228,7 @@ export const ProposalComparisonTable = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {typeProposals.map((proposal) => {
+              {sortedTypeProposals.map((proposal) => {
                 const isLowestPrice = typeLowestPrice === proposal.price;
                 const isExpanded = expandedRows.has(proposal.id);
                 const { mandatory, optional } = calculateTotals(proposal.fee_line_items);
@@ -414,7 +413,7 @@ export const ProposalComparisonTable = ({
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
-          {typeProposals.map((proposal) => {
+          {sortedTypeProposals.map((proposal) => {
             const isLowestPrice = typeLowestPrice === proposal.price;
             const { mandatory, optional } = calculateTotals(proposal.fee_line_items);
             const hasFeeItems = proposal.fee_line_items && proposal.fee_line_items.length > 0;

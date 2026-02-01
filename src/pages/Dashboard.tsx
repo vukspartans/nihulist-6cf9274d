@@ -238,6 +238,14 @@ const Dashboard = () => {
       return matchesSearch && matchesPhase;
     })
     .sort((a, b) => {
+      // Priority 1: Projects with unseen proposals come first
+      const aHasUnseen = (unseenProposalCounts[a.id] || 0) > 0;
+      const bHasUnseen = (unseenProposalCounts[b.id] || 0) > 0;
+      if (aHasUnseen !== bHasUnseen) {
+        return aHasUnseen ? -1 : 1; // Unseen first
+      }
+      
+      // Priority 2: User's selected sort
       let aValue = a[sortBy as keyof ProjectSummary];
       let bValue = b[sortBy as keyof ProjectSummary];
       
@@ -392,7 +400,7 @@ const Dashboard = () => {
                           {/* New proposals badge */}
                           {(unseenProposalCounts[project.id] || 0) > 0 && (
                             <div 
-                              className="relative"
+                              className="relative animate-pulse"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/projects/${project.id}?tab=received`);
@@ -401,7 +409,7 @@ const Dashboard = () => {
                               <FileText className="w-5 h-5 text-primary" />
                               <Badge 
                                 variant="destructive"
-                                className="absolute -top-2 -right-2 h-4 min-w-[16px] px-1 text-[10px] flex items-center justify-center"
+                                className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1.5 text-[11px] flex items-center justify-center animate-bounce"
                               >
                                 {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
                               </Badge>
