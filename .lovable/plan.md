@@ -1,130 +1,142 @@
 
 
-# תיקון קריטי: שינויי אבני דרך לא מועברים ליועץ
+# מיון הצעות מחיר - ברירת מחדל מהזול ליקר עם אפשרות מיון
 
-## אבחון הבעיה
+## סיכום
 
-### זרימת הנתונים הנוכחית (עם הבאג)
-
-```
-יזם → NegotiationDialog.tsx
-       ↓
-       milestoneAdjustments = [{ milestone_id, original_percentage, target_percentage }]
-       ↓
-Edge Function → נשמר ב-negotiation_sessions.milestone_adjustments ✅
-       ↓
-יועץ → NegotiationResponseView.tsx
-       ↓
-       קורא מ-proposal.milestone_adjustments (הערכים המקוריים!) ❌
-       לא ממזג עם session.milestone_adjustments!
-```
-
-### הוכחה מהדאטאבייס
-
-**`negotiation_sessions.milestone_adjustments`** (שינויי היזם - נשמרים נכון):
-```json
-[
-  {"milestone_id": "ent-milestone-0", "original_percentage": 10, "target_percentage": 5},
-  {"milestone_id": "ent-milestone-2", "original_percentage": 30, "target_percentage": 35}
-]
-```
-
-**`proposals.milestone_adjustments`** (הנתונים המקוריים - לא מעודכנים):
-```json
-[
-  {"id": "ent-milestone-0", "consultant_percentage": 10, "entrepreneur_percentage": 10},
-  {"id": "ent-milestone-2", "consultant_percentage": 30, "entrepreneur_percentage": 30}
-]
-```
-
-### הקוד הבעייתי (`NegotiationResponseView.tsx` שורות 155-176)
-
-```typescript
-// Initialize milestone responses from proposal milestones ❌
-if (data.proposal?.milestone_adjustments) {
-  const milestones = data.proposal.milestone_adjustments as any[];
-  
-  const responses = milestones.map((milestone) => {
-    const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
-    // ❌ קורא entrepreneur_percentage מההצעה במקום target_percentage מהסשן!
-    const entrepreneurPercentage = milestone.entrepreneur_percentage ?? originalPercentage;
-    ...
-  });
-}
-```
+הוספת יכולת מיון להצעות המחיר בלשונית "הצעות שהתקבלו" עם:
+- ברירת מחדל: מיון לפי מחיר מהזול ליקר
+- אפשרויות מיון נוספות: מחיר (זול→יקר), מחיר (יקר→זול), סטטוס
 
 ---
 
-## פתרון
+## מצב נוכחי
 
-### 1. מיזוג נתוני הסשן עם נתוני ההצעה
+### `src/components/ProposalComparisonTable.tsx` (שורות 126-137)
 
 ```typescript
-// Initialize milestone responses - MERGE session adjustments with proposal milestones
-if (data.proposal?.milestone_adjustments) {
-  const milestones = data.proposal.milestone_adjustments as any[];
-  
-  // Get entrepreneur's requested changes from SESSION (not proposal!)
-  const sessionMilestoneAdjs = (data.milestone_adjustments as any[]) || [];
-  const adjMap = new Map<string, any>();
-  sessionMilestoneAdjs.forEach((adj: any) => {
-    adjMap.set(adj.milestone_id, adj);
-  });
-  
-  const responses: MilestoneResponse[] = milestones.map((milestone: any) => {
-    const milestoneId = milestone.id || milestone.description;
-    const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
-    
-    // Check for session adjustment (entrepreneur's NEW requested change)
-    const sessionAdj = adjMap.get(milestoneId);
-    const entrepreneurPercentage = sessionAdj
-      ? sessionAdj.target_percentage
-      : (milestone.entrepreneur_percentage ?? originalPercentage);
-    
-    return {
-      description: milestone.description || milestone.trigger || 'אבן דרך',
-      originalPercentage: originalPercentage,
-      entrepreneurPercentage: entrepreneurPercentage,  // Now uses session data!
-      advisorResponsePercentage: originalPercentage,
-      accepted: false,
+// Sort proposals: accepted first, then by status priority
+const sortedProposals = useMemo(() => {
+  return [...proposals].sort((a, b) => {
+    const statusOrder: Record<string, number> = { 
+      'accepted': 0, 
+      'resubmitted': 1, 
+      'submitted': 2, 
+      'negotiation_requested': 3, 
+      'rejected': 4 
     };
+    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
   });
-  
-  setMilestoneResponses(responses);
-}
+}, [proposals]);
 ```
+
+**בעיה:** המיון הנוכחי מתבסס רק על סטטוס, לא על מחיר.
 
 ---
 
 ## שינויים נדרשים
 
-### קובץ: `src/components/negotiation/NegotiationResponseView.tsx`
+### קובץ: `src/components/ProposalComparisonTable.tsx`
 
-**שורות 155-177 - עדכון לוגיקת טעינת אבני הדרך:**
+**1. הוספת state למיון (אחרי שורה 89):**
 
-| לפני | אחרי |
-|------|------|
-| קריאה רק מ-`proposal.milestone_adjustments` | מיזוג עם `session.milestone_adjustments` |
-| שימוש ב-`entrepreneur_percentage` מההצעה | שימוש ב-`target_percentage` מהסשן |
+```typescript
+const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'status'>('price_asc');
+```
+
+**2. עדכון לוגיקת המיון (שורות 126-137):**
+
+```typescript
+// Sort proposals based on selected criteria
+const sortedProposals = useMemo(() => {
+  return [...proposals].sort((a, b) => {
+    switch (sortBy) {
+      case 'price_asc':
+        // Sort by price ascending (cheapest first)
+        return a.price - b.price;
+      case 'price_desc':
+        // Sort by price descending (most expensive first)
+        return b.price - a.price;
+      case 'status':
+        // Sort by status priority
+        const statusOrder: Record<string, number> = { 
+          'accepted': 0, 
+          'resubmitted': 1, 
+          'submitted': 2, 
+          'negotiation_requested': 3, 
+          'rejected': 4 
+        };
+        return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+      default:
+        return 0;
+    }
+  });
+}, [proposals, sortBy]);
+```
+
+**3. הוספת UI למיון (לפני ה-Accordion, שורה 517):**
+
+```tsx
+{/* Sort Controls */}
+<div className="flex items-center justify-between mb-4">
+  <div className="flex items-center gap-2">
+    <span className="text-sm text-muted-foreground">מיון לפי:</span>
+    <div className="flex gap-1">
+      <Button
+        variant={sortBy === 'price_asc' ? 'default' : 'outline'}
+        size="sm"
+        onClick={() => setSortBy('price_asc')}
+        className="text-xs"
+      >
+        <ArrowUp className="w-3 h-3 ml-1" />
+        מחיר (זול→יקר)
+      </Button>
+      <Button
+        variant={sortBy === 'price_desc' ? 'default' : 'outline'}
+        size="sm"
+        onClick={() => setSortBy('price_desc')}
+        className="text-xs"
+      >
+        <ArrowDown className="w-3 h-3 ml-1" />
+        מחיר (יקר→זול)
+      </Button>
+      <Button
+        variant={sortBy === 'status' ? 'default' : 'outline'}
+        size="sm"
+        onClick={() => setSortBy('status')}
+        className="text-xs"
+      >
+        סטטוס
+      </Button>
+    </div>
+  </div>
+</div>
+```
+
+**4. הוספת imports (שורה 8):**
+
+```typescript
+import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, ArrowUp, ArrowDown } from 'lucide-react';
+```
 
 ---
 
-## בדיקות לאחר התיקון
+## סיכום השינויים
 
-1. **יזם** מבקש שינוי באבני דרך (למשל: 10% → 5%)
-2. **יועץ** פותח את דף המשא ומתן
-3. **וידוא**: היועץ רואה את הערכים המבוקשים (5% ולא 10%)
-4. **וידוא**: טבלת ההשוואה מציגה נכון:
-   - עמודת "יועץ (מקורי)": 10%
-   - עמודת "יזם (מבוקש)": 5%
-   - עמודת "שינוי": -5%
+| שינוי | מיקום | תיאור |
+|-------|-------|-------|
+| State חדש | שורה ~90 | `sortBy` עם ברירת מחדל `'price_asc'` |
+| לוגיקת מיון | שורות 126-137 | switch case לפי סוג המיון |
+| UI מיון | לפני Accordion | 3 כפתורים לבחירת מיון |
+| Imports | שורה 8 | `ArrowUp`, `ArrowDown` |
 
 ---
 
-## סיכום הבאג
+## תוצאה צפויה
 
-| מיקום | בעיה | תיקון |
-|-------|------|-------|
-| `NegotiationResponseView.tsx` | קורא `entrepreneur_percentage` מההצעה | למזג עם `target_percentage` מהסשן |
-| שורות 155-177 | מתעלם מ-`session.milestone_adjustments` | לבנות map ולהשתמש בו |
+1. **ברירת מחדל:** הצעות ממוינות מהזול ליקר
+2. **כפתור "מחיר (זול→יקר)"** - מסומן כברירת מחדל
+3. **כפתור "מחיר (יקר→זול)"** - מיון הפוך
+4. **כפתור "סטטוס"** - מיון לפי סטטוס (אושר ראשון)
+5. המיון פועל בתוך כל קבוצת סוג יועץ
 
