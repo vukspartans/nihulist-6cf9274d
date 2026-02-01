@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionBadge } from '@/components/negotiation/VersionBadge';
 
@@ -88,6 +88,14 @@ export const ProposalComparisonTable = ({
 }: ProposalComparisonTableProps) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'status'>('price_asc');
+
+  const cycleSortOrder = () => {
+    setSortBy(prev => {
+      if (prev === 'price_asc') return 'price_desc';
+      if (prev === 'price_desc') return 'price_asc';
+      return 'price_asc';
+    });
+  };
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -200,7 +208,20 @@ export const ProposalComparisonTable = ({
               <TableRow className="bg-muted/50">
                 <TableHead className="text-right w-10"></TableHead>
                 <TableHead className="text-right">ספק</TableHead>
-                <TableHead className="text-right">סה״כ מחיר</TableHead>
+                <TableHead className="text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cycleSortOrder();
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    סה״כ מחיר
+                    {sortBy === 'price_asc' && <ArrowUp className="w-3 h-3" />}
+                    {sortBy === 'price_desc' && <ArrowDown className="w-3 h-3" />}
+                    {sortBy === 'status' && <ArrowUpDown className="w-3 h-3 text-muted-foreground" />}
+                  </button>
+                </TableHead>
                 <TableHead className="text-right">חובה</TableHead>
                 <TableHead className="text-right">אופציונלי</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
@@ -528,41 +549,7 @@ export const ProposalComparisonTable = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Sort Controls */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">מיון לפי:</span>
-        <div className="flex gap-1">
-          <Button
-            variant={sortBy === 'price_asc' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSortBy('price_asc')}
-            className="text-xs"
-          >
-            <ArrowUp className="w-3 h-3 ml-1" />
-            מחיר (זול→יקר)
-          </Button>
-          <Button
-            variant={sortBy === 'price_desc' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSortBy('price_desc')}
-            className="text-xs"
-          >
-            <ArrowDown className="w-3 h-3 ml-1" />
-            מחיר (יקר→זול)
-          </Button>
-          <Button
-            variant={sortBy === 'status' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSortBy('status')}
-            className="text-xs"
-          >
-            סטטוס
-          </Button>
-        </div>
-      </div>
-
-      <Accordion type="multiple" defaultValue={vendorTypes} className="space-y-4">
+    <Accordion type="multiple" defaultValue={vendorTypes} className="space-y-4">
       {vendorTypes.map(vendorType => {
         const typeProposals = groupedProposals[vendorType];
         const submittedCount = typeProposals.filter(p => 
@@ -601,7 +588,6 @@ export const ProposalComparisonTable = ({
           </AccordionItem>
         );
       })}
-      </Accordion>
-    </div>
+    </Accordion>
   );
 };
