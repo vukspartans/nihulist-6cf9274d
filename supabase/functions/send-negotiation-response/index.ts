@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { renderAsync } from "npm:@react-email/components@0.0.31";
+import React from "npm:react@18.3.1";
 import { NegotiationResponseEmail } from "../_shared/email-templates/negotiation-response.tsx";
 
 const corsHeaders = {
@@ -189,7 +190,7 @@ serve(async (req) => {
         const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
         const emailHtml = await renderAsync(
-          NegotiationResponseEmail({
+          React.createElement(NegotiationResponseEmail, {
             entrepreneurName: entrepreneurProfile.name || "יזם",
             advisorCompany: advisorData.company_name || "יועץ",
             projectName: projectData.name,
