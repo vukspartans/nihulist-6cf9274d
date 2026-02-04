@@ -1192,8 +1192,6 @@ const SubmitProposal = () => {
                       onSelectionChange={setSelectedServices}
                       consultantNotes={servicesNotes}
                       onNotesChange={setServicesNotes}
-                      projectFiles={projectFiles}
-                      requestFiles={entrepreneurData?.request_files || []}
                     />
                   </CardContent>
                 </Card>

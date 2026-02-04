@@ -449,74 +449,198 @@ export type Database = {
       default_fee_item_templates: {
         Row: {
           advisor_specialty: string
+          category_id: string | null
           charge_type: string | null
           created_at: string | null
+          created_by_user_id: string | null
           default_quantity: number | null
           description: string
           display_order: number
           id: string
           is_optional: boolean | null
+          is_user_template: boolean | null
+          project_type: string | null
+          submission_method_id: string | null
           unit: string
           updated_at: string | null
         }
         Insert: {
           advisor_specialty: string
+          category_id?: string | null
           charge_type?: string | null
           created_at?: string | null
+          created_by_user_id?: string | null
           default_quantity?: number | null
           description: string
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          is_user_template?: boolean | null
+          project_type?: string | null
+          submission_method_id?: string | null
           unit?: string
           updated_at?: string | null
         }
         Update: {
           advisor_specialty?: string
+          category_id?: string | null
           charge_type?: string | null
           created_at?: string | null
+          created_by_user_id?: string | null
           default_quantity?: number | null
           description?: string
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          is_user_template?: boolean | null
+          project_type?: string | null
+          submission_method_id?: string | null
           unit?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "default_fee_item_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "default_fee_item_templates_submission_method_id_fkey"
+            columns: ["submission_method_id"]
+            isOneToOne: false
+            referencedRelation: "fee_submission_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       default_service_scope_templates: {
         Row: {
           advisor_specialty: string
+          category_id: string | null
           created_at: string | null
           created_by: string | null
           default_fee_category: string | null
           display_order: number
           id: string
           is_optional: boolean | null
+          project_type: string | null
           task_name: string
           updated_at: string | null
         }
         Insert: {
           advisor_specialty: string
+          category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_fee_category?: string | null
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          project_type?: string | null
           task_name: string
           updated_at?: string | null
         }
         Update: {
           advisor_specialty?: string
+          category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_fee_category?: string | null
           display_order?: number
           id?: string
           is_optional?: boolean | null
+          project_type?: string | null
           task_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "default_service_scope_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_submission_methods: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          method_label: string
+          method_type: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_label: string
+          method_type: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_label?: string
+          method_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_submission_methods_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_template_categories: {
+        Row: {
+          advisor_specialty: string
+          created_at: string | null
+          default_index_type: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          project_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          advisor_specialty: string
+          created_at?: string | null
+          default_index_type?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          project_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          advisor_specialty?: string
+          created_at?: string | null
+          default_index_type?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          project_type?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -712,6 +836,7 @@ export type Database = {
       milestone_templates: {
         Row: {
           advisor_specialty: string | null
+          category_id: string | null
           created_at: string
           currency: string | null
           description: string | null
@@ -730,6 +855,7 @@ export type Database = {
         }
         Insert: {
           advisor_specialty?: string | null
+          category_id?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
@@ -748,6 +874,7 @@ export type Database = {
         }
         Update: {
           advisor_specialty?: string | null
+          category_id?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
@@ -765,6 +892,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "milestone_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fee_template_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "milestone_templates_municipality_id_fkey"
             columns: ["municipality_id"]
@@ -1760,12 +1894,15 @@ export type Database = {
           description: string | null
           display_order: number | null
           duration_days: number | null
+          hierarchy_level: number | null
+          hierarchy_path: string | null
           id: string
           is_blocked: boolean | null
           is_milestone: boolean | null
           is_payment_critical: boolean | null
           name: string
           notes: string | null
+          parent_task_id: string | null
           payment_milestone_id: string | null
           phase: string | null
           planned_end_date: string | null
@@ -1776,6 +1913,7 @@ export type Database = {
           status: string
           template_id: string | null
           updated_at: string
+          wbs_code: string | null
         }
         Insert: {
           actual_end_date?: string | null
@@ -1788,12 +1926,15 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           duration_days?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
           is_payment_critical?: boolean | null
           name: string
           notes?: string | null
+          parent_task_id?: string | null
           payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
@@ -1804,6 +1945,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Update: {
           actual_end_date?: string | null
@@ -1816,12 +1958,15 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           duration_days?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_blocked?: boolean | null
           is_milestone?: boolean | null
           is_payment_critical?: boolean | null
           name?: string
           notes?: string | null
+          parent_task_id?: string | null
           payment_milestone_id?: string | null
           phase?: string | null
           planned_end_date?: string | null
@@ -1832,6 +1977,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Relationships: [
           {
@@ -1839,6 +1985,13 @@ export type Database = {
             columns: ["assigned_advisor_id"]
             isOneToOne: false
             referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -2812,6 +2965,8 @@ export type Database = {
           depends_on_template_id: string | null
           description: string | null
           display_order: number | null
+          hierarchy_level: number | null
+          hierarchy_path: string | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
@@ -2820,10 +2975,12 @@ export type Database = {
           licensing_phase_id: string | null
           municipality_id: string | null
           name: string
+          parent_template_id: string | null
           phase: string | null
           project_type: string
           template_group_id: string | null
           updated_at: string
+          wbs_code: string | null
         }
         Insert: {
           advisor_specialty?: string | null
@@ -2833,6 +2990,8 @@ export type Database = {
           depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
@@ -2841,10 +3000,12 @@ export type Database = {
           licensing_phase_id?: string | null
           municipality_id?: string | null
           name: string
+          parent_template_id?: string | null
           phase?: string | null
           project_type: string
           template_group_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Update: {
           advisor_specialty?: string | null
@@ -2854,6 +3015,8 @@ export type Database = {
           depends_on_template_id?: string | null
           description?: string | null
           display_order?: number | null
+          hierarchy_level?: number | null
+          hierarchy_path?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
@@ -2862,10 +3025,12 @@ export type Database = {
           licensing_phase_id?: string | null
           municipality_id?: string | null
           name?: string
+          parent_template_id?: string | null
           phase?: string | null
           project_type?: string
           template_group_id?: string | null
           updated_at?: string
+          wbs_code?: string | null
         }
         Relationships: [
           {
@@ -2887,6 +3052,55 @@ export type Database = {
             columns: ["municipality_id"]
             isOneToOne: false
             referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_parent_template_id_fkey"
+            columns: ["parent_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_dependencies: {
+        Row: {
+          created_at: string | null
+          dependency_type: string
+          depends_on_template_id: string
+          id: string
+          lag_days: number | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_template_id: string
+          id?: string
+          lag_days?: number | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_template_id?: string
+          id?: string
+          lag_days?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_dependencies_depends_on_template_id_fkey"
+            columns: ["depends_on_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_dependencies_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
             referencedColumns: ["id"]
           },
         ]

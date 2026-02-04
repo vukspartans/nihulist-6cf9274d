@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { renderAsync } from "npm:@react-email/components@0.0.31";
+import React from "npm:react@18.3.1";
 import { NegotiationRequestEmail } from "../_shared/email-templates/negotiation-request.tsx";
 
 const corsHeaders = {
@@ -393,7 +394,7 @@ serve(async (req) => {
         const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
         const emailHtml = await renderAsync(
-          NegotiationRequestEmail({
+          React.createElement(NegotiationRequestEmail, {
             advisorCompany,
             entrepreneurName: entrepreneurProfile?.name || "יזם",
             projectName: project.name,
@@ -472,7 +473,22 @@ serve(async (req) => {
         });
       }
     } else {
-      console.warn("[Negotiation Request] No advisor email found, skipping notification");
+      console.warn("[Negotiation Request] No advisor email found, skipping email notification");
+      // Log missing email for debugging
+      await supabase.from("activity_log").insert({
+        actor_id: user.id,
+        actor_type: "system",
+        action: "negotiation_request_email_skipped",
+        entity_type: "proposal",
+        entity_id: proposal_id,
+        project_id,
+        meta: {
+          session_id: session.id,
+          reason: "no_advisor_email",
+          advisor_id: advisor.id,
+          advisor_user_id: advisor.user_id,
+        },
+      });
     }
 
     // Log activity

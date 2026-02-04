@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature } from 'lucide-react';
+import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionBadge } from '@/components/negotiation/VersionBadge';
 
@@ -87,6 +87,15 @@ export const ProposalComparisonTable = ({
   loading = false 
 }: ProposalComparisonTableProps) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'status'>('price_asc');
+
+  const cycleSortOrder = () => {
+    setSortBy(prev => {
+      if (prev === 'price_asc') return 'price_desc';
+      if (prev === 'price_desc') return 'price_asc';
+      return 'price_asc';
+    });
+  };
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -123,32 +132,41 @@ export const ProposalComparisonTable = ({
     return { mandatory, optional };
   };
 
-  // Sort proposals: accepted first, then by status priority
-  const sortedProposals = useMemo(() => {
-    return [...proposals].sort((a, b) => {
-      const statusOrder: Record<string, number> = { 
-        'accepted': 0, 
-        'resubmitted': 1, 
-        'submitted': 2, 
-        'negotiation_requested': 3, 
-        'rejected': 4 
-      };
-      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
-    });
-  }, [proposals]);
-
-  // Group proposals by vendor type
+  // Group proposals by vendor type first (without sorting)
   const groupedProposals = useMemo(() => {
     const groups: Record<string, Proposal[]> = {};
     
-    sortedProposals.forEach(proposal => {
+    proposals.forEach(proposal => {
       const type = proposal.rfp_invite?.advisor_type || 'אחר';
       if (!groups[type]) groups[type] = [];
       groups[type].push(proposal);
     });
     
     return groups;
-  }, [sortedProposals]);
+  }, [proposals]);
+
+  // Sort function for proposals within a group
+  const sortProposals = (proposalList: Proposal[]) => {
+    return [...proposalList].sort((a, b) => {
+      switch (sortBy) {
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'status':
+          const statusOrder: Record<string, number> = { 
+            'accepted': 0, 
+            'resubmitted': 1, 
+            'submitted': 2, 
+            'negotiation_requested': 3, 
+            'rejected': 4 
+          };
+          return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+        default:
+          return 0;
+      }
+    });
+  };
 
   const vendorTypes = Object.keys(groupedProposals);
 
@@ -176,7 +194,9 @@ export const ProposalComparisonTable = ({
 
   // Render table for a group of proposals
   const renderProposalTable = (typeProposals: Proposal[]) => {
-    const typeLowestPrice = Math.min(...typeProposals.map(p => p.price));
+    // Sort proposals within this group only
+    const sortedTypeProposals = sortProposals(typeProposals);
+    const typeLowestPrice = Math.min(...sortedTypeProposals.map(p => p.price));
 
     return (
       <>
@@ -187,7 +207,20 @@ export const ProposalComparisonTable = ({
               <TableRow className="bg-muted/50">
                 <TableHead className="text-right w-10"></TableHead>
                 <TableHead className="text-right">ספק</TableHead>
-                <TableHead className="text-right">סה״כ מחיר</TableHead>
+                <TableHead className="text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cycleSortOrder();
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    סה״כ מחיר
+                    {sortBy === 'price_asc' && <ArrowUp className="w-3 h-3" />}
+                    {sortBy === 'price_desc' && <ArrowDown className="w-3 h-3" />}
+                    {sortBy === 'status' && <ArrowUpDown className="w-3 h-3 text-muted-foreground" />}
+                  </button>
+                </TableHead>
                 <TableHead className="text-right">חובה</TableHead>
                 <TableHead className="text-right">אופציונלי</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
@@ -195,7 +228,7 @@ export const ProposalComparisonTable = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {typeProposals.map((proposal) => {
+              {sortedTypeProposals.map((proposal) => {
                 const isLowestPrice = typeLowestPrice === proposal.price;
                 const isExpanded = expandedRows.has(proposal.id);
                 const { mandatory, optional } = calculateTotals(proposal.fee_line_items);
@@ -380,7 +413,7 @@ export const ProposalComparisonTable = ({
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
-          {typeProposals.map((proposal) => {
+          {sortedTypeProposals.map((proposal) => {
             const isLowestPrice = typeLowestPrice === proposal.price;
             const { mandatory, optional } = calculateTotals(proposal.fee_line_items);
             const hasFeeItems = proposal.fee_line_items && proposal.fee_line_items.length > 0;

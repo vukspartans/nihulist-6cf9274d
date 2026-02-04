@@ -42,11 +42,24 @@ import PaymentCategoriesManagement from "./pages/admin/PaymentCategoriesManageme
 import PaymentStatusesManagement from "./pages/admin/PaymentStatusesManagement";
 import MilestoneTemplatesManagement from "./pages/admin/MilestoneTemplatesManagement";
 import RFPTemplatesManagement from "./pages/admin/RFPTemplatesManagement";
+import FeeTemplatesHierarchy from "./pages/admin/FeeTemplatesHierarchy";
+import FeeTemplatesByProject from "./pages/admin/FeeTemplatesByProject";
+import FeeTemplateCategories from "./pages/admin/FeeTemplateCategories";
+import FeeTemplateSubmissionMethods from "./pages/admin/FeeTemplateSubmissionMethods";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
+import LicensingManagement from "./pages/admin/LicensingManagement";
 import { supabase } from "@/integrations/supabase/client";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
 // Scroll to top component for route changes
 const ScrollToTop = () => {
@@ -225,11 +238,16 @@ const AppContent = () => {
             <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfp-templates" element={<AdminRoute><RFPTemplatesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/fee-templates" element={<AdminRoute><FeeTemplatesHierarchy /></AdminRoute>} />
+            <Route path="/heyadmin/fee-templates/:advisorType" element={<AdminRoute><FeeTemplatesByProject /></AdminRoute>} />
+            <Route path="/heyadmin/fee-templates/:advisorType/:projectType" element={<AdminRoute><FeeTemplateCategories /></AdminRoute>} />
+            <Route path="/heyadmin/fee-templates/:advisorType/:projectType/:categoryId" element={<AdminRoute><FeeTemplateSubmissionMethods /></AdminRoute>} />
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
             <Route path="/heyadmin/feedback" element={<AdminRoute><FeedbackManagement /></AdminRoute>} />
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
             <Route path="/heyadmin/municipalities" element={<AdminRoute><MunicipalitiesManagement /></AdminRoute>} />
             <Route path="/heyadmin/licensing-phases" element={<AdminRoute><LicensingPhasesManagement /></AdminRoute>} />
+            <Route path="/heyadmin/licensing" element={<AdminRoute><LicensingManagement /></AdminRoute>} />
             <Route path="/heyadmin/task-templates" element={<AdminRoute><TaskTemplatesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-categories" element={<AdminRoute><PaymentCategoriesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-statuses" element={<AdminRoute><PaymentStatusesManagement /></AdminRoute>} />

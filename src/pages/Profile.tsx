@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon } from 'lucide-react';
+import { User, Building, Building2, Shield, KeyRound, Edit, Save, X, Target, MapPin, Users, Globe, Linkedin, Instagram, Facebook, CheckCircle, Briefcase, Link2, Upload, Image as ImageIcon, ArrowRight } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import NavigationLogo from '@/components/NavigationLogo';
 import { UserHeader } from '@/components/UserHeader';
@@ -728,7 +728,20 @@ const Profile = () => {
         {/* Sticky Top Navigation Bar */}
         <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
           <div className="flex items-center justify-between gap-2">
-            <NavigationLogo size="sm" className="flex-shrink-0" />
+            <div className="flex items-center gap-3">
+              <NavigationLogo size="sm" className="flex-shrink-0" />
+              <div className="h-6 w-px bg-border hidden sm:block" />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+                className="gap-2"
+              >
+                <ArrowRight className="h-4 w-4" />
+                <span className="hidden sm:inline">חזרה לדאשבורד</span>
+                <span className="sm:hidden">חזרה</span>
+              </Button>
+            </div>
             <UserHeader />
           </div>
         </div>
@@ -758,7 +771,20 @@ const Profile = () => {
       {/* Sticky Top Navigation Bar */}
       <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
         <div className="flex items-center justify-between gap-2">
-          <NavigationLogo size="sm" className="flex-shrink-0" />
+          <div className="flex items-center gap-3">
+            <NavigationLogo size="sm" className="flex-shrink-0" />
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate(getDashboardRouteForRole(primaryRole))}
+              className="gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              <span className="hidden sm:inline">חזרה לדאשבורד</span>
+              <span className="sm:hidden">חזרה</span>
+            </Button>
+          </div>
           <UserHeader />
         </div>
       </div>

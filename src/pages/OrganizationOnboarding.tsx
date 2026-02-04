@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Phone, Globe, Linkedin, Users, Sparkles } from 'lucide-react';
+import { Building2, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Phone, Globe, Linkedin, Users, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganization, type OrganizationInput } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -258,6 +258,8 @@ const OrganizationOnboarding = () => {
       if (success) {
         // Clear skip flag on successful completion
         localStorage.removeItem('onboarding_skipped');
+        // Mark as just completed to prevent redirect loop
+        sessionStorage.setItem('onboarding_just_completed', 'true');
         toast({
           title: 'הארגון נוצר בהצלחה!',
           description: 'ברוכים הבאים לניהוליסט'
@@ -295,7 +297,20 @@ const OrganizationOnboarding = () => {
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background border-b px-4 py-3">
         <div className="container mx-auto flex items-center justify-between">
-          <NavigationLogo size="sm" />
+          <div className="flex items-center gap-3">
+            <NavigationLogo size="sm" />
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              <span className="hidden sm:inline">חזרה לדאשבורד</span>
+              <span className="sm:hidden">חזרה</span>
+            </Button>
+          </div>
           <Button 
             variant="ghost" 
             size="sm"

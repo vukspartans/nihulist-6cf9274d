@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, Home, List, Coins, CreditCard, Wand2, Edit2, Database, FolderOpen, Download, ExternalLink } from 'lucide-react';
+import { Edit, Save, FileText, Paperclip, Upload, X, CheckCircle, Eye, Sparkles, Loader2, List, Coins, CreditCard, Wand2, Edit2, Database, FolderOpen, Download, ExternalLink } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,6 +36,7 @@ interface RequestEditorDialogProps {
   advisorType: string;
   projectName: string;
   projectId: string;
+  projectType?: string;
   rfpId?: string;
   recipientCount: number;
   initialData?: Partial<AdvisorTypeRequestData>;
@@ -43,8 +44,10 @@ interface RequestEditorDialogProps {
   hasBeenReviewed?: boolean;
 }
 
-const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRequestData => ({
-  requestTitle: `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי תכנון ${advisorType}`,
+const getDefaultData = (projectName: string, advisorType: string, categoryName?: string): AdvisorTypeRequestData => ({
+  requestTitle: categoryName 
+    ? `${projectName} – בקשה להצעת מחיר עבור ${categoryName}`
+    : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`,
   requestContent: `שלום,
 
 אנו מעוניינים לקבל הצעת מחיר עבור הפרויקט "${projectName}".
@@ -55,11 +58,15 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
   requestAttachments: [],
   hasBeenReviewed: false,
   
-  // Service details
-  serviceDetailsMode: 'free_text',
+  // Service details - default to checklist mode
+  serviceDetailsMode: 'checklist',
   serviceDetailsFreeText: '',
   serviceDetailsFile: undefined,
   serviceScopeItems: [],
+  selectedCategoryId: undefined,
+  selectedCategoryName: undefined,
+  selectedMethodId: undefined,
+  selectedMethodLabel: undefined,
   
   // Fee items
   feeItems: [],
@@ -69,7 +76,8 @@ const getDefaultData = (projectName: string, advisorType: string): AdvisorTypeRe
   paymentTerms: {
     milestone_payments: [],
     payment_term_type: 'net_30',
-    notes: ''
+    notes: '',
+    index_type: 'cpi'
   }
 });
 
@@ -77,6 +85,7 @@ export const RequestEditorDialog = ({
   advisorType,
   projectName,
   projectId,
+  projectType,
   rfpId,
   recipientCount,
   initialData,
@@ -85,15 +94,20 @@ export const RequestEditorDialog = ({
 }: RequestEditorDialogProps) => {
   const { toast } = useToast();
   const { saveDraft, loadDraft, saving } = useRFPDraft(projectId);
+  
+  // Session storage key for persisting dialog state across tab switches
+  const DIALOG_STORAGE_KEY = `request-editor-${projectId}-${advisorType}`;
+  
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [canAutoClose, setCanAutoClose] = useState(true);
   const [extracting, setExtracting] = useState(false);
   const [rfpDocumentFile, setRfpDocumentFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState('main');
+  const [activeTab, setActiveTab] = useState('services');
   const [isContentAIGenerated, setIsContentAIGenerated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [restoredFromSession, setRestoredFromSession] = useState(false);
   
   // Project files state
   interface ProjectFile {
@@ -172,10 +186,73 @@ export const RequestEditorDialog = ({
   };
   
   const defaultData = getDefaultData(projectName, advisorType);
-  const [formData, setFormData] = useState<AdvisorTypeRequestData>({
-    ...defaultData,
-    ...initialData
+  const [formData, setFormData] = useState<AdvisorTypeRequestData>(() => {
+    // Try to restore from sessionStorage on initial mount
+    try {
+      const saved = sessionStorage.getItem(DIALOG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) {
+          console.log('[RequestEditor] Restored form data from sessionStorage');
+          return parsed.formData;
+        }
+      }
+    } catch (e) {
+      console.error('[RequestEditor] Error parsing sessionStorage:', e);
+    }
+    return {
+      ...defaultData,
+      ...initialData
+    };
   });
+
+  // Restore dialog open state from sessionStorage (defense in depth for tab switches)
+  useEffect(() => {
+    if (restoredFromSession) return;
+    
+    try {
+      const saved = sessionStorage.getItem(DIALOG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.isOpen) {
+          console.log('[RequestEditor] Restoring open state from sessionStorage');
+          setIsOpen(true);
+          setActiveTab(parsed.activeTab || 'services');
+          if (parsed.formData) {
+            setFormData(parsed.formData);
+          }
+          setRestoredFromSession(true);
+        }
+      }
+    } catch (e) {
+      console.error('[RequestEditor] Error restoring from sessionStorage:', e);
+    }
+  }, [DIALOG_STORAGE_KEY, restoredFromSession]);
+
+  // Save dialog state to sessionStorage whenever it changes (for tab-switch persistence)
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        sessionStorage.setItem(DIALOG_STORAGE_KEY, JSON.stringify({
+          formData,
+          isOpen: true,
+          activeTab
+        }));
+      } catch (e) {
+        console.error('[RequestEditor] Error saving to sessionStorage:', e);
+      }
+    }
+  }, [formData, isOpen, activeTab, DIALOG_STORAGE_KEY]);
+
+  // Clear sessionStorage when dialog is explicitly closed
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Clear session storage on explicit close
+      sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+      setRestoredFromSession(false);
+    }
+  };
 
   // Initialize form data and load draft when dialog opens
   useEffect(() => {
@@ -643,6 +720,10 @@ export const RequestEditorDialog = ({
     const saved = await saveDraft(advisorType, dataToSave);
     
     if (saved) {
+      // Clear sessionStorage on successful save
+      sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+      setRestoredFromSession(false);
+      
       // Then update parent state
       onSave(dataToSave);
       setIsOpen(false);
@@ -654,6 +735,10 @@ export const RequestEditorDialog = ({
   };
 
   const handleCancel = () => {
+    // Clear sessionStorage on cancel
+    sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+    setRestoredFromSession(false);
+    
     setFormData({
       ...defaultData,
       ...initialData
@@ -668,6 +753,9 @@ export const RequestEditorDialog = ({
       open={isOpen} 
       onOpenChange={(open) => {
         if (!open && canAutoClose) {
+          // Clear sessionStorage when dialog is closed via X or outside click
+          sessionStorage.removeItem(DIALOG_STORAGE_KEY);
+          setRestoredFromSession(false);
           setIsOpen(false);
         } else if (open) {
           setIsOpen(true);
@@ -713,10 +801,6 @@ export const RequestEditorDialog = ({
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 min-h-0 flex flex-col" dir="rtl">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 flex-row-reverse h-auto">
-            <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">ראשי</span>
-            </TabsTrigger>
             <TabsTrigger value="services" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <List className="h-4 w-4" />
               <span className="hidden sm:inline">פירוט שירותים</span>
@@ -728,6 +812,10 @@ export const RequestEditorDialog = ({
             <TabsTrigger value="payment" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">תשלום</span>
+            </TabsTrigger>
+            <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">מידע וקבצים</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1074,6 +1162,34 @@ export const RequestEditorDialog = ({
                   feeItems={formData.feeItems || []}
                   advisorType={advisorType}
                   projectId={projectId}
+                  projectType={projectType}
+                  selectedCategoryId={formData.selectedCategoryId}
+                  selectedCategoryName={formData.selectedCategoryName}
+                  selectedMethodId={formData.selectedMethodId}
+                  selectedMethodLabel={formData.selectedMethodLabel}
+                  onCategoryChange={(categoryId, categoryName, defaultIndexType) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedCategoryId: categoryId || undefined,
+                      selectedCategoryName: categoryName || undefined,
+                      // Update request title with category name
+                      requestTitle: categoryName 
+                        ? `${projectName} – בקשה להצעת מחיר עבור ${categoryName}`
+                        : `${projectName} – בקשה לקבלת הצעת מחיר עבור שירותי ${advisorType}`,
+                      // Set index type from category default if provided
+                      paymentTerms: defaultIndexType ? {
+                        ...prev.paymentTerms,
+                        index_type: defaultIndexType as any
+                      } : prev.paymentTerms
+                    }));
+                  }}
+                  onMethodChange={(methodId, methodLabel) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedMethodId: methodId || undefined,
+                      selectedMethodLabel: methodLabel || undefined
+                    }));
+                  }}
                 />
               </TabsContent>
 
@@ -1094,6 +1210,8 @@ export const RequestEditorDialog = ({
                   paymentTerms={formData.paymentTerms || { milestone_payments: [], payment_term_type: 'net_30' }}
                   onPaymentTermsChange={(terms) => setFormData(prev => ({ ...prev, paymentTerms: terms }))}
                   advisorType={advisorType}
+                  categoryId={formData.selectedCategoryId}
+                  defaultIndexType={formData.paymentTerms?.index_type}
                 />
               </TabsContent>
             </div>

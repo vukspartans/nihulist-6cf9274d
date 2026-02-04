@@ -152,22 +152,35 @@ export const NegotiationResponseView = ({
         setEmbeddedFiles(embedded);
       }
       
-      // Initialize milestone responses from proposal milestones
-      // Both consultant_percentage (original) and entrepreneur_percentage (requested) 
-      // are stored in the SAME milestone object, not in separate arrays
+      // Initialize milestone responses - MERGE session adjustments with proposal milestones
+      // The session.milestone_adjustments contains the entrepreneur's REQUESTED changes
+      // with target_percentage, while proposal.milestone_adjustments has the original values
       if (data.proposal?.milestone_adjustments) {
         const milestones = data.proposal.milestone_adjustments as any[];
         
+        // Get entrepreneur's requested changes from SESSION (not proposal!)
+        const sessionMilestoneAdjs = (data.milestone_adjustments as any[]) || [];
+        const adjMap = new Map<string, any>();
+        sessionMilestoneAdjs.forEach((adj: any) => {
+          // Map by milestone_id to quickly find adjustments
+          adjMap.set(adj.milestone_id, adj);
+        });
+        
         const responses: MilestoneResponse[] = milestones.map((milestone: any) => {
-          // Original advisor percentage
+          const milestoneId = milestone.id || milestone.description;
+          // Original advisor percentage from proposal
           const originalPercentage = milestone.consultant_percentage ?? milestone.percentage ?? 0;
-          // Entrepreneur's requested percentage (stored in same object)
-          const entrepreneurPercentage = milestone.entrepreneur_percentage ?? originalPercentage;
+          
+          // Check for session adjustment (entrepreneur's NEW requested change)
+          const sessionAdj = adjMap.get(milestoneId);
+          const entrepreneurPercentage = sessionAdj
+            ? sessionAdj.target_percentage  // Use the requested change from session
+            : (milestone.entrepreneur_percentage ?? originalPercentage); // Fallback to proposal value
           
           return {
             description: milestone.description || milestone.trigger || 'אבן דרך',
             originalPercentage: originalPercentage,
-            entrepreneurPercentage: entrepreneurPercentage,
+            entrepreneurPercentage: entrepreneurPercentage,  // Now correctly uses session data!
             advisorResponsePercentage: originalPercentage, // Default to original
             accepted: false,
           };

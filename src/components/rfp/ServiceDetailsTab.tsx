@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Upload, List, Plus, X, Loader2 } from 'lucide-react';
+import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack } from 'lucide-react';
 import { ServiceDetailsMode, ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
-import { DEFAULT_FEE_CATEGORIES } from '@/constants/rfpUnits';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
+import { useFeeTemplateCategories, useFeeSubmissionMethods } from '@/hooks/useFeeTemplateHierarchy';
 
 interface ServiceDetailsTabProps {
   mode: ServiceDetailsMode;
@@ -26,6 +26,14 @@ interface ServiceDetailsTabProps {
   feeItems: RFPFeeItem[];
   advisorType: string;
   projectId: string;
+  projectType?: string;
+  // Category selection callbacks
+  selectedCategoryId?: string;
+  selectedCategoryName?: string;
+  selectedMethodId?: string;
+  selectedMethodLabel?: string;
+  onCategoryChange?: (categoryId: string | null, categoryName: string | null, defaultIndexType: string | null) => void;
+  onMethodChange?: (methodId: string | null, methodLabel: string | null) => void;
 }
 
 export const ServiceDetailsTab = ({
@@ -39,12 +47,34 @@ export const ServiceDetailsTab = ({
   onScopeItemsChange,
   feeItems,
   advisorType,
-  projectId
+  projectId,
+  projectType,
+  selectedCategoryId: propCategoryId,
+  selectedCategoryName: propCategoryName,
+  selectedMethodId: propMethodId,
+  selectedMethodLabel: propMethodLabel,
+  onCategoryChange,
+  onMethodChange
 }: ServiceDetailsTabProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
+  
+  // Template hierarchy selection - use props if provided
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(propCategoryId || null);
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(propMethodId || null);
+
+  // Fetch categories for this advisor type and project type
+  const { data: categories, isLoading: loadingCategories } = useFeeTemplateCategories(
+    advisorType,
+    projectType || undefined
+  );
+
+  // Fetch submission methods for selected category
+  const { data: submissionMethods, isLoading: loadingMethods } = useFeeSubmissionMethods(
+    selectedCategoryId || undefined
+  );
 
   // Get fee categories from fee items for linking
   const feeCategories = [
@@ -54,20 +84,89 @@ export const ServiceDetailsTab = ({
       .map(item => item.description)
   ];
 
-  // Load default templates when switching to checklist mode
+  // Handle category change and notify parent (includes default index type)
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    const category = categories?.find(c => c.id === categoryId);
+    onCategoryChange?.(categoryId, category?.name || null, category?.default_index_type || null);
+  };
+
+  // Handle method change and notify parent
+  const handleMethodChange = (methodId: string) => {
+    setSelectedMethodId(methodId);
+    const method = submissionMethods?.find(m => m.id === methodId);
+    onMethodChange?.(methodId, method?.method_label || null);
+  };
+
+  // Auto-select default category when categories load
   useEffect(() => {
-    if (mode === 'checklist' && scopeItems.length === 0) {
-      loadDefaultTemplates();
+    if (categories && categories.length > 0 && !selectedCategoryId) {
+      const defaultCat = categories.find(c => c.is_default) || categories[0];
+      handleCategoryChange(defaultCat.id);
     }
-  }, [mode]);
+  }, [categories, selectedCategoryId]);
+
+  // Auto-select default submission method when methods load
+  useEffect(() => {
+    if (submissionMethods && submissionMethods.length > 0 && !selectedMethodId) {
+      const defaultMethod = submissionMethods.find(m => m.is_default) || submissionMethods[0];
+      handleMethodChange(defaultMethod.id);
+    }
+  }, [submissionMethods, selectedMethodId]);
+
+  // Reset submission method when category changes
+  useEffect(() => {
+    setSelectedMethodId(null);
+    onMethodChange?.(null, null);
+  }, [selectedCategoryId]);
+
+  // Load templates when category is selected and mode is checklist
+  useEffect(() => {
+    if (mode === 'checklist' && selectedCategoryId) {
+      loadTemplatesForCategory(selectedCategoryId);
+    }
+  }, [mode, selectedCategoryId]);
+
+  const loadTemplatesForCategory = async (categoryId: string) => {
+    setLoadingTemplates(true);
+    try {
+      // First try to load templates linked to this category
+      const { data: categoryTemplates, error: catError } = await supabase
+        .from('default_service_scope_templates')
+        .select('*')
+        .eq('category_id', categoryId)
+        .order('display_order', { ascending: true });
+
+      if (catError) throw catError;
+
+      if (categoryTemplates && categoryTemplates.length > 0) {
+        const items: ServiceScopeItem[] = categoryTemplates.map((template, index) => ({
+          task_name: template.task_name,
+          is_included: true,
+          fee_category: template.default_fee_category || 'כללי',
+          is_optional: template.is_optional,
+          display_order: index
+        }));
+        onScopeItemsChange(items);
+      } else {
+        // Fallback: load by advisor specialty only
+        await loadDefaultTemplates();
+      }
+    } catch (error) {
+      console.error('[ServiceDetails] Error loading category templates:', error);
+      await loadDefaultTemplates();
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
 
   const loadDefaultTemplates = async () => {
-    setLoadingTemplates(true);
     try {
       const { data, error } = await supabase
         .from('default_service_scope_templates')
         .select('*')
         .eq('advisor_specialty', advisorType)
+        .is('category_id', null)
         .order('display_order', { ascending: true });
 
       if (error) throw error;
@@ -84,8 +183,6 @@ export const ServiceDetailsTab = ({
       }
     } catch (error) {
       console.error('[ServiceDetails] Error loading templates:', error);
-    } finally {
-      setLoadingTemplates(false);
     }
   };
 
@@ -202,6 +299,9 @@ export const ServiceDetailsTab = ({
     onScopeItemsChange(scopeItems.filter((_, i) => i !== index));
   };
 
+  const selectedCategory = categories?.find(c => c.id === selectedCategoryId);
+  const selectedMethod = submissionMethods?.find(m => m.id === selectedMethodId);
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="space-y-2">
@@ -300,6 +400,80 @@ export const ServiceDetailsTab = ({
 
           <TabsContent value="checklist" className="mt-4" dir="rtl">
             <div className="space-y-4">
+              {/* Template Hierarchy Selection */}
+              {categories && categories.length > 0 && (
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <FolderOpen className="h-4 w-4 text-primary" />
+                    בחירת תבנית
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Category Selection */}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">סוג תבנית</Label>
+                      <Select
+                        dir="rtl"
+                        value={selectedCategoryId || ''}
+                        onValueChange={handleCategoryChange}
+                        disabled={loadingCategories}
+                      >
+                        <SelectTrigger className="text-right">
+                          <SelectValue placeholder="בחר תבנית..." />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id} className="text-right">
+                              <div className="flex items-center gap-2">
+                                {cat.name}
+                                {cat.is_default && (
+                                  <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Submission Method Selection */}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">שיטת הגשה</Label>
+                      <Select
+                        dir="rtl"
+                        value={selectedMethodId || ''}
+                        onValueChange={handleMethodChange}
+                        disabled={!selectedCategoryId || loadingMethods}
+                      >
+                        <SelectTrigger className="text-right">
+                          <SelectValue placeholder={loadingMethods ? "טוען..." : "בחר שיטה..."} />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          {submissionMethods?.map((method) => (
+                            <SelectItem key={method.id} value={method.id} className="text-right">
+                              <div className="flex items-center gap-2">
+                                <FileStack className="h-3.5 w-3.5" />
+                                {method.method_label}
+                                {method.is_default && (
+                                  <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {selectedCategory && (
+                    <p className="text-xs text-muted-foreground">
+                      תבנית נבחרת: {selectedCategory.name}
+                      {selectedMethod && ` • ${selectedMethod.method_label}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label className="text-right block">רשימת שירותים</Label>
                 <p className="text-sm text-muted-foreground text-right">
@@ -358,7 +532,7 @@ export const ServiceDetailsTab = ({
                   
                   {scopeItems.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
-                      אין שירותים ברשימה. הוסף שירותים או טען תבנית ברירת מחדל
+                      אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
                     </div>
                   )}
 

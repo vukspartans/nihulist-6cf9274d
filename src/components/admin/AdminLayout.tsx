@@ -27,6 +27,7 @@ import {
   Tags,
   GitPullRequest,
   Milestone,
+  ClipboardList,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { UserHeader } from "@/components/UserHeader";
@@ -63,12 +64,14 @@ const managementItems = [
   { title: adminTranslations.navigation.projects, url: "/heyadmin/projects", icon: FolderKanban },
   { title: adminTranslations.navigation.rfps, url: "/heyadmin/rfps", icon: FileText },
   { title: adminTranslations.navigation.rfpTemplates, url: "/heyadmin/rfp-templates", icon: FileStack },
+  { title: "תבניות שכר טרחה", url: "/heyadmin/fee-templates", icon: Wallet },
   { title: adminTranslations.navigation.users, url: "/heyadmin/users", icon: Users },
   { title: adminTranslations.navigation.feedback, url: "/heyadmin/feedback", icon: MessageSquareHeart },
   { title: adminTranslations.navigation.auditLog, url: "/heyadmin/audit", icon: Shield },
 ];
 
 const licensingNavigationItems = [
+  { title: "ניהול רישוי", url: "/heyadmin/licensing", icon: ClipboardList },
   { title: "עיריות", url: "/heyadmin/municipalities", icon: MapPin },
   { title: "שלבי רישוי", url: "/heyadmin/licensing-phases", icon: GitBranch },
   { title: "תבניות משימות", url: "/heyadmin/task-templates", icon: FileStack },
@@ -90,9 +93,10 @@ function AdminSidebar() {
   const isManagementRoute = managementItems.some(item => location.pathname === item.url);
 
   // Check if current route is a licensing route
-  const isLicensingRoute = location.pathname.includes('/heyadmin/municipalities') ||
+  const isLicensingRoute = location.pathname.includes('/heyadmin/municipalities') || 
                            location.pathname.includes('/heyadmin/licensing-phases') ||
-                           location.pathname.includes('/heyadmin/task-templates');
+                           location.pathname.includes('/heyadmin/task-templates') ||
+                           location.pathname === '/heyadmin/licensing';
   
   // Check if current route is a payment route
   const isPaymentRoute = location.pathname.includes('/heyadmin/payment-') || 

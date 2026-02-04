@@ -28,6 +28,10 @@ export const canonicalizeAdvisor = (raw: string): string => {
     'עורכת דין מקרקעין': 'עורך דין מקרקעין',
     'עו"ד מקרקעין': 'עורך דין מקרקעין',
     'עו״ד מקרקעין': 'עורך דין מקרקעין',
+    // Map legacy names to new canonical names
+    'יועץ אשפה': 'יועץ תברואה',
+    'אדריכל נוף': 'אדריכל נוף ופיתוח',
+    'יועץ פיתוח': 'אדריכל נוף ופיתוח',
   };
   
   // Return canonical form if matched, otherwise return cleaned string

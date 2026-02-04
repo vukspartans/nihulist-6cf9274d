@@ -93,14 +93,14 @@ serve(async (req) => {
         .select('advisor_type')
         .eq('id', proposal.rfp_invite_id)
         .single();
-      if (rfpInvite?.advisor_type) {
-        advisorType = rfpInvite.advisor_type;
+      
+      // Validate advisor_type is a valid, non-empty string
+      if (rfpInvite?.advisor_type && 
+          typeof rfpInvite.advisor_type === 'string' && 
+          rfpInvite.advisor_type.trim().length > 0) {
+        advisorType = rfpInvite.advisor_type.trim();
       }
-    }
-
-    if (proposalError || !proposal) {
-      console.error('[Proposal Submitted] Proposal not found:', proposalError);
-      throw new Error('Proposal not found');
+      console.log('[Proposal Submitted] advisorType resolved to:', advisorType);
     }
 
     console.log('[Proposal Submitted] Proposal data:', { proposal, project, advisor });

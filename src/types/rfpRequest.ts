@@ -47,12 +47,19 @@ export interface MilestonePayment {
 
 export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
 
+export type IndexType = 'none' | 'cpi' | 'construction_wage' | 'hourly_labor_cost' | 
+                        'residential_construction_input' | 'non_residential_construction_input';
+
 export interface PaymentTerms {
   advance_percent?: number;
   milestone_payments?: MilestonePayment[];
   payment_term_type?: PaymentTermType;
   payment_due_days?: number; // Kept for backward compatibility
   notes?: string;
+  // Index (מדד) fields
+  index_type?: IndexType;
+  index_base_value?: number;
+  index_base_month?: string; // e.g., "2024-01"
 }
 
 export interface UploadedFileMetadata {
@@ -76,6 +83,10 @@ export interface AdvisorTypeRequestData {
   serviceDetailsFreeText?: string;
   serviceDetailsFile?: UploadedFileMetadata;
   serviceScopeItems?: ServiceScopeItem[];
+  selectedCategoryId?: string;
+  selectedCategoryName?: string;
+  selectedMethodId?: string;
+  selectedMethodLabel?: string;
   
   // Fee items (שכר טרחה)
   feeItems: RFPFeeItem[];

@@ -292,7 +292,7 @@ export const NegotiationDialog = ({
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
     },
-    maxSize: 10 * 1024 * 1024,
+    maxSize: 20 * 1024 * 1024,
   });
 
   const removeFile = (index: number) => {

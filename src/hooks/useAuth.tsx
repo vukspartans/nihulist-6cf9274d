@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getPrimaryRole } from '@/lib/roleNavigation';
@@ -155,11 +155,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // Keep a ref to current user ID to detect if it's the same user on tab return
+  const currentUserIdRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     // Set up auth state listener FIRST - synchronous to avoid deadlocks
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('[useAuth] Auth event:', event, 'session:', !!session, 'timestamp:', new Date().toISOString());
+        
+        // Skip loading states for token refresh - session is still valid, no need to reload profile/roles
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('[useAuth] Token refreshed silently, skipping reload');
+          setSession(session);
+          setUser(session?.user ?? null);
+          return;
+        }
+        
+        // Skip loading states when SIGNED_IN is triggered for the same user (tab return scenario)
+        // This prevents full component tree unmount when returning to tab
+        if (event === 'SIGNED_IN' && 
+            session?.user?.id === currentUserIdRef.current && 
+            currentUserIdRef.current !== null) {
+          console.log('[useAuth] Same user SIGNED_IN (tab return), skipping reload');
+          setSession(session);
+          setUser(session?.user ?? null);
+          return;
+        }
         
         // Log session expiry information
         if (session) {
@@ -169,6 +191,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Update ref with current user ID
+        currentUserIdRef.current = session?.user?.id ?? null;
         
         if (session?.user) {
           // Start loading immediately
