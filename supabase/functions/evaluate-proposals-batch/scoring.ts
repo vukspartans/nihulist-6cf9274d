@@ -1,5 +1,6 @@
 import type { EvaluationMode, RecommendationLevel } from "./schema.ts";
-import type { EvaluationProposalInput, EvaluationRfpRequirements, RfpFeeItemRow, RfpScopeItemRow } from "./fetch.ts";
+import type { EvaluationProposalInput, EvaluationRfpRequirements, RfpFeeItemRow, RfpScopeItemRow, VendorCompanyRow } from "./fetch.ts";
+import type { PolicyViolation, OrganizationPolicies } from "./precheck.ts";
 
 function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(n)));
@@ -142,27 +143,62 @@ export interface DeterministicProposalScore {
   compare_price_score?: number;
   final_score: number;
   knockout_triggered: boolean;
-  knockout_reason_hint: string | null; // Hebrew hint we can supply; LLM can expand
+  knockout_reason_hint: string | null;
   data_completeness: number;
   missing_mandatory_fee_items: string[];
   missing_mandatory_scope_items: string[];
+  policy_red_flags: string[];
+  vendor_completeness_flags: string[];
+}
+
+function getPolicyRedFlags(proposalId: string, violations: PolicyViolation[]): string[] {
+  return violations.filter((v) => v.proposal_id === proposalId).map((v) => v.message_he);
+}
+
+function getVendorCompletenessFlags(
+  input: EvaluationProposalInput,
+  vendorCompany: VendorCompanyRow | null,
+): string[] {
+  const flags: string[] = [];
+  const vendorName = input.proposal.supplier_name?.trim() || input.advisor.company_name?.trim() || vendorCompany?.name?.trim();
+  if (!vendorName) flags.push("פרופיל ספק לא מלא: חסר שם ספק/חברה");
+  return flags;
 }
 
 export function computeDeterministicScores(
   mode: EvaluationMode,
   rfp: EvaluationRfpRequirements,
   proposals: EvaluationProposalInput[],
+  options?: {
+    policyViolations?: PolicyViolation[];
+    vendorCompanies?: Map<string, VendorCompanyRow>;
+  },
 ): DeterministicProposalScore[] {
   const priceScores = mode === "COMPARE" ? computeComparePriceScores(proposals) : new Map<string, number>();
+  const policyViolations = options?.policyViolations ?? [];
+  const vendorCompanies = options?.vendorCompanies ?? new Map();
 
   return proposals.map((p) => {
     const coverage = computeRequirementCoverage(rfp, p);
     const priceScore = priceScores.get(p.proposal.id);
+    const policyFlags = getPolicyRedFlags(p.proposal.id, policyViolations);
+    const vendorFlags = getVendorCompletenessFlags(p, vendorCompanies.get(p.advisor.id) ?? null);
 
     const missingRatio =
       coverage.total_mandatory === 0 ? 0 : (coverage.total_mandatory - coverage.covered_mandatory) / coverage.total_mandatory;
 
-    const knockout = coverage.total_mandatory > 0 && missingRatio > 0.5;
+    const policyKnockout = policyViolations.some(
+      (v) => v.proposal_id === p.proposal.id && (v.type === "CURRENCY" || v.type === "PAYMENT_TERMS"),
+    );
+    const coverageKnockout = coverage.total_mandatory > 0 && missingRatio > 0.5;
+    const knockout = policyKnockout || coverageKnockout;
+
+    const knockoutHint = policyKnockout
+      ? policyFlags[0] ?? "הפרת מדיניות ארגונית"
+      : coverageKnockout
+        ? "חסרים יותר מ-50% מפריטי החובה שבבקשה"
+        : null;
+
     const finalScoreRaw =
       mode === "SINGLE"
         ? coverage.score
@@ -178,10 +214,12 @@ export function computeDeterministicScores(
       compare_price_score: mode === "COMPARE" ? (priceScore ?? 0) : undefined,
       final_score: finalScore,
       knockout_triggered: knockout,
-      knockout_reason_hint: knockout ? "חסרים יותר מ-50% מפריטי החובה שבבקשה" : null,
+      knockout_reason_hint: knockoutHint,
       data_completeness: computeDataCompleteness(p.proposal),
       missing_mandatory_fee_items: missingFee,
       missing_mandatory_scope_items: missingScope,
+      policy_red_flags: policyFlags,
+      vendor_completeness_flags: vendorFlags,
     };
   });
 }

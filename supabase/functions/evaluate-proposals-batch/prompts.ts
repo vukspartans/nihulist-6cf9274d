@@ -1,29 +1,39 @@
 import type { EvaluationMode } from "./schema.ts";
-import type { ProjectRow, EvaluationRfpRequirements, EvaluationProposalInput } from "./fetch.ts";
+import type { ProjectRow, EvaluationRfpRequirements, EvaluationProposalInput, VendorCompanyRow } from "./fetch.ts";
 import type { DeterministicProposalScore } from "./scoring.ts";
+import type { OrganizationPolicies } from "./precheck.ts";
 
 function allowedFieldsBlock(): string {
   return [
     "## AllowedFields (hard whitelist)",
+    "- organization_evaluation_frame: default_currency, allowed_currencies, payment_terms_policy (org-level constraints)",
     "- project_metadata: id, name, type, location, budget, advisors_budget, units, description, is_large_scale, phase",
     "- rfp_requirements: rfp_id, rfp_invite_id, advisor_type, request_title, request_content, service_details_text, payment_terms, fee_items[], service_scope_items[]",
-    "- proposals[]: proposal_id, vendor_name, company_name, price, currency, timeline_days, scope_text, extracted_text, terms, conditions_json, fee_line_items[], selected_services[], milestone_adjustments[], consultant_request_notes, services_notes",
-    "- deterministic_scores[]: proposal_id, requirement_coverage_score, compare_price_score (COMPARE only), final_score_locked, rank_locked, recommendation_level_locked, data_completeness_locked, knockout_triggered_locked, knockout_reason_hint, missing_mandatory_fee_items, missing_mandatory_scope_items",
+    "- proposals[]: proposal_id, vendor_name, company_name, vendor_profile (name, registration_number, contact, completeness), price, currency, timeline_days, scope_text, extracted_text, terms, conditions_json, fee_line_items[], selected_services[], milestone_adjustments[], consultant_request_notes, services_notes",
+    "- deterministic_scores[]: proposal_id, requirement_coverage_score, compare_price_score (COMPARE only), final_score_locked, rank_locked, recommendation_level_locked, data_completeness_locked, knockout_triggered_locked, knockout_reason_hint, missing_mandatory_fee_items, missing_mandatory_scope_items, policy_red_flags, vendor_completeness_flags",
   ].join("\n");
 }
 
 export function systemInstruction(mode: EvaluationMode): string {
+  const hebrewRule = [
+    "- STRICT LANGUAGE: ALL narrative text MUST be in Hebrew. Use 'לא סופק' for missing values. Use 'אין' when a list is empty (e.g. no missing items = full coverage). English ONLY for: proper nouns, enum values (e.g. recommendation_level), field names in technical contexts. NO mixed language in paragraphs.",
+    "- Do NOT use English field names (e.g. missing_mandatory_fee_items) in narrative output. Use Hebrew: פריטי שכר חסרים, פריטי היקף חסרים. When value is ['אין'] it means no items missing.",
+    "- Evaluate each offer across THREE mandatory dimensions: (1) Vendor identity and profile completeness, (2) Entrepreneur organization constraints (currency, payment terms), (3) RFP alignment.",
+    "- Explain explicitly how missing data (e.g. incomplete vendor profile) or policy violations impacted the score. Add vendor_completeness_impact, policy_compliance_impact, missing_data_impact where relevant.",
+  ].join("\n");
+
   if (mode === "SINGLE") {
     return [
       "You are a strict procurement evaluator.",
       "",
       "## CRITICAL RULES",
       "- Output MUST be valid JSON only (no markdown).",
-      "- ALL human text MUST be in simple Hebrew, except enum values that must remain in English.",
-      "- You MUST NOT invent or infer any missing value. If a value is null/empty/not present, output exactly: Not provided",
+      hebrewRule,
+      "- You MUST NOT invent or infer any missing value. If a value is null/empty/not present, output exactly: לא סופק",
       "- SINGLE MODE: NO market benchmarks, NO industry averages, NO external comparisons, NO price commentary beyond what is in the proposal itself.",
       "- You MUST follow the response schema exactly for SINGLE mode: individual_analysis MUST NOT include price_assessment.",
       "- You MUST keep locked numeric fields EXACTLY as provided in deterministic_scores (final_score_locked, rank_locked, recommendation_level_locked, data_completeness_locked, knockout_triggered_locked). Do not change them.",
+      "- Include policy_red_flags and vendor_completeness_flags from deterministic_scores in flags.red_flags when present.",
       "",
       allowedFieldsBlock(),
       "",
@@ -68,11 +78,12 @@ export function systemInstruction(mode: EvaluationMode): string {
     "",
     "## CRITICAL RULES",
     "- Output MUST be valid JSON only (no markdown).",
-    "- ALL human text MUST be in simple Hebrew, except enum values that must remain in English.",
-    "- You MUST NOT invent or infer any missing value. If a value is null/empty/not present, output exactly: Not provided",
-    "- COMPARE MODE: You MAY compare prices ONLY within the provided proposals set (no market benchmarks, no external standards).",
+    hebrewRule,
+    "- You MUST NOT invent or infer any missing value. If a value is null/empty/not present, output exactly: לא סופק",
+    "- COMPARE MODE: Rank offers against the shared organization_evaluation_frame FIRST, then compare relative to each other. You MAY compare prices ONLY within the provided proposals set (no market benchmarks, no external standards).",
     "- You MUST follow the response schema exactly for COMPARE mode (includes price_assessment).",
     "- You MUST keep locked numeric fields EXACTLY as provided in deterministic_scores (final_score_locked, rank_locked, recommendation_level_locked, data_completeness_locked, knockout_triggered_locked). Do not change them.",
+    "- Include policy_red_flags and vendor_completeness_flags from deterministic_scores in flags.red_flags when present. Flag offers breaking hard rules (wrong currency, non-compliant payment terms) regardless of score.",
     "",
     allowedFieldsBlock(),
     "",
@@ -119,29 +130,52 @@ export function buildUserContent(args: {
   rfp: EvaluationRfpRequirements;
   proposals: EvaluationProposalInput[];
   deterministic: Array<DeterministicProposalScore & { rank_locked: number; recommendation_level_locked: string; final_score_locked: number; data_completeness_locked: number; knockout_triggered_locked: boolean }>;
+  organizationPolicies?: OrganizationPolicies | null;
+  vendorCompanies?: Map<string, VendorCompanyRow>;
 }): string {
-  const { mode, project, rfp, proposals, deterministic } = args;
+  const { mode, project, rfp, proposals, deterministic, organizationPolicies, vendorCompanies } = args;
 
-  const proposalPayload = proposals.map((p) => ({
-    proposal_id: p.proposal.id,
-    vendor_name: p.proposal.supplier_name,
-    company_name: p.advisor.company_name,
-    price: p.proposal.price,
-    currency: p.proposal.currency,
-    timeline_days: p.proposal.timeline_days,
-    scope_text: p.proposal.scope_text,
-    extracted_text: p.proposal.extracted_text,
-    terms: p.proposal.terms,
-    conditions_json: p.proposal.conditions_json,
-    fee_line_items: p.proposal.fee_line_items ?? [],
-    selected_services: p.proposal.selected_services ?? [],
-    milestone_adjustments: p.proposal.milestone_adjustments ?? [],
-    consultant_request_notes: p.proposal.consultant_request_notes ?? p.proposal.services_notes ?? null,
-    services_notes: p.proposal.services_notes ?? null,
-  }));
+  const proposalPayload = proposals.map((p) => {
+    const vendorCompany = vendorCompanies?.get(p.advisor.id) ?? null;
+    const vendorName = p.proposal.supplier_name || p.advisor.company_name || vendorCompany?.name || "לא סופק";
+    const vendorProfile = {
+      name: vendorName,
+      registration_number: vendorCompany?.registration_number ?? "לא סופק",
+      email: vendorCompany?.email ?? "לא סופק",
+      phone: vendorCompany?.phone ?? "לא סופק",
+      completeness: !!(p.proposal.supplier_name || p.advisor.company_name) ? "מלא" : "חלקי",
+    };
+    return {
+      proposal_id: p.proposal.id,
+      vendor_name: vendorName,
+      company_name: p.advisor.company_name,
+      vendor_profile: vendorProfile,
+      price: p.proposal.price,
+      currency: p.proposal.currency,
+      timeline_days: p.proposal.timeline_days,
+      scope_text: p.proposal.scope_text,
+      extracted_text: p.proposal.extracted_text,
+      terms: p.proposal.terms,
+      conditions_json: p.proposal.conditions_json,
+      fee_line_items: p.proposal.fee_line_items ?? [],
+      selected_services: p.proposal.selected_services ?? [],
+      milestone_adjustments: p.proposal.milestone_adjustments ?? [],
+      consultant_request_notes: p.proposal.consultant_request_notes ?? p.proposal.services_notes ?? null,
+      services_notes: p.proposal.services_notes ?? null,
+    };
+  });
+
+  const organizationEvaluationFrame = organizationPolicies
+    ? {
+        default_currency: organizationPolicies.default_currency,
+        allowed_currencies: organizationPolicies.allowed_currencies,
+        payment_terms_policy: organizationPolicies.payment_terms_policy,
+      }
+    : null;
 
   const payload = {
     evaluation_mode: mode,
+    organization_evaluation_frame: organizationEvaluationFrame,
     project_metadata: {
       id: project.id,
       name: project.name,
@@ -166,7 +200,11 @@ export function buildUserContent(args: {
       service_scope_items: rfp.service_scope_items,
     },
     proposals: proposalPayload,
-    deterministic_scores: deterministic,
+    deterministic_scores: deterministic.map((d) => ({
+      ...d,
+      missing_mandatory_fee_items: d.missing_mandatory_fee_items.length ? d.missing_mandatory_fee_items : ["אין"],
+      missing_mandatory_scope_items: d.missing_mandatory_scope_items.length ? d.missing_mandatory_scope_items : ["אין"],
+    })),
   };
 
   return JSON.stringify(payload, null, 2);

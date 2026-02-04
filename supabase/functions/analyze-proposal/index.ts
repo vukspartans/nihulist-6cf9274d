@@ -13,9 +13,10 @@ const SYSTEM_PROMPT = `אתה מעריך הצעות בצורה קפדנית וש
 
 ## כללי בסיס (קריטי)
 1. אתה משתמש **רק** במידע שמופיע בנתונים שסופקו לך.
-2. אסור להסיק/להמציא. אם נתון חסר/ריק/לא מופיע — כתוב בדיוק: Not provided
-3. **אין ניתוח מחיר** ואין השוואות לשוק/סטנדרטים/ממוצעים (אין לך סט השוואה).
-4. התמקד ב: התאמה לדרישות חובה, חוסרים, אי-בהירויות, וסיכונים מהטקסט/תנאים.
+2. אסור להסיק/להמציא. אם נתון חסר/ריק/לא מופיע — כתוב בדיוק: לא סופק
+3. **כל הטקסט בעברית**. אסור לערבב אנגלית בפסקאות. אנגלית רק למונחים טכניים/שמות שדות כשהכרחי.
+4. **אין ניתוח מחיר** ואין השוואות לשוק/סטנדרטים/ממוצעים (אין לך סט השוואה).
+5. הערך את ההצעה בשלושה מימדים חובה: (א) זהות ופרופיל ספק, (ב) אילוצי ארגון היזם (מטבע, תנאי תשלום), (ג) התאמה לדרישות הבקשה.
 
 ## מבנה תשובה (השתמש בדיוק בכותרות הללו)
 
@@ -23,7 +24,7 @@ const SYSTEM_PROMPT = `אתה מעריך הצעות בצורה קפדנית וש
 [2-3 משפטים תמציתיים]
 
 ### 📐 התאמה לדרישות חובה
-[ציין את ציון הכיסוי (0-100) שסופק לך, ומה חסר. אל תשנה מספרים.]
+[ציין את ציון הכיסוי (0-100) שסופק לך. אם missing_mandatory_fee_items או missing_mandatory_scope_items מכילים "אין" – משמעות: אין פריטים חסרים (כיסוי מלא). כתוב: פריטי שכר חסרים: אין. פריטי היקף חסרים: אין. אל תשנה מספרים. אל תשתמש בשמות שדות באנגלית בטקסט.]
 
 ### ❓ מה חסר / שאלות חובה ליועץ
 • [שאלה 1]
@@ -39,8 +40,9 @@ const SYSTEM_PROMPT = `אתה מעריך הצעות בצורה קפדנית וש
 🟢 מומלץ לאשר | 🟡 דורש בדיקה/משא ומתן | 🔴 לא מומלץ
 [נימוק קצר]
 
-## סגנון
-- עברית מקצועית וברורה
+## סגנון ועקביות
+- עברית מקצועית וברורה – **כל הטקסט בעברית**. אסור להשתמש בשמות שדות באנגלית (כגון missing_mandatory_fee_items) בפסקאות. השתמש: פריטי שכר חסרים, פריטי היקף חסרים.
+- "לא סופק" = נתון שחסר/לא הוגש. "אין" = אין פריטים חסרים (כיסוי מלא).
 - ישיר ותמציתי
 - מקסימום 350 מילים`;
 
@@ -231,9 +233,10 @@ serve(async (req) => {
       console.error('[analyze-proposal] Project not found:', projectError);
     }
 
-    // Org context (entrepreneur company)
+    // Org context (entrepreneur company) + policies
     let entrepreneurProfile: any = null;
     let entrepreneurCompany: any = null;
+    let orgPolicies: any = null;
     if (project?.owner_id) {
       const { data: profile } = await supabaseClient
         .from('profiles')
@@ -246,10 +249,36 @@ serve(async (req) => {
       if (orgId) {
         const { data: company } = await supabaseClient
           .from('companies')
-          .select('id, name, type, location, website, description')
+          .select('id, name, type, location, website, description, default_currency, allowed_currencies, payment_terms_policy, procurement_rules')
           .eq('id', orgId)
           .maybeSingle();
         entrepreneurCompany = company;
+        if (company) {
+          orgPolicies = {
+            default_currency: company.default_currency || 'ILS',
+            allowed_currencies: Array.isArray(company.allowed_currencies) ? company.allowed_currencies : [company.default_currency || 'ILS'],
+            payment_terms_policy: company.payment_terms_policy || {},
+            procurement_rules: company.procurement_rules || {},
+          };
+        }
+      }
+    }
+
+    // Vendor (advisor + company)
+    let vendorCompany: any = null;
+    if (proposal.advisor_id) {
+      const { data: advisor } = await supabaseClient
+        .from('advisors')
+        .select('id, company_name, company_id')
+        .eq('id', proposal.advisor_id)
+        .maybeSingle();
+      if (advisor?.company_id) {
+        const { data: comp } = await supabaseClient
+          .from('companies')
+          .select('id, name, registration_number, email, phone')
+          .eq('id', advisor.company_id)
+          .maybeSingle();
+        vendorCompany = comp;
       }
     }
 
@@ -260,27 +289,39 @@ serve(async (req) => {
       proposalSelectedServices: proposal.selected_services,
     });
 
-    const rfpTitle = invite?.request_title ?? 'Not provided';
-    const rfpContent = invite?.request_content ?? 'Not provided';
-    const advisorType = invite?.advisor_type ?? 'Not provided';
-    const serviceDetails = invite?.service_details_text ?? 'Not provided';
-    const paymentTerms = invite?.payment_terms ?? 'Not provided';
+    const rfpTitle = invite?.request_title ?? 'לא סופק';
+    const rfpContent = invite?.request_content ?? 'לא סופק';
+    const advisorType = invite?.advisor_type ?? 'לא סופק';
+    const serviceDetails = invite?.service_details_text ?? 'לא סופק';
+    const paymentTerms = invite?.payment_terms ?? 'לא סופק';
 
     const analysisPayload = {
       organization: {
-        entrepreneur_name: entrepreneurProfile?.name ?? 'Not provided',
-        company_name: entrepreneurCompany?.name ?? entrepreneurProfile?.company_name ?? 'Not provided',
-        company_location: entrepreneurCompany?.location ?? 'Not provided',
+        entrepreneur_name: entrepreneurProfile?.name ?? 'לא סופק',
+        company_name: entrepreneurCompany?.name ?? entrepreneurProfile?.company_name ?? 'לא סופק',
+        company_location: entrepreneurCompany?.location ?? 'לא סופק',
+        policies: orgPolicies ? {
+          default_currency: orgPolicies.default_currency,
+          allowed_currencies: orgPolicies.allowed_currencies,
+          payment_terms_policy: orgPolicies.payment_terms_policy,
+        } : null,
+      },
+      vendor_profile: {
+        supplier_name: proposal.supplier_name ?? 'לא סופק',
+        company_name: vendorCompany?.name ?? 'לא סופק',
+        registration_number: vendorCompany?.registration_number ?? 'לא סופק',
+        email: vendorCompany?.email ?? 'לא סופק',
+        phone: vendorCompany?.phone ?? 'לא סופק',
       },
       project: {
-        name: project?.name ?? 'Not provided',
-        type: project?.type ?? 'Not provided',
-        location: project?.location ?? 'Not provided',
-        phase: project?.phase ?? 'Not provided',
-        budget: project?.budget ?? 'Not provided',
-        advisors_budget: project?.advisors_budget ?? 'Not provided',
-        units: project?.units ?? 'Not provided',
-        description: project?.description ?? 'Not provided',
+        name: project?.name ?? 'לא סופק',
+        type: project?.type ?? 'לא סופק',
+        location: project?.location ?? 'לא סופק',
+        phase: project?.phase ?? 'לא סופק',
+        budget: project?.budget ?? 'לא סופק',
+        advisors_budget: project?.advisors_budget ?? 'לא סופק',
+        units: project?.units ?? 'לא סופק',
+        description: project?.description ?? 'לא סופק',
       },
       rfp_requirements: {
         title: rfpTitle,
@@ -292,27 +333,27 @@ serve(async (req) => {
         mandatory_scope_items: rfpScopeItems.filter((i) => !i.is_optional).map((i) => ({ id: i.id, task_name: i.task_name })),
       },
       proposal: {
-        supplier_name: proposal.supplier_name ?? 'Not provided',
-        scope_text: proposal.scope_text ?? 'Not provided',
-        terms: proposal.terms ?? 'Not provided',
+        supplier_name: proposal.supplier_name ?? 'לא סופק',
+        scope_text: proposal.scope_text ?? 'לא סופק',
+        terms: proposal.terms ?? 'לא סופק',
         conditions_json: proposal.conditions_json ?? {},
         fee_line_items: proposal.fee_line_items ?? [],
         selected_services: proposal.selected_services ?? [],
         milestone_adjustments: proposal.milestone_adjustments ?? [],
-        consultant_request_notes: proposal.consultant_request_notes ?? proposal.services_notes ?? 'Not provided',
+        consultant_request_notes: proposal.consultant_request_notes ?? proposal.services_notes ?? 'לא סופק',
       },
       deterministic: {
         requirement_coverage_score: coverage.coverage_score,
         total_mandatory: coverage.total_mandatory,
         covered_mandatory: coverage.covered_mandatory,
-        missing_mandatory_fee_items: coverage.missing_fee.length ? coverage.missing_fee : ['Not provided'],
-        missing_mandatory_scope_items: coverage.missing_scope.length ? coverage.missing_scope : ['Not provided'],
+        missing_mandatory_fee_items: coverage.missing_fee.length ? coverage.missing_fee : ['אין'],
+        missing_mandatory_scope_items: coverage.missing_scope.length ? coverage.missing_scope : ['אין'],
       },
     };
 
-    const analysisPrompt = `נתונים לניתוח (JSON). השתמש רק במה שמופיע פה. אם חסר משהו כתוב Not provided.
+    const analysisPrompt = `נתונים לניתוח (JSON). השתמש רק במה שמופיע פה. אם חסר משהו כתוב: לא סופק. כל הטקסט בעברית בלבד.
 \n\n${JSON.stringify(analysisPayload, null, 2)}
-\n\nהפק ניתוח לפי מבנה הכותרות שהוגדר ב-System Prompt.`;
+\n\nהפק ניתוח לפי מבנה הכותרות שהוגדר ב-System Prompt. הערך בשלושה מימדים: ספק, אילוצי ארגון, התאמה לדרישות.`;
 
     let analysis = '';
     const modelUsed = 'gpt-5.2';

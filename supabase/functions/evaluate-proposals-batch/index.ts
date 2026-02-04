@@ -6,6 +6,7 @@ import { EvaluationResultSchema, type EvaluationMode, type EvaluationResult } fr
 import { fetchEvaluationInputs } from "./fetch.ts";
 import { computeDeterministicScores, recommendationFromScore } from "./scoring.ts";
 import { buildUserContent, systemInstruction } from "./prompts.ts";
+import { runPreCheck } from "./precheck.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,8 +174,10 @@ serve(async (req) => {
     const aiProvider = getAIProvider();
     const apiKey = aiProvider === "openai" ? getOpenAIAPIKey() : getGoogleAPIKey();
 
-    const { project, proposals, rfp } = await fetchEvaluationInputs(supabase, { project_id, proposal_ids });
+    const { project, proposals, rfp, organizationAndPolicies, vendorCompanies } = await fetchEvaluationInputs(supabase, { project_id, proposal_ids });
     const mode: EvaluationMode = proposals.length === 1 ? "SINGLE" : "COMPARE";
+
+    const preCheck = runPreCheck(proposals, organizationAndPolicies?.policies ?? null, vendorCompanies);
 
     // Cache shortcut (best-effort): if all selected proposals already evaluated, return cached.
     if (!force_reevaluate) {
@@ -244,7 +247,10 @@ serve(async (req) => {
       }
     }
 
-    const deterministicBase = computeDeterministicScores(mode, rfp, proposals);
+    const deterministicBase = computeDeterministicScores(mode, rfp, proposals, {
+      policyViolations: preCheck.all_violations,
+      vendorCompanies,
+    });
     const rankedByScore = stableSortByScore(
       deterministicBase.map((d) => ({ proposal_id: d.proposal_id, final_score_locked: d.final_score })),
     );
@@ -268,6 +274,8 @@ serve(async (req) => {
       rfp,
       proposals,
       deterministic: deterministicLocked,
+      organizationPolicies: organizationAndPolicies?.policies ?? null,
+      vendorCompanies,
     });
 
     const sys = systemInstruction(mode);
@@ -293,7 +301,10 @@ serve(async (req) => {
       const fromModel = byId.get(proposal_id) ?? {};
       const proposal = proposalsById.get(proposal_id);
 
-      const vendor_name = proposal?.proposal.supplier_name || proposal?.advisor.company_name || "Unknown Vendor";
+      const vendor_name = proposal?.proposal.supplier_name || proposal?.advisor.company_name || "ספק לא ידוע";
+      const policyAndVendorFlags = [...(base.policy_red_flags ?? []), ...(base.vendor_completeness_flags ?? [])];
+      const modelRedFlags = Array.isArray(fromModel?.flags?.red_flags) ? fromModel.flags.red_flags : [];
+      const red_flags = [...new Set([...policyAndVendorFlags, ...modelRedFlags])];
 
       const common = {
         proposal_id,
@@ -303,7 +314,7 @@ serve(async (req) => {
         data_completeness: base.data_completeness_locked,
         recommendation_level: base.recommendation_level_locked,
         flags: {
-          red_flags: Array.isArray(fromModel?.flags?.red_flags) ? fromModel.flags.red_flags : [],
+          red_flags,
           green_flags: Array.isArray(fromModel?.flags?.green_flags) ? fromModel.flags.green_flags : [],
           knockout_triggered: base.knockout_triggered_locked,
           knockout_reason: base.knockout_triggered_locked
@@ -318,10 +329,10 @@ serve(async (req) => {
         return {
           ...common,
           individual_analysis: {
-            requirements_alignment: fromModel?.individual_analysis?.requirements_alignment ?? "Not provided",
-            timeline_assessment: fromModel?.individual_analysis?.timeline_assessment ?? "Not provided",
-            experience_assessment: fromModel?.individual_analysis?.experience_assessment ?? "Not provided",
-            scope_quality: fromModel?.individual_analysis?.scope_quality ?? "Not provided",
+            requirements_alignment: fromModel?.individual_analysis?.requirements_alignment ?? "לא סופק",
+            timeline_assessment: fromModel?.individual_analysis?.timeline_assessment ?? "לא סופק",
+            experience_assessment: fromModel?.individual_analysis?.experience_assessment ?? "לא סופק",
+            scope_quality: fromModel?.individual_analysis?.scope_quality ?? "לא סופק",
             fee_structure_assessment: fromModel?.individual_analysis?.fee_structure_assessment,
             payment_terms_assessment: fromModel?.individual_analysis?.payment_terms_assessment,
             strengths: Array.isArray(fromModel?.individual_analysis?.strengths) ? fromModel.individual_analysis.strengths : [],
@@ -338,11 +349,11 @@ serve(async (req) => {
       return {
         ...common,
         individual_analysis: {
-          requirements_alignment: fromModel?.individual_analysis?.requirements_alignment ?? "Not provided",
-          price_assessment: fromModel?.individual_analysis?.price_assessment ?? "Not provided",
-          timeline_assessment: fromModel?.individual_analysis?.timeline_assessment ?? "Not provided",
-          experience_assessment: fromModel?.individual_analysis?.experience_assessment ?? "Not provided",
-          scope_quality: fromModel?.individual_analysis?.scope_quality ?? "Not provided",
+          requirements_alignment: fromModel?.individual_analysis?.requirements_alignment ?? "לא סופק",
+          price_assessment: fromModel?.individual_analysis?.price_assessment ?? "לא סופק",
+          timeline_assessment: fromModel?.individual_analysis?.timeline_assessment ?? "לא סופק",
+          experience_assessment: fromModel?.individual_analysis?.experience_assessment ?? "לא סופק",
+          scope_quality: fromModel?.individual_analysis?.scope_quality ?? "לא סופק",
           fee_structure_assessment: fromModel?.individual_analysis?.fee_structure_assessment,
           payment_terms_assessment: fromModel?.individual_analysis?.payment_terms_assessment,
           strengths: Array.isArray(fromModel?.individual_analysis?.strengths) ? fromModel.individual_analysis.strengths : [],

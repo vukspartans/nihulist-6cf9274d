@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import type { OrganizationPolicies } from "./precheck.ts";
 
 export type ProposalStatus =
   | "draft"
@@ -30,6 +31,15 @@ export interface ProjectRow {
   description: string | null;
   is_large_scale: boolean | null;
   phase: string | null;
+  owner_id?: string | null;
+}
+
+export interface VendorCompanyRow {
+  id: string;
+  name: string | null;
+  registration_number: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 export interface RfpInviteRow {
@@ -67,6 +77,7 @@ export interface RfpScopeItemRow {
 export interface AdvisorRow {
   id: string;
   company_name: string | null;
+  company_id: string | null;
   rating: number | null;
   expertise: string[] | null;
   certifications: string[] | null;
@@ -140,7 +151,7 @@ export async function fetchProject(
 ): Promise<ProjectRow> {
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, name, type, location, budget, advisors_budget, units, description, is_large_scale, phase")
+    .select("id, name, type, location, budget, advisors_budget, units, description, is_large_scale, phase, owner_id")
     .eq("id", project_id)
     .single();
 
@@ -151,6 +162,40 @@ export async function fetchProject(
   return project as ProjectRow;
 }
 
+export async function fetchOrganizationAndPolicies(
+  supabase: SupabaseClient,
+  owner_id: string | null | undefined,
+): Promise<{ organization_id: string; policies: OrganizationPolicies } | null> {
+  if (!owner_id) return null;
+  const { fetchOrganizationPolicies } = await import("./precheck.ts");
+  return fetchOrganizationPolicies(supabase, owner_id);
+}
+
+export async function fetchVendorCompanies(
+  supabase: SupabaseClient,
+  advisorIds: string[],
+): Promise<Map<string, VendorCompanyRow>> {
+  const out = new Map<string, VendorCompanyRow>();
+  if (advisorIds.length === 0) return out;
+  const { data: advisors } = await supabase
+    .from("advisors")
+    .select("id, company_id")
+    .in("id", advisorIds);
+  const companyIds = [...new Set((advisors ?? []).map((a: { company_id: string | null }) => a.company_id).filter(Boolean))] as string[];
+  if (companyIds.length === 0) return out;
+  const { data: companies } = await supabase
+    .from("companies")
+    .select("id, name, registration_number, email, phone")
+    .in("id", companyIds);
+  const byId = new Map((companies ?? []).map((c: VendorCompanyRow) => [c.id, c]));
+  for (const a of advisors ?? []) {
+    const aid = (a as { id: string; company_id: string | null }).id;
+    const cid = (a as { id: string; company_id: string | null }).company_id;
+    if (cid && byId.has(cid)) out.set(aid, byId.get(cid)!);
+  }
+  return out;
+}
+
 export async function fetchEvaluationInputs(
   supabase: SupabaseClient,
   args: { project_id: string; proposal_ids?: string[] },
@@ -158,6 +203,8 @@ export async function fetchEvaluationInputs(
   project: ProjectRow;
   proposals: EvaluationProposalInput[];
   rfp: EvaluationRfpRequirements;
+  organizationAndPolicies: { organization_id: string; policies: OrganizationPolicies } | null;
+  vendorCompanies: Map<string, VendorCompanyRow>;
 }> {
   const project = await fetchProject(supabase, args.project_id);
 
@@ -188,6 +235,7 @@ export async function fetchEvaluationInputs(
       advisors!fk_proposals_advisor(
         id,
         company_name,
+        company_id,
         rating,
         expertise,
         certifications,
@@ -338,6 +386,10 @@ export async function fetchEvaluationInputs(
     })),
   };
 
-  return { project, proposals: dedupedInputs, rfp };
+  const organizationAndPolicies = await fetchOrganizationAndPolicies(supabase, (project as { owner_id?: string }).owner_id);
+  const advisorIds = dedupedInputs.map((x) => x.advisor.id);
+  const vendorCompanies = await fetchVendorCompanies(supabase, advisorIds);
+
+  return { project, proposals: dedupedInputs, rfp, organizationAndPolicies, vendorCompanies };
 }
 
