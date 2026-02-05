@@ -1,203 +1,122 @@
 
 
-# סקירה: שלוש בעיות לתיקון
+# תכנית: הוספת שלבי פרויקט להתחדשות עירונית
 
-## 1. מייל ליועץ על בקשת תיקון הצעה - נכשל!
+## הבעיה
+הבקשה היא להוסיף שלבים נוספים ספציפית לפרויקטי התחדשות עירונית (תמ"א 38/1, תמ"א 38/2, פינוי מתחמים).
 
-### הבעיה
-בדיקת ה-`activity_log` מראה שמיילי משא ומתן **נכשלים** באופן עקבי:
+## המצב הנוכחי
+
+רשימת השלבים הנוכחית ב-`PROJECT_PHASES`:
 
 ```
-action: "negotiation_request_email_failed"
-error: "Objects are not valid as a React child (found: object with keys {$$typeof, type, key, ref, props, _owner, _store})"
+1.  בדיקה ראשונית
+2.  תכנון ראשוני
+3.  עמידה בתנאי סף
+4.  פרסום
+5.  בקרה מרחבית
+6.  דיון בוועדה
+7.  מכון בקרה
+8.  אישור תחילת עבודות
+9.  התקבל היתר
+10. ביצוע
+11. הסתיים
 ```
 
-### סיבת הכשל
-בקובץ `layout.tsx` (שורה 39), נעשה שימוש ב-`React.Fragment` שלא עובד טוב בסביבת Deno:
+## השינויים המבוקשים
 
-```tsx
-// בעייתי
-{footer || (
-  <React.Fragment>
-    <Text>...</Text>
-    <Text>...</Text>
-  </React.Fragment>
-)}
-```
+| מיקום | שלב חדש | הערות |
+|-------|---------|-------|
+| אחרי "בדיקה ראשונית" | **הגשת הצעה** | שלב חדש |
+| אחרי "תכנון ראשוני" | **בחתימות** | שלב חדש |
+| אחרי "מכון בקרה" | **בקבלת היתר** | שלב חדש |
+| אחרי "בקבלת היתר" | **באישור תחילת עבודות** | שינוי נוסח? |
 
-### הפתרון
-החלפת `React.Fragment` בסינטקס JSX קצר `<>...</>`:
+**הערה:** קיימים כבר "אישור תחילת עבודות" ו-"התקבל היתר" - הבקשה כוללת סדר הפוך ונוסח שונה ("בקבלת היתר" / "באישור תחילת עבודות").
 
-```tsx
-// תקין
-{footer || (
-  <>
-    <Text>...</Text>
-    <Text>...</Text>
-  </>
-)}
+## הפתרון המומלץ
+
+### אפשרות נבחרת: שלבים גלובליים מעודכנים
+
+מכיוון שהרשימה הנוכחית היא גלובלית לכל סוגי הפרויקטים, נעדכן את `PROJECT_PHASES` כך:
+
+```typescript
+export const PROJECT_PHASES = [
+  'בדיקה ראשונית',
+  'הגשת הצעה',           // חדש
+  'תכנון ראשוני',
+  'בחתימות',             // חדש
+  'עמידה בתנאי סף',
+  'פרסום',
+  'בקרה מרחבית',
+  'דיון בוועדה',
+  'מכון בקרה',
+  'בקבלת היתר',          // חדש (מחליף "התקבל היתר")
+  'באישור תחילת עבודות', // חדש (מחליף "אישור תחילת עבודות")
+  'ביצוע',
+  'הסתיים'
+] as const;
 ```
 
 ---
 
-## 2. הערת מע"מ (* ללא מע"מ) - מיושם!
-
-### סטטוס: ✅ מיושם ב-6 מקומות
-
-| קובץ | שורה | סטטוס |
-|------|------|--------|
-| `SubmitProposal.tsx` | 1156 | ✅ |
-| `ConsultantFeeTable.tsx` | 361 | ✅ |
-| `ProposalComparisonTable.tsx` | 413 | ✅ |
-| `ProposalComparisonDialog.tsx` | 531 | ✅ |
-| `ProposalApprovalDialog.tsx` | 386 | ✅ |
-| `ProposalDetailDialog.tsx` | 835 | ✅ |
-
-הערה: יש לוודא שה-PDF המיוצר כולל גם הוא את ההערה.
-
----
-
-## 3. הרחבת תנאי תשלום - חסר!
-
-### המצב הנוכחי
-תנאי התשלום הקיימים (ליזם וליועץ):
-
-```tsx
-const PAYMENT_TERM_OPTIONS = [
-  { value: 'current', label: 'שוטף' },
-  { value: 'net_30', label: 'שוטף + 30' },
-  { value: 'net_60', label: 'שוטף + 60' },
-  { value: 'net_90', label: 'שוטף + 90' },
-];
-```
-
-### הבקשה
-להוסיף את האפשרויות:
-- תשלום מיידי
-- שוטף + 15
-- שוטף + 45
-- שוטף + 75
-- שוטף + 120
-
-### קבצים לעדכון
+## שלבים לביצוע
 
 | # | קובץ | שינוי |
 |---|------|-------|
-| 1 | `src/types/rfpRequest.ts` | הרחבת `PaymentTermType` |
-| 2 | `src/components/rfp/PaymentTermsTab.tsx` | הוספת אפשרויות לדרופדאון |
-| 3 | `src/components/proposal/ConsultantPaymentTerms.tsx` | הוספת אפשרויות לדרופדאון |
-| 4 | `src/components/ProposalDetailDialog.tsx` | הוספת תצוגת תנאים חדשים |
-| 5 | `src/hooks/useProposalSubmit.ts` | עדכון הטיפוס |
-| 6 | `src/components/negotiation/NegotiationContext.tsx` | עדכון תרגום Labels |
+| 1 | `src/constants/project.ts` | עדכון `PROJECT_PHASES` עם השלבים החדשים והסדר הנכון |
 
 ---
 
-## שינויים לביצוע
+## פרטים טכניים
 
-### שינוי 1: תיקון React.Fragment בקובץ layout.tsx
-
-בקובץ `supabase/functions/_shared/email-templates/layout.tsx` שורות 38-53:
+### שינוי בקובץ `src/constants/project.ts` (שורות 106-118)
 
 **לפני:**
-```tsx
-<Section style={footerSection}>
-  {footer || (
-    <React.Fragment>
-      <Text style={footerText}>
-        צוות Billding...
-      </Text>
-      <Text style={footerText}>
-        <Link href="https://billding.ai" style={footerLink}>
-          billding.ai
-        </Link>
-        {' | '}
-        <Link href="mailto:support@billding.ai" style={footerLink}>
-          support@billding.ai
-        </Link>
-      </Text>
-    </React.Fragment>
-  )}
-</Section>
+```typescript
+export const PROJECT_PHASES = [
+  'בדיקה ראשונית',
+  'תכנון ראשוני',
+  'עמידה בתנאי סף',
+  'פרסום',
+  'בקרה מרחבית',
+  'דיון בוועדה',
+  'מכון בקרה',
+  'אישור תחילת עבודות',
+  'התקבל היתר',
+  'ביצוע',
+  'הסתיים'
+] as const;
 ```
 
 **אחרי:**
-```tsx
-<Section style={footerSection}>
-  {footer || (
-    <>
-      <Text style={footerText}>
-        צוות Billding...
-      </Text>
-      <Text style={footerText}>
-        <Link href="https://billding.ai" style={footerLink}>
-          billding.ai
-        </Link>
-        {' | '}
-        <Link href="mailto:support@billding.ai" style={footerLink}>
-          support@billding.ai
-        </Link>
-      </Text>
-    </>
-  )}
-</Section>
+```typescript
+export const PROJECT_PHASES = [
+  'בדיקה ראשונית',
+  'הגשת הצעה',              // חדש - אחרי בדיקה ראשונית
+  'תכנון ראשוני',
+  'בחתימות',                // חדש - אחרי תכנון ראשוני
+  'עמידה בתנאי סף',
+  'פרסום',
+  'בקרה מרחבית',
+  'דיון בוועדה',
+  'מכון בקרה',
+  'בקבלת היתר',             // חדש - אחרי מכון בקרה
+  'באישור תחילת עבודות',    // נוסח מעודכן
+  'ביצוע',
+  'הסתיים'
+] as const;
 ```
-
-### שינוי 2: הרחבת PaymentTermType
-
-בקובץ `src/types/rfpRequest.ts` שורה 48:
-
-**לפני:**
-```tsx
-export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
-```
-
-**אחרי:**
-```tsx
-export type PaymentTermType = 
-  | 'immediate'  // תשלום מיידי
-  | 'current'    // שוטף
-  | 'net_15'     // שוטף + 15
-  | 'net_30'     // שוטף + 30
-  | 'net_45'     // שוטף + 45
-  | 'net_60'     // שוטף + 60
-  | 'net_75'     // שוטף + 75
-  | 'net_90'     // שוטף + 90
-  | 'net_120';   // שוטף + 120
-```
-
-### שינוי 3: עדכון PAYMENT_TERM_OPTIONS בכל הקבצים
-
-בקובץ `PaymentTermsTab.tsx` שורות 21-26:
-
-```tsx
-const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
-  { value: 'immediate', label: 'תשלום מיידי' },
-  { value: 'current', label: 'שוטף' },
-  { value: 'net_15', label: 'שוטף + 15' },
-  { value: 'net_30', label: 'שוטף + 30' },
-  { value: 'net_45', label: 'שוטף + 45' },
-  { value: 'net_60', label: 'שוטף + 60' },
-  { value: 'net_75', label: 'שוטף + 75' },
-  { value: 'net_90', label: 'שוטף + 90' },
-  { value: 'net_120', label: 'שוטף + 120' },
-];
-```
-
-אותו עדכון גם ב:
-- `ConsultantPaymentTerms.tsx` (SelectContent)
-- `ProposalDetailDialog.tsx` (תצוגת תנאי תשלום)
-- `NegotiationContext.tsx` (paymentTermLabels)
-- `useProposalSubmit.ts` (טיפוס)
 
 ---
 
-## סיכום
+## השפעה על נתונים קיימים
 
-| # | בעיה | סטטוס | פעולה |
-|---|------|--------|-------|
-| 1 | מייל משא ומתן | ❌ נכשל | תיקון React.Fragment |
-| 2 | הערת מע"מ | ✅ מיושם | לא נדרש |
-| 3 | תנאי תשלום | ❌ חסר | הרחבת האפשרויות |
+פרויקטים קיימים שיש להם שלבים ישנים (כמו "התקבל היתר" או "אישור תחילת עבודות") יציגו את הערך כפי שהוא שמור בדאטאבייס, אך לא יהיו בדרופדאון. ייתכן שיידרש migration לעדכון נתונים קיימים:
 
-לאחר התיקונים יש **לבדוק** את שליחת המייל ולוודא שהיועץ מקבל התראה כשהיזם מבקש תיקון להצעה.
+```sql
+-- אופציונלי: עדכון ערכים קיימים
+UPDATE projects SET phase = 'בקבלת היתר' WHERE phase = 'התקבל היתר';
+UPDATE projects SET phase = 'באישור תחילת עבודות' WHERE phase = 'אישור תחילת עבודות';
+```
 
