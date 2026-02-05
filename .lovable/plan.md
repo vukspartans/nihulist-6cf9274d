@@ -1,139 +1,55 @@
 
 
-# תכנית: תמיכה ביועץ עם מספר שירותים לאותו פרויקט
+# תכנית: מחיקת אינדקס חוסם
 
-## הבעיה
+## הבעיה המאומתת
 
-היועץ **א.א.ל.משכית תכנון והנדסה** כבר אושר לפרויקט עבור **יועץ אשפה**.
-כעת היזם רוצה לאשר אותו גם עבור **יועץ אינסטלציה** - אבל הConstraint הקיים חוסם זאת:
+אימות מלא של מצב הדאטאבייס מראה:
 
-```sql
-UNIQUE (project_id, advisor_id)  -- לא מתחשב בסוג השירות!
-```
+| אינדקס | הגדרה | סטטוס |
+|--------|-------|--------|
+| `project_advisors_pkey` | PRIMARY KEY (id) | ✅ תקין |
+| `project_advisors_project_advisor_type_unique` | UNIQUE (project_id, advisor_id, advisor_type) | ✅ נוסף כנדרש |
+| **`idx_project_advisors_project_advisor`** | **UNIQUE (project_id, advisor_id)** | ❌ **חוסם!** |
+
+הפונקציה `approve_proposal_atomic` מעודכנת נכון, אבל האינדקס הישן גורם לPostgreSQL לדחות את הINSERT לפני שהON CONFLICT מופעל.
 
 ---
 
 ## הפתרון
 
-### שלב 1: הוספת עמודת `advisor_type` לטבלת `project_advisors`
+מחיקת האינדקס הישן:
 
 ```sql
-ALTER TABLE project_advisors 
-ADD COLUMN advisor_type TEXT;
-```
-
-### שלב 2: עדכון הנתונים הקיימים
-
-מילוי `advisor_type` לרשומות קיימות מתוך ה-`rfp_invite` של ההצעה:
-
-```sql
-UPDATE project_advisors pa
-SET advisor_type = ri.advisor_type
-FROM proposals p
-JOIN rfp_invites ri ON ri.id = p.rfp_invite_id
-WHERE pa.proposal_id = p.id
-  AND pa.advisor_type IS NULL;
-```
-
-### שלב 3: שינוי הUnique Constraint
-
-```sql
--- הסרת הConstraint הישן
-ALTER TABLE project_advisors 
-DROP CONSTRAINT project_advisors_project_id_advisor_id_key;
-
--- יצירת Constraint חדש שכולל advisor_type
-ALTER TABLE project_advisors 
-ADD CONSTRAINT project_advisors_project_advisor_type_unique 
-UNIQUE (project_id, advisor_id, advisor_type);
-```
-
-### שלב 4: עדכון פונקציית `approve_proposal_atomic`
-
-הוספת שליפת `advisor_type` מה-`rfp_invite` והכנסתו ל-`project_advisors`:
-
-```sql
--- בשליפת הproposal - הוספת JOIN ל-rfp_invites
-SELECT 
-  p.id,
-  p.project_id,
-  p.advisor_id,
-  p.price,
-  p.timeline_days,
-  proj.owner_id,
-  ri.advisor_type  -- חדש!
-INTO v_proposal
-FROM public.proposals p
-JOIN public.projects proj ON proj.id = p.project_id
-LEFT JOIN public.rfp_invites ri ON ri.id = p.rfp_invite_id
-WHERE p.id = p_proposal_id
-  AND proj.owner_id = auth.uid()
-  AND p.status IN ('submitted', 'resubmitted');
-
--- בINSERT ל-project_advisors
-INSERT INTO public.project_advisors (
-  project_id, advisor_id, advisor_type, proposal_id, fee_amount, ...
-)
-VALUES (
-  v_proposal.project_id,
-  v_proposal.advisor_id,
-  v_proposal.advisor_type,  -- חדש!
-  p_proposal_id,
-  v_proposal.price,
-  ...
-)
-ON CONFLICT (project_id, advisor_id, advisor_type) 
-DO UPDATE SET ...
+DROP INDEX IF EXISTS public.idx_project_advisors_project_advisor;
 ```
 
 ---
 
-## קבצים לעדכון
+## שלבי ביצוע
 
-| # | קובץ | שינוי |
-|---|------|-------|
-| 1 | **New Migration** | הוספת עמודה, עדכון נתונים, שינוי constraint, עדכון פונקציה |
-
----
-
-## תוצאה צפויה
-
-לאחר התיקון, אותו יועץ יכול לספק מספר שירותים לאותו פרויקט:
-
-| יועץ | סוג שירות | מחיר |
-|------|-----------|------|
-| א.א.ל.משכית | יועץ אשפה | ₪14,000 |
-| א.א.ל.משכית | יועץ אינסטלציה | ₪70,004 |
+1. יצירת migration חדש שמוחק את האינדקס
+2. Migration יופעל אוטומטית על סביבת Test
+3. **לחיצה על Publish** כדי להפעיל גם על Live
+4. ניסיון מחודש לאשר את ההצעה
 
 ---
 
 ## פרטים טכניים
 
-### Migration מלא
+### סקריפט SQL מלא
 
 ```sql
--- 1. Add advisor_type column
-ALTER TABLE project_advisors ADD COLUMN advisor_type TEXT;
-
--- 2. Backfill existing records from rfp_invites
-UPDATE project_advisors pa
-SET advisor_type = ri.advisor_type
-FROM proposals p
-JOIN rfp_invites ri ON ri.id = p.rfp_invite_id
-WHERE pa.proposal_id = p.id
-  AND pa.advisor_type IS NULL;
-
--- 3. Drop old constraint
-ALTER TABLE project_advisors 
-DROP CONSTRAINT IF EXISTS project_advisors_project_id_advisor_id_key;
-
--- 4. Add new constraint with advisor_type
-ALTER TABLE project_advisors 
-ADD CONSTRAINT project_advisors_project_advisor_type_unique 
-UNIQUE (project_id, advisor_id, advisor_type);
-
--- 5. Update approve_proposal_atomic function (full function with changes)
-CREATE OR REPLACE FUNCTION public.approve_proposal_atomic(...)
--- [See full function in implementation]
+-- Fix: Drop legacy unique index that blocks multi-service advisors
+-- The previous migration dropped the constraint but this separate index 
+-- still enforces UNIQUE (project_id, advisor_id), blocking approval of 
+-- the same advisor for different service types
+DROP INDEX IF EXISTS public.idx_project_advisors_project_advisor;
 ```
+
+---
+
+## לאחר התיקון
+
+**חשוב:** לאחר אישור ה-migration יש ללחוץ על **Publish** כדי שהשינוי יופעל גם על סביבת ה-Live (הייצור), ואז לנסות שוב לאשר את ההצעה של א.א.ל.משכית.
 
