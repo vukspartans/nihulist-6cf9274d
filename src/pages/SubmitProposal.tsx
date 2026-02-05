@@ -1152,6 +1152,9 @@ const SubmitProposal = () => {
                           ₪{parseFloat(price || '0').toLocaleString('he-IL')}
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground text-right mt-2">
+                        * כל המחירים ללא מע"מ
+                      </p>
                     </div>
                   )}
                 </CardContent>

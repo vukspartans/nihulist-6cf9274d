@@ -136,10 +136,7 @@ export const ProjectFilesManager = ({ projectId, files, onFilesUpdate }: Project
 
     onFilesUpdate();
     
-    // Trigger analysis for successfully uploaded files
-    for (const fileId of uploadedFileIds) {
-      analyzeFile(fileId);
-    }
+    // Note: AI analysis is now user-triggered only (via manual "Analyze" button)
     
     setUploading(false);
   }, [projectId, onFilesUpdate, toast]);

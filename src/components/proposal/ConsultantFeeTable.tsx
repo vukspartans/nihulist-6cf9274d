@@ -355,6 +355,11 @@ export function ConsultantFeeTable({
             </TableRow>
           </TableFooter>
         </Table>
+        
+        {/* VAT Disclaimer */}
+        <p className="text-xs text-muted-foreground text-right mt-2">
+          * כל המחירים ללא מע"מ
+        </p>
 
         <div className="flex gap-2">
           <Button

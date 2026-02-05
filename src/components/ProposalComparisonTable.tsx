@@ -409,6 +409,9 @@ export const ProposalComparisonTable = ({
               })}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground text-right mt-2 px-2">
+            * כל המחירים ללא מע"מ
+          </p>
         </div>
 
         {/* Mobile Card View */}
