@@ -335,20 +335,7 @@ export const ProjectWizard = () => {
         console.log('[ProjectWizard] File upload complete. Errors:', uploadErrors.length);
       }
 
-      // Trigger AI analysis for uploaded files in background
-      if (uploadedFileIds.length > 0) {
-        toast({
-          title: "ניתוח AI מתבצע ברקע",
-          description: `מנתח ${uploadedFileIds.length} קבצים. התוצאות יופיעו בעמוד הפרויקט.`,
-        });
-
-        // Analyze files in background (don't await)
-        uploadedFileIds.forEach(fileId => {
-          supabase.functions.invoke('analyze-project-file', {
-            body: { fileId }
-          }).catch(err => console.error('AI analysis failed:', err));
-        });
-      }
+      // Note: AI analysis is now user-triggered only (via manual "Analyze" button on project page)
 
       // Clear localStorage draft
       localStorage.removeItem(DRAFT_KEY);

@@ -339,8 +339,10 @@ export type Database = {
           activity_regions: string[] | null
           activity_scope: string | null
           activity_scope_tier: string | null
+          allowed_currencies: string[] | null
           country: string | null
           created_at: string
+          default_currency: string | null
           description: string | null
           email: string | null
           employee_count: string | null
@@ -351,9 +353,12 @@ export type Database = {
           name: string
           onboarding_completed_at: string | null
           onboarding_skipped_at: string | null
+          payment_terms_policy: Json | null
           phone: string | null
           primary_activity_category: string | null
+          procurement_rules: Json | null
           registration_number: string | null
+          required_contract_clauses: string[] | null
           type: string
           updated_at: string
           website: string | null
@@ -363,8 +368,10 @@ export type Database = {
           activity_regions?: string[] | null
           activity_scope?: string | null
           activity_scope_tier?: string | null
+          allowed_currencies?: string[] | null
           country?: string | null
           created_at?: string
+          default_currency?: string | null
           description?: string | null
           email?: string | null
           employee_count?: string | null
@@ -375,9 +382,12 @@ export type Database = {
           name: string
           onboarding_completed_at?: string | null
           onboarding_skipped_at?: string | null
+          payment_terms_policy?: Json | null
           phone?: string | null
           primary_activity_category?: string | null
+          procurement_rules?: Json | null
           registration_number?: string | null
+          required_contract_clauses?: string[] | null
           type: string
           updated_at?: string
           website?: string | null
@@ -387,8 +397,10 @@ export type Database = {
           activity_regions?: string[] | null
           activity_scope?: string | null
           activity_scope_tier?: string | null
+          allowed_currencies?: string[] | null
           country?: string | null
           created_at?: string
+          default_currency?: string | null
           description?: string | null
           email?: string | null
           employee_count?: string | null
@@ -399,9 +411,12 @@ export type Database = {
           name?: string
           onboarding_completed_at?: string | null
           onboarding_skipped_at?: string | null
+          payment_terms_policy?: Json | null
           phone?: string | null
           primary_activity_category?: string | null
+          procurement_rules?: Json | null
           registration_number?: string | null
+          required_contract_clauses?: string[] | null
           type?: string
           updated_at?: string
           website?: string | null

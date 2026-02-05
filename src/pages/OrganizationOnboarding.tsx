@@ -394,10 +394,10 @@ const OrganizationOnboarding = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="location" className="text-right block">עיר</Label>
+                    <Label htmlFor="location" className="text-right block">כתובת</Label>
                     <Input
                       id="location"
-                      placeholder="עיר הרישום"
+                      placeholder="הזן כתובת מלאה"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       className="text-right"

@@ -527,6 +527,9 @@ export const ProposalComparisonDialog = ({
                 </TableRow>
               </TableBody>
             </Table>
+            <p className="text-xs text-muted-foreground text-right mt-2">
+              * כל המחירים ללא מע"מ
+            </p>
           </div>
         )}
       </div>

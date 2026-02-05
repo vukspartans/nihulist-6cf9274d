@@ -831,6 +831,9 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                           <span className="font-medium text-muted-foreground">{formatCurrency(optionalTotal)}</span>
                         </div>
                       )}
+                      <p className="text-xs text-muted-foreground text-right mt-2">
+                        * כל המחירים ללא מע"מ
+                      </p>
                     </CardContent>
                   </Card>
                 )}

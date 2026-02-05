@@ -348,11 +348,11 @@ const OrganizationProfileTab = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>עיר *</Label>
+                  <Label>כתובת *</Label>
                   <Input
                     value={editedData.location}
                     onChange={(e) => setEditedData(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="תל אביב"
+                    placeholder="הזן כתובת מלאה"
                   />
                 </div>
                 <div className="space-y-2">
@@ -386,7 +386,7 @@ const OrganizationProfileTab = () => {
                 <p className="text-foreground" dir="ltr" style={{ textAlign: 'right' }}>{organization?.registration_number || 'לא מוגדר'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">עיר</label>
+                <label className="text-sm font-medium text-muted-foreground">כתובת</label>
                 <p className="text-foreground">{organization?.location || 'לא מוגדר'}</p>
               </div>
               <div>

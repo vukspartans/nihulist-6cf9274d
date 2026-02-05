@@ -97,6 +97,7 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
             ${generateRows(mandatoryItems)}
           </tbody>
         </table>
+        <p style="font-size: 11px; color: #6b7280; text-align: right; margin-top: 8px;">* כל המחירים ללא מע"מ</p>
       `;
     }
 
