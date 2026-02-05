@@ -107,11 +107,22 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'checkbox-blink': {
+					'0%, 100%': {
+						boxShadow: '0 0 0 0 hsl(45 93% 47% / 0)',
+						transform: 'scale(1)'
+					},
+					'50%': {
+						boxShadow: '0 0 0 6px hsl(45 93% 47% / 0.4)',
+						transform: 'scale(1.1)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'checkbox-blink': 'checkbox-blink 0.8s ease-in-out infinite'
 			}
 		}
 	},
