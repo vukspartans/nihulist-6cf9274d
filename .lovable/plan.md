@@ -1,111 +1,203 @@
 
 
-# תכנית: תיקונים ואימות
+# סקירה: שלוש בעיות לתיקון
 
-## סיכום הממצאים
+## 1. מייל ליועץ על בקשת תיקון הצעה - נכשל!
 
-### 1. יישור מספר ח.פ. בתוך שדה הקלט
+### הבעיה
+בדיקת ה-`activity_log` מראה שמיילי משא ומתן **נכשלים** באופן עקבי:
 
-| מיקום | סטטוס | הערה |
-|-------|--------|------|
-| תצוגה (קריאה בלבד) | ✅ | מיושר לימין עם `textAlign: 'right'` |
-| שדה קלט (מצב עריכה) | ❌ | חסר יישור לימין - המספר מוצג משמאל בתוך השדה |
-
-**תיקון נדרש**: הוספת `className="text-right"` לשדה הקלט של מספר ח.פ.
-
----
-
-### 2. שינויי טקסונומיית יועצים
-
-| בקשה | קובץ | סטטוס |
-|------|------|--------|
-| מחיקת "יועץ פיתוח" משלב 3 | `advisorPhases.ts` | ✅ לא קיים |
-| העברת "אדריכל נוף ופיתוח" לשלב 3 | `advisorPhases.ts` (שורה 80) | ✅ |
-| העברת "הדמיות" לשלב 3 | `advisorPhases.ts` (שורה 81) | ✅ |
-| העברת "בדיקת אל הרס" לשלב 3 | `advisorPhases.ts` (שורה 82) | ✅ |
-| העברת "בדיקת אפיון רשת" לשלב 3 | `advisorPhases.ts` (שורה 83) | ✅ |
-| העברת "מכון התעדה (בניה ירוקה)" לשלב 3 | `advisorPhases.ts` (שורה 84) | ✅ |
-| שינוי "יועץ אשפה" ל"יועץ תברואה" | `canonicalizeAdvisor.ts` (שורה 32) | ✅ |
-| העברת "יועץ גז" לשלב 3 | `advisorPhases.ts` (שורה 86) | ✅ |
-| הוספת "יועץ סביבתי" | `advisor.ts` (שורה 60) | ✅ |
-| הוספת "יועץ CFD" | `advisor.ts` (שורה 61) | ✅ |
-| הוספת "הסדרי תנועה" | `advisor.ts` (שורה 62) | ✅ |
-| הוספת "התארגנות אתר" | `advisor.ts` (שורה 63) | ✅ |
-| הוספת "פרסום תכנון ובניה" לשלב 3 | `advisorPhases.ts` (שורה 91) | ✅ |
-
-**בעיה שנמצאה**: ה-Edge Function `update-advisors-data` עדיין מכיל שמות ישנים:
-- `יועץ פיתוח` (במקום הסרה או מיפוי ל-`אדריכל נוף ופיתוח`)
-- `יועץ אשפה` (במקום `יועץ תברואה`)
-- `אדריכל נוף` (במקום `אדריכל נוף ופיתוח`)
-
-**תיקון נדרש**: עדכון ה-Edge Function כך שישתמש בשמות הקנוניים החדשים.
-
----
-
-### 3. ניתוח AI ידני בלבד
-
-| רכיב | סטטוס | הערה |
-|------|--------|------|
-| `ProjectFilesManager.tsx` | ✅ | ניתוח רק דרך כפתור "נתח" ידני |
-| `ProposalDetailDialog.tsx` | ✅ | ניתוח ידני בלבד |
-| `RFPWizard.tsx` | ✅ | אין ניתוח אוטומטי |
-| `evaluate-proposals-batch` | ✅ | ניתוח לצורך דירוג הצעות - חריג מותר |
-
-הערה בקוד (שורה 139):
-```javascript
-// Note: AI analysis is now user-triggered only (via manual "Analyze" button)
+```
+action: "negotiation_request_email_failed"
+error: "Objects are not valid as a React child (found: object with keys {$$typeof, type, key, ref, props, _owner, _store})"
 ```
 
-**סטטוס**: ✅ מיושם כנדרש
+### סיבת הכשל
+בקובץ `layout.tsx` (שורה 39), נעשה שימוש ב-`React.Fragment` שלא עובד טוב בסביבת Deno:
+
+```tsx
+// בעייתי
+{footer || (
+  <React.Fragment>
+    <Text>...</Text>
+    <Text>...</Text>
+  </React.Fragment>
+)}
+```
+
+### הפתרון
+החלפת `React.Fragment` בסינטקס JSX קצר `<>...</>`:
+
+```tsx
+// תקין
+{footer || (
+  <>
+    <Text>...</Text>
+    <Text>...</Text>
+  </>
+)}
+```
+
+---
+
+## 2. הערת מע"מ (* ללא מע"מ) - מיושם!
+
+### סטטוס: ✅ מיושם ב-6 מקומות
+
+| קובץ | שורה | סטטוס |
+|------|------|--------|
+| `SubmitProposal.tsx` | 1156 | ✅ |
+| `ConsultantFeeTable.tsx` | 361 | ✅ |
+| `ProposalComparisonTable.tsx` | 413 | ✅ |
+| `ProposalComparisonDialog.tsx` | 531 | ✅ |
+| `ProposalApprovalDialog.tsx` | 386 | ✅ |
+| `ProposalDetailDialog.tsx` | 835 | ✅ |
+
+הערה: יש לוודא שה-PDF המיוצר כולל גם הוא את ההערה.
+
+---
+
+## 3. הרחבת תנאי תשלום - חסר!
+
+### המצב הנוכחי
+תנאי התשלום הקיימים (ליזם וליועץ):
+
+```tsx
+const PAYMENT_TERM_OPTIONS = [
+  { value: 'current', label: 'שוטף' },
+  { value: 'net_30', label: 'שוטף + 30' },
+  { value: 'net_60', label: 'שוטף + 60' },
+  { value: 'net_90', label: 'שוטף + 90' },
+];
+```
+
+### הבקשה
+להוסיף את האפשרויות:
+- תשלום מיידי
+- שוטף + 15
+- שוטף + 45
+- שוטף + 75
+- שוטף + 120
+
+### קבצים לעדכון
+
+| # | קובץ | שינוי |
+|---|------|-------|
+| 1 | `src/types/rfpRequest.ts` | הרחבת `PaymentTermType` |
+| 2 | `src/components/rfp/PaymentTermsTab.tsx` | הוספת אפשרויות לדרופדאון |
+| 3 | `src/components/proposal/ConsultantPaymentTerms.tsx` | הוספת אפשרויות לדרופדאון |
+| 4 | `src/components/ProposalDetailDialog.tsx` | הוספת תצוגת תנאים חדשים |
+| 5 | `src/hooks/useProposalSubmit.ts` | עדכון הטיפוס |
+| 6 | `src/components/negotiation/NegotiationContext.tsx` | עדכון תרגום Labels |
 
 ---
 
 ## שינויים לביצוע
 
-| # | קובץ | שינוי |
-|---|------|-------|
-| 1 | `src/components/OrganizationProfileTab.tsx` | הוספת `className="text-right"` לשדה הקלט של מספר ח.פ. |
-| 2 | `supabase/functions/update-advisors-data/index.ts` | עדכון שמות יועצים לקנוניים |
+### שינוי 1: תיקון React.Fragment בקובץ layout.tsx
 
----
-
-## פרטים טכניים
-
-### שינוי 1: יישור שדה מספר ח.פ.
-
-בקובץ `OrganizationProfileTab.tsx` שורה 343:
+בקובץ `supabase/functions/_shared/email-templates/layout.tsx` שורות 38-53:
 
 **לפני:**
 ```tsx
-<Input
-  value={editedData.registration_number}
-  onChange={(e) => setEditedData(prev => ({ ...prev, registration_number: e.target.value }))}
-  placeholder="123456789"
-  dir="ltr"
-/>
+<Section style={footerSection}>
+  {footer || (
+    <React.Fragment>
+      <Text style={footerText}>
+        צוות Billding...
+      </Text>
+      <Text style={footerText}>
+        <Link href="https://billding.ai" style={footerLink}>
+          billding.ai
+        </Link>
+        {' | '}
+        <Link href="mailto:support@billding.ai" style={footerLink}>
+          support@billding.ai
+        </Link>
+      </Text>
+    </React.Fragment>
+  )}
+</Section>
 ```
 
 **אחרי:**
 ```tsx
-<Input
-  value={editedData.registration_number}
-  onChange={(e) => setEditedData(prev => ({ ...prev, registration_number: e.target.value }))}
-  placeholder="123456789"
-  dir="ltr"
-  className="text-right"
-/>
+<Section style={footerSection}>
+  {footer || (
+    <>
+      <Text style={footerText}>
+        צוות Billding...
+      </Text>
+      <Text style={footerText}>
+        <Link href="https://billding.ai" style={footerLink}>
+          billding.ai
+        </Link>
+        {' | '}
+        <Link href="mailto:support@billding.ai" style={footerLink}>
+          support@billding.ai
+        </Link>
+      </Text>
+    </>
+  )}
+</Section>
 ```
 
-### שינוי 2: עדכון Edge Function
+### שינוי 2: הרחבת PaymentTermType
 
-בקובץ `update-advisors-data/index.ts`:
+בקובץ `src/types/rfpRequest.ts` שורה 48:
 
-**עדכון `required_categories` (שורות 11-25):**
-- הסרה: `יועץ פיתוח`, `יועץ אשפה`, `אדריכל נוף`
-- הוספה: `אדריכל נוף ופיתוח`, `יועץ תברואה`, `יועץ סביבתי`, `יועץ CFD`, `הסדרי תנועה`, `התארגנות אתר`, `פרסום תכנון ובניה`
+**לפני:**
+```tsx
+export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
+```
 
-**עדכון כל הפרויקטים ב-`projects` array:**
-- החלפת `יועץ פיתוח` ב-`אדריכל נוף ופיתוח`
-- החלפת `יועץ אשפה` ב-`יועץ תברואה`
-- החלפת `אדריכל נוף` ב-`אדריכל נוף ופיתוח`
+**אחרי:**
+```tsx
+export type PaymentTermType = 
+  | 'immediate'  // תשלום מיידי
+  | 'current'    // שוטף
+  | 'net_15'     // שוטף + 15
+  | 'net_30'     // שוטף + 30
+  | 'net_45'     // שוטף + 45
+  | 'net_60'     // שוטף + 60
+  | 'net_75'     // שוטף + 75
+  | 'net_90'     // שוטף + 90
+  | 'net_120';   // שוטף + 120
+```
+
+### שינוי 3: עדכון PAYMENT_TERM_OPTIONS בכל הקבצים
+
+בקובץ `PaymentTermsTab.tsx` שורות 21-26:
+
+```tsx
+const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
+  { value: 'immediate', label: 'תשלום מיידי' },
+  { value: 'current', label: 'שוטף' },
+  { value: 'net_15', label: 'שוטף + 15' },
+  { value: 'net_30', label: 'שוטף + 30' },
+  { value: 'net_45', label: 'שוטף + 45' },
+  { value: 'net_60', label: 'שוטף + 60' },
+  { value: 'net_75', label: 'שוטף + 75' },
+  { value: 'net_90', label: 'שוטף + 90' },
+  { value: 'net_120', label: 'שוטף + 120' },
+];
+```
+
+אותו עדכון גם ב:
+- `ConsultantPaymentTerms.tsx` (SelectContent)
+- `ProposalDetailDialog.tsx` (תצוגת תנאי תשלום)
+- `NegotiationContext.tsx` (paymentTermLabels)
+- `useProposalSubmit.ts` (טיפוס)
+
+---
+
+## סיכום
+
+| # | בעיה | סטטוס | פעולה |
+|---|------|--------|-------|
+| 1 | מייל משא ומתן | ❌ נכשל | תיקון React.Fragment |
+| 2 | הערת מע"מ | ✅ מיושם | לא נדרש |
+| 3 | תנאי תשלום | ❌ חסר | הרחבת האפשרויות |
+
+לאחר התיקונים יש **לבדוק** את שליחת המייל ולוודא שהיועץ מקבל התראה כשהיזם מבקש תיקון להצעה.
 
