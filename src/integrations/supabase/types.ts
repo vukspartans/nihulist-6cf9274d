@@ -1685,6 +1685,7 @@ export type Database = {
       project_advisors: {
         Row: {
           advisor_id: string
+          advisor_type: string | null
           agreement_url: string | null
           created_at: string | null
           deliverables: string[] | null
@@ -1706,6 +1707,7 @@ export type Database = {
         }
         Insert: {
           advisor_id: string
+          advisor_type?: string | null
           agreement_url?: string | null
           created_at?: string | null
           deliverables?: string[] | null
@@ -1727,6 +1729,7 @@ export type Database = {
         }
         Update: {
           advisor_id?: string
+          advisor_type?: string | null
           agreement_url?: string | null
           created_at?: string | null
           deliverables?: string[] | null
