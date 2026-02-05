@@ -45,7 +45,16 @@ export interface MilestonePayment {
   trigger?: string; // e.g., "עם קבלת היתר", "עם סיום התכנון"
 }
 
-export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
+export type PaymentTermType = 
+  | 'immediate'  // תשלום מיידי
+  | 'current'    // שוטף
+  | 'net_15'     // שוטף + 15
+  | 'net_30'     // שוטף + 30
+  | 'net_45'     // שוטף + 45
+  | 'net_60'     // שוטף + 60
+  | 'net_75'     // שוטף + 75
+  | 'net_90'     // שוטף + 90
+  | 'net_120';   // שוטף + 120
 
 export type IndexType = 'none' | 'cpi' | 'construction_wage' | 'hourly_labor_cost' | 
                         'residential_construction_input' | 'non_residential_construction_input';

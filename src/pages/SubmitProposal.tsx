@@ -116,7 +116,7 @@ const SubmitProposal = () => {
 
   // Payment terms / milestones state
   const [consultantMilestones, setConsultantMilestones] = useState<ConsultantMilestone[]>([]);
-  const [paymentTermType, setPaymentTermType] = useState<'current' | 'net_30' | 'net_60' | 'net_90'>('current');
+  const [paymentTermType, setPaymentTermType] = useState<'immediate' | 'current' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120'>('current');
   const [paymentTermsComment, setPaymentTermsComment] = useState('');
 
   // Phase 3.5: Consultant response to request
@@ -782,7 +782,7 @@ const SubmitProposal = () => {
       // Phase 4: Payment terms change tracking
       paymentTermType: paymentTermType,
       paymentTermsComment: paymentTermsComment || undefined,
-      entrepreneurPaymentTermType: entrepreneurData?.payment_terms?.payment_term_type as 'current' | 'net_30' | 'net_60' | 'net_90' | undefined,
+      entrepreneurPaymentTermType: entrepreneurData?.payment_terms?.payment_term_type as 'immediate' | 'current' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120' | undefined,
     });
     
     console.log('[SubmitProposal] Submission result:', result);

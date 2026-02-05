@@ -91,10 +91,15 @@ const chargeTypeLabels: Record<string, string> = {
 };
 
 const paymentTermLabels: Record<string, string> = {
+  immediate: "תשלום מיידי",
   current: "שוטף",
+  net_15: "שוטף + 15",
   net_30: "שוטף + 30",
+  net_45: "שוטף + 45",
   net_60: "שוטף + 60",
+  net_75: "שוטף + 75",
   net_90: "שוטף + 90",
+  net_120: "שוטף + 120",
 };
 
 export const NegotiationContext = ({

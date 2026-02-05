@@ -27,7 +27,9 @@ export interface ConsultantMilestone {
   is_entrepreneur_defined: boolean;
 }
 
-export type PaymentTermType = 'current' | 'net_30' | 'net_60' | 'net_90';
+export type PaymentTermType = 
+  | 'immediate' | 'current' | 'net_15' | 'net_30' 
+  | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120';
 
 interface ConsultantPaymentTermsProps {
   entrepreneurTerms: PaymentTerms | null;
@@ -306,18 +308,31 @@ export function ConsultantPaymentTerms({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר תנאי תשלום" />
                 </SelectTrigger>
-                <SelectContent>
+              <SelectContent>
+                  <SelectItem value="immediate">תשלום מיידי</SelectItem>
                   <SelectItem value="current">שוטף</SelectItem>
+                  <SelectItem value="net_15">שוטף + 15</SelectItem>
                   <SelectItem value="net_30">שוטף + 30</SelectItem>
+                  <SelectItem value="net_45">שוטף + 45</SelectItem>
                   <SelectItem value="net_60">שוטף + 60</SelectItem>
+                  <SelectItem value="net_75">שוטף + 75</SelectItem>
                   <SelectItem value="net_90">שוטף + 90</SelectItem>
+                  <SelectItem value="net_120">שוטף + 120</SelectItem>
                 </SelectContent>
               </Select>
               {entrepreneurPaymentType && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  היזם ביקש: {entrepreneurPaymentType === 'current' ? 'שוטף' : 
+                  היזם ביקש: {
+                    entrepreneurPaymentType === 'immediate' ? 'תשלום מיידי' :
+                    entrepreneurPaymentType === 'current' ? 'שוטף' : 
+                    entrepreneurPaymentType === 'net_15' ? 'שוטף + 15' :
                     entrepreneurPaymentType === 'net_30' ? 'שוטף + 30' :
-                    entrepreneurPaymentType === 'net_60' ? 'שוטף + 60' : 'שוטף + 90'}
+                    entrepreneurPaymentType === 'net_45' ? 'שוטף + 45' :
+                    entrepreneurPaymentType === 'net_60' ? 'שוטף + 60' :
+                    entrepreneurPaymentType === 'net_75' ? 'שוטף + 75' :
+                    entrepreneurPaymentType === 'net_90' ? 'שוטף + 90' :
+                    entrepreneurPaymentType === 'net_120' ? 'שוטף + 120' : entrepreneurPaymentType
+                  }
                 </p>
               )}
             </div>

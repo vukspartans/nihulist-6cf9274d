@@ -19,10 +19,15 @@ interface PaymentTermsTabProps {
 }
 
 const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
+  { value: 'immediate', label: 'תשלום מיידי' },
   { value: 'current', label: 'שוטף' },
+  { value: 'net_15', label: 'שוטף + 15' },
   { value: 'net_30', label: 'שוטף + 30' },
+  { value: 'net_45', label: 'שוטף + 45' },
   { value: 'net_60', label: 'שוטף + 60' },
+  { value: 'net_75', label: 'שוטף + 75' },
   { value: 'net_90', label: 'שוטף + 90' },
+  { value: 'net_120', label: 'שוטף + 120' },
 ];
 
 // Get current month in YYYY-MM format
