@@ -63,10 +63,10 @@ export const RFPInvitationEmail = ({
       {requestFiles && requestFiles.length > 0 && (
         <Text style={filesText}>
           קבצים מצורפים: {requestFiles.map((file, index) => (
-            <React.Fragment key={index}>
+            <span key={index}>
               <Link href={file.url} style={fileLink}>{file.name}</Link>
               {index < requestFiles.length - 1 ? ', ' : ''}
-            </React.Fragment>
+            </span>
           ))}
         </Text>
       )}
