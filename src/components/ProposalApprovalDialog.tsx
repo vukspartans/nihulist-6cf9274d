@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -80,9 +80,24 @@ export const ProposalApprovalDialog = ({
   const [step, setStep] = useState<'review' | 'signature'>('review');
   const [selectedOptionalItems, setSelectedOptionalItems] = useState<Set<number>>(new Set());
   const [notesOpen, setNotesOpen] = useState(false);
+  const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
   
   const { approveProposal, loading } = useProposalApproval();
   const { toast } = useToast();
+
+  // Blink animation for authorization checkbox
+  useEffect(() => {
+    if (step === 'signature' && !authorizationAccepted) {
+      const startTimer = setTimeout(() => setShowBlinkAnimation(true), 2000);
+      const stopTimer = setTimeout(() => setShowBlinkAnimation(false), 5000);
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    } else {
+      setShowBlinkAnimation(false);
+    }
+  }, [step, authorizationAccepted]);
 
   // Parse items
   const mandatoryItems = proposal.fee_line_items?.filter(item => !item.is_optional) || [];
@@ -413,21 +428,20 @@ export const ProposalApprovalDialog = ({
             )}
 
             {step === 'signature' && (
-              <div className="space-y-3 sm:space-y-4" dir="rtl">
-                {/* Combined Warning + Authorization */}
-                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4 space-y-3">
-                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-                    <strong>חשוב:</strong> חתימתך מאשרת את תנאי ההצעה ומחייבת את הארגון שלך כלפי היועץ.
-                  </p>
-                  <Separator className="bg-amber-200 dark:bg-amber-800" />
+              <div className="space-y-2.5 sm:space-y-3" dir="rtl">
+                {/* Authorization Checkbox Only */}
+                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5 sm:p-3">
                   <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                     <Checkbox
                       id="authorization"
                       checked={authorizationAccepted}
                       onCheckedChange={(checked) => setAuthorizationAccepted(checked === true)}
-                      className="mt-0.5 shrink-0"
+                      className={cn(
+                        "mt-0.5 shrink-0",
+                        showBlinkAnimation && "animate-checkbox-blink"
+                      )}
                     />
-                    <span className="text-xs sm:text-sm font-medium leading-relaxed text-amber-900 dark:text-amber-100">
+                    <span className="text-xs sm:text-sm font-medium leading-snug text-amber-900 dark:text-amber-100">
                       אני מאשר/ת כי יש לי את הסמכות המשפטית להתחייב בשם הארגון לתנאי הצעה זו
                       <span className="text-destructive me-1">*</span>
                     </span>
