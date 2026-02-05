@@ -345,6 +345,7 @@ const OrganizationProfileTab = () => {
                     onChange={(e) => setEditedData(prev => ({ ...prev, registration_number: e.target.value }))}
                     placeholder="123456789"
                     dir="ltr"
+                    className="text-right"
                   />
                 </div>
                 <div className="space-y-2">
