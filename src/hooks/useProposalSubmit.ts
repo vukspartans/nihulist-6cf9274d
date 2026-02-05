@@ -69,9 +69,9 @@ export interface SubmitProposalData {
   consultantRequestFiles?: UploadedFile[];
   
   // Phase 4: Payment terms change tracking
-  paymentTermType?: 'current' | 'net_30' | 'net_60' | 'net_90';
+  paymentTermType?: 'immediate' | 'current' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120';
   paymentTermsComment?: string;
-  entrepreneurPaymentTermType?: 'current' | 'net_30' | 'net_60' | 'net_90';
+  entrepreneurPaymentTermType?: 'immediate' | 'current' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120';
 }
 
 /**
