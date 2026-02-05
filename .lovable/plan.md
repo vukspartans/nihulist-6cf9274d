@@ -1,55 +1,111 @@
 
 
-# תכנית: מחיקת אינדקס חוסם
+# תכנית: תיקונים ואימות
 
-## הבעיה המאומתת
+## סיכום הממצאים
 
-אימות מלא של מצב הדאטאבייס מראה:
+### 1. יישור מספר ח.פ. בתוך שדה הקלט
 
-| אינדקס | הגדרה | סטטוס |
-|--------|-------|--------|
-| `project_advisors_pkey` | PRIMARY KEY (id) | ✅ תקין |
-| `project_advisors_project_advisor_type_unique` | UNIQUE (project_id, advisor_id, advisor_type) | ✅ נוסף כנדרש |
-| **`idx_project_advisors_project_advisor`** | **UNIQUE (project_id, advisor_id)** | ❌ **חוסם!** |
+| מיקום | סטטוס | הערה |
+|-------|--------|------|
+| תצוגה (קריאה בלבד) | ✅ | מיושר לימין עם `textAlign: 'right'` |
+| שדה קלט (מצב עריכה) | ❌ | חסר יישור לימין - המספר מוצג משמאל בתוך השדה |
 
-הפונקציה `approve_proposal_atomic` מעודכנת נכון, אבל האינדקס הישן גורם לPostgreSQL לדחות את הINSERT לפני שהON CONFLICT מופעל.
+**תיקון נדרש**: הוספת `className="text-right"` לשדה הקלט של מספר ח.פ.
 
 ---
 
-## הפתרון
+### 2. שינויי טקסונומיית יועצים
 
-מחיקת האינדקס הישן:
+| בקשה | קובץ | סטטוס |
+|------|------|--------|
+| מחיקת "יועץ פיתוח" משלב 3 | `advisorPhases.ts` | ✅ לא קיים |
+| העברת "אדריכל נוף ופיתוח" לשלב 3 | `advisorPhases.ts` (שורה 80) | ✅ |
+| העברת "הדמיות" לשלב 3 | `advisorPhases.ts` (שורה 81) | ✅ |
+| העברת "בדיקת אל הרס" לשלב 3 | `advisorPhases.ts` (שורה 82) | ✅ |
+| העברת "בדיקת אפיון רשת" לשלב 3 | `advisorPhases.ts` (שורה 83) | ✅ |
+| העברת "מכון התעדה (בניה ירוקה)" לשלב 3 | `advisorPhases.ts` (שורה 84) | ✅ |
+| שינוי "יועץ אשפה" ל"יועץ תברואה" | `canonicalizeAdvisor.ts` (שורה 32) | ✅ |
+| העברת "יועץ גז" לשלב 3 | `advisorPhases.ts` (שורה 86) | ✅ |
+| הוספת "יועץ סביבתי" | `advisor.ts` (שורה 60) | ✅ |
+| הוספת "יועץ CFD" | `advisor.ts` (שורה 61) | ✅ |
+| הוספת "הסדרי תנועה" | `advisor.ts` (שורה 62) | ✅ |
+| הוספת "התארגנות אתר" | `advisor.ts` (שורה 63) | ✅ |
+| הוספת "פרסום תכנון ובניה" לשלב 3 | `advisorPhases.ts` (שורה 91) | ✅ |
 
-```sql
-DROP INDEX IF EXISTS public.idx_project_advisors_project_advisor;
+**בעיה שנמצאה**: ה-Edge Function `update-advisors-data` עדיין מכיל שמות ישנים:
+- `יועץ פיתוח` (במקום הסרה או מיפוי ל-`אדריכל נוף ופיתוח`)
+- `יועץ אשפה` (במקום `יועץ תברואה`)
+- `אדריכל נוף` (במקום `אדריכל נוף ופיתוח`)
+
+**תיקון נדרש**: עדכון ה-Edge Function כך שישתמש בשמות הקנוניים החדשים.
+
+---
+
+### 3. ניתוח AI ידני בלבד
+
+| רכיב | סטטוס | הערה |
+|------|--------|------|
+| `ProjectFilesManager.tsx` | ✅ | ניתוח רק דרך כפתור "נתח" ידני |
+| `ProposalDetailDialog.tsx` | ✅ | ניתוח ידני בלבד |
+| `RFPWizard.tsx` | ✅ | אין ניתוח אוטומטי |
+| `evaluate-proposals-batch` | ✅ | ניתוח לצורך דירוג הצעות - חריג מותר |
+
+הערה בקוד (שורה 139):
+```javascript
+// Note: AI analysis is now user-triggered only (via manual "Analyze" button)
 ```
 
+**סטטוס**: ✅ מיושם כנדרש
+
 ---
 
-## שלבי ביצוע
+## שינויים לביצוע
 
-1. יצירת migration חדש שמוחק את האינדקס
-2. Migration יופעל אוטומטית על סביבת Test
-3. **לחיצה על Publish** כדי להפעיל גם על Live
-4. ניסיון מחודש לאשר את ההצעה
+| # | קובץ | שינוי |
+|---|------|-------|
+| 1 | `src/components/OrganizationProfileTab.tsx` | הוספת `className="text-right"` לשדה הקלט של מספר ח.פ. |
+| 2 | `supabase/functions/update-advisors-data/index.ts` | עדכון שמות יועצים לקנוניים |
 
 ---
 
 ## פרטים טכניים
 
-### סקריפט SQL מלא
+### שינוי 1: יישור שדה מספר ח.פ.
 
-```sql
--- Fix: Drop legacy unique index that blocks multi-service advisors
--- The previous migration dropped the constraint but this separate index 
--- still enforces UNIQUE (project_id, advisor_id), blocking approval of 
--- the same advisor for different service types
-DROP INDEX IF EXISTS public.idx_project_advisors_project_advisor;
+בקובץ `OrganizationProfileTab.tsx` שורה 343:
+
+**לפני:**
+```tsx
+<Input
+  value={editedData.registration_number}
+  onChange={(e) => setEditedData(prev => ({ ...prev, registration_number: e.target.value }))}
+  placeholder="123456789"
+  dir="ltr"
+/>
 ```
 
----
+**אחרי:**
+```tsx
+<Input
+  value={editedData.registration_number}
+  onChange={(e) => setEditedData(prev => ({ ...prev, registration_number: e.target.value }))}
+  placeholder="123456789"
+  dir="ltr"
+  className="text-right"
+/>
+```
 
-## לאחר התיקון
+### שינוי 2: עדכון Edge Function
 
-**חשוב:** לאחר אישור ה-migration יש ללחוץ על **Publish** כדי שהשינוי יופעל גם על סביבת ה-Live (הייצור), ואז לנסות שוב לאשר את ההצעה של א.א.ל.משכית.
+בקובץ `update-advisors-data/index.ts`:
+
+**עדכון `required_categories` (שורות 11-25):**
+- הסרה: `יועץ פיתוח`, `יועץ אשפה`, `אדריכל נוף`
+- הוספה: `אדריכל נוף ופיתוח`, `יועץ תברואה`, `יועץ סביבתי`, `יועץ CFD`, `הסדרי תנועה`, `התארגנות אתר`, `פרסום תכנון ובניה`
+
+**עדכון כל הפרויקטים ב-`projects` array:**
+- החלפת `יועץ פיתוח` ב-`אדריכל נוף ופיתוח`
+- החלפת `יועץ אשפה` ב-`יועץ תברואה`
+- החלפת `אדריכל נוף` ב-`אדריכל נוף ופיתוח`
 
