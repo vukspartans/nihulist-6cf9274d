@@ -164,19 +164,19 @@ export function EditFeeItemTemplateDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="submit"
-              disabled={updateMutation.isPending || !advisorSpecialty || !description.trim()}
-            >
-              {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
-            </Button>
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
+            </Button>
+            <Button
+              type="submit"
+              disabled={updateMutation.isPending || !advisorSpecialty || !description.trim()}
+            >
+              {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
           </DialogFooter>
         </form>

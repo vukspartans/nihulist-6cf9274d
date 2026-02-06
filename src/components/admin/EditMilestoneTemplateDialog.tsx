@@ -336,7 +336,7 @@ export function EditMilestoneTemplateDialog({
               </TabsContent>
             </Tabs>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter className="mt-6 flex-row-reverse gap-2">
               <Button type="button" variant="outline" onClick={handleClose}>
                 {adminTranslations.common.cancel}
               </Button>

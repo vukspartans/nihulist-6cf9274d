@@ -101,7 +101,8 @@ export interface AdvisorTypeSummary {
 
 export interface ProjectTypeSummary {
   project_type: string;
-  category_count: number;
+  category_count: number; // Deprecated, kept for backwards compatibility
+  template_count?: number;
 }
 
 // Method type labels mapping

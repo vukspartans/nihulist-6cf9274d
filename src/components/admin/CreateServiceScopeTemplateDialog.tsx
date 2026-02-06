@@ -137,19 +137,19 @@ export function CreateServiceScopeTemplateDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !advisorSpecialty || !taskName.trim()}
-            >
-              {createMutation.isPending ? "יוצר..." : "צור שירות"}
-            </Button>
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !advisorSpecialty || !taskName.trim()}
+            >
+              {createMutation.isPending ? "יוצר..." : "צור שירות"}
             </Button>
           </DialogFooter>
         </form>

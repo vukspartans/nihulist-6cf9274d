@@ -65,10 +65,12 @@ export default function FeeTemplatesHierarchy() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{advisor.category_count} קטגוריות</span>
-                    <span>•</span>
-                    <span>{advisor.template_count} תבניות</span>
+                  <div className="text-sm text-muted-foreground">
+                    {advisor.template_count > 0 ? (
+                      <span>{advisor.template_count} תבניות</span>
+                    ) : (
+                      <span className="text-muted-foreground/60">טרם הוגדרו תבניות</span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
