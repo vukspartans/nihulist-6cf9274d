@@ -1,110 +1,203 @@
 
-# Plan: Fix Empty String SelectItem Values
 
-## Problem
+# Plan: RTL Optimization for Admin Template Creation Dialogs
 
-The Radix UI Select component throws an error when a `SelectItem` has `value=""` (empty string). This is by design - Radix reserves empty string to represent "no selection" for placeholder display.
+## Analysis Summary
 
-**Error Location**: 
-- `CreateMilestoneTemplateDialog.tsx` - 3 occurrences (lines 154, 175, 196)
-- `EditMilestoneTemplateDialog.tsx` - 3 occurrences (lines 188, 209, 230)
+I reviewed the 6 dialog components used in template creation/editing:
 
-## Solution
+| Dialog | File | Status |
+|--------|------|--------|
+| Create Milestone | `CreateMilestoneTemplateDialog.tsx` | Mostly RTL-compliant, minor issues |
+| Edit Milestone | `EditMilestoneTemplateDialog.tsx` | Mostly RTL-compliant, minor issues |
+| Create Fee Item | `CreateFeeItemTemplateDialog.tsx` | RTL issues found |
+| Edit Fee Item | `EditFeeItemTemplateDialog.tsx` | RTL issues found |
+| Create Service | `CreateServiceScopeTemplateDialog.tsx` | RTL issues found |
+| Edit Service | `EditServiceScopeTemplateDialog.tsx` | RTL issues found |
 
-Replace `value=""` with a special non-empty placeholder value like `"__all__"`, then handle this value in the `onValueChange` handler to convert it back to empty string for the form state.
+## Issues Found
 
-### Pattern to Apply
+### Issue 1: SelectContent Missing `dir="rtl"`
 
-**Before:**
+**Affected Files**: All 6 dialogs
+
+The `SelectContent` component needs `dir="rtl"` for proper RTL alignment of dropdown items. Some dialogs have it, some don't.
+
+**Pattern from RFP wizard (FeeItemsTable.tsx):**
 ```tsx
-<SelectItem value="" className="text-right">הכל</SelectItem>
-```
-
-**After:**
-```tsx
-<SelectItem value="__all__" className="text-right">הכל</SelectItem>
-```
-
-**Handler Update:**
-```tsx
-<Select
-  value={watch("project_type") || "__all__"}
-  onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
->
-```
-
----
-
-## Implementation
-
-### File 1: `CreateMilestoneTemplateDialog.tsx`
-
-**Lines 147-161 (Project Type Select):**
-```tsx
-<Select
-  dir="rtl"
-  value={watch("project_type") || "__all__"}
-  onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
->
-  <SelectTrigger dir="rtl" className="text-right">
-    <SelectValue placeholder={t.dialog.projectTypeAll} />
+<Select dir="rtl" value={...}>
+  <SelectTrigger dir="rtl" className="w-full text-right">
+    <SelectValue />
   </SelectTrigger>
-  <SelectContent dir="rtl">
-    <SelectItem value="__all__" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
-    {PROJECT_TYPE_OPTIONS.map((type) => (...))}
+  <SelectContent dir="rtl">  // <-- Must have dir="rtl"
+    <SelectItem key={...} value={...} className="text-right">
+      {label}
+    </SelectItem>
   </SelectContent>
 </Select>
 ```
 
-**Lines 166-182 (Municipality Select):**
+### Issue 2: Switch Position for RTL
+
+**Affected Files**: All dialogs with Switch component
+
+Per memory `memory/admin/ui-optimization-and-rtl-standards`, the Switch is isolated with `dir="ltr"` (already done in switch.tsx). However, per memory `memory/features/payment-budgetary-control-foundation`, the label/checkbox positioning in RTL should have text on RIGHT, control on LEFT.
+
+Currently the dialogs have:
 ```tsx
-<Select
-  dir="rtl"
-  value={watch("municipality_id") || "__all__"}
-  onValueChange={(val) => setValue("municipality_id", val === "__all__" ? "" : val)}
->
-  ...
-  <SelectItem value="__all__" className="text-right">{t.dialog.municipalityAll}</SelectItem>
-  ...
-</Select>
+<div className="flex items-center justify-between">
+  <Label htmlFor="is_optional">סמן כאופציונלי</Label>
+  <Switch ... />
+</div>
 ```
 
-**Lines 187-203 (Advisor Specialty Select):**
+This is correct for RTL (label on right via justify-between, switch on left).
+
+### Issue 3: Footer Button Order
+
+**Affected Files**: Fee Item and Service dialogs
+
+Per memory `memory/style/rtl-footer-button-order`: In RTL footers, the visual order follows Hebrew reading direction: Cancel in center, primary Action on far LEFT.
+
+Current pattern in Fee/Service dialogs:
 ```tsx
-<Select
-  dir="rtl"
-  value={watch("advisor_specialty") || "__all__"}
-  onValueChange={(val) => setValue("advisor_specialty", val === "__all__" ? "" : val)}
->
-  ...
-  <SelectItem value="__all__" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
-  ...
-</Select>
+<DialogFooter className="flex-row-reverse gap-2">
+  <Button variant="outline">ביטול</Button>  // Cancel - appears RIGHT
+  <Button type="submit">צור פריט</Button>   // Primary - appears LEFT
+</DialogFooter>
 ```
 
-### File 2: `EditMilestoneTemplateDialog.tsx`
+This is **correct** because `DialogFooter` already has `flex-row-reverse` and `justify-start`.
 
-Apply the same pattern to the 3 Select components in this file:
-- Project Type Select (around line 188)
-- Municipality Select (around line 209)
-- Advisor Specialty Select (around line 230)
+### Issue 4: Missing Tabs Component in Fee/Service Dialogs
+
+**Observation**: The Milestone dialogs use tabs for organization (basic/payment/tasks), but Fee Item and Service dialogs are simpler single-page forms. This is intentional and appropriate given their simpler structure.
+
+### Issue 5: Input Text Alignment
+
+**Affected Files**: All dialogs
+
+Some inputs have `className="text-right"` and some don't. For consistency in RTL, all text inputs should have `text-right` class.
+
+### Issue 6: Number Input Positioning (Percentage/Amount Fields)
+
+**Affected Files**: Milestone dialogs
+
+The percentage and amount inputs have suffix symbols (% and ₪) positioned with `left-3`. In RTL context, this should remain `left-3` since numbers read LTR but the symbol should appear on the visual left (end of number).
+
+This is **correct** per memory `memory/ui/rtl-numerical-input-alignment`.
+
+---
+
+## Implementation Plan
+
+### File 1: `CreateFeeItemTemplateDialog.tsx`
+
+1. Add `dir="rtl"` to all `SelectContent` components (4 occurrences)
+2. Add `className="text-right"` to all `SelectItem` components for consistency
+
+### File 2: `EditFeeItemTemplateDialog.tsx`
+
+Same changes as File 1.
+
+### File 3: `CreateServiceScopeTemplateDialog.tsx`
+
+Same changes as File 1.
+
+### File 4: `EditServiceScopeTemplateDialog.tsx`
+
+Same changes as File 1.
+
+### File 5: `CreateMilestoneTemplateDialog.tsx`
+
+Already has `dir="rtl"` on most SelectContent. Verify consistency.
+
+### File 6: `EditMilestoneTemplateDialog.tsx`
+
+Already has `dir="rtl"` on most SelectContent. Verify consistency.
+
+---
+
+## Detailed Changes
+
+### CreateFeeItemTemplateDialog.tsx
+
+**Line 98**: Add `dir="rtl"` to SelectContent
+```tsx
+// Before
+<SelectContent>
+
+// After
+<SelectContent dir="rtl">
+```
+
+**Line 127**: Add `dir="rtl"` to SelectContent
+```tsx
+// Before
+<SelectContent>
+
+// After
+<SelectContent dir="rtl">
+```
+
+**Line 157**: Add `dir="rtl"` to SelectContent
+```tsx
+// Before
+<SelectContent>
+
+// After
+<SelectContent dir="rtl">
+```
+
+**Lines 100, 129, 159**: Add `className="text-right"` to SelectItem
+```tsx
+// Before
+<SelectItem key={expertise} value={expertise}>
+
+// After
+<SelectItem key={expertise} value={expertise} className="text-right">
+```
+
+### EditFeeItemTemplateDialog.tsx
+
+Apply same pattern:
+- Line 89, 118, 148: Add `dir="rtl"` to SelectContent
+- Lines 91, 120, 150: Add `className="text-right"` to SelectItem
+
+### CreateServiceScopeTemplateDialog.tsx
+
+Apply same pattern:
+- Line 93, 121: Add `dir="rtl"` to SelectContent
+- Lines 95, 123: Add `className="text-right"` to SelectItem
+
+### EditServiceScopeTemplateDialog.tsx
+
+Apply same pattern:
+- Line 83, 111: Add `dir="rtl"` to SelectContent
+- Lines 85, 113: Add `className="text-right"` to SelectItem
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Replace 3 empty string values with `"__all__"`, update handlers |
-| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Replace 3 empty string values with `"__all__"`, update handlers |
+| File | Changes |
+|------|---------|
+| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add `dir="rtl"` to 3 SelectContent, add `text-right` to SelectItems |
+| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Add `dir="rtl"` to 3 SelectContent, add `text-right` to SelectItems |
+| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Add `dir="rtl"` to 2 SelectContent, add `text-right` to SelectItems |
+| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Add `dir="rtl"` to 2 SelectContent, add `text-right` to SelectItems |
 
 ---
 
 ## Testing Checklist
 
-1. Open Create Milestone Template dialog - no error
-2. Open Edit Milestone Template dialog - no error
-3. Select "הכל" option - form value becomes empty string
-4. Select a specific option - form value updates correctly
-5. Editing existing milestone with null values shows "הכל" selected
-6. Form submission works correctly with both selected and "all" options
+1. Open Create Fee Item dialog - verify dropdown items are right-aligned
+2. Open Edit Fee Item dialog - verify same
+3. Open Create Service dialog - verify dropdown items are right-aligned
+4. Open Edit Service dialog - verify same
+5. Open Create Milestone dialog - confirm already working
+6. Open Edit Milestone dialog - confirm already working
+7. Verify Switch toggle still works correctly (isolated LTR)
+8. Verify footer buttons appear in correct RTL order (Cancel right, Action left)
+9. Test on both desktop and mobile viewport sizes
+
