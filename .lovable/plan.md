@@ -1,359 +1,311 @@
 
-# Product Specification: Revised Price Offer (הגשת הצעה מעודכנת)
+# UX Pattern Design: Required Acknowledgment with Validation
 
-## 1. User Intent
+## 1. Overview
 
-**Primary Goal**: Enable a consultant to submit a new/revised price offer during an ongoing negotiation, after an initial proposal has already been submitted and a negotiation session is active.
+This is a **required acknowledgment pattern** where users must explicitly confirm understanding before proceeding with a critical action. The implementation will be based on the existing `ToSAcceptanceModal` structure but with enhanced validation messaging and accessibility features.
 
-**User Story**: 
-> As a Consultant, after submitting my initial price offer and receiving a negotiation request from the Entrepreneur, I want to submit a revised price offer that addresses the Entrepreneur's requested changes, so that we can reach an agreement without starting a new proposal process.
+## 2. User Intent & Context
 
----
+**Primary Goal**: Ensure users understand and acknowledge critical system requirements before proceeding, creating an auditable record of their explicit consent.
 
-## 2. Current System State Analysis
+**Use Cases**:
+- Terms of Service acceptance (already implemented in `ToSAcceptanceModal.tsx`)
+- Critical action confirmations (e.g., submitting binding proposals)
+- Operational requirements (e.g., understanding payment terms)
+- Risk acknowledgments (e.g., accepting binding negotiation offers)
 
-### Existing Flow (What Already Works)
-The system already supports the "revised offer" concept through the negotiation response mechanism:
+## 3. Final UX Behavior
 
-| Step | Action | Status |
-|------|--------|--------|
-| 1 | Consultant submits initial proposal | `status: submitted` |
-| 2 | Entrepreneur initiates negotiation | `negotiation_sessions` created, proposal `status: negotiation_requested` |
-| 3 | Consultant responds with counter-offer | `send-negotiation-response` edge function creates `proposal_versions` entry |
-| 4 | Proposal status updated | `status: resubmitted` |
+### Visual Hierarchy & Layout Structure
 
-### Key Components Involved
-- `NegotiationResponseView.tsx` - Consultant's view for responding to negotiation requests
-- `send-negotiation-response/index.ts` - Edge function that creates new proposal version
-- `submit_negotiation_response` - Database RPC that handles versioning
-- `proposal_versions` table - Stores version history
-- `NegotiationStepsTimeline.tsx` - Displays offer history (V1, V2, etc.)
-
----
-
-## 3. Feature Name & Terminology
-
-| Hebrew | English | Context |
-|--------|---------|---------|
-| הגשת הצעת מחיר מעודכנת | Submit Revised Price Offer | Primary action label |
-| הצעה נגדית | Counter-Offer | Current terminology in code |
-| הצעה V2 / V3 | Offer V2 / V3 | Version labels in timeline |
-| עדכון הצעה | Update Offer | Alternative terminology |
-
-**Recommendation**: Standardize on "הצעה מעודכנת" (Revised Offer) for user-facing UI, keeping "הצעה נגדית" (Counter-Offer) as a secondary/legal term.
-
----
-
-## 4. Exact UI Action and Button Behavior
-
-### 4.1 Entry Points for "Revised Price Offer"
-
-**Location 1: Advisor Dashboard - Negotiations Tab**
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ 📋 משא ומתן פעיל                                                │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ 🏗️ פרויקט: מבנה מרפאת אלופאתיה                               │ │
-│ │ מחיר מקורי: ₪55,000 → מחיר יעד: ₪50,000 (-9%)              │ │
-│ │                                                             │ │
-│ │ [הגב לבקשה] ← Primary CTA (existing)                        │ │
-│ └─────────────────────────────────────────────────────────────┘ │
+│ INFORMATION SECTION (Background: light blue/primary/10)         │
+│ ├─ Icon: AlertCircle or equivalent                             │
+│ ├─ Title: "שים לב / Critical Notice"                           │
+│ └─ Description: Clear, human-readable explanation              │
+├─────────────────────────────────────────────────────────────────┤
+│ SCROLLABLE CONTENT (if applicable)                              │
+│ ├─ Detailed terms, conditions, or requirements                 │
+│ └─ Maximum height: 300-400px with internal scroll             │
+├─────────────────────────────────────────────────────────────────┤
+│ ACKNOWLEDGMENT SECTION (Background: subtle, rounded)            │
+│ ├─ Checkbox + Label (flex row-reverse for RTL)                │
+│ ├─ Inline Error (if validation fails)                          │
+│ └─ Color: Accessible neutral/slate for unchecked state        │
+├─────────────────────────────────────────────────────────────────┤
+│ ACTION BUTTONS SECTION (sticky footer)                         │
+│ ├─ Primary CTA: Disabled until checkbox checked               │
+│ ├─ Secondary: Cancel/Go Back                                   │
+│ └─ Footer text: Consequences of action (e.g., VAT disclaimer) │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Location 2: Negotiation Response Page (`/negotiation/:sessionId`)**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Tab: תגובה (Response)                                           │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ סיכום ההצעה שלך                                              │ │
-│ │ ┌───────────┬───────────┬───────────┐                        │ │
-│ │ │ מחיר מקורי│ יעד היזם  │ ההצעה שלך │                        │ │
-│ │ │ ₪55,000  │ ₪50,000  │ ₪52,000  │                        │ │
-│ │ └───────────┴───────────┴───────────┘                        │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ הודעה ליזם (אופציונלי)                                       │ │
-│ │ ┌─────────────────────────────────────────────────────────┐ │ │
-│ │ │ [Textarea: הוסף הערות או הסברים להצעה המעודכנת...]      │ │ │
-│ │ └─────────────────────────────────────────────────────────┘ │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│  [דחה בקשה]  [קבל מחיר יעד]  [🔵 הגש הצעת מחיר מעודכנת]         │
-│                               ↑ PRIMARY CTA                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+### State Transitions
 
-### 4.2 Button Specifications
+**Initial State** (Page Load):
+- Checkbox: Unchecked
+- Primary CTA: Disabled (greyed out, not clickable)
+- Validation Message: Hidden
+- Content: Visible, scrollable
 
-| Button | Current Label | Proposed Label | Variant | Icon |
-|--------|---------------|----------------|---------|------|
-| Submit Counter-Offer | שלח הצעה נגדית | הגש הצעת מחיר מעודכנת | Primary (blue) | Send |
-| Accept Target Price | קבל מחיר יעד | אשר מחיר יעד | Outline (green) | Check |
-| Decline Request | דחה בקשה | דחה בקשה | Destructive (red) | XCircle |
+**User Checks Checkbox**:
+- Checkbox: Checked (filled with blue)
+- Primary CTA: Enabled (clickable)
+- Validation Message: Hidden
+- Visual Feedback: Subtle green highlight on checkbox container (optional)
 
-### 4.3 Button Click Behavior
+**User Unchecks Checkbox** (if previously checked):
+- Checkbox: Unchecked
+- Primary CTA: Disabled (reverts)
+- Validation Message: Hidden
 
-**On Click "הגש הצעת מחיר מעודכנת":**
+**User Attempts Click Without Checking** (required):
+- Validation Error: Appears inline below checkbox
+- Focus: Moves to checkbox (screen readers announce)
+- Message: "יש לאשר את האמור לעיל כדי להמשיך" (You must confirm the above to proceed)
+- Visual: Red/destructive border or background tint on checkbox container
 
-1. **Pre-flight Validation** (client-side):
-   - Verify all mandatory items have prices ≥ 0
-   - Verify milestone percentages sum to 100% (if applicable)
-   - Verify `newTotal > 0` (prevent zero/negative offers)
+**User Clicks Primary CTA While Checked**:
+- CTA: Shows loading state (spinner)
+- Checkbox: Disabled during submission
+- Error Message: Cleared
+- On Success: Modal closes, record audited in database
 
-2. **Confirmation Dialog** (new requirement):
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ ⚠️ אישור הגשת הצעה מעודכנת                                      │
-│                                                                 │
-│ אתה עומד להגיש הצעת מחיר מעודכנת:                               │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ מחיר מקורי: ₪55,000                                         │ │
-│ │ מחיר חדש: ₪52,000                                           │ │
-│ │ הפחתה: -5.5%                                                │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ⚠️ שים לב: זוהי הצעה מחייבת. לאחר ההגשה, היזם יקבל הודעה       │
-│ וההצעה תהיה זמינה לאישור. לא ניתן לבטל הגשה.                    │
-│                                                                 │
-│                              [ביטול]  [🔵 אשר והגש הצעה]        │
-└─────────────────────────────────────────────────────────────────┘
-```
+## 4. Validation Logic
 
-3. **On Confirm**:
-   - Call `send-negotiation-response` edge function
-   - Create new `proposal_versions` entry
-   - Update `proposals.status` to `resubmitted`
-   - Update `negotiation_sessions.status` to `responded`
-   - Send email notification to Entrepreneur
-   - Create in-app notification
+### Client-Side Validation
 
-4. **Success State**:
-   - Toast: "ההצעה המעודכנת נשלחה בהצלחה"
-   - Redirect to Advisor Dashboard
-   - Timeline shows new "הצעה V2" entry
-
----
-
-## 5. State Changes and Validation Rules
-
-### 5.1 State Machine
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     PROPOSAL STATUS FLOW                         │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  [submitted] ────────────────────────────────────────────────►   │
-│       │                                                          │
-│       ▼                                                          │
-│  [negotiation_requested] ◄──── Entrepreneur initiates            │
-│       │                                                          │
-│       ├──► [resubmitted] ◄──── Consultant submits revised offer  │
-│       │         │                                                │
-│       │         ├──► [accepted] ◄──── Entrepreneur approves      │
-│       │         │                                                │
-│       │         └──► [negotiation_requested] ◄── Another round   │
-│       │                                                          │
-│       └──► [cancelled] ◄──── Consultant declines negotiation     │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Negotiation Session Status
-
-| Status | Meaning | Consultant Can Respond? |
-|--------|---------|------------------------|
-| `open` | Session created, awaiting details | No |
-| `awaiting_response` | Ready for consultant response | ✅ Yes |
-| `responded` | Consultant submitted revised offer | No |
-| `resolved` | Entrepreneur accepted/rejected | No |
-| `cancelled` | Session cancelled | No |
-
-### 5.3 Validation Rules
-
-**Price Validation:**
 ```typescript
-// Minimum: Must be greater than 0
-if (newTotal <= 0) {
-  throw new Error("סכום ההצעה חייב להיות גדול מאפס");
-}
+// State
+const [isChecked, setIsChecked] = useState(false);
+const [showError, setShowError] = useState(false);
+const [loading, setLoading] = useState(false);
 
-// Maximum: No upper limit, but warn if higher than original
-if (newTotal > originalTotal) {
-  showWarning("ההצעה החדשה גבוהה מההצעה המקורית - האם להמשיך?");
-}
+// Checkbox Handler
+const handleCheckChange = (checked: boolean) => {
+  setIsChecked(checked);
+  // Clear error when user checks box
+  if (checked && showError) {
+    setShowError(false);
+  }
+};
 
-// Reasonable change: Warn if discount > 50%
-const discountPercent = ((originalTotal - newTotal) / originalTotal) * 100;
-if (discountPercent > 50) {
-  showWarning("ההנחה המוצעת עולה על 50% - האם אתה בטוח?");
-}
+// Primary CTA Handler
+const handleProceed = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  
+  // Validation Check
+  if (!isChecked) {
+    setShowError(true);
+    // Announce error to screen readers
+    const errorElement = document.getElementById('acknowledgment-error');
+    if (errorElement) {
+      errorElement.focus();
+      errorElement.setAttribute('role', 'alert');
+    }
+    return;
+  }
+  
+  setLoading(true);
+  try {
+    // Call API to record acknowledgment + proceed with action
+    await submitAcknowledgment();
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Disabled State Logic
+const isCTADisabled = !isChecked || loading;
 ```
 
-**Milestone Validation:**
+### Server-Side Validation (Audit Trail)
+
 ```typescript
-const totalPercentage = milestoneResponses.reduce(
-  (sum, m) => sum + m.advisorResponsePercentage, 0
-);
-if (Math.abs(totalPercentage - 100) > 0.01) {
-  throw new Error(`סה"כ אחוזי אבני דרך חייב להיות 100% (כרגע: ${totalPercentage}%)`);
-}
+// Record in database
+const recordAcknowledgment = async (
+  userId: string,
+  acknowledgmentType: string,
+  version: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const { error } = await supabase.from('user_acknowledgments').insert({
+    user_id: userId,
+    acknowledgment_type: acknowledgmentType,
+    version: version,
+    acknowledged_at: new Date().toISOString(),
+    ip_address: ipAddress,
+    user_agent: userAgent,
+  });
+  
+  if (error) throw error;
+};
 ```
 
-**Rate Limiting:**
-- Maximum 3 revised offers per proposal per hour
-- Prevents spam/abuse
+## 5. Edge Cases & Handling
 
----
+| Edge Case | Behavior |
+|-----------|----------|
+| **User closes dialog without confirming** | Modal remains open (non-dismissible by default) |
+| **Form submission fails** | Show error toast, checkbox remains checked, allow retry |
+| **User navigates away mid-submission** | Show unsaved changes warning (if applicable) |
+| **Browser back button** | Modal persists (non-closeable until confirmed) |
+| **Keyboard only navigation** | Tab → Checkbox → Error message → CTA buttons; Enter to toggle/submit |
+| **Screen reader access** | Checkbox role, error messages have role="alert", labels linked via htmlFor |
+| **Mobile viewport** | Checkbox label wraps, modal scrolls internally, CTA sticky |
+| **Same acknowledgment re-triggered** | Skip modal if `tos_accepted_at` already exists in database |
+| **User submits same acknowledgment twice** | Prevent duplicate records via unique constraint or check |
 
-## 6. Constraints and Edge Cases
+## 6. Accessibility Requirements
 
-### 6.1 Permission Constraints
+### ARIA & Semantic HTML
+- **Checkbox**: `<input type="checkbox" id="ack" />`
+- **Label**: `<label htmlFor="ack">` (properly linked)
+- **Error Container**: `id="acknowledgment-error" role="alert" aria-live="polite"`
+- **Dialog**: `role="alertdialog"` if dismissal is prevented
 
-| Constraint | Rule |
-|------------|------|
-| User Role | Only `advisor` role can submit revised offers |
-| Session Ownership | `consultant_advisor_id` must match current user's advisor ID |
-| Session Status | Only `awaiting_response` sessions allow submission |
-| Time Limit | Session must not be expired (if deadline exists) |
+### Keyboard Navigation
+- **Tab order**: Scrollable content (if focusable) → Checkbox → Error message → Primary CTA → Secondary CTA
+- **Escape Key**: Disabled (prevents accidental dismissal)
+- **Enter Key**: Submits form from any field
 
-### 6.2 Edge Cases
+### Color & Contrast
+- **Error text**: WCAG AA compliant contrast ratio
+- **Disabled CTA**: Meets minimum contrast; not grey-on-grey
+- **Checkbox border**: Visible focus ring (minimum 2px solid, high contrast color)
 
-| Edge Case | System Behavior |
-|-----------|-----------------|
-| **Simultaneous Edits** | Last write wins; optimistic locking via `updated_at` check |
-| **Same Price Submitted** | Allow submission (counts as confirmation of original offer) |
-| **Network Failure During Submit** | Show retry option; don't create duplicate versions |
-| **Session Cancelled While Editing** | On submit, show error "בקשת המשא ומתן בוטלה" |
-| **Browser Closed Mid-Edit** | No auto-save; user must resubmit |
-| **Multiple Browser Tabs** | Warn on navigation; prevent duplicate submissions |
-| **Zero Line Items** | Allow submission with total price only (non-itemized) |
-| **Negative Discount (Price Increase)** | Allow with warning confirmation |
+### Screen Reader Announcements
+- **Initial**: "Dialog: [Title]. [Description]. To proceed, you must check the acknowledgment checkbox."
+- **On Error**: "Error: [Message]. Focus moved to acknowledgment checkbox. Please check the box to continue."
+- **On Success**: "Acknowledgment recorded. Closing dialog."
 
-### 6.3 Maximum Revisions Constraint
+## 7. Proposed Microcopy
 
-**Business Rule**: No hard limit on number of revisions, but:
-- Each revision is logged in `proposal_versions`
-- Timeline displays all versions (V1, V2, V3...)
-- Entrepreneur sees full negotiation history
+### Checkbox Label (Standard Pattern)
 
----
+**Hebrew (RTL)**:
+- "אני מאשר/ת את תנאי השימוש של פלטפורמת בילדינג ומתחייב/ת לפעול על פיהם"
+- *Short & formal, using "מאשר/ת" (confirm) and "מתחייב/ת" (commit)*
 
-## 7. Expected System Behavior After Submission
+**Alternative (More Explicit)**:
+- "אני מבין/ה וקורא/ת את תנאי השימוש ומסכים/ה ללחיצה על הכפתור"
+- *Emphasizes understanding + reading before agreement*
 
-### 7.1 Database Updates
+### Inline Error Message (When Unchecked & CTA Clicked)
 
-| Table | Field | Update |
-|-------|-------|--------|
-| `proposals` | `status` | `'resubmitted'` |
-| `proposals` | `price` | New total price |
-| `proposals` | `current_version` | Incremented |
-| `proposals` | `fee_line_items` | Updated JSONB with new prices |
-| `proposal_versions` | (new row) | Snapshot of revised offer |
-| `negotiation_sessions` | `status` | `'responded'` |
-| `negotiation_sessions` | `responded_at` | Current timestamp |
-| `negotiation_sessions` | `consultant_response_message` | Message text |
-| `activity_log` | (new row) | `action: 'negotiation_responded'` |
+**Hebrew**:
+- "יש לאשר את האמור לעיל כדי להמשיך" (You must confirm the above to proceed)
+- *Clear, direct, not punitive*
 
-### 7.2 Notifications
+**Alternative**:
+- "אנא סמן את תיבת האישור כדי להמשיך" (Please check the confirmation box to proceed)
+- *More conversational, "please" format*
 
-**Email to Entrepreneur:**
+### Header / Dialog Title
+
+**Hebrew**:
+- "אישור תנאי השימוש" (Confirm Terms of Use)
+- or "שים לב: נדרש אישור" (Notice: Confirmation Required)
+
+### Primary CTA Microcopy
+
+**Hebrew**:
+- "אשר והמשך" (Confirm and Continue)
+- or "אשר ותגש" (Confirm and Submit)
+
+**When Disabled**:
+- Keep same label, show visual disabled state (greyed out)
+- Tooltip (optional): "יש לאשר את תיבת האישור לפני ההמשך"
+
+### Helper Text (Below CTA)
+
+**Hebrew**:
+- "* לא ניתן להמשיך להשתמש במערכת ללא אישור תנאי השימוש"
+- *Reinforces non-optional nature*
+
+## 8. Implementation Files & Changes
+
+### New Component (Optional)
+Create a reusable `<RequiredAcknowledgmentPattern />` component with:
+- Props: `title`, `description`, `content`, `checkboxLabel`, `onConfirm`, `isLoading`
+- Internal state: `isChecked`, `showError`
+- Built-in validation and error messaging
+
+### Modify Existing Components
+
+**`src/components/ToSAcceptanceModal.tsx`**:
+- Add inline error state & message
+- Add error announcement logic (role="alert")
+- Add disabled state styling on CTA
+- Import `AlertCircle` icon for visual emphasis
+
+**`src/pages/Auth.tsx` (signup step 3)**:
+- Validate `tosAccepted` before form submission
+- Show error toast if not checked (already done, but enhance messaging)
+
+**`src/lib/auditLog.ts`** (or new audit utility):
+- Record acknowledgment timestamp + version + IP (for compliance)
+- Called on successful confirmation
+
+## 9. Visual Design Details
+
+### Color & Styling
+
+**Warning/Notice Section**:
 ```
-Subject: הצעה מעודכנת התקבלה - {project_name}
-
-שלום {entrepreneur_name},
-
-היועץ {advisor_company} שלח הצעה מעודכנת לפרויקט {project_name}:
-
-• מחיר קודם: ₪{previous_price}
-• מחיר חדש: ₪{new_price}
-• הפחתה: {reduction_percent}%
-
-{consultant_message if provided}
-
-[לצפייה בהצעה המעודכנת]
+Background: bg-blue-50/50 dark:bg-blue-950/20
+Border: border-blue-200 dark:border-blue-800
+Icon: text-blue-600
+Text: text-blue-700 dark:text-blue-300
 ```
 
-**In-App Notification:**
-- Type: `negotiation_response`
-- Priority: 2 (high)
-- Target: `project.owner_id`
-
-### 7.3 UI Updates
-
-**Advisor Dashboard:**
-- Negotiation card moves from "פעיל" to "הוגש"
-- Status badge: "הצעה נשלחה ✓"
-
-**Entrepreneur Project View:**
-- Proposal card shows "🔄 הצעה מעודכנת" badge
-- Timeline shows new "הצעה V{n}" entry
-- "קבל הצעה" button remains active
-
-**Negotiation Timeline:**
+**Acknowledgment Checkbox Section**:
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ 📄 01/02/2026  הצעה מקורית         ₪55,000    [הוגשה] [צפה] │
-│ 💬 03/02/2026  בקשה לשינויים                 [משא ומתן] [צפה]│
-│ 🔄 05/02/2026  הצעה V2              ₪52,000    [הוגשה] [צפה] │
-└─────────────────────────────────────────────────────────────┘
+Normal State:
+  Background: transparent or muted/20
+  Border: border-input (subtle)
+  
+Checked State:
+  Background: subtle highlight (blue/5)
+  Checkbox: filled with primary color
+
+Error State:
+  Background: red-50/30
+  Border: border-red-300 dark:border-red-700
+  Error Text: text-red-600 dark:text-red-400
 ```
 
-### 7.4 Audit Trail
+**Primary CTA**:
+```
+Enabled: bg-primary, hover:bg-primary/90, cursor-pointer
+Disabled: bg-muted, text-muted-foreground, cursor-not-allowed, opacity-50
+Loading: show spinner icon, disabled
+```
 
-| Field | Value |
-|-------|-------|
-| `actor_id` | Consultant's user ID |
-| `actor_type` | `'advisor'` |
-| `action` | `'negotiation_responded'` |
-| `entity_type` | `'proposal'` |
-| `entity_id` | Proposal UUID |
-| `project_id` | Project UUID |
-| `meta` | `{ session_id, new_version_id, new_version_number, new_price }` |
+### Typography & Spacing
 
----
+- **Checkbox Label**: `text-sm font-medium leading-relaxed`
+- **Error Message**: `text-sm text-red-600 mt-2`
+- **Helper Text**: `text-xs text-muted-foreground`
+- **Overall Layout**: `space-y-4` between major sections
 
-## 8. Implementation Files to Modify
+## 10. Summary of Key Decisions
 
-### 8.1 UI Changes
+1. **Non-Dismissible Modal**: Prevents accidental skipping; uses `onPointerDownOutside` + `onEscapeKeyDown` preventDefault
+2. **Inline Error Over Toast**: Error appears adjacent to checkbox for immediate context
+3. **Disabled CTA vs Hidden CTA**: Disabled is clearer UX; shows requirement visually
+4. **Checkbox as Primary UX**: More explicit than accepting by clicking CTA; auditable action
+5. **Clear Microcopy**: Avoids legal jargon; uses simple Hebrew with gender-inclusive forms (מ/ת endings)
+6. **Audit Trail**: Timestamps + versions recorded in database for compliance & legal proof
+7. **Accessibility First**: Full keyboard navigation, screen reader support, WCAG AA contrast ratios
 
-| File | Change |
-|------|--------|
-| `src/components/negotiation/NegotiationResponseView.tsx` | Update CTA label to "הגש הצעת מחיר מעודכנת", add confirmation dialog |
-| `src/pages/AdvisorDashboard.tsx` | Update status display for responded negotiations |
-| `src/components/NegotiationStepsTimeline.tsx` | Ensure V2+ labels are clear |
+## 11. Expected Outcomes
 
-### 8.2 Logic Changes
+- **User Experience**: Clear, unambiguous requirement; feels fair, not aggressive
+- **Compliance**: Explicit acknowledgment recorded + timestamped in audit log
+- **Accessibility**: Keyboard + screen reader friendly; error states announced
+- **Reusability**: Pattern can be applied to other critical acknowledgments (payment terms, binding offers, etc.)
 
-| File | Change |
-|------|--------|
-| `src/hooks/useNegotiation.ts` | Add rate limiting check before submission |
-| `supabase/functions/send-negotiation-response/index.ts` | Already handles versioning correctly |
-
-### 8.3 Microcopy Updates
-
-| Location | Current | Updated |
-|----------|---------|---------|
-| Submit Button | שלח הצעה נגדית | הגש הצעת מחיר מעודכנת |
-| Confirmation Title | (none) | אישור הגשת הצעה מעודכנת |
-| Success Toast | (generic) | ההצעה המעודכנת נשלחה בהצלחה |
-| Tab Label | תגובה | הגש הצעה מעודכנת |
-
----
-
-## 9. Summary
-
-The "Revised Price Offer" feature is **already implemented** in the current codebase through the `NegotiationResponseView` component and `send-negotiation-response` edge function. The recommended changes are:
-
-1. **Rename CTA** from "שלח הצעה נגדית" to "הגש הצעת מחיר מעודכנת"
-2. **Add Confirmation Dialog** with price summary and binding warning
-3. **Improve Microcopy** for clarity and legal compliance
-4. **Add Rate Limiting** to prevent abuse
-5. **Standardize Terminology** across all UI components
-
-The versioning, email notifications, and audit logging are already fully functional.
