@@ -91,11 +91,13 @@ export default function FeeTemplatesByProject() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-end">
-                    <Badge variant={project.template_count > 0 ? "default" : "secondary"}>
-                      {project.template_count > 0 ? `${project.template_count} תבניות` : "טרם הוגדר"}
-                    </Badge>
-                  </div>
+                  {project.template_count > 0 && (
+                    <div className="flex items-center justify-end">
+                      <Badge variant="default">
+                        {project.template_count} תבניות
+                      </Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
