@@ -1,28 +1,59 @@
 
 
+# Fix: Remove Duplicate "במשא ומתן" Badge
 
-# Plan: RFP Invite Visibility During Active Negotiations
+## Problem
 
-## ✅ IMPLEMENTED
+The RFP card shows two badges that indicate the same thing:
+1. **ProposalStatusBadge**: Shows "משא ומתן" (orange, with MessageCircle icon) when proposal status is `negotiation_requested`
+2. **New negotiation badge**: Shows "במשא ומתן" (amber, with Handshake icon) when there's an active negotiation session
 
-### Summary
-Fixed the issue where RFP invites with active negotiations were disappearing from the "הזמנות להצעת מחיר" tab after the deadline passed.
+This creates visual duplication as shown in the screenshot.
 
-### Changes Made
+## Solution
 
-1. **AdvisorDashboard.tsx** - Updated `isInactiveInvite()` to consider active negotiations
-2. **AdvisorDashboard.tsx** - Added `negotiationByInvite` state to map invite IDs to negotiation sessions
-3. **AdvisorDashboard.tsx** - Added "במשא ומתן" amber badge to RFP cards with active negotiations
-4. **AdvisorDashboard.tsx** - Added "מעבר למשא ומתן" button to navigate directly to negotiation page
-5. **Database** - Updated `expire_old_rfp_invites()` function to skip invites with active negotiations
+Show the "במשא ומתן" badge ONLY when there's an active negotiation **AND** the ProposalStatusBadge isn't already showing a negotiation-related status.
 
-### Testing Checklist
+## Implementation
+
+### File: `src/pages/AdvisorDashboard.tsx`
+
+**Change: Conditionally render the negotiation badge**
+
+Current code (around line 1143-1149):
+```tsx
+{/* Show negotiation badge if there's an active negotiation */}
+{negotiationByInvite.has(invite.id) && (
+  <Badge className="bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+    <Handshake className="h-3 w-3" />
+    במשא ומתן
+  </Badge>
+)}
+```
+
+Updated code - only show if proposal status doesn't already indicate negotiation:
+```tsx
+{/* Show negotiation badge ONLY if there's an active negotiation 
+    AND proposal status isn't already showing negotiation status */}
+{negotiationByInvite.has(invite.id) && 
+ proposalMap.get(invite.id)?.status !== 'negotiation_requested' && (
+  <Badge className="bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+    <Handshake className="h-3 w-3" />
+    במשא ומתן
+  </Badge>
+)}
+```
+
+This ensures:
+- If proposal status is `negotiation_requested`, the ProposalStatusBadge shows "משא ומתן" and our new badge is hidden
+- If there's an active negotiation but proposal status is different (edge case), the "במשא ומתן" badge still appears
+- No duplication in any scenario
+
+## Testing Checklist
 
 1. Login as `lior+sapak2@spartans.tech`
 2. Navigate to "הזמנות להצעת מחיר" tab
-3. Verify the "וולפסון 12-18, חולון" project is now visible (if it has active negotiation)
-4. Verify it shows "במשא ומתן" badge
-5. Click "מעבר למשא ומתן" button
-6. Verify it navigates to the negotiation page
-7. Toggle to "הצג הכל" and verify all invites display correctly
-8. Verify that truly expired RFPs (no negotiation) still show as inactive
+3. Verify only ONE negotiation badge appears (the orange "משא ומתן")
+4. Verify the "מעבר למשא ומתן" button still appears correctly
+5. Click the button and verify navigation works
+
