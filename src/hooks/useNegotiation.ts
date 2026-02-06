@@ -87,8 +87,8 @@ export const useNegotiation = () => {
       if (error) throw error;
 
       toast({
-        title: "הצעה מעודכנת נשלחה",
-        description: "ההצעה המעודכנת נשלחה ליזם בהצלחה",
+        title: "✓ הצעה מעודכנת נשלחה בהצלחה",
+        description: "ההצעה המעודכנת נשלחה ליזם. תקבל עדכון כשיגיב להצעה.",
       });
 
       return result as NegotiationResponseOutput;

@@ -86,6 +86,7 @@ export const NegotiationResponseView = ({
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [negotiationFiles, setNegotiationFiles] = useState<NegotiationFile[]>([]);
   const [embeddedFiles, setEmbeddedFiles] = useState<NegotiationFile[]>([]);
   const [declineReason, setDeclineReason] = useState("");
@@ -477,7 +478,8 @@ export const NegotiationResponseView = ({
     });
   }, [handlePriceChange]);
 
-  const handleSubmit = async () => {
+  const handleSubmitConfirmed = async () => {
+    setShowSubmitDialog(false);
     const result = await respondToNegotiation({
       session_id: sessionId,
       consultant_message: consultantMessage || undefined,
@@ -490,6 +492,14 @@ export const NegotiationResponseView = ({
       onSuccess?.();
     }
   };
+
+  // Calculate price change for display
+  const priceChangePercent = useMemo(() => {
+    if (!originalTotal || originalTotal === 0) return 0;
+    return Math.round(((originalTotal - newTotal) / originalTotal) * 100);
+  }, [originalTotal, newTotal]);
+
+  const isPriceIncrease = newTotal > originalTotal;
 
   const handleAcceptTarget = async () => {
     setShowAcceptDialog(false);
@@ -1644,12 +1654,12 @@ export const NegotiationResponseView = ({
                     קבל מחיר יעד
                   </Button>
                   <Button 
-                    onClick={handleCounterOffer} 
-                    disabled={loading || declining}
+                    onClick={() => setShowSubmitDialog(true)} 
+                    disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
                     className="bg-primary"
                   >
                     <Send className="h-4 w-4 me-2" />
-                    שלח הצעה נגדית
+                    הגש הצעת מחיר מעודכנת
                   </Button>
                 </div>
               </CardContent>
@@ -1725,6 +1735,65 @@ export const NegotiationResponseView = ({
             >
               <Check className="h-4 w-4 me-2" />
               אשר והתחייב
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Submit Revised Offer Confirmation Dialog */}
+      <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              אישור הגשת הצעה מעודכנת
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right space-y-3">
+              <p>
+                אתה עומד להגיש הצעת מחיר מעודכנת:
+              </p>
+              <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר מקורי:</span>
+                  <span className="font-medium">{formatCurrency(originalTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר חדש:</span>
+                  <span className="font-bold text-lg text-primary">{formatCurrency(newTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">שינוי:</span>
+                  <span className={`font-medium ${isPriceIncrease ? 'text-red-600' : priceChangePercent > 0 ? 'text-green-600' : ''}`}>
+                    {isPriceIncrease ? '+' : priceChangePercent > 0 ? '-' : ''}{Math.abs(priceChangePercent)}%
+                  </span>
+                </div>
+              </div>
+              {isPriceIncrease && (
+                <Alert variant="destructive" className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-red-800">
+                    <strong>שים לב:</strong> ההצעה החדשה גבוהה מההצעה המקורית. האם אתה בטוח?
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong>שים לב:</strong> זוהי הצעה מחייבת בהתאם לתנאי השימוש של המערכת. 
+                  לאחר ההגשה, היזם יקבל הודעה וההצעה תהיה זמינה לאישור. לא ניתן לבטל הגשה.
+                </AlertDescription>
+              </Alert>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSubmitConfirmed}
+              disabled={loading}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-4 w-4 me-2" />
+              אשר והגש הצעה
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

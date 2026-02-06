@@ -1469,7 +1469,7 @@ const AdvisorDashboard = () => {
 
                 const getStatusBadge = () => {
                   if (isPending) return <Badge className="bg-amber-500 text-white">ממתין לתגובה</Badge>;
-                  if (isResponded) return <Badge className="bg-green-500 text-white">נענה</Badge>;
+                  if (isResponded) return <Badge className="bg-green-500 text-white">הצעה נשלחה ✓</Badge>;
                   if (isCancelled) return <Badge variant="secondary">בוטל</Badge>;
                   if (isResolved) return <Badge variant="outline">הסתיים</Badge>;
                   return <Badge variant="outline">{negotiation.status}</Badge>;
@@ -1547,7 +1547,7 @@ const AdvisorDashboard = () => {
                           dir="rtl"
                           onClick={() => navigate(`/negotiation/${negotiation.id}`)}
                         >
-                          צפה ושלח תגובה
+                          הגש הצעה מעודכנת
                           <ArrowLeft className="h-4 w-4 ms-2" />
                         </Button>
                       ) : (
