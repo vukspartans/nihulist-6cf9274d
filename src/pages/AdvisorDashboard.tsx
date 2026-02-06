@@ -1140,8 +1140,10 @@ const AdvisorDashboard = () => {
                           </CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
-                          {/* Show negotiation badge if there's an active negotiation */}
-                          {negotiationByInvite.has(invite.id) && (
+                          {/* Show negotiation badge ONLY if there's an active negotiation 
+                              AND proposal status isn't already showing negotiation status */}
+                          {negotiationByInvite.has(invite.id) && 
+                           proposalMap.get(invite.id)?.status !== 'negotiation_requested' && (
                             <Badge className="bg-amber-100 text-amber-800 border border-amber-300 gap-1">
                               <Handshake className="h-3 w-3" />
                               במשא ומתן
