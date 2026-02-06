@@ -143,6 +143,7 @@ const AdvisorDashboard = () => {
   const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations'>('rfp-invites');
   const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
   const [negotiations, setNegotiations] = useState<NegotiationItem[]>([]);
+  const [negotiationByInvite, setNegotiationByInvite] = useState<Map<string, NegotiationItem>>(new Map());
   const [proposalFilter, setProposalFilter] = useState<'all' | 'accepted' | 'submitted' | 'under_review' | 'rejected'>('all');
   const [proposalViewDialogOpen, setProposalViewDialogOpen] = useState(false);
   const [selectedProposalToView, setSelectedProposalToView] = useState<string | null>(null);
@@ -393,10 +394,15 @@ const AdvisorDashboard = () => {
         // FIXED: Create a map of rfp_invite_id -> proposal for accurate matching
         // This prevents proposals from "leaking" across different RFP invites
         const proposalsByInvite = new Map<string, AdvisorProposal>();
+        const proposalsWithActiveNegotiation = new Set<string>(); // Track proposal IDs with active negotiations
         (proposalData || []).forEach(p => {
           // Primary: use rfp_invite_id if available
           if (p.rfp_invite_id) {
             proposalsByInvite.set(p.rfp_invite_id, p);
+          }
+          // Track proposals that have active negotiations
+          if (p.has_active_negotiation) {
+            proposalsWithActiveNegotiation.add(p.id);
           }
         });
         setProposalMap(proposalsByInvite);
@@ -484,6 +490,18 @@ const AdvisorDashboard = () => {
             });
           setNegotiations(mappedNegotiations);
           console.debug('[AdvisorDashboard] ✅ Fetched pending negotiations:', mappedNegotiations.length);
+
+          // Build a map from rfp_invite_id -> active negotiation for RFP invite display
+          const negotiationInviteMap = new Map<string, NegotiationItem>();
+          mappedNegotiations.forEach(neg => {
+            // Find the proposal that matches this negotiation
+            const proposal = (proposalData || []).find(p => p.id === neg.proposal_id);
+            if (proposal?.rfp_invite_id) {
+              negotiationInviteMap.set(proposal.rfp_invite_id, neg);
+            }
+          });
+          setNegotiationByInvite(negotiationInviteMap);
+          console.debug('[AdvisorDashboard] ✅ Mapped negotiations to invites:', negotiationInviteMap.size);
         }
       }
     } catch (error) {
@@ -592,9 +610,18 @@ const AdvisorDashboard = () => {
   };
 
   // Check if an invite is inactive (declined, expired, or past deadline)
+  // BUT: if there's an active negotiation, keep it visible even if deadline passed
   const isInactiveInvite = (invite: RFPInvite) => {
     if (['declined', 'expired'].includes(invite.status)) return true;
-    if (invite.deadline_at && new Date(invite.deadline_at) < new Date()) return true;
+    
+    // Check if there's an active negotiation for this invite
+    const hasActiveNegotiation = negotiationByInvite.has(invite.id);
+    
+    // If deadline passed but there's an active negotiation, keep it active
+    if (invite.deadline_at && new Date(invite.deadline_at) < new Date()) {
+      return !hasActiveNegotiation;
+    }
+    
     return false;
   };
 
@@ -1113,6 +1140,13 @@ const AdvisorDashboard = () => {
                           </CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
+                          {/* Show negotiation badge if there's an active negotiation */}
+                          {negotiationByInvite.has(invite.id) && (
+                            <Badge className="bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+                              <Handshake className="h-3 w-3" />
+                              במשא ומתן
+                            </Badge>
+                          )}
                           {(() => {
                             const proposal = proposalMap.get(invite.id);
                             if (proposal) {
@@ -1219,6 +1253,18 @@ const AdvisorDashboard = () => {
                             צפייה בהצעה שהוגשה
                           </Button>
                         )}
+                        
+                        {/* Show "Go to Negotiation" button if there's an active negotiation */}
+                        {negotiationByInvite.has(invite.id) && (
+                          <Button 
+                            className="bg-amber-500 hover:bg-amber-600 text-white"
+                            onClick={() => navigate(`/negotiation/${negotiationByInvite.get(invite.id)!.id}`)}
+                          >
+                            <Handshake className="h-4 w-4 me-2" />
+                            מעבר למשא ומתן
+                          </Button>
+                        )}
+                        
                         {/* FIXED: Show decline button only if no proposal exists for THIS specific invite */}
                         {canSubmitProposal(invite.status, invite.deadline_at) && !proposalMap.has(invite.id) && (
                           <Button 
