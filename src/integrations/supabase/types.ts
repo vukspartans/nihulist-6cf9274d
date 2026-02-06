@@ -2195,8 +2195,10 @@ export type Database = {
           conditions_json: Json | null
           created_at: string
           created_by: string | null
+          fee_line_items: Json | null
           id: string
           line_items: Json | null
+          milestone_adjustments: Json | null
           price: number
           proposal_id: string
           scope_text: string | null
@@ -2209,8 +2211,10 @@ export type Database = {
           conditions_json?: Json | null
           created_at?: string
           created_by?: string | null
+          fee_line_items?: Json | null
           id?: string
           line_items?: Json | null
+          milestone_adjustments?: Json | null
           price: number
           proposal_id: string
           scope_text?: string | null
@@ -2223,8 +2227,10 @@ export type Database = {
           conditions_json?: Json | null
           created_at?: string
           created_by?: string | null
+          fee_line_items?: Json | null
           id?: string
           line_items?: Json | null
+          milestone_adjustments?: Json | null
           price?: number
           proposal_id?: string
           scope_text?: string | null
