@@ -1,180 +1,163 @@
 
 
-# Plan: RTL Optimization for Admin Template Creation Dialogs
+# Plan: Fix RTL Alignment in CreateMilestoneTemplateDialog
 
-## Analysis Summary
+## Issues Identified
 
-I reviewed the 6 dialog components used in template creation/editing:
+After comparing `CreateMilestoneTemplateDialog.tsx` with the properly aligned `CreateFeeItemTemplateDialog.tsx` and `CreateTaskTemplateDialog.tsx`, I found the following RTL issues:
 
-| Dialog | File | Status |
-|--------|------|--------|
-| Create Milestone | `CreateMilestoneTemplateDialog.tsx` | Mostly RTL-compliant, minor issues |
-| Edit Milestone | `EditMilestoneTemplateDialog.tsx` | Mostly RTL-compliant, minor issues |
-| Create Fee Item | `CreateFeeItemTemplateDialog.tsx` | RTL issues found |
-| Edit Fee Item | `EditFeeItemTemplateDialog.tsx` | RTL issues found |
-| Create Service | `CreateServiceScopeTemplateDialog.tsx` | RTL issues found |
-| Edit Service | `EditServiceScopeTemplateDialog.tsx` | RTL issues found |
+### Issue 1: Tabs Component Missing `dir="rtl"`
 
-## Issues Found
+The Tabs component doesn't have `dir="rtl"`, causing the tab order to display incorrectly (left-to-right instead of right-to-left).
 
-### Issue 1: SelectContent Missing `dir="rtl"`
-
-**Affected Files**: All 6 dialogs
-
-The `SelectContent` component needs `dir="rtl"` for proper RTL alignment of dropdown items. Some dialogs have it, some don't.
-
-**Pattern from RFP wizard (FeeItemsTable.tsx):**
+**Current:**
 ```tsx
-<Select dir="rtl" value={...}>
-  <SelectTrigger dir="rtl" className="w-full text-right">
-    <SelectValue />
-  </SelectTrigger>
-  <SelectContent dir="rtl">  // <-- Must have dir="rtl"
-    <SelectItem key={...} value={...} className="text-right">
-      {label}
-    </SelectItem>
-  </SelectContent>
-</Select>
+<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
 ```
 
-### Issue 2: Switch Position for RTL
-
-**Affected Files**: All dialogs with Switch component
-
-Per memory `memory/admin/ui-optimization-and-rtl-standards`, the Switch is isolated with `dir="ltr"` (already done in switch.tsx). However, per memory `memory/features/payment-budgetary-control-foundation`, the label/checkbox positioning in RTL should have text on RIGHT, control on LEFT.
-
-Currently the dialogs have:
+**Fix:**
 ```tsx
-<div className="flex items-center justify-between">
-  <Label htmlFor="is_optional">סמן כאופציונלי</Label>
-  <Switch ... />
-</div>
+<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
 ```
 
-This is correct for RTL (label on right via justify-between, switch on left).
+### Issue 2: Input Fields Missing `text-right` Class
 
-### Issue 3: Footer Button Order
+Hebrew text inputs should have `text-right` for proper alignment. Compare with `CreateFeeItemTemplateDialog` which has `className="text-right"` on inputs.
 
-**Affected Files**: Fee Item and Service dialogs
-
-Per memory `memory/style/rtl-footer-button-order`: In RTL footers, the visual order follows Hebrew reading direction: Cancel in center, primary Action on far LEFT.
-
-Current pattern in Fee/Service dialogs:
+**Current:**
 ```tsx
-<DialogFooter className="flex-row-reverse gap-2">
-  <Button variant="outline">ביטול</Button>  // Cancel - appears RIGHT
-  <Button type="submit">צור פריט</Button>   // Primary - appears LEFT
-</DialogFooter>
+<Input
+  id="name"
+  {...register("name", { required: true })}
+  placeholder={t.dialog.namePlaceholder}
+/>
 ```
 
-This is **correct** because `DialogFooter` already has `flex-row-reverse` and `justify-start`.
+**Fix:**
+```tsx
+<Input
+  id="name"
+  {...register("name", { required: true })}
+  placeholder={t.dialog.namePlaceholder}
+  className="text-right"
+/>
+```
 
-### Issue 4: Missing Tabs Component in Fee/Service Dialogs
+### Issue 3: Textarea Missing `text-right` Class
 
-**Observation**: The Milestone dialogs use tabs for organization (basic/payment/tasks), but Fee Item and Service dialogs are simpler single-page forms. This is intentional and appropriate given their simpler structure.
+Same issue for the description textarea.
 
-### Issue 5: Input Text Alignment
+### Issue 4: Number Inputs Need RTL Optimization
 
-**Affected Files**: All dialogs
+Per memory `memory/ui/rtl-numerical-input-alignment`, number inputs should use `text-right` and `dir="ltr"` for proper number display while maintaining RTL context.
 
-Some inputs have `className="text-right"` and some don't. For consistency in RTL, all text inputs should have `text-right` class.
+**Current:**
+```tsx
+<Input
+  id="percentage_of_total"
+  type="number"
+  ...
+  className="pl-8"
+/>
+```
 
-### Issue 6: Number Input Positioning (Percentage/Amount Fields)
+**Fix:**
+```tsx
+<Input
+  id="percentage_of_total"
+  type="number"
+  ...
+  className="pl-8 text-right"
+  dir="ltr"
+/>
+```
 
-**Affected Files**: Milestone dialogs
+### Issue 5: TabsList Missing `flex-row-reverse`
 
-The percentage and amount inputs have suffix symbols (% and ₪) positioned with `left-3`. In RTL context, this should remain `left-3` since numbers read LTR but the symbol should appear on the visual left (end of number).
+For proper RTL tab order, the tabs should appear in reverse visual order (first tab on right).
 
-This is **correct** per memory `memory/ui/rtl-numerical-input-alignment`.
+**Current:**
+```tsx
+<TabsList className="grid w-full grid-cols-2">
+```
+
+**Fix:**
+```tsx
+<TabsList className="grid w-full grid-cols-2" dir="rtl">
+```
 
 ---
 
-## Implementation Plan
+## Complete Changes
 
-### File 1: `CreateFeeItemTemplateDialog.tsx`
+### File: `src/components/admin/CreateMilestoneTemplateDialog.tsx`
 
-1. Add `dir="rtl"` to all `SelectContent` components (4 occurrences)
-2. Add `className="text-right"` to all `SelectItem` components for consistency
-
-### File 2: `EditFeeItemTemplateDialog.tsx`
-
-Same changes as File 1.
-
-### File 3: `CreateServiceScopeTemplateDialog.tsx`
-
-Same changes as File 1.
-
-### File 4: `EditServiceScopeTemplateDialog.tsx`
-
-Same changes as File 1.
-
-### File 5: `CreateMilestoneTemplateDialog.tsx`
-
-Already has `dir="rtl"` on most SelectContent. Verify consistency.
-
-### File 6: `EditMilestoneTemplateDialog.tsx`
-
-Already has `dir="rtl"` on most SelectContent. Verify consistency.
+| Line | Change |
+|------|--------|
+| 101 | Add `dir="rtl"` to Tabs component |
+| 102 | Add `dir="rtl"` to TabsList component |
+| 111-115 | Add `className="text-right"` to name Input |
+| 123-128 | Keep `dir="ltr"` on English name input (already correct) |
+| 134-139 | Add `className="text-right"` to description Textarea |
+| 215-228 | Add `dir="ltr"` and `text-right` to percentage Input |
+| 245-252 | Add `dir="ltr"` and `text-right` to fixed_amount Input |
 
 ---
 
-## Detailed Changes
+## Implementation Details
 
-### CreateFeeItemTemplateDialog.tsx
-
-**Line 98**: Add `dir="rtl"` to SelectContent
 ```tsx
-// Before
-<SelectContent>
+// Line 101: Add dir="rtl" to Tabs
+<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
 
-// After
-<SelectContent dir="rtl">
+// Line 102: Add dir="rtl" to TabsList  
+<TabsList className="grid w-full grid-cols-2" dir="rtl">
+
+// Line 111: Add text-right to name Input
+<Input
+  id="name"
+  {...register("name", { required: true })}
+  placeholder={t.dialog.namePlaceholder}
+  className="text-right"
+/>
+
+// Line 134: Add text-right to description Textarea
+<Textarea
+  id="description"
+  {...register("description")}
+  placeholder="תיאור אבן הדרך..."
+  rows={2}
+  className="text-right"
+/>
+
+// Line 215: Fix percentage input with dir="ltr" and text-right
+<Input
+  id="percentage_of_total"
+  type="number"
+  step="0.01"
+  min="0"
+  max="100"
+  {...register("percentage_of_total", {
+    required: true,
+    valueAsNumber: true,
+    min: 0,
+    max: 100,
+  })}
+  className="pl-8 text-right"
+  dir="ltr"
+/>
+
+// Line 245: Fix fixed_amount input with dir="ltr" and text-right
+<Input
+  id="fixed_amount"
+  type="number"
+  step="0.01"
+  min="0"
+  {...register("fixed_amount", { valueAsNumber: true })}
+  className="pl-10 text-right"
+  dir="ltr"
+/>
 ```
-
-**Line 127**: Add `dir="rtl"` to SelectContent
-```tsx
-// Before
-<SelectContent>
-
-// After
-<SelectContent dir="rtl">
-```
-
-**Line 157**: Add `dir="rtl"` to SelectContent
-```tsx
-// Before
-<SelectContent>
-
-// After
-<SelectContent dir="rtl">
-```
-
-**Lines 100, 129, 159**: Add `className="text-right"` to SelectItem
-```tsx
-// Before
-<SelectItem key={expertise} value={expertise}>
-
-// After
-<SelectItem key={expertise} value={expertise} className="text-right">
-```
-
-### EditFeeItemTemplateDialog.tsx
-
-Apply same pattern:
-- Line 89, 118, 148: Add `dir="rtl"` to SelectContent
-- Lines 91, 120, 150: Add `className="text-right"` to SelectItem
-
-### CreateServiceScopeTemplateDialog.tsx
-
-Apply same pattern:
-- Line 93, 121: Add `dir="rtl"` to SelectContent
-- Lines 95, 123: Add `className="text-right"` to SelectItem
-
-### EditServiceScopeTemplateDialog.tsx
-
-Apply same pattern:
-- Line 83, 111: Add `dir="rtl"` to SelectContent
-- Lines 85, 113: Add `className="text-right"` to SelectItem
 
 ---
 
@@ -182,22 +165,17 @@ Apply same pattern:
 
 | File | Changes |
 |------|---------|
-| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add `dir="rtl"` to 3 SelectContent, add `text-right` to SelectItems |
-| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Add `dir="rtl"` to 3 SelectContent, add `text-right` to SelectItems |
-| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Add `dir="rtl"` to 2 SelectContent, add `text-right` to SelectItems |
-| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Add `dir="rtl"` to 2 SelectContent, add `text-right` to SelectItems |
+| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Add RTL attributes to Tabs, TabsList, Inputs, and Textarea |
 
 ---
 
 ## Testing Checklist
 
-1. Open Create Fee Item dialog - verify dropdown items are right-aligned
-2. Open Edit Fee Item dialog - verify same
-3. Open Create Service dialog - verify dropdown items are right-aligned
-4. Open Edit Service dialog - verify same
-5. Open Create Milestone dialog - confirm already working
-6. Open Edit Milestone dialog - confirm already working
-7. Verify Switch toggle still works correctly (isolated LTR)
-8. Verify footer buttons appear in correct RTL order (Cancel right, Action left)
-9. Test on both desktop and mobile viewport sizes
+1. Open "הוספת אבן דרך חדשה" dialog
+2. Verify tabs appear with "פרטי בסיס" on the RIGHT and "פרטי תשלום" on the LEFT
+3. Verify all text inputs are right-aligned
+4. Verify number inputs display numbers correctly (LTR) but remain positioned correctly in RTL context
+5. Verify dropdown options are right-aligned
+6. Verify buttons appear in correct RTL order (Cancel right, Create left)
+7. Verify the dialog title and labels are right-aligned
 
