@@ -112,7 +112,22 @@ export function ConsultantPaymentTerms({
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="space-y-4" dir="rtl">
+        {/* Milestone Change Window Explanation */}
+        <Alert className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20" role="status">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            <p className="font-medium mb-1">חלון שינויים</p>
+            <p className="text-sm">
+              ניתן לערוך אבני דרך עד להגשת ההצעה.
+            </p>
+            <p className="text-sm mt-1">
+              לאחר ההגשה, אבני הדרך נעולות.
+              לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.
+            </p>
+          </AlertDescription>
+        </Alert>
+
         {/* Advance Payment */}
         {advancePercent && advancePercent > 0 && (
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
@@ -292,6 +307,11 @@ export function ConsultantPaymentTerms({
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Helper Text */}
+        <p className="text-xs text-muted-foreground">
+          ודא שאחוזי התשלום נכונים לפני ההגשה.
+        </p>
 
         {/* Payment Term Type - Editable */}
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">

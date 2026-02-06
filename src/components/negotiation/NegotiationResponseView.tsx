@@ -16,7 +16,7 @@ import type { NegotiationSessionWithDetails, UpdatedLineItem, FeeLineItem, JsonL
 import { 
   RefreshCw, Send, ArrowLeft, ArrowRight, FileText, Download, Eye, Loader2, Check, XCircle, 
   AlertTriangle, Paperclip, Calendar, ArrowDown, ArrowUp, CheckCircle2,
-  Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus, Upload
+  Building2, User, Clock, MessageSquare, ListChecks, FileCheck, LayoutList, Minus, Upload, Info
 } from "lucide-react";
 import { getFeeUnitLabel } from "@/constants/rfpUnits";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1146,6 +1146,20 @@ export const NegotiationResponseView = ({
 
         {/* Milestones Tab */}
         <TabsContent value="milestones" className="space-y-4 mt-4">
+          {/* Negotiation State Clarification */}
+          <Alert className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20" role="status">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <p className="font-medium mb-1">שינויים באבני דרך</p>
+              <p className="text-sm">
+                במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.
+              </p>
+              <p className="text-sm mt-1">
+                שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה והגשת הצעה חדשה.
+              </p>
+            </AlertDescription>
+          </Alert>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">

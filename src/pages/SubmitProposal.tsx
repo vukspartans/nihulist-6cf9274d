@@ -14,7 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { UserHeader } from '@/components/UserHeader';
-import { CheckCircle, AlertCircle, Edit3, Upload, Send, ArrowRight, ArrowLeft, FileText, Receipt, PenTool, FileDown, Milestone, ListChecks, FolderOpen } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit3, Upload, Send, ArrowRight, ArrowLeft, FileText, Receipt, PenTool, FileDown, Milestone, ListChecks, FolderOpen, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavigationLogo from '@/components/NavigationLogo';
 import BackToTop from '@/components/BackToTop';
 import { FileUpload } from '@/components/FileUpload';
@@ -1220,6 +1221,16 @@ const SubmitProposal = () => {
                     <CardTitle className="flex items-center gap-2">
                       <Milestone className="h-5 w-5" />
                       אבני דרך ותנאי תשלום
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-right">
+                            <p>אבני דרך ניתנות לעריכה עד להגשת ההצעה.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                     <CardDescription>
                       התאימו את אחוזי התשלום לכל אבן דרך
