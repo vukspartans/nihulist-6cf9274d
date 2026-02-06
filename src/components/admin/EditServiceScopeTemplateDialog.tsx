@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ADVISOR_EXPERTISE } from "@/constants/advisor";
 import { DEFAULT_FEE_CATEGORIES } from "@/constants/rfpUnits";
 import { useUpdateServiceScopeTemplate, ServiceScopeTemplate } from "@/hooks/useRFPTemplatesAdmin";
 
@@ -32,7 +31,6 @@ export function EditServiceScopeTemplateDialog({
   onOpenChange,
   template,
 }: EditServiceScopeTemplateDialogProps) {
-  const [advisorSpecialty, setAdvisorSpecialty] = useState("");
   const [taskName, setTaskName] = useState("");
   const [feeCategory, setFeeCategory] = useState("כללי");
   const [isOptional, setIsOptional] = useState(false);
@@ -41,7 +39,6 @@ export function EditServiceScopeTemplateDialog({
 
   useEffect(() => {
     if (template) {
-      setAdvisorSpecialty(template.advisor_specialty);
       setTaskName(template.task_name);
       setFeeCategory(template.default_fee_category || "כללי");
       setIsOptional(template.is_optional);
@@ -51,13 +48,12 @@ export function EditServiceScopeTemplateDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!template || !advisorSpecialty || !taskName.trim()) {
+    if (!template || !taskName.trim()) {
       return;
     }
 
     await updateMutation.mutateAsync({
       id: template.id,
-      advisor_specialty: advisorSpecialty,
       task_name: taskName.trim(),
       default_fee_category: feeCategory,
       is_optional: isOptional,
@@ -74,22 +70,6 @@ export function EditServiceScopeTemplateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="advisor_specialty">סוג יועץ *</Label>
-            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
-              <SelectTrigger dir="rtl" className="text-right">
-                <SelectValue placeholder="בחר סוג יועץ" />
-              </SelectTrigger>
-              <SelectContent dir="rtl">
-                {ADVISOR_EXPERTISE.map((expertise) => (
-                  <SelectItem key={expertise} value={expertise} className="text-right">
-                    {expertise}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="task_name">שם השירות *</Label>
             <Input
@@ -137,7 +117,7 @@ export function EditServiceScopeTemplateDialog({
             </Button>
             <Button
               type="submit"
-              disabled={updateMutation.isPending || !advisorSpecialty || !taskName.trim()}
+              disabled={updateMutation.isPending || !taskName.trim()}
             >
               {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
