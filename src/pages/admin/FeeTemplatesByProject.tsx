@@ -3,9 +3,10 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useProjectTypeSummary } from "@/hooks/useFeeTemplateHierarchy";
 import { PROJECT_TYPES } from "@/constants/project";
-import { Folder, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Folder, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function FeeTemplatesByProject() {
   const { advisorType } = useParams<{ advisorType: string }>();
@@ -14,13 +15,20 @@ export default function FeeTemplatesByProject() {
   
   const { data: summaries, isLoading } = useProjectTypeSummary(decodedAdvisorType);
 
-  // Combine DB data with all available project types
+  // Combine DB data with all available project types and sort by activity
   const projectTypes = PROJECT_TYPES.map((type) => {
     const summary = summaries?.find((s) => s.project_type === type);
     return {
       project_type: type,
       category_count: summary?.category_count || 0,
     };
+  }).sort((a, b) => {
+    // First by category count (descending) - active projects first
+    if (b.category_count !== a.category_count) {
+      return b.category_count - a.category_count;
+    }
+    // Then alphabetically by name
+    return a.project_type.localeCompare(b.project_type, 'he');
   });
 
   const handleProjectClick = (projectType: string) => {
@@ -83,9 +91,14 @@ export default function FeeTemplatesByProject() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {project.category_count} קטגוריות
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {project.category_count} קטגוריות
+                    </p>
+                    <Badge variant={project.category_count > 0 ? "default" : "secondary"}>
+                      {project.category_count > 0 ? "פעיל" : "טרם הוגדר"}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))}

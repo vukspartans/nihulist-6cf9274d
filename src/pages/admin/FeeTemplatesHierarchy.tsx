@@ -32,7 +32,7 @@ export default function FeeTemplatesHierarchy() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              ניהול תבניות שכר טרחה
+              ניהול תבניות קריאה להצעה
             </h1>
             <p className="text-muted-foreground mt-1">
               בחר סוג יועץ לצפייה בתבניות
