@@ -311,7 +311,7 @@ export const ServiceDetailsTab = ({
         onOpenChange={setChecklistOpen}
         className="border rounded-lg bg-card"
       >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
             <List className="h-4 w-4 text-primary" />
             <span className="font-medium">רשימת שירותים</span>
@@ -324,16 +324,16 @@ export const ServiceDetailsTab = ({
           <ChevronDown className={`h-4 w-4 transition-transform ${checklistOpen ? 'rotate-180' : ''}`} />
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
-          <div className="p-4 space-y-4">
+          <div className="p-3 space-y-3">
             {/* Template Hierarchy Selection */}
             {categories && categories.length > 0 && (
-              <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+              <div className="p-3 bg-muted/30 rounded-lg border space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <FolderOpen className="h-4 w-4 text-primary" />
                   בחירת תבנית
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {/* Category Selection */}
                   <div className="space-y-1.5">
                     <Label className="text-sm">סוג תבנית</Label>
@@ -390,18 +390,12 @@ export const ServiceDetailsTab = ({
                   </div>
                 </div>
 
-                {selectedCategory && (
-                  <p className="text-xs text-muted-foreground">
-                    תבנית נבחרת: {selectedCategory.name}
-                    {selectedMethod && ` • ${selectedMethod.method_label}`}
-                  </p>
-                )}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label className="text-right block">רשימת שירותים</Label>
-              <p className="text-sm text-muted-foreground text-right">
+            <div className="space-y-1">
+              <Label className="text-right block text-sm">רשימת שירותים</Label>
+              <p className="text-xs text-muted-foreground text-right">
                 סמן את השירותים הנדרשים ושייך אותם לסעיפי שכ"ט
               </p>
             </div>
@@ -415,7 +409,7 @@ export const ServiceDetailsTab = ({
                 {scopeItems.map((item, index) => (
                   <div 
                     key={index}
-                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
+                    className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
                   >
                     <Checkbox
                       checked={item.is_included}
@@ -456,7 +450,7 @@ export const ServiceDetailsTab = ({
                 ))}
                 
                 {scopeItems.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-4 text-sm text-muted-foreground">
                     אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
                   </div>
                 )}
@@ -492,7 +486,7 @@ export const ServiceDetailsTab = ({
         onOpenChange={setFreeTextOpen}
         className="border rounded-lg bg-card"
       >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
             <span className="font-medium">הערות נוספות (מלל חופשי)</span>
@@ -503,7 +497,7 @@ export const ServiceDetailsTab = ({
           <ChevronDown className={`h-4 w-4 transition-transform ${freeTextOpen ? 'rotate-180' : ''}`} />
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
-          <div className="p-4 space-y-2">
+          <div className="p-3 space-y-2">
             <Label className="text-right block">פירוט נוסף או הערות</Label>
             <Textarea
               value={freeText || ''}
@@ -526,7 +520,7 @@ export const ServiceDetailsTab = ({
         onOpenChange={setFileUploadOpen}
         className="border rounded-lg bg-card"
       >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
             <Upload className="h-4 w-4 text-primary" />
             <span className="font-medium">קובץ פירוט שירותים (אופציונלי)</span>
@@ -537,7 +531,7 @@ export const ServiceDetailsTab = ({
           <ChevronDown className={`h-4 w-4 transition-transform ${fileUploadOpen ? 'rotate-180' : ''}`} />
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
-          <div className="p-4 space-y-4">
+          <div className="p-3 space-y-3">
             <div className="space-y-2">
               <Label className="text-right block">העלאת קובץ פירוט שירותים</Label>
               <p className="text-sm text-muted-foreground text-right">

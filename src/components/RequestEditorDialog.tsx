@@ -1216,24 +1216,17 @@ export const RequestEditorDialog = ({
           </ScrollArea>
         </Tabs>
 
-        <Alert className="mt-2 flex-shrink-0">
-          <Database className="h-4 w-4" />
-          <AlertDescription className="text-right">
-            השינויים נשמרים במאגר הנתונים ויישמרו גם לאחר רענון הדף
-          </AlertDescription>
-        </Alert>
-
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4 flex-shrink-0">
-          <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto" disabled={saving}>
-            ביטול
-          </Button>
-          <Button onClick={handleSave} disabled={saving} className="flex items-center justify-center gap-2 w-full sm:w-auto">
+        <DialogFooter className="flex-shrink-0 flex flex-row-reverse gap-2 mt-4">
+          <Button onClick={handleSave} disabled={saving} className="flex items-center justify-center gap-2">
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Save className="h-4 w-4" />
             )}
             {saving ? 'שומר...' : 'שמור שינויים'}
+          </Button>
+          <Button variant="outline" onClick={handleCancel} disabled={saving}>
+            ביטול
           </Button>
         </DialogFooter>
       </DialogContent>
