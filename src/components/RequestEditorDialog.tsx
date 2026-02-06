@@ -1151,8 +1151,6 @@ export const RequestEditorDialog = ({
               {/* Services Tab */}
               <TabsContent value="services" className="mt-0" dir="rtl">
                 <ServiceDetailsTab
-                  mode={formData.serviceDetailsMode}
-                  onModeChange={(mode) => setFormData(prev => ({ ...prev, serviceDetailsMode: mode }))}
                   freeText={formData.serviceDetailsFreeText}
                   onFreeTextChange={(text) => setFormData(prev => ({ ...prev, serviceDetailsFreeText: text }))}
                   file={formData.serviceDetailsFile}

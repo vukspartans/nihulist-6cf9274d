@@ -4,19 +4,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack } from 'lucide-react';
-import { ServiceDetailsMode, ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack, ChevronDown } from 'lucide-react';
+import { ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeFileName, isValidFileType, isValidFileSize, formatFileSize } from '@/utils/fileUtils';
 import { useFeeTemplateCategories, useFeeSubmissionMethods } from '@/hooks/useFeeTemplateHierarchy';
 
 interface ServiceDetailsTabProps {
-  mode: ServiceDetailsMode;
-  onModeChange: (mode: ServiceDetailsMode) => void;
   freeText?: string;
   onFreeTextChange: (text: string) => void;
   file?: UploadedFileMetadata;
@@ -37,8 +35,6 @@ interface ServiceDetailsTabProps {
 }
 
 export const ServiceDetailsTab = ({
-  mode,
-  onModeChange,
   freeText,
   onFreeTextChange,
   file,
@@ -60,6 +56,11 @@ export const ServiceDetailsTab = ({
   const [uploading, setUploading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
+  
+  // Collapsible section states
+  const [checklistOpen, setChecklistOpen] = useState(true);
+  const [freeTextOpen, setFreeTextOpen] = useState(false);
+  const [fileUploadOpen, setFileUploadOpen] = useState(false);
   
   // Template hierarchy selection - use props if provided
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(propCategoryId || null);
@@ -120,12 +121,12 @@ export const ServiceDetailsTab = ({
     onMethodChange?.(null, null);
   }, [selectedCategoryId]);
 
-  // Load templates when category is selected and mode is checklist
+  // Load templates when category is selected
   useEffect(() => {
-    if (mode === 'checklist' && selectedCategoryId) {
+    if (selectedCategoryId) {
       loadTemplatesForCategory(selectedCategoryId);
     }
-  }, [mode, selectedCategoryId]);
+  }, [selectedCategoryId]);
 
   const loadTemplatesForCategory = async (categoryId: string) => {
     setLoadingTemplates(true);
@@ -303,264 +304,297 @@ export const ServiceDetailsTab = ({
   const selectedMethod = submissionMethods?.find(m => m.id === selectedMethodId);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <div className="space-y-2">
-        <Label className="text-base font-semibold text-right block">בחר אופן פירוט השירותים</Label>
-        <Tabs value={mode} onValueChange={(v) => onModeChange(v as ServiceDetailsMode)} className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-3 flex-row-reverse">
-            <TabsTrigger value="free_text" className="flex items-center gap-2 flex-row-reverse">
-              <FileText className="h-4 w-4" />
-              מלל חופשי
-            </TabsTrigger>
-            <TabsTrigger value="file" className="flex items-center gap-2 flex-row-reverse">
-              <Upload className="h-4 w-4" />
-              העלאת קובץ
-            </TabsTrigger>
-            <TabsTrigger value="checklist" className="flex items-center gap-2 flex-row-reverse">
-              <List className="h-4 w-4" />
-              רשימת שירותים
-            </TabsTrigger>
-          </TabsList>
+    <div className="space-y-4" dir="rtl">
+      {/* Section 1: Service Checklist (רשימת שירותים) */}
+      <Collapsible 
+        open={checklistOpen} 
+        onOpenChange={setChecklistOpen}
+        className="border rounded-lg bg-card"
+      >
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <List className="h-4 w-4 text-primary" />
+            <span className="font-medium">רשימת שירותים</span>
+            {scopeItems.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {scopeItems.filter(i => i.is_included).length}/{scopeItems.length}
+              </Badge>
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 transition-transform ${checklistOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t">
+          <div className="p-4 space-y-4">
+            {/* Template Hierarchy Selection */}
+            {categories && categories.length > 0 && (
+              <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <FolderOpen className="h-4 w-4 text-primary" />
+                  בחירת תבנית
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Category Selection */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">סוג תבנית</Label>
+                    <Select
+                      dir="rtl"
+                      value={selectedCategoryId || ''}
+                      onValueChange={handleCategoryChange}
+                      disabled={loadingCategories}
+                    >
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder="בחר תבנית..." />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id} className="text-right">
+                            <div className="flex items-center gap-2">
+                              {cat.name}
+                              {cat.is_default && (
+                                <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          <TabsContent value="free_text" className="mt-4" dir="rtl">
+                  {/* Submission Method Selection */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">שיטת הגשה</Label>
+                    <Select
+                      dir="rtl"
+                      value={selectedMethodId || ''}
+                      onValueChange={handleMethodChange}
+                      disabled={!selectedCategoryId || loadingMethods}
+                    >
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder={loadingMethods ? "טוען..." : "בחר שיטה..."} />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {submissionMethods?.map((method) => (
+                          <SelectItem key={method.id} value={method.id} className="text-right">
+                            <div className="flex items-center gap-2">
+                              <FileStack className="h-3.5 w-3.5" />
+                              {method.method_label}
+                              {method.is_default && (
+                                <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {selectedCategory && (
+                  <p className="text-xs text-muted-foreground">
+                    תבנית נבחרת: {selectedCategory.name}
+                    {selectedMethod && ` • ${selectedMethod.method_label}`}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label className="text-right block">פירוט השירותים הנדרשים</Label>
-              <Textarea
-                value={freeText || ''}
-                onChange={(e) => onFreeTextChange(e.target.value)}
-                rows={8}
-                className="text-right"
-                dir="rtl"
-                placeholder="פרט את השירותים הנדרשים מהיועץ..."
-              />
-              <p className="text-xs text-muted-foreground text-right">
-                מתאים לתחומים שבהם הפירוט פשוט יחסית
+              <Label className="text-right block">רשימת שירותים</Label>
+              <p className="text-sm text-muted-foreground text-right">
+                סמן את השירותים הנדרשים ושייך אותם לסעיפי שכ"ט
               </p>
             </div>
-          </TabsContent>
 
-          <TabsContent value="file" className="mt-4" dir="rtl">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-right block">העלאת קובץ פירוט שירותים</Label>
-                <p className="text-sm text-muted-foreground text-right">
-                  מתאים כאשר פירוט השירותים ארוך ומפורט - ניתן להעלות מסמך קיים
-                </p>
+            {loadingTemplates ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-              
-              {file ? (
-                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border">
-                  <FileText className="h-8 w-8 text-primary" />
-                  <div className="flex-1">
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeFile}
-                    className="text-destructive"
+            ) : (
+              <div className="space-y-2">
+                {scopeItems.map((item, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <input
-                    type="file"
-                    id="service-details-file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                    onChange={handleFileUpload}
-                    className="hidden"
+                    <Checkbox
+                      checked={item.is_included}
+                      onCheckedChange={() => toggleScopeItem(index)}
+                    />
+                    <span className={`flex-1 ${!item.is_included ? 'text-muted-foreground line-through' : ''}`}>
+                      {item.task_name}
+                    </span>
+                    {item.is_optional && (
+                      <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                    )}
+                    <Select
+                      dir="rtl"
+                      value={item.fee_category}
+                      onValueChange={(value) => updateScopeItemCategory(index, value)}
+                    >
+                      <SelectTrigger dir="rtl" className="w-40 text-right">
+                        <SelectValue placeholder="סעיף שכ&quot;ט" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {feeCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-right">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeScopeItem(index)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                {scopeItems.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Input
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    placeholder="הוסף שירות חדש..."
+                    className="text-right"
+                    dir="rtl"
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addScopeItem())}
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => document.getElementById('service-details-file')?.click()}
-                    className="w-full h-24 border-dashed"
-                    disabled={uploading}
+                    onClick={addScopeItem}
+                    disabled={!newTaskName.trim()}
                   >
-                    {uploading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 ml-2 animate-spin" />
-                        מעלה...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-5 w-5 ml-2" />
-                        לחץ להעלאת קובץ פירוט שירותים
-                      </>
-                    )}
+                    <Plus className="h-4 w-4 ml-1" />
+                    הוסף
                   </Button>
                 </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="checklist" className="mt-4" dir="rtl">
-            <div className="space-y-4">
-              {/* Template Hierarchy Selection */}
-              {categories && categories.length > 0 && (
-                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <FolderOpen className="h-4 w-4 text-primary" />
-                    בחירת תבנית
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Category Selection */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">סוג תבנית</Label>
-                      <Select
-                        dir="rtl"
-                        value={selectedCategoryId || ''}
-                        onValueChange={handleCategoryChange}
-                        disabled={loadingCategories}
-                      >
-                        <SelectTrigger className="text-right">
-                          <SelectValue placeholder="בחר תבנית..." />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id} className="text-right">
-                              <div className="flex items-center gap-2">
-                                {cat.name}
-                                {cat.is_default && (
-                                  <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Submission Method Selection */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">שיטת הגשה</Label>
-                      <Select
-                        dir="rtl"
-                        value={selectedMethodId || ''}
-                        onValueChange={handleMethodChange}
-                        disabled={!selectedCategoryId || loadingMethods}
-                      >
-                        <SelectTrigger className="text-right">
-                          <SelectValue placeholder={loadingMethods ? "טוען..." : "בחר שיטה..."} />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                          {submissionMethods?.map((method) => (
-                            <SelectItem key={method.id} value={method.id} className="text-right">
-                              <div className="flex items-center gap-2">
-                                <FileStack className="h-3.5 w-3.5" />
-                                {method.method_label}
-                                {method.is_default && (
-                                  <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {selectedCategory && (
-                    <p className="text-xs text-muted-foreground">
-                      תבנית נבחרת: {selectedCategory.name}
-                      {selectedMethod && ` • ${selectedMethod.method_label}`}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label className="text-right block">רשימת שירותים</Label>
-                <p className="text-sm text-muted-foreground text-right">
-                  סמן את השירותים הנדרשים ושייך אותם לסעיפי שכ"ט
-                </p>
               </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-              {loadingTemplates ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {scopeItems.map((item, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
-                    >
-                      <Checkbox
-                        checked={item.is_included}
-                        onCheckedChange={() => toggleScopeItem(index)}
-                      />
-                      <span className={`flex-1 ${!item.is_included ? 'text-muted-foreground line-through' : ''}`}>
-                        {item.task_name}
-                      </span>
-                      {item.is_optional && (
-                        <Badge variant="outline" className="text-xs">אופציונלי</Badge>
-                      )}
-                      <Select
-                        dir="rtl"
-                        value={item.fee_category}
-                        onValueChange={(value) => updateScopeItemCategory(index, value)}
-                      >
-                        <SelectTrigger dir="rtl" className="w-40 text-right">
-                          <SelectValue placeholder="סעיף שכ&quot;ט" />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                          {feeCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat} className="text-right">
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeScopeItem(index)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  
-                  {scopeItems.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
-                    </div>
-                  )}
+      {/* Section 2: Free Text Notes (מלל חופשי) */}
+      <Collapsible 
+        open={freeTextOpen} 
+        onOpenChange={setFreeTextOpen}
+        className="border rounded-lg bg-card"
+      >
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <span className="font-medium">הערות נוספות (מלל חופשי)</span>
+            {freeText && freeText.trim() && (
+              <Badge variant="secondary" className="text-xs">מולא</Badge>
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 transition-transform ${freeTextOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t">
+          <div className="p-4 space-y-2">
+            <Label className="text-right block">פירוט נוסף או הערות</Label>
+            <Textarea
+              value={freeText || ''}
+              onChange={(e) => onFreeTextChange(e.target.value)}
+              rows={6}
+              className="text-right"
+              dir="rtl"
+              placeholder="הוסף הערות, הנחיות מיוחדות או פירוט נוסף ליועץ..."
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              מתאים להוספת הנחיות מיוחדות, דרישות ספציפיות או הערות נוספות
+            </p>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-                  <div className="flex gap-2 pt-2">
-                    <Input
-                      value={newTaskName}
-                      onChange={(e) => setNewTaskName(e.target.value)}
-                      placeholder="הוסף שירות חדש..."
-                      className="text-right"
-                      dir="rtl"
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addScopeItem())}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addScopeItem}
-                      disabled={!newTaskName.trim()}
-                    >
-                      <Plus className="h-4 w-4 ml-1" />
-                      הוסף
-                    </Button>
-                  </div>
-                </div>
-              )}
+      {/* Section 3: File Upload (העלאת קובץ) */}
+      <Collapsible 
+        open={fileUploadOpen} 
+        onOpenChange={setFileUploadOpen}
+        className="border rounded-lg bg-card"
+      >
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
+            <span className="font-medium">קובץ פירוט שירותים (אופציונלי)</span>
+            {file && (
+              <Badge variant="secondary" className="text-xs">קובץ מצורף</Badge>
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 transition-transform ${fileUploadOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t">
+          <div className="p-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-right block">העלאת קובץ פירוט שירותים</Label>
+              <p className="text-sm text-muted-foreground text-right">
+                מתאים כאשר פירוט השירותים ארוך ומפורט - ניתן להעלות מסמך קיים
+              </p>
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+            
+            {file ? (
+              <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border">
+                <FileText className="h-8 w-8 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium">{file.name}</p>
+                  <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={removeFile}
+                  className="text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="file"
+                  id="service-details-file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('service-details-file')?.click()}
+                  className="w-full h-24 border-dashed"
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 ml-2 animate-spin" />
+                      מעלה...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5 ml-2" />
+                      לחץ להעלאת קובץ פירוט שירותים
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
