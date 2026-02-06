@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, AlertCircle, Loader2, Database, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { PaymentTerms, MilestonePayment, IndexType } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { INDEX_TYPES, DEFAULT_INDEX_TYPE, getIndexLabel } from '@/constants/indexTypes';
 import { PAYMENT_TERM_TYPES, PaymentTermType } from '@/constants/paymentTerms';
+import { LoadTemplateButton } from './LoadTemplateButton';
 
 interface PaymentTermsTabProps {
   paymentTerms: PaymentTerms;
@@ -151,21 +152,10 @@ export const PaymentTermsTab = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-right font-medium">אבני דרך לתשלום</Label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
+          <LoadTemplateButton
             onClick={loadTemplate}
-            disabled={loadingTemplate}
-            className="h-7 text-xs gap-1"
-          >
-            {loadingTemplate ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Database className="h-3 w-3" />
-            )}
-            {loadingTemplate ? 'טוען...' : 'טען תבנית'}
-          </Button>
+            loading={loadingTemplate}
+          />
         </div>
         
         <div className="border rounded-lg overflow-hidden">

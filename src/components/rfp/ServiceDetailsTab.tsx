@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack, ChevronDown } from 'lucide-react';
+import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack, ChevronDown, Wand2 } from 'lucide-react';
+import { LoadTemplateButton } from './LoadTemplateButton';
 import { ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -325,73 +326,68 @@ export const ServiceDetailsTab = ({
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
           <div className="p-3 space-y-3">
-            {/* Template Hierarchy Selection */}
-            {categories && categories.length > 0 && (
-              <div className="p-3 bg-muted/30 rounded-lg border space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <FolderOpen className="h-4 w-4 text-primary" />
-                  בחירת תבנית
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Template Selection with Load Button */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              {categories && categories.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
                   {/* Category Selection */}
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">סוג תבנית</Label>
-                    <Select
-                      dir="rtl"
-                      value={selectedCategoryId || ''}
-                      onValueChange={handleCategoryChange}
-                      disabled={loadingCategories}
-                    >
-                      <SelectTrigger className="text-right">
-                        <SelectValue placeholder="בחר תבנית..." />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id} className="text-right">
-                            <div className="flex items-center gap-2">
-                              {cat.name}
-                              {cat.is_default && (
-                                <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    dir="rtl"
+                    value={selectedCategoryId || ''}
+                    onValueChange={handleCategoryChange}
+                    disabled={loadingCategories}
+                  >
+                    <SelectTrigger className="text-right w-[180px]">
+                      <SelectValue placeholder="סוג תבנית..." />
+                    </SelectTrigger>
+                    <SelectContent dir="rtl">
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id} className="text-right">
+                          <div className="flex items-center gap-2">
+                            {cat.name}
+                            {cat.is_default && (
+                              <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Submission Method Selection */}
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">שיטת הגשה</Label>
-                    <Select
-                      dir="rtl"
-                      value={selectedMethodId || ''}
-                      onValueChange={handleMethodChange}
-                      disabled={!selectedCategoryId || loadingMethods}
-                    >
-                      <SelectTrigger className="text-right">
-                        <SelectValue placeholder={loadingMethods ? "טוען..." : "בחר שיטה..."} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        {submissionMethods?.map((method) => (
-                          <SelectItem key={method.id} value={method.id} className="text-right">
-                            <div className="flex items-center gap-2">
-                              <FileStack className="h-3.5 w-3.5" />
-                              {method.method_label}
-                              {method.is_default && (
-                                <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    dir="rtl"
+                    value={selectedMethodId || ''}
+                    onValueChange={handleMethodChange}
+                    disabled={!selectedCategoryId || loadingMethods}
+                  >
+                    <SelectTrigger className="text-right w-[160px]">
+                      <SelectValue placeholder={loadingMethods ? "טוען..." : "שיטת הגשה..."} />
+                    </SelectTrigger>
+                    <SelectContent dir="rtl">
+                      {submissionMethods?.map((method) => (
+                        <SelectItem key={method.id} value={method.id} className="text-right">
+                          <div className="flex items-center gap-2">
+                            <FileStack className="h-3.5 w-3.5" />
+                            {method.method_label}
+                            {method.is_default && (
+                              <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-              </div>
-            )}
+              )}
+              
+              {/* Load Template Button */}
+              <LoadTemplateButton
+                onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
+                loading={loadingTemplates}
+                disabled={!advisorType || !selectedCategoryId}
+              />
+            </div>
 
             <div className="space-y-1">
               <Label className="text-right block text-sm">רשימת שירותים</Label>
