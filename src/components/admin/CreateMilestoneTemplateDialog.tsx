@@ -98,8 +98,8 @@ export function CreateMilestoneTemplateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
+            <TabsList className="grid w-full grid-cols-2" dir="rtl">
               <TabsTrigger value="basic">{t.dialog.basicTab}</TabsTrigger>
               <TabsTrigger value="payment">{t.dialog.paymentTab}</TabsTrigger>
             </TabsList>
@@ -112,6 +112,7 @@ export function CreateMilestoneTemplateDialog({
                     id="name"
                     {...register("name", { required: true })}
                     placeholder={t.dialog.namePlaceholder}
+                    className="text-right"
                   />
                   {errors.name && (
                     <p className="text-xs text-destructive">שדה חובה</p>
@@ -136,6 +137,7 @@ export function CreateMilestoneTemplateDialog({
                   {...register("description")}
                   placeholder="תיאור אבן הדרך..."
                   rows={2}
+                  className="text-right"
                 />
               </div>
 
@@ -224,7 +226,8 @@ export function CreateMilestoneTemplateDialog({
                         min: 0,
                         max: 100,
                       })}
-                      className="pl-8"
+                      className="pl-8 text-right"
+                      dir="ltr"
                     />
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       %
@@ -248,7 +251,8 @@ export function CreateMilestoneTemplateDialog({
                       step="0.01"
                       min="0"
                       {...register("fixed_amount", { valueAsNumber: true })}
-                      className="pl-10"
+                      className="pl-10 text-right"
+                      dir="ltr"
                     />
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       ₪
