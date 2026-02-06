@@ -144,14 +144,14 @@ export function CreateMilestoneTemplateDialog({
                   <Label>{t.dialog.projectTypeLabel}</Label>
                   <Select
                     dir="rtl"
-                    value={watch("project_type") || ""}
-                    onValueChange={(val) => setValue("project_type", val)}
+                    value={watch("project_type") || "__all__"}
+                    onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
                   >
                     <SelectTrigger dir="rtl" className="text-right">
                       <SelectValue placeholder={t.dialog.projectTypeAll} />
                     </SelectTrigger>
                     <SelectContent dir="rtl">
-                      <SelectItem value="" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
+                      <SelectItem value="__all__" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
                       {PROJECT_TYPE_OPTIONS.map((type) => (
                         <SelectItem key={type.value} value={type.value} className="text-right">
                           {type.label}
@@ -165,14 +165,14 @@ export function CreateMilestoneTemplateDialog({
                   <Label>{t.dialog.municipalityLabel}</Label>
                   <Select
                     dir="rtl"
-                    value={watch("municipality_id") || ""}
-                    onValueChange={(val) => setValue("municipality_id", val)}
+                    value={watch("municipality_id") || "__all__"}
+                    onValueChange={(val) => setValue("municipality_id", val === "__all__" ? "" : val)}
                   >
                     <SelectTrigger dir="rtl" className="text-right">
                       <SelectValue placeholder={t.dialog.municipalityAll} />
                     </SelectTrigger>
                     <SelectContent dir="rtl">
-                      <SelectItem value="" className="text-right">{t.dialog.municipalityAll}</SelectItem>
+                      <SelectItem value="__all__" className="text-right">{t.dialog.municipalityAll}</SelectItem>
                       {municipalities.map((m) => (
                         <SelectItem key={m.id} value={m.id} className="text-right">
                           {m.name}
@@ -186,14 +186,14 @@ export function CreateMilestoneTemplateDialog({
                   <Label>{t.dialog.advisorSpecialtyLabel}</Label>
                   <Select
                     dir="rtl"
-                    value={watch("advisor_specialty") || ""}
-                    onValueChange={(val) => setValue("advisor_specialty", val)}
+                    value={watch("advisor_specialty") || "__all__"}
+                    onValueChange={(val) => setValue("advisor_specialty", val === "__all__" ? "" : val)}
                   >
                     <SelectTrigger dir="rtl" className="text-right">
                       <SelectValue placeholder={t.dialog.advisorSpecialtyAll} />
                     </SelectTrigger>
                     <SelectContent dir="rtl">
-                      <SelectItem value="" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
+                      <SelectItem value="__all__" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
                       {EXPERTISE_OPTIONS.map((exp) => (
                         <SelectItem key={exp.value} value={exp.value} className="text-right">
                           {exp.label}
