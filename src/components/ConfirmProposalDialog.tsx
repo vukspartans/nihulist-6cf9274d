@@ -12,12 +12,14 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Download, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Download, Loader2, Clock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
 import { useToast } from '@/hooks/use-toast';
+import { getFeeUnitLabel } from '@/constants/rfpUnits';
 
 interface FeeLineItem {
+  id?: string;
   description: string;
   quantity?: number;
   unit?: string;
@@ -27,6 +29,7 @@ interface FeeLineItem {
 }
 
 interface MilestoneItem {
+  id?: string;
   description: string;
   percentage: number;
 }
@@ -37,7 +40,6 @@ interface ConfirmProposalDialogProps {
   onConfirm: () => void;
   price: string;
   timelineDays: string;
-  scopeText: string;
   fileCount: number;
   hasSignature: boolean;
   feeLineItems?: FeeLineItem[];
@@ -46,12 +48,8 @@ interface ConfirmProposalDialogProps {
   advisorName?: string;
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('he-IL', {
-    style: 'currency',
-    currency: 'ILS',
-    minimumFractionDigits: 0,
-  }).format(amount);
+const formatAmount = (amount: number) => {
+  return `₪${amount.toLocaleString('he-IL')}`;
 };
 
 export function ConfirmProposalDialog({
@@ -75,6 +73,8 @@ export function ConfirmProposalDialog({
   const totalMandatory = mandatoryItems.reduce((sum, item) => sum + item.total, 0);
   const totalOptional = optionalItems.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = totalMandatory + totalOptional;
+  const displayTotal = grandTotal > 0 ? grandTotal : parseFloat(price || '0');
+  const parsedTimelineDays = parseInt(timelineDays) || 0;
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -84,7 +84,7 @@ export function ConfirmProposalDialog({
         advisorName,
         submittedAt: new Date().toISOString(),
         price: parseFloat(price) || 0,
-        timelineDays: parseInt(timelineDays) || 0,
+        timelineDays: parsedTimelineDays,
         feeItems: feeLineItems.map(item => ({
           description: item.description,
           unit: item.unit || 'פאושלי',
@@ -116,25 +116,43 @@ export function ConfirmProposalDialog({
     }
   };
 
+  const getItemKey = (item: FeeLineItem | MilestoneItem, idx: number) => {
+    return item.id || `item-${idx}`;
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0" dir="rtl">
-        <AlertDialogHeader className="px-6 pt-6 pb-2">
+      <AlertDialogContent 
+        className="max-w-2xl !h-[85vh] flex flex-col p-0" 
+        dir="rtl"
+      >
+        <AlertDialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <AlertDialogTitle>סיכום לפני הגשת הצעה רשמית</AlertDialogTitle>
           <AlertDialogDescription>
             אנא בדקו את הפרטים הבאים לפני הגשת ההצעה. לאחר ההגשה לא ניתן לבטל.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
-        <ScrollArea className="flex-1 px-6">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <div className="space-y-4 py-4">
             {/* Total Fee - Prominent Display */}
-            <div className="p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
+            <div className="p-4 border-2 rounded-lg bg-primary/5 border-primary/20" role="status">
               <Label className="text-muted-foreground text-xs">סה״כ שכר טרחה</Label>
               <p className="text-3xl font-bold text-primary mt-1">
-                {formatCurrency(grandTotal > 0 ? grandTotal : parseFloat(price || '0'))}
+                {formatAmount(displayTotal)}
               </p>
             </div>
+
+            {/* Timeline Days */}
+            {parsedTimelineDays > 0 && (
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-muted-foreground text-xs">לו״ז מוערך</Label>
+                </div>
+                <Badge variant="secondary">{parsedTimelineDays} ימים</Badge>
+              </div>
+            )}
             
             {/* Fee Line Items Breakdown - Mandatory */}
             {mandatoryItems.length > 0 && (
@@ -142,14 +160,24 @@ export function ConfirmProposalDialog({
                 <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים כלולים (חובה)</Label>
                 <div className="space-y-2">
                   {mandatoryItems.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-muted last:border-0">
-                      <span className="text-muted-foreground">{item.description}</span>
-                      <span className="font-medium">{formatCurrency(item.total)}</span>
+                    <div 
+                      key={getItemKey(item, idx)} 
+                      className="flex justify-between items-start text-sm py-1 border-b border-muted last:border-0"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">{item.description}</span>
+                        {item.unit && item.quantity && item.quantity > 0 && (
+                          <span className="text-xs text-muted-foreground/70">
+                            {item.quantity} × {getFeeUnitLabel(item.unit)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-medium">{formatAmount(item.total)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center pt-2 font-semibold">
-                    <span>סה״כ פריטים עיקריים</span>
-                    <span className="text-primary">{formatCurrency(totalMandatory)}</span>
+                    <span>סה״כ פריטי חובה</span>
+                    <span className="text-primary">{formatAmount(totalMandatory)}</span>
                   </div>
                 </div>
               </div>
@@ -161,14 +189,24 @@ export function ConfirmProposalDialog({
                 <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים נוספים (אופציונלי)</Label>
                 <div className="space-y-2">
                   {optionalItems.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm py-1">
-                      <span className="text-muted-foreground">{item.description}</span>
-                      <span className="font-medium">{formatCurrency(item.total)}</span>
+                    <div 
+                      key={getItemKey(item, idx)} 
+                      className="flex justify-between items-start text-sm py-1"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">{item.description}</span>
+                        {item.unit && item.quantity && item.quantity > 0 && (
+                          <span className="text-xs text-muted-foreground/70">
+                            {item.quantity} × {getFeeUnitLabel(item.unit)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-medium">{formatAmount(item.total)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center pt-2 text-slate-600 dark:text-slate-400">
                     <span>סה״כ אופציונלי</span>
-                    <span>{formatCurrency(totalOptional)}</span>
+                    <span>{formatAmount(totalOptional)}</span>
                   </div>
                 </div>
               </div>
@@ -180,11 +218,16 @@ export function ConfirmProposalDialog({
                 <Label className="text-muted-foreground text-xs mb-3 block">אבני דרך לתשלום</Label>
                 <div className="space-y-2">
                   {milestones.map((milestone, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-muted last:border-0">
+                    <div 
+                      key={getItemKey(milestone, idx)} 
+                      className="flex justify-between items-center text-sm py-1 border-b border-muted last:border-0"
+                    >
                       <span className="text-muted-foreground">{milestone.description}</span>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">{milestone.percentage}%</Badge>
-                        <span className="font-medium">{formatCurrency((grandTotal > 0 ? grandTotal : parseFloat(price || '0')) * milestone.percentage / 100)}</span>
+                        <span className="font-medium">
+                          {formatAmount(displayTotal * milestone.percentage / 100)}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -199,7 +242,11 @@ export function ConfirmProposalDialog({
             
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <Label className="text-muted-foreground text-xs">חתימה דיגיטלית</Label>
-              <Badge variant={hasSignature ? "default" : "destructive"} className="gap-1">
+              <Badge 
+                variant={hasSignature ? "default" : "destructive"} 
+                className="gap-1"
+                aria-label={hasSignature ? "חתימה קיימת" : "חתימה חסרה"}
+              >
                 {hasSignature ? (
                   <>
                     <CheckCircle2 className="h-3 w-3" />
@@ -213,30 +260,41 @@ export function ConfirmProposalDialog({
                 )}
               </Badge>
             </div>
+
+            {/* VAT Disclaimer */}
+            <p className="text-xs text-muted-foreground text-center pt-2 border-t">
+              * כל המחירים ללא מע״מ | הצעה תקפה ל-30 יום
+            </p>
           </div>
         </ScrollArea>
         
-        {/* Sticky Footer */}
-        <AlertDialogFooter className="px-6 py-4 border-t bg-background flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="gap-2"
-          >
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            ייצוא ל-PDF
-          </Button>
-          <div className="flex gap-2">
-            <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirm} className="bg-primary hover:bg-primary/90 font-bold">
-              הגש הצעת מחיר רשמית
-            </AlertDialogAction>
+        {/* Sticky Footer with RTL-compliant layout */}
+        <AlertDialogFooter className="px-6 py-4 border-t bg-background flex-shrink-0" dir="rtl">
+          <div className="flex w-full items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="gap-2"
+              aria-label="ייצוא ל-PDF"
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              ייצוא ל-PDF
+            </Button>
+            <div className="flex gap-2">
+              <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={onConfirm} 
+                className="bg-primary hover:bg-primary/90 font-bold"
+              >
+                הגש הצעת מחיר רשמית
+              </AlertDialogAction>
+            </div>
           </div>
         </AlertDialogFooter>
       </AlertDialogContent>
