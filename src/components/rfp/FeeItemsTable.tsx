@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, FileDown, Loader2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { LoadTemplateButton } from './LoadTemplateButton';
 import { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
 import { 
   FEE_UNITS, 
@@ -184,21 +185,10 @@ export const FeeItemsTable = ({
             הוסף שורה
           </Button>
           {!isOptional && advisorType && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
+            <LoadTemplateButton
               onClick={loadTemplates}
-              disabled={loadingTemplates}
-              className="flex items-center gap-2 flex-row-reverse flex-1 sm:flex-none"
-            >
-              {loadingTemplates ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="h-4 w-4" />
-              )}
-              טען תבנית
-            </Button>
+              loading={loadingTemplates}
+            />
           )}
         </div>
         <Label className="text-base font-semibold text-right">{title}</Label>
