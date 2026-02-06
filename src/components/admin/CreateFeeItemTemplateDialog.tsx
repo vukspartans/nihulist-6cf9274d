@@ -25,12 +25,14 @@ interface CreateFeeItemTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultAdvisorSpecialty?: string;
+  defaultProjectType?: string;
 }
 
 export function CreateFeeItemTemplateDialog({
   open,
   onOpenChange,
   defaultAdvisorSpecialty,
+  defaultProjectType,
 }: CreateFeeItemTemplateDialogProps) {
   const [advisorSpecialty, setAdvisorSpecialty] = useState(defaultAdvisorSpecialty || "");
   const [description, setDescription] = useState("");
@@ -55,6 +57,7 @@ export function CreateFeeItemTemplateDialog({
       default_quantity: defaultQuantity,
       charge_type: chargeType,
       is_optional: isOptional,
+      project_type: defaultProjectType,
     });
 
     // Reset form

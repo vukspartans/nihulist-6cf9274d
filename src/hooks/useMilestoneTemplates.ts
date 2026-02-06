@@ -38,6 +38,34 @@ export function useMilestoneTemplates(includeInactive = true, categoryId?: strin
   });
 }
 
+// Fetch milestone templates by advisor specialty + project type (simplified hierarchy)
+export function useMilestoneTemplatesByAdvisorProject(
+  advisorSpecialty: string,
+  projectType: string
+) {
+  return useQuery({
+    queryKey: ['milestone-templates', 'by-advisor-project', advisorSpecialty, projectType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('milestone_templates')
+        .select(`
+          *,
+          municipalities (id, name)
+        `)
+        .or(`advisor_specialty.eq.${advisorSpecialty},advisor_specialty.is.null`)
+        .or(`project_type.eq.${projectType},project_type.is.null`)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data as MilestoneTemplate[];
+    },
+    enabled: !!advisorSpecialty && !!projectType,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 // Fetch single milestone template with linked tasks
 export function useMilestoneTemplate(id: string) {
   return useQuery({

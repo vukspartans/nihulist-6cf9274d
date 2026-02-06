@@ -60,7 +60,7 @@ export default function FeeTemplatesByProject() {
                 {decodedAdvisorType}
               </h1>
               <p className="text-muted-foreground mt-1">
-                בחר סוג פרויקט לצפייה בקטגוריות
+                בחר סוג פרויקט לניהול תבניות
               </p>
             </div>
           </div>
@@ -91,10 +91,7 @@ export default function FeeTemplatesByProject() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      {project.category_count} קטגוריות
-                    </p>
+                  <div className="flex items-center justify-end">
                     <Badge variant={project.category_count > 0 ? "default" : "secondary"}>
                       {project.category_count > 0 ? "פעיל" : "טרם הוגדר"}
                     </Badge>

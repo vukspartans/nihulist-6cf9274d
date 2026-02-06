@@ -13,6 +13,7 @@ export interface FeeItemTemplate {
   charge_type: string | null;
   is_optional: boolean;
   display_order: number;
+  project_type: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +39,7 @@ export interface CreateFeeItemTemplateInput {
   charge_type?: string;
   is_optional?: boolean;
   display_order?: number;
+  project_type?: string;
 }
 
 export interface UpdateFeeItemTemplateInput extends Partial<CreateFeeItemTemplateInput> {
@@ -90,6 +92,31 @@ export function useFeeItemTemplates(
       return data as FeeItemTemplate[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - templates don't change often
+    refetchOnWindowFocus: false,
+  });
+}
+
+// New hook: Fetch fee item templates by advisor specialty + project type (simplified hierarchy)
+export function useFeeItemTemplatesByAdvisorProject(
+  advisorSpecialty: string,
+  projectType: string
+) {
+  return useQuery({
+    queryKey: [FEE_ITEM_QUERY_KEY, "by-advisor-project", advisorSpecialty, projectType],
+    queryFn: async () => {
+      // Get templates that match advisor + (specific project OR null for global)
+      const { data, error } = await supabase
+        .from("default_fee_item_templates")
+        .select("*")
+        .eq("advisor_specialty", advisorSpecialty)
+        .or(`project_type.eq.${projectType},project_type.is.null`)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      return data as FeeItemTemplate[];
+    },
+    enabled: !!advisorSpecialty && !!projectType,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
@@ -243,6 +270,30 @@ export function useServiceScopeTemplates(advisorSpecialty?: string, categoryId?:
       return data as ServiceScopeTemplate[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - templates don't change often
+    refetchOnWindowFocus: false,
+  });
+}
+
+// New hook: Fetch service scope templates by advisor specialty + project type (simplified hierarchy)
+export function useServiceScopeTemplatesByAdvisorProject(
+  advisorSpecialty: string,
+  projectType: string
+) {
+  return useQuery({
+    queryKey: [SERVICE_SCOPE_QUERY_KEY, "by-advisor-project", advisorSpecialty, projectType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("default_service_scope_templates")
+        .select("*")
+        .eq("advisor_specialty", advisorSpecialty)
+        .or(`project_type.eq.${projectType},project_type.is.null`)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      return data as ServiceScopeTemplate[];
+    },
+    enabled: !!advisorSpecialty && !!projectType,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
