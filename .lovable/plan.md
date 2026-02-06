@@ -1,103 +1,82 @@
 
-## Test Fee Items Addition Plan
 
-### Current State
-The test RFP (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa001`) was created with two RFP invites but **no fee items** in the `rfp_request_fee_items` table. This means:
-- Pre-submission invite (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa002`): Opened, no proposal yet
-- Submitted invite (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa003`): Submitted, has a locked proposal
+## Fix: UUID Cast Error in Negotiation Response
 
-### What Needs to Be Added
+### Problem
+When an advisor tries to submit a negotiation response, the database function `submit_negotiation_response` fails with:
+```
+invalid input syntax for type uuid: "idx-1"
+```
 
-#### 1. **Mandatory (חובה) Fee Items for Pre-Submission Invite**
-These will be associated with invite `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa002` and appear in the RFP wizard's Fees tab.
+This happens because the function attempts to cast ALL `line_item_id` values to UUID on line 147, but many line items use synthetic IDs like `idx-1` (index-based fallback) or string IDs like `fee-1` (from JSONB data).
 
-| Item # | Description | Unit | Qty | Charge Type | is_optional |
-|--------|---|---|---|---|---|
-| 1 | שירותי ייעוץ בשלב התכנון הראשוני | lump_sum | 1 | one_time | false |
-| 2 | הכנת מסמכים והתוכנית הטכנית | hourly | 40 | hourly_rate | false |
-| 3 | ליווי וייצוג מול הרשויות | per_consultant | 2 | hourly_rate | false |
-| 4 | פיקוח עליון על הביצוע | per_floor | 5 | one_time | false |
+### Root Cause Analysis
 
-#### 2. **Optional (אופציונלי) Fee Items for Pre-Submission Invite**
-These represent add-on services the consultant can choose from.
-
-| Item # | Description | Unit | Qty | Charge Type | is_optional |
-|--------|---|---|---|---|---|
-| 1 | הכנת תוכנית עסקית מפורטת | lump_sum | 1 | one_time | true |
-| 2 | ייעוץ בנושא התקנות תשנ"ד (נגישות) | hourly | 8 | hourly_rate | true |
-
-#### 3. **Fee Items for Submitted Proposal**
-The proposal (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa004`) needs `fee_line_items` in its JSONB column to display with visual styling. This allows testing the UI for:
-- Visual differentiation (amber background, Shield icon for mandatory; neutral background, Info icon for optional)
-- Badge styling (חובה vs אופציונלי)
-- Total calculations (סה"כ פריטי חובה + סה"כ פריטים אופציונליים)
-
-### Implementation Approach
-
-**Create a new migration file**: `supabase/migrations/[timestamp]_add_fee_items_to_test_rfp.sql`
-
-This migration will:
-
-1. **Insert fee items for pre-submission invite** (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa002`)
-   - 4 mandatory items with display_order 0-3
-   - 2 optional items with display_order 0-1
-   - All with `is_optional = false/true` and proper charge_type
-
-2. **Update the proposal** (`aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa004`) with fee_line_items JSONB
-   - Populate `fee_line_items` column with structured data
-   - Include unit_price for each item to enable calculation demo
-   - Mix mandatory and optional items with prices to show totaling
-   - Expected format:
-   ```json
-   [
-     {
-       "id": "fee-1",
-       "item_number": 1,
-       "description": "שירותי ייעוץ בשלה התכנון",
-       "unit": "lump_sum",
-       "quantity": 1,
-       "unit_price": 8000,
-       "is_optional": false,
-       "charge_type": "one_time"
-     },
-     // ... more items
-   ]
+1. **Frontend ID Generation**: The `NegotiationResponseView` generates IDs using:
+   ```typescript
+   const itemId = item.item_id || `idx-${item.item_number ?? idx}`;
    ```
+   
+2. **Database Function Failure**: The `submit_negotiation_response` function at line 147:
+   ```sql
+   WHERE id = (v_item->>'line_item_id')::UUID
+   ```
+   This fails for non-UUID strings.
 
-3. **Validation & Constraints**
-   - All UUIDs follow existing pattern (aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa001)
-   - `rfp_invite_id` references existing invites
-   - `item_number` increments properly per is_optional group
-   - `display_order` increments 0, 1, 2, etc. per group
+3. **Test Data Impact**: The recently added test data uses IDs like `fee-1`, `fee-2` which are also not valid UUIDs.
 
-### Testing Scenarios
+### Solution
 
-After running the migration, the following test flows will be enabled:
+Modify the `submit_negotiation_response` database function to:
+1. Skip UUID-based operations for non-UUID line item IDs
+2. Only attempt database record lookups for valid UUID IDs
+3. Continue to update fee_line_items JSONB (which works with any ID format)
 
-1. **Vendor 1 (Pre-submission)**
-   - Login: `vendor.test+billding@example.com` / `Billding2026!`
-   - Navigate to RFP invite
-   - View Fees tab → See 4 mandatory items + 2 optional items separated
-   - Verify visual styling is NOT yet applied (pre-submission uses plain table)
+### Implementation
 
-2. **Vendor 2 (Submitted/Negotiation)**
-   - Login: `vendor.test1+billding@example.com` / `TestPassword123!`
-   - View submitted proposal
-   - See proposal with fee_line_items rendered
-   - Verify visual differentiation:
-     - Mandatory items: Amber background, 4px amber right border, Shield icon, "חובה" badge
-     - Optional items: Slate background, 2px slate right border, Info icon, "אופציונלי" badge
-   - Verify footer totals: סה"כ פריטי חובה | סה"כ פריטים אופציונליים | סה"כ
+**File to modify:** Create new SQL migration
 
-3. **Entrepreneur (Project Owner)**
-   - Can view proposals and see the fee differentiation
-   - Can initiate negotiation and request price adjustments
+```sql
+-- In the loop that processes line items (lines 143-169):
+FOR v_item IN SELECT * FROM jsonb_array_elements(p_updated_line_items)
+LOOP
+  -- Check if line_item_id is a valid UUID before attempting DB lookup
+  IF (v_item->>'line_item_id') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    SELECT * INTO v_prev_line_item 
+    FROM public.proposal_line_items 
+    WHERE id = (v_item->>'line_item_id')::UUID;
+    
+    IF FOUND THEN
+      -- Insert/update logic for database-backed line items
+    END IF;
+  END IF;
+  -- JSONB updates continue to work for all IDs
+END LOOP;
+```
 
-### Files Modified
-- **Create**: `supabase/migrations/[timestamp]_add_fee_items_to_test_rfp.sql` (new migration with INSERT statements)
+### Changes Summary
 
-### Notes
-- The migration uses `ON CONFLICT (id) DO NOTHING` to be idempotent
-- Uses actual UUIDs that follow the test pattern for consistency
-- Provides realistic Hebrew descriptions for construction/consulting domain
-- Includes realistic unit prices for negotiation testing (8000-15000 range)
+| Location | Change |
+|----------|--------|
+| `submit_negotiation_response` function | Add UUID validation regex before casting |
+| Loop over `p_updated_line_items` | Skip DB operations for non-UUID IDs |
+| JSONB fee_line_items matching logic | Already uses string matching (line 97) - no change needed |
+
+### Technical Details
+
+The fix adds a PostgreSQL regex check before the UUID cast:
+```sql
+-- UUID regex pattern
+'line_item_id' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+```
+
+This matches the pattern already used in `send-negotiation-request/index.ts` (line 246).
+
+### Testing After Fix
+
+1. Login as Vendor 2: `vendor.test1+billding@example.com` / `TestPassword123!`
+2. Navigate to Negotiations tab
+3. Open the active negotiation request
+4. Modify prices and submit response
+5. Verify no UUID cast error occurs
+
