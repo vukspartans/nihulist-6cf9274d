@@ -1,311 +1,302 @@
 
-# UX Pattern Design: Required Acknowledgment with Validation
 
-## 1. Overview
+# Refined UX Specification: Milestone Change Window
 
-This is a **required acknowledgment pattern** where users must explicitly confirm understanding before proceeding with a critical action. The implementation will be based on the existing `ToSAcceptanceModal` structure but with enhanced validation messaging and accessibility features.
+## Executive Summary
 
-## 2. User Intent & Context
+This specification defines the exact copy and behavior for communicating milestone editability rules to **consultants** (יועץ) on the proposal submission and negotiation response screens. All terminology has been aligned with actual system actions.
 
-**Primary Goal**: Ensure users understand and acknowledge critical system requirements before proceeding, creating an auditable record of their explicit consent.
+---
 
-**Use Cases**:
-- Terms of Service acceptance (already implemented in `ToSAcceptanceModal.tsx`)
-- Critical action confirmations (e.g., submitting binding proposals)
-- Operational requirements (e.g., understanding payment terms)
-- Risk acknowledgments (e.g., accepting binding negotiation offers)
+## 1. Terminology Alignment Matrix
 
-## 3. Final UX Behavior
+| Concept | CORRECT Term (Hebrew) | CORRECT Term (English) | INCORRECT Terms to Avoid |
+|---------|----------------------|------------------------|--------------------------|
+| Stop milestone edits | נעולים / נעול | Locked | "Frozen", "Disabled" |
+| Consultant withdraws their proposal | ביטול ההצעה / ביטול | Cancel (proposal) | "Decline", "Reject", "Withdraw" |
+| Entrepreneur declines proposal | דחייה | Reject | Do not use from consultant perspective |
+| Create new proposal | הגש הצעה חדשה | Submit new proposal | "Restart", "Redo" |
+| Send proposal | הגשה | Submit | "Send", "Deliver" |
+| Proposal awaiting response | בהמתנה לאישור | Awaiting approval | Avoid "pending" |
 
-### Visual Hierarchy & Layout Structure
+---
 
+## 2. User Perspective: Consultant (יועץ)
+
+All copy on proposal submission and negotiation screens is written from the **consultant's perspective**. The consultant:
+- Submits their proposal
+- Can edit milestones **until** they submit
+- Cannot edit milestones **after** submission
+- Must cancel their own proposal to make structural changes
+
+---
+
+## 3. Refined Copy by Location
+
+### 3.1 Primary Explanation (Pre-Submission)
+
+**Location**: `ConsultantPaymentTerms.tsx` — shown above milestone table
+
+**Hebrew (RTL)**:
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ INFORMATION SECTION (Background: light blue/primary/10)         │
-│ ├─ Icon: AlertCircle or equivalent                             │
-│ ├─ Title: "שים לב / Critical Notice"                           │
-│ └─ Description: Clear, human-readable explanation              │
-├─────────────────────────────────────────────────────────────────┤
-│ SCROLLABLE CONTENT (if applicable)                              │
-│ ├─ Detailed terms, conditions, or requirements                 │
-│ └─ Maximum height: 300-400px with internal scroll             │
-├─────────────────────────────────────────────────────────────────┤
-│ ACKNOWLEDGMENT SECTION (Background: subtle, rounded)            │
-│ ├─ Checkbox + Label (flex row-reverse for RTL)                │
-│ ├─ Inline Error (if validation fails)                          │
-│ └─ Color: Accessible neutral/slate for unchecked state        │
-├─────────────────────────────────────────────────────────────────┤
-│ ACTION BUTTONS SECTION (sticky footer)                         │
-│ ├─ Primary CTA: Disabled until checkbox checked               │
-│ ├─ Secondary: Cancel/Go Back                                   │
-│ └─ Footer text: Consequences of action (e.g., VAT disclaimer) │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### State Transitions
-
-**Initial State** (Page Load):
-- Checkbox: Unchecked
-- Primary CTA: Disabled (greyed out, not clickable)
-- Validation Message: Hidden
-- Content: Visible, scrollable
-
-**User Checks Checkbox**:
-- Checkbox: Checked (filled with blue)
-- Primary CTA: Enabled (clickable)
-- Validation Message: Hidden
-- Visual Feedback: Subtle green highlight on checkbox container (optional)
-
-**User Unchecks Checkbox** (if previously checked):
-- Checkbox: Unchecked
-- Primary CTA: Disabled (reverts)
-- Validation Message: Hidden
-
-**User Attempts Click Without Checking** (required):
-- Validation Error: Appears inline below checkbox
-- Focus: Moves to checkbox (screen readers announce)
-- Message: "יש לאשר את האמור לעיל כדי להמשיך" (You must confirm the above to proceed)
-- Visual: Red/destructive border or background tint on checkbox container
-
-**User Clicks Primary CTA While Checked**:
-- CTA: Shows loading state (spinner)
-- Checkbox: Disabled during submission
-- Error Message: Cleared
-- On Success: Modal closes, record audited in database
-
-## 4. Validation Logic
-
-### Client-Side Validation
-
-```typescript
-// State
-const [isChecked, setIsChecked] = useState(false);
-const [showError, setShowError] = useState(false);
-const [loading, setLoading] = useState(false);
-
-// Checkbox Handler
-const handleCheckChange = (checked: boolean) => {
-  setIsChecked(checked);
-  // Clear error when user checks box
-  if (checked && showError) {
-    setShowError(false);
-  }
-};
-
-// Primary CTA Handler
-const handleProceed = async (e: React.MouseEvent) => {
-  e.preventDefault();
-  
-  // Validation Check
-  if (!isChecked) {
-    setShowError(true);
-    // Announce error to screen readers
-    const errorElement = document.getElementById('acknowledgment-error');
-    if (errorElement) {
-      errorElement.focus();
-      errorElement.setAttribute('role', 'alert');
-    }
-    return;
-  }
-  
-  setLoading(true);
-  try {
-    // Call API to record acknowledgment + proceed with action
-    await submitAcknowledgment();
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Disabled State Logic
-const isCTADisabled = !isChecked || loading;
+כותרת: חלון שינויים
+גוף: ניתן לערוך אבני דרך עד להגשת ההצעה.
+      לאחר ההגשה, אבני הדרך נעולות.
+      לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.
 ```
 
-### Server-Side Validation (Audit Trail)
-
-```typescript
-// Record in database
-const recordAcknowledgment = async (
-  userId: string,
-  acknowledgmentType: string,
-  version: string,
-  ipAddress?: string,
-  userAgent?: string
-) => {
-  const { error } = await supabase.from('user_acknowledgments').insert({
-    user_id: userId,
-    acknowledgment_type: acknowledgmentType,
-    version: version,
-    acknowledged_at: new Date().toISOString(),
-    ip_address: ipAddress,
-    user_agent: userAgent,
-  });
-  
-  if (error) throw error;
-};
+**English (for reference)**:
+```
+Title: Change Window
+Body: Milestones can be edited until the proposal is submitted.
+      After submission, milestones are locked.
+      To change milestones after submission, the proposal must be canceled and a new proposal submitted.
 ```
 
-## 5. Edge Cases & Handling
+**Design Specifications**:
+- Container: `Alert` with `border-amber-200 bg-amber-50/50`
+- Icon: `AlertCircle` (no emoji)
+- Typography: Title as `font-medium`, body as `text-sm`
+- No decorative symbols or emojis
 
-| Edge Case | Behavior |
-|-----------|----------|
-| **User closes dialog without confirming** | Modal remains open (non-dismissible by default) |
-| **Form submission fails** | Show error toast, checkbox remains checked, allow retry |
-| **User navigates away mid-submission** | Show unsaved changes warning (if applicable) |
-| **Browser back button** | Modal persists (non-closeable until confirmed) |
-| **Keyboard only navigation** | Tab → Checkbox → Error message → CTA buttons; Enter to toggle/submit |
-| **Screen reader access** | Checkbox role, error messages have role="alert", labels linked via htmlFor |
-| **Mobile viewport** | Checkbox label wraps, modal scrolls internally, CTA sticky |
-| **Same acknowledgment re-triggered** | Skip modal if `tos_accepted_at` already exists in database |
-| **User submits same acknowledgment twice** | Prevent duplicate records via unique constraint or check |
+---
+
+### 3.2 Helper Text (Optional Tip)
+
+**Location**: Below milestone table, before submit button
+
+**Hebrew**:
+```
+ודא שאחוזי התשלום נכונים לפני ההגשה.
+```
+
+**English**:
+```
+Verify payment percentages before submission.
+```
+
+**Design**: `text-xs text-muted-foreground`, no icon
+
+---
+
+### 3.3 Tooltip (On Milestone Section Header)
+
+**Location**: Info icon next to "אבני דרך ותנאי תשלום" heading
+
+**Hebrew**:
+```
+אבני דרך ניתנות לעריכה עד להגשת ההצעה.
+```
+
+**English**:
+```
+Milestones are editable until the proposal is submitted.
+```
+
+**Constraint**: Single sentence only; do not repeat full explanation
+
+---
+
+### 3.4 Read-Only State Label (Post-Submission)
+
+**Location**: Inline badge or text when milestone inputs are disabled
+
+**Hebrew**:
+```
+נעול לאחר הגשה
+```
+
+**English**:
+```
+Locked after submission
+```
+
+**Design**: 
+- Badge: `bg-muted text-muted-foreground border`
+- Icon: `Lock` (h-3 w-3)
+- Displayed inline next to disabled inputs OR as a banner above table
+
+---
+
+### 3.5 Negotiation State Clarification
+
+**Location**: `NegotiationResponseView.tsx` — Milestones tab
+
+**Hebrew**:
+```
+כותרת: שינויים באבני דרך
+גוף: במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.
+      שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה והגשת הצעה חדשה.
+```
+
+**English**:
+```
+Title: Milestone Changes
+Body: During negotiation, prices and milestone percentages can be updated.
+      Structural changes (adding or removing milestones) require canceling the proposal and submitting a new one.
+```
+
+**Design**: `Alert` with `border-blue-200 bg-blue-50/50`
+
+---
+
+## 4. State-Based Display Logic
+
+| Proposal Status | Milestones Editable? | Display |
+|-----------------|---------------------|---------|
+| `draft` | Yes | Primary explanation (change window) |
+| `submitted` | No | Locked label + disabled inputs |
+| `negotiation_requested` | Percentages only | Negotiation clarification alert |
+| `resubmitted` | No | Locked label |
+| `accepted` | No | Locked label |
+| `canceled` | N/A | Proposal no longer visible |
+
+---
+
+## 5. Validation & Error States
+
+### 5.1 Milestone Total Validation
+
+**Error (when sum ≠ 100%)**:
+```
+Hebrew: סה"כ אחוזי אבני דרך חייב להיות 100%. כרגע: {total}%.
+English: Total milestone percentages must equal 100%. Current: {total}%.
+```
+
+### 5.2 Attempt to Edit Locked Milestones
+
+If a user somehow triggers an edit action on a locked field (edge case):
+```
+Hebrew: לא ניתן לערוך אבני דרך לאחר הגשת ההצעה.
+English: Milestones cannot be edited after proposal submission.
+```
+
+---
 
 ## 6. Accessibility Requirements
 
-### ARIA & Semantic HTML
-- **Checkbox**: `<input type="checkbox" id="ack" />`
-- **Label**: `<label htmlFor="ack">` (properly linked)
-- **Error Container**: `id="acknowledgment-error" role="alert" aria-live="polite"`
-- **Dialog**: `role="alertdialog"` if dismissal is prevented
+| Requirement | Implementation |
+|-------------|----------------|
+| RTL Support | `dir="rtl"` on container, `text-right` alignment |
+| Keyboard Navigation | Tooltip accessible via Tab, Enter to activate |
+| Screen Readers | Alert has `role="status"`, disabled fields have `aria-disabled="true"` |
+| Color Independence | Lock icon + text label, not just color change |
 
-### Keyboard Navigation
-- **Tab order**: Scrollable content (if focusable) → Checkbox → Error message → Primary CTA → Secondary CTA
-- **Escape Key**: Disabled (prevents accidental dismissal)
-- **Enter Key**: Submits form from any field
+---
 
-### Color & Contrast
-- **Error text**: WCAG AA compliant contrast ratio
-- **Disabled CTA**: Meets minimum contrast; not grey-on-grey
-- **Checkbox border**: Visible focus ring (minimum 2px solid, high contrast color)
+## 7. Files to Modify
 
-### Screen Reader Announcements
-- **Initial**: "Dialog: [Title]. [Description]. To proceed, you must check the acknowledgment checkbox."
-- **On Error**: "Error: [Message]. Focus moved to acknowledgment checkbox. Please check the box to continue."
-- **On Success**: "Acknowledgment recorded. Closing dialog."
+| File | Changes |
+|------|---------|
+| `src/components/proposal/ConsultantPaymentTerms.tsx` | Add primary explanation Alert, add helper text, add read-only badge |
+| `src/pages/SubmitProposal.tsx` | Add tooltip to milestone section header |
+| `src/components/negotiation/NegotiationResponseView.tsx` | Add negotiation state clarification alert in Milestones tab |
 
-## 7. Proposed Microcopy
+---
 
-### Checkbox Label (Standard Pattern)
+## 8. Final Copy Summary
 
-**Hebrew (RTL)**:
-- "אני מאשר/ת את תנאי השימוש של פלטפורמת בילדינג ומתחייב/ת לפעול על פיהם"
-- *Short & formal, using "מאשר/ת" (confirm) and "מתחייב/ת" (commit)*
+### Proposal Submission Screen (Editable State)
 
-**Alternative (More Explicit)**:
-- "אני מבין/ה וקורא/ת את תנאי השימוש ומסכים/ה ללחיצה על הכפתור"
-- *Emphasizes understanding + reading before agreement*
-
-### Inline Error Message (When Unchecked & CTA Clicked)
-
-**Hebrew**:
-- "יש לאשר את האמור לעיל כדי להמשיך" (You must confirm the above to proceed)
-- *Clear, direct, not punitive*
-
-**Alternative**:
-- "אנא סמן את תיבת האישור כדי להמשיך" (Please check the confirmation box to proceed)
-- *More conversational, "please" format*
-
-### Header / Dialog Title
-
-**Hebrew**:
-- "אישור תנאי השימוש" (Confirm Terms of Use)
-- or "שים לב: נדרש אישור" (Notice: Confirmation Required)
-
-### Primary CTA Microcopy
-
-**Hebrew**:
-- "אשר והמשך" (Confirm and Continue)
-- or "אשר ותגש" (Confirm and Submit)
-
-**When Disabled**:
-- Keep same label, show visual disabled state (greyed out)
-- Tooltip (optional): "יש לאשר את תיבת האישור לפני ההמשך"
-
-### Helper Text (Below CTA)
-
-**Hebrew**:
-- "* לא ניתן להמשיך להשתמש במערכת ללא אישור תנאי השימוש"
-- *Reinforces non-optional nature*
-
-## 8. Implementation Files & Changes
-
-### New Component (Optional)
-Create a reusable `<RequiredAcknowledgmentPattern />` component with:
-- Props: `title`, `description`, `content`, `checkboxLabel`, `onConfirm`, `isLoading`
-- Internal state: `isChecked`, `showError`
-- Built-in validation and error messaging
-
-### Modify Existing Components
-
-**`src/components/ToSAcceptanceModal.tsx`**:
-- Add inline error state & message
-- Add error announcement logic (role="alert")
-- Add disabled state styling on CTA
-- Import `AlertCircle` icon for visual emphasis
-
-**`src/pages/Auth.tsx` (signup step 3)**:
-- Validate `tosAccepted` before form submission
-- Show error toast if not checked (already done, but enhance messaging)
-
-**`src/lib/auditLog.ts`** (or new audit utility):
-- Record acknowledgment timestamp + version + IP (for compliance)
-- Called on successful confirmation
-
-## 9. Visual Design Details
-
-### Color & Styling
-
-**Warning/Notice Section**:
+**Alert Box:**
 ```
-Background: bg-blue-50/50 dark:bg-blue-950/20
-Border: border-blue-200 dark:border-blue-800
-Icon: text-blue-600
-Text: text-blue-700 dark:text-blue-300
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚠ חלון שינויים                                                  │
+│                                                                 │
+│ ניתן לערוך אבני דרך עד להגשת ההצעה.                             │
+│ לאחר ההגשה, אבני הדרך נעולות.                                   │
+│ לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Acknowledgment Checkbox Section**:
-```
-Normal State:
-  Background: transparent or muted/20
-  Border: border-input (subtle)
-  
-Checked State:
-  Background: subtle highlight (blue/5)
-  Checkbox: filled with primary color
+### Proposal Submission Screen (Locked State)
 
-Error State:
-  Background: red-50/30
-  Border: border-red-300 dark:border-red-700
-  Error Text: text-red-600 dark:text-red-400
+**Inline Badge:**
+```
+┌───────────────────────┐
+│ 🔒 נעול לאחר הגשה      │
+└───────────────────────┘
 ```
 
-**Primary CTA**:
+### Negotiation Response Screen (Milestones Tab)
+
+**Alert Box:**
 ```
-Enabled: bg-primary, hover:bg-primary/90, cursor-pointer
-Disabled: bg-muted, text-muted-foreground, cursor-not-allowed, opacity-50
-Loading: show spinner icon, disabled
+┌─────────────────────────────────────────────────────────────────┐
+│ ℹ שינויים באבני דרך                                              │
+│                                                                 │
+│ במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.              │
+│ שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה         │
+│ והגשת הצעה חדשה.                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Typography & Spacing
+### Tooltip
 
-- **Checkbox Label**: `text-sm font-medium leading-relaxed`
-- **Error Message**: `text-sm text-red-600 mt-2`
-- **Helper Text**: `text-xs text-muted-foreground`
-- **Overall Layout**: `space-y-4` between major sections
+```
+אבני דרך ניתנות לעריכה עד להגשת ההצעה.
+```
 
-## 10. Summary of Key Decisions
+---
 
-1. **Non-Dismissible Modal**: Prevents accidental skipping; uses `onPointerDownOutside` + `onEscapeKeyDown` preventDefault
-2. **Inline Error Over Toast**: Error appears adjacent to checkbox for immediate context
-3. **Disabled CTA vs Hidden CTA**: Disabled is clearer UX; shows requirement visually
-4. **Checkbox as Primary UX**: More explicit than accepting by clicking CTA; auditable action
-5. **Clear Microcopy**: Avoids legal jargon; uses simple Hebrew with gender-inclusive forms (מ/ת endings)
-6. **Audit Trail**: Timestamps + versions recorded in database for compliance & legal proof
-7. **Accessibility First**: Full keyboard navigation, screen reader support, WCAG AA contrast ratios
+## 9. Implementation Code Snippets
 
-## 11. Expected Outcomes
+### Primary Alert (ConsultantPaymentTerms.tsx)
 
-- **User Experience**: Clear, unambiguous requirement; feels fair, not aggressive
-- **Compliance**: Explicit acknowledgment recorded + timestamped in audit log
-- **Accessibility**: Keyboard + screen reader friendly; error states announced
-- **Reusability**: Pattern can be applied to other critical acknowledgments (payment terms, binding offers, etc.)
+```tsx
+<Alert className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+  <AlertCircle className="h-4 w-4 text-amber-600" />
+  <AlertDescription className="text-amber-800 dark:text-amber-200">
+    <p className="font-medium mb-1">חלון שינויים</p>
+    <p className="text-sm">
+      ניתן לערוך אבני דרך עד להגשת ההצעה.
+    </p>
+    <p className="text-sm mt-1">
+      לאחר ההגשה, אבני הדרך נעולות.
+      לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.
+    </p>
+  </AlertDescription>
+</Alert>
+```
+
+### Locked State Badge
+
+```tsx
+<Badge variant="secondary" className="gap-1 text-muted-foreground">
+  <Lock className="h-3 w-3" />
+  נעול לאחר הגשה
+</Badge>
+```
+
+### Negotiation Clarification Alert
+
+```tsx
+<Alert className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+  <Info className="h-4 w-4 text-blue-600" />
+  <AlertDescription className="text-blue-800 dark:text-blue-200">
+    <p className="font-medium mb-1">שינויים באבני דרך</p>
+    <p className="text-sm">
+      במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.
+    </p>
+    <p className="text-sm mt-1">
+      שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה והגשת הצעה חדשה.
+    </p>
+  </AlertDescription>
+</Alert>
+```
+
+---
+
+## 10. Review Checklist
+
+| Criterion | Status |
+|-----------|--------|
+| User perspective consistency (consultant) | ✓ |
+| Terminology alignment (cancel vs reject) | ✓ |
+| No emojis in legal explanations | ✓ |
+| RTL support | ✓ |
+| Accessibility (keyboard, screen reader) | ✓ |
+| Single-sentence tooltips | ✓ |
+| Disabled state explanation | ✓ |
+| Negotiation does not contradict lock rule | ✓ |
 
