@@ -131,6 +131,19 @@ export type ProjectType = typeof PROJECT_TYPES[number];
 export type ProjectPhase = typeof PROJECT_PHASES[number];
 export type ProjectStatus = typeof PROJECT_STATUSES[number];
 
+// Project types currently enabled for entrepreneurs to create
+// Update this list when enabling new categories in ProjectTypeSelector
+export const LIVE_PROJECT_TYPES: ProjectType[] = [
+  'פינוי־בינוי (מתחמים)',
+  'תמ"א 38/1 – חיזוק ותוספות',
+  'תמ"א 38/2 – הריסה ובנייה מחדש',
+];
+
+// Helper function to check if a project type is live
+export const isLiveProjectType = (type: string): boolean => {
+  return LIVE_PROJECT_TYPES.includes(type as ProjectType);
+};
+
 // Options format for Select components
 export const PROJECT_TYPE_OPTIONS = PROJECT_TYPES.map(type => ({
   value: type,
