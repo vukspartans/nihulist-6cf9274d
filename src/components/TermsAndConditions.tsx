@@ -1,13 +1,23 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { RefObject } from "react";
 
 interface TermsAndConditionsProps {
   accepted: boolean;
   onAcceptChange: (accepted: boolean) => void;
+  showError?: boolean;
+  checkboxRef?: RefObject<HTMLButtonElement>;
 }
 
-export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditionsProps) => {
+export const TermsAndConditions = ({ 
+  accepted, 
+  onAcceptChange, 
+  showError = false,
+  checkboxRef 
+}: TermsAndConditionsProps) => {
   return (
     <div className="space-y-4" dir="rtl">
       <ScrollArea className="h-96 border rounded-md p-4 bg-muted/30 text-right" dir="rtl">
@@ -466,19 +476,47 @@ export const TermsAndConditions = ({ accepted, onAcceptChange }: TermsAndConditi
         </div>
       </ScrollArea>
       
-      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-md border flex-row-reverse justify-end" dir="rtl">
-        <Checkbox 
-          id="tos" 
-          checked={accepted}
-          onCheckedChange={(checked) => onAcceptChange(checked === true)}
-          className="mt-1"
-        />
-        <Label 
-          htmlFor="tos" 
-          className="text-sm cursor-pointer leading-relaxed font-medium"
-        >
-          אני מאשר/ת את תנאי השימוש של פלטפורמת בילדינג ומתחייב/ת לפעול על פיהם
-        </Label>
+      <div 
+        className={cn(
+          "flex flex-col gap-3 p-4 rounded-md border transition-colors",
+          showError 
+            ? "bg-destructive/5 border-destructive/50" 
+            : accepted 
+              ? "bg-primary/5 border-primary/30"
+              : "bg-muted/20 border-input"
+        )} 
+        dir="rtl"
+      >
+        <div className="flex items-start gap-3 flex-row-reverse justify-end">
+          <Checkbox 
+            ref={checkboxRef}
+            id="tos" 
+            checked={accepted}
+            onCheckedChange={(checked) => onAcceptChange(checked === true)}
+            className="mt-1"
+            aria-describedby={showError ? "acknowledgment-error" : undefined}
+            aria-invalid={showError}
+          />
+          <Label 
+            htmlFor="tos" 
+            className="text-sm cursor-pointer leading-relaxed font-medium"
+          >
+            אני מאשר/ת את תנאי השימוש של פלטפורמת בילדינג ומתחייב/ת לפעול על פיהם
+          </Label>
+        </div>
+        
+        {/* Inline Error Message */}
+        {showError && (
+          <div 
+            id="acknowledgment-error" 
+            role="alert" 
+            aria-live="polite"
+            className="flex items-center gap-2 text-sm text-destructive"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>יש לאשר את האמור לעיל כדי להמשיך</span>
+          </div>
+        )}
       </div>
     </div>
   );
