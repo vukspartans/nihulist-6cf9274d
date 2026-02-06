@@ -13,6 +13,12 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { 
+  isRecurringChargeType, 
+  getDurationUnitLabel, 
+  getChargeTypeLabel,
+  calculateFeeItemTotal 
+} from "@/constants/rfpUnits";
 
 // Unit labels in Hebrew
 const unitLabels: Record<string, string> = {
@@ -37,6 +43,7 @@ interface FeeLineItem {
   is_optional: boolean;
   comment?: string;
   charge_type?: string;
+  duration?: number;
 }
 
 interface LineItemAdjustment {
@@ -214,7 +221,13 @@ export const EnhancedLineItemTable = ({
 
     filteredItems.forEach((item, idx) => {
       const itemId = getItemId(item, idx);
-      const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
+      // Calculate item total including duration for recurring items
+      const itemTotal = item.total || calculateFeeItemTotal(
+        item.unit_price,
+        item.quantity,
+        item.charge_type || 'one_time',
+        item.duration
+      );
       
       // Include all items with a price > 0 in original total (mandatory + priced optional)
       if (itemTotal > 0) {
@@ -286,7 +299,13 @@ export const EnhancedLineItemTable = ({
               const itemId = getItemId(item, idx);
               const adjustment = adjustments.find(a => a.line_item_id === itemId);
               const response = consultantResponses.find(r => r.line_item_id === itemId);
-              const itemTotal = item.total || ((item.unit_price ?? 0) * (item.quantity ?? 1));
+              // Calculate item total including duration
+              const itemTotal = item.total || calculateFeeItemTotal(
+                item.unit_price,
+                item.quantity,
+                item.charge_type || 'one_time',
+                item.duration
+              );
               const displayQuantity = adjustment?.new_quantity ?? item.quantity ?? 1;
               
               // Calculate displayed target unit price and total with null safety
@@ -296,6 +315,10 @@ export const EnhancedLineItemTable = ({
               // Check if item is "removed" (target total set to 0)
               const isRemoved = adjustment?.target_total === 0;
               const hasAdjustment = !!adjustment;
+              
+              // Check if recurring
+              const isRecurring = item.charge_type && isRecurringChargeType(item.charge_type);
+              const durationLabel = item.charge_type ? getDurationUnitLabel(item.charge_type) : '';
 
               return (
                 <TableRow 
@@ -328,6 +351,11 @@ export const EnhancedLineItemTable = ({
                     <Badge variant="secondary" className="text-xs">
                       {getUnitLabel(item.unit)}
                     </Badge>
+                    {isRecurring && item.duration && (
+                      <span className="block text-xs text-muted-foreground mt-1">
+                        × {item.duration} {durationLabel}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     {mode === 'entrepreneur' ? (

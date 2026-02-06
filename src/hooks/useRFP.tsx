@@ -292,7 +292,10 @@ export const useRFP = () => {
               unit_price: item.unit_price || null,
               charge_type: item.charge_type,
               is_optional: item.is_optional,
-              display_order: item.display_order || index
+              display_order: item.display_order || index,
+              // Include duration for recurring payments
+              duration: item.duration || null,
+              duration_unit: item.duration_unit || null
             }));
 
             const { error: feeError } = await supabase

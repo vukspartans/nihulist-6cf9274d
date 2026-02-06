@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2 } from "lucide-react";
 import type { FeeLineItem, JsonLineItemAdjustment, UpdatedLineItem } from "@/types/negotiation";
-import { getFeeUnitLabel } from "@/constants/rfpUnits";
+import { 
+  getFeeUnitLabel, 
+  getChargeTypeLabel, 
+  getDurationUnitLabel, 
+  isRecurringChargeType 
+} from "@/constants/rfpUnits";
 
 interface NegotiationItemsCardProps {
   item: FeeLineItem;
@@ -43,6 +48,9 @@ export const NegotiationItemsCard = memo(({
   onPriceChange,
   onApprovalChange,
 }: NegotiationItemsCardProps) => {
+  const isRecurring = item.charge_type && isRecurringChargeType(item.charge_type);
+  const durationLabel = item.charge_type ? getDurationUnitLabel(item.charge_type) : '';
+  
   return (
     <Card className={`${isRemoved ? "border-red-200 bg-red-50/30" : hasChange ? "border-amber-200 bg-amber-50/30" : ""}`}>
       <CardContent className="p-3 space-y-2">
@@ -65,6 +73,12 @@ export const NegotiationItemsCard = memo(({
           <span>{getFeeUnitLabel(item.unit || '') || 'יחידה'}</span>
           <span>×</span>
           <span>{adjustment?.quantity ?? item.quantity ?? 1}</span>
+          {isRecurring && item.duration && (
+            <>
+              <span>×</span>
+              <span>{item.duration} {durationLabel}</span>
+            </>
+          )}
         </div>
 
         {/* Price grid */}

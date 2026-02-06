@@ -2707,6 +2707,8 @@ export type Database = {
           created_at: string | null
           description: string
           display_order: number
+          duration: number | null
+          duration_unit: string | null
           id: string
           is_optional: boolean | null
           item_number: number
@@ -2721,6 +2723,8 @@ export type Database = {
           created_at?: string | null
           description: string
           display_order?: number
+          duration?: number | null
+          duration_unit?: string | null
           id?: string
           is_optional?: boolean | null
           item_number: number
@@ -2735,6 +2739,8 @@ export type Database = {
           created_at?: string | null
           description?: string
           display_order?: number
+          duration?: number | null
+          duration_unit?: string | null
           id?: string
           is_optional?: boolean | null
           item_number?: number

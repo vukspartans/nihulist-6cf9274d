@@ -9,6 +9,7 @@ import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, A
 import { cn } from '@/lib/utils';
 import { VersionBadge } from '@/components/negotiation/VersionBadge';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
+import { calculateFeeItemTotal, isRecurringChargeType } from '@/constants/rfpUnits';
 
 interface FeeLineItem {
   item_id?: string;
@@ -20,6 +21,8 @@ interface FeeLineItem {
   is_optional?: boolean;
   is_entrepreneur_defined?: boolean;
   comment?: string;
+  charge_type?: string;
+  duration?: number;
 }
 
 interface Proposal {
@@ -118,7 +121,7 @@ export const ProposalComparisonTable = ({
     return Math.min(...proposals.map(p => p.price));
   }, [proposals]);
 
-  // Calculate mandatory and optional totals from fee_line_items
+  // Calculate mandatory and optional totals from fee_line_items (including duration)
   const calculateTotals = (feeItems: FeeLineItem[] | undefined) => {
     if (!feeItems || feeItems.length === 0) return { mandatory: 0, optional: 0 };
     
@@ -126,7 +129,14 @@ export const ProposalComparisonTable = ({
     let optional = 0;
     
     feeItems.forEach(item => {
-      const itemTotal = item.total ?? (item.quantity ?? 1) * (item.unit_price ?? 0);
+      // Use calculateFeeItemTotal which handles duration for recurring items
+      const itemTotal = item.total ?? calculateFeeItemTotal(
+        item.unit_price,
+        item.quantity,
+        item.charge_type || 'one_time',
+        item.duration
+      );
+      
       if (item.is_optional) {
         optional += itemTotal;
       } else {

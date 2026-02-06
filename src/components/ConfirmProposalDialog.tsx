@@ -16,7 +16,12 @@ import { CheckCircle2, XCircle, Download, Loader2, Clock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
 import { useToast } from '@/hooks/use-toast';
-import { getFeeUnitLabel } from '@/constants/rfpUnits';
+import { 
+  getFeeUnitLabel, 
+  getChargeTypeLabel, 
+  getDurationUnitLabel, 
+  isRecurringChargeType 
+} from '@/constants/rfpUnits';
 
 interface FeeLineItem {
   id?: string;
@@ -26,6 +31,8 @@ interface FeeLineItem {
   unit_price?: number;
   total: number;
   is_optional?: boolean;
+  charge_type?: string;
+  duration?: number;
 }
 
 interface MilestoneItem {
@@ -159,22 +166,31 @@ export function ConfirmProposalDialog({
               <div className="p-4 border rounded-lg bg-amber-50/30 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                 <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים כלולים (חובה)</Label>
                 <div className="space-y-2">
-                  {mandatoryItems.map((item, idx) => (
-                    <div 
-                      key={getItemKey(item, idx)} 
-                      className="flex justify-between items-start text-sm py-1 border-b border-muted last:border-0"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-muted-foreground">{item.description}</span>
-                        {item.unit && item.quantity && item.quantity > 0 && (
-                          <span className="text-xs text-muted-foreground/70">
-                            {item.quantity} × {getFeeUnitLabel(item.unit)}
-                          </span>
-                        )}
+                  {mandatoryItems.map((item, idx) => {
+                    const isRecurring = item.charge_type && isRecurringChargeType(item.charge_type);
+                    const durationLabel = item.charge_type ? getDurationUnitLabel(item.charge_type) : '';
+                    
+                    return (
+                      <div 
+                        key={getItemKey(item, idx)} 
+                        className="flex justify-between items-start text-sm py-1 border-b border-muted last:border-0"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">{item.description}</span>
+                          {isRecurring && item.duration && item.unit_price ? (
+                            <span className="text-xs text-muted-foreground/70">
+                              ₪{item.unit_price.toLocaleString('he-IL')}/{getChargeTypeLabel(item.charge_type!)} × {item.duration} {durationLabel}
+                            </span>
+                          ) : item.unit && item.quantity && item.quantity > 0 ? (
+                            <span className="text-xs text-muted-foreground/70">
+                              {item.quantity} × {getFeeUnitLabel(item.unit)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="font-medium">{formatAmount(item.total)}</span>
                       </div>
-                      <span className="font-medium">{formatAmount(item.total)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex justify-between items-center pt-2 font-semibold">
                     <span>סה״כ פריטי חובה</span>
                     <span className="text-primary">{formatAmount(totalMandatory)}</span>
@@ -188,22 +204,31 @@ export function ConfirmProposalDialog({
               <div className="p-4 border rounded-lg border-dashed bg-slate-50/30 dark:bg-slate-900/20">
                 <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים נוספים (אופציונלי)</Label>
                 <div className="space-y-2">
-                  {optionalItems.map((item, idx) => (
-                    <div 
-                      key={getItemKey(item, idx)} 
-                      className="flex justify-between items-start text-sm py-1"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-muted-foreground">{item.description}</span>
-                        {item.unit && item.quantity && item.quantity > 0 && (
-                          <span className="text-xs text-muted-foreground/70">
-                            {item.quantity} × {getFeeUnitLabel(item.unit)}
-                          </span>
-                        )}
+                  {optionalItems.map((item, idx) => {
+                    const isRecurring = item.charge_type && isRecurringChargeType(item.charge_type);
+                    const durationLabel = item.charge_type ? getDurationUnitLabel(item.charge_type) : '';
+                    
+                    return (
+                      <div 
+                        key={getItemKey(item, idx)} 
+                        className="flex justify-between items-start text-sm py-1"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">{item.description}</span>
+                          {isRecurring && item.duration && item.unit_price ? (
+                            <span className="text-xs text-muted-foreground/70">
+                              ₪{item.unit_price.toLocaleString('he-IL')}/{getChargeTypeLabel(item.charge_type!)} × {item.duration} {durationLabel}
+                            </span>
+                          ) : item.unit && item.quantity && item.quantity > 0 ? (
+                            <span className="text-xs text-muted-foreground/70">
+                              {item.quantity} × {getFeeUnitLabel(item.unit)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="font-medium">{formatAmount(item.total)}</span>
                       </div>
-                      <span className="font-medium">{formatAmount(item.total)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex justify-between items-center pt-2 text-slate-600 dark:text-slate-400">
                     <span>סה״כ אופציונלי</span>
                     <span>{formatAmount(totalOptional)}</span>
