@@ -173,19 +173,19 @@ export function CreateFeeItemTemplateDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !advisorSpecialty || !description.trim()}
-            >
-              {createMutation.isPending ? "יוצר..." : "צור פריט"}
-            </Button>
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
               ביטול
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !advisorSpecialty || !description.trim()}
+            >
+              {createMutation.isPending ? "יוצר..." : "צור פריט"}
             </Button>
           </DialogFooter>
         </form>

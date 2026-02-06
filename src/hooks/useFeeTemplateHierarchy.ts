@@ -269,53 +269,35 @@ export function useAdvisorTypeSummary() {
   return useQuery({
     queryKey: [HIERARCHY_KEY, "advisor-summary"],
     queryFn: async () => {
-      // Get unique advisor specialties from categories
-      const { data: categories, error: catError } = await supabase
-        .from("fee_template_categories")
-        .select("advisor_specialty")
-        .eq("is_active", true);
+      // Count templates from all 3 tables
+      const [feeItemsResult, servicesResult, milestonesResult] = await Promise.all([
+        supabase.from("default_fee_item_templates").select("advisor_specialty"),
+        supabase.from("default_service_scope_templates").select("advisor_specialty"),
+        supabase.from("milestone_templates").select("advisor_specialty"),
+      ]);
 
-      if (catError) throw catError;
+      if (feeItemsResult.error) throw feeItemsResult.error;
+      if (servicesResult.error) throw servicesResult.error;
+      if (milestonesResult.error) throw milestonesResult.error;
 
-      // Get counts from templates
-      const { data: templates, error: tmpError } = await supabase
-        .from("default_fee_item_templates")
-        .select("advisor_specialty");
+      // Aggregate template counts by advisor specialty
+      const advisorMap = new Map<string, number>();
 
-      if (tmpError) throw tmpError;
-
-      // Aggregate
-      const advisorMap = new Map<string, AdvisorTypeSummary>();
-
-      // Add from categories
-      categories?.forEach((cat) => {
-        if (!advisorMap.has(cat.advisor_specialty)) {
-          advisorMap.set(cat.advisor_specialty, {
-            advisor_specialty: cat.advisor_specialty,
-            category_count: 0,
-            template_count: 0,
-          });
+      [...(feeItemsResult.data || []), ...(servicesResult.data || []), ...(milestonesResult.data || [])].forEach((t) => {
+        if (t.advisor_specialty) {
+          advisorMap.set(t.advisor_specialty, (advisorMap.get(t.advisor_specialty) || 0) + 1);
         }
-        const existing = advisorMap.get(cat.advisor_specialty)!;
-        existing.category_count++;
       });
 
-      // Add template counts
-      templates?.forEach((tmp) => {
-        if (!advisorMap.has(tmp.advisor_specialty)) {
-          advisorMap.set(tmp.advisor_specialty, {
-            advisor_specialty: tmp.advisor_specialty,
-            category_count: 0,
-            template_count: 0,
-          });
-        }
-        const existing = advisorMap.get(tmp.advisor_specialty)!;
-        existing.template_count++;
-      });
-
-      return Array.from(advisorMap.values()).sort((a, b) => 
-        a.advisor_specialty.localeCompare(b.advisor_specialty, 'he')
+      const result: AdvisorTypeSummary[] = Array.from(advisorMap.entries()).map(
+        ([advisor_specialty, template_count]) => ({
+          advisor_specialty,
+          category_count: 0, // No longer used
+          template_count,
+        })
       );
+
+      return result.sort((a, b) => a.advisor_specialty.localeCompare(b.advisor_specialty, 'he'));
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -325,23 +307,42 @@ export function useProjectTypeSummary(advisorSpecialty: string) {
   return useQuery({
     queryKey: [HIERARCHY_KEY, "project-summary", advisorSpecialty],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fee_template_categories")
-        .select("project_type")
-        .eq("advisor_specialty", advisorSpecialty)
-        .eq("is_active", true);
+      // Count templates from all 3 tables for this advisor specialty
+      const [feeItemsResult, servicesResult, milestonesResult] = await Promise.all([
+        supabase
+          .from("default_fee_item_templates")
+          .select("project_type")
+          .eq("advisor_specialty", advisorSpecialty),
+        supabase
+          .from("default_service_scope_templates")
+          .select("project_type")
+          .eq("advisor_specialty", advisorSpecialty),
+        supabase
+          .from("milestone_templates")
+          .select("project_type")
+          .eq("advisor_specialty", advisorSpecialty),
+      ]);
 
-      if (error) throw error;
+      if (feeItemsResult.error) throw feeItemsResult.error;
+      if (servicesResult.error) throw servicesResult.error;
+      if (milestonesResult.error) throw milestonesResult.error;
 
-      // Aggregate by project type
+      // Aggregate counts by project type
       const projectMap = new Map<string, number>();
-      data?.forEach((cat) => {
-        const pt = cat.project_type || "כללי";
-        projectMap.set(pt, (projectMap.get(pt) || 0) + 1);
+
+      [...(feeItemsResult.data || []), ...(servicesResult.data || []), ...(milestonesResult.data || [])].forEach((t) => {
+        const pt = t.project_type;
+        if (pt) {
+          projectMap.set(pt, (projectMap.get(pt) || 0) + 1);
+        }
       });
 
       const result: ProjectTypeSummary[] = Array.from(projectMap.entries()).map(
-        ([project_type, category_count]) => ({ project_type, category_count })
+        ([project_type, template_count]) => ({ 
+          project_type, 
+          category_count: 0, // No longer used
+          template_count,
+        })
       );
 
       return result.sort((a, b) => a.project_type.localeCompare(b.project_type, 'he'));

@@ -20,12 +20,12 @@ export default function FeeTemplatesByProject() {
     const summary = summaries?.find((s) => s.project_type === type);
     return {
       project_type: type,
-      category_count: summary?.category_count || 0,
+      template_count: summary?.template_count || 0,
     };
   }).sort((a, b) => {
-    // First by category count (descending) - active projects first
-    if (b.category_count !== a.category_count) {
-      return b.category_count - a.category_count;
+    // First by template count (descending) - active projects first
+    if (b.template_count !== a.template_count) {
+      return b.template_count - a.template_count;
     }
     // Then alphabetically by name
     return a.project_type.localeCompare(b.project_type, 'he');
@@ -92,8 +92,8 @@ export default function FeeTemplatesByProject() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-end">
-                    <Badge variant={project.category_count > 0 ? "default" : "secondary"}>
-                      {project.category_count > 0 ? "פעיל" : "טרם הוגדר"}
+                    <Badge variant={project.template_count > 0 ? "default" : "secondary"}>
+                      {project.template_count > 0 ? `${project.template_count} תבניות` : "טרם הוגדר"}
                     </Badge>
                   </div>
                 </CardContent>
