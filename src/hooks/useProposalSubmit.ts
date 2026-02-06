@@ -483,15 +483,10 @@ export const useProposalSubmit = () => {
             .single();
           
           if (ownerProfile?.email) {
-            const paymentTermLabels: Record<string, string> = {
-              'current': 'שוטף',
-              'net_30': 'שוטף + 30',
-              'net_60': 'שוטף + 60',
-              'net_90': 'שוטף + 90',
-            };
+            const { getPaymentTermLabel } = await import('@/constants/paymentTerms');
             
-            const originalTerm = paymentTermLabels[data.entrepreneurPaymentTermType] || data.entrepreneurPaymentTermType;
-            const newTerm = paymentTermLabels[data.paymentTermType] || data.paymentTermType;
+            const originalTerm = getPaymentTermLabel(data.entrepreneurPaymentTermType);
+            const newTerm = getPaymentTermLabel(data.paymentTermType);
             
             const notificationBody = `
               <div dir="rtl" style="font-family: sans-serif;">

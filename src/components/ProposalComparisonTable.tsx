@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionBadge } from '@/components/negotiation/VersionBadge';
+import { getPaymentTermLabel } from '@/constants/paymentTerms';
 
 interface FeeLineItem {
   item_id?: string;
@@ -35,6 +36,10 @@ interface Proposal {
   fee_line_items?: FeeLineItem[];
   current_version?: number;
   has_active_negotiation?: boolean;
+  conditions_json?: {
+    payment_term_type?: string;
+    payment_terms?: string;
+  };
   advisors?: {
     id: string;
     company_name: string;
@@ -223,6 +228,7 @@ export const ProposalComparisonTable = ({
                 </TableHead>
                 <TableHead className="text-right">חובה</TableHead>
                 <TableHead className="text-right">אופציונלי</TableHead>
+                <TableHead className="text-right">תנאי תשלום</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
                 <TableHead className="text-center w-20">פעולות</TableHead>
               </TableRow>
@@ -338,6 +344,13 @@ export const ProposalComparisonTable = ({
                         </span>
                       </TableCell>
 
+                      {/* Payment Terms */}
+                      <TableCell>
+                        <span className="text-sm">
+                          {getPaymentTermLabel(proposal.conditions_json?.payment_term_type)}
+                        </span>
+                      </TableCell>
+
                       {/* Status */}
                       <TableCell>
                         {getStatusBadge(proposal.status)}
@@ -362,7 +375,7 @@ export const ProposalComparisonTable = ({
                     {/* Expanded Fee Items Row */}
                     {isExpanded && hasFeeItems && (
                       <TableRow key={`${proposal.id}-expanded`} className="bg-muted/30">
-                        <TableCell colSpan={7} className="p-0">
+                        <TableCell colSpan={8} className="p-0">
                           <div className="p-4 border-t">
                             <h4 className="text-sm font-semibold mb-3">פירוט שכר טרחה</h4>
                             <div className="overflow-x-auto">

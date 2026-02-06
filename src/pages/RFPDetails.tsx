@@ -17,6 +17,7 @@ import { DeclineRFPDialog } from '@/components/DeclineRFPDialog';
 import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import { AdvisorProposalViewDialog } from '@/components/AdvisorProposalViewDialog';
+import { getPaymentTermLabel, PAYMENT_TERM_LABELS } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -114,12 +115,7 @@ const CHARGE_TYPE_LABELS: Record<string, string> = {
   'per_unit': 'ליח"ד'
 };
 
-const PAYMENT_TERM_LABELS: Record<string, string> = {
-  'current': 'שוטף',
-  'net_30': 'שוטף + 30',
-  'net_60': 'שוטף + 60',
-  'net_90': 'שוטף + 90'
-};
+// Use PAYMENT_TERM_LABELS from constants - kept for backward compatibility in this file
 
 const RFPDetails = () => {
   const { rfp_id, invite_id } = useParams();

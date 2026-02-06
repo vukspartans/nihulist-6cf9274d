@@ -5,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Check, AlertCircle, Loader2, Database, TrendingUp } from 'lucide-react';
-import { PaymentTerms, MilestonePayment, PaymentTermType, IndexType } from '@/types/rfpRequest';
+import { PaymentTerms, MilestonePayment, IndexType } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { INDEX_TYPES, DEFAULT_INDEX_TYPE, getIndexLabel } from '@/constants/indexTypes';
+import { PAYMENT_TERM_TYPES, PaymentTermType } from '@/constants/paymentTerms';
 
 interface PaymentTermsTabProps {
   paymentTerms: PaymentTerms;
@@ -17,18 +18,6 @@ interface PaymentTermsTabProps {
   defaultIndexType?: string;
   categoryId?: string;
 }
-
-const PAYMENT_TERM_OPTIONS: { value: PaymentTermType; label: string }[] = [
-  { value: 'immediate', label: 'תשלום מיידי' },
-  { value: 'current', label: 'שוטף' },
-  { value: 'net_15', label: 'שוטף + 15' },
-  { value: 'net_30', label: 'שוטף + 30' },
-  { value: 'net_45', label: 'שוטף + 45' },
-  { value: 'net_60', label: 'שוטף + 60' },
-  { value: 'net_75', label: 'שוטף + 75' },
-  { value: 'net_90', label: 'שוטף + 90' },
-  { value: 'net_120', label: 'שוטף + 120' },
-];
 
 // Get current month in YYYY-MM format
 const getCurrentMonth = () => {
@@ -280,7 +269,7 @@ export const PaymentTermsTab = ({
             <SelectValue placeholder="בחרו תנאי תשלום" />
           </SelectTrigger>
           <SelectContent dir="rtl" align="end">
-            {PAYMENT_TERM_OPTIONS.map((option) => (
+            {PAYMENT_TERM_TYPES.map((option) => (
               <SelectItem key={option.value} value={option.value} className="text-right">
                 {option.label}
               </SelectItem>
