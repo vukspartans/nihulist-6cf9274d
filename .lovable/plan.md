@@ -1,107 +1,93 @@
 
-# Plan: Mark and Prioritize Live Project Types in Admin Templates
+# Plan: Fix Empty String SelectItem Values
 
 ## Problem
 
-The admin template management page shows all 60+ project types, but only 3 are currently enabled for entrepreneurs (Urban Renewal category). Admins need to:
-1. Easily identify which project types are "live" and need templates
-2. See these priority types first, not buried in the alphabetical list
+The Radix UI Select component throws an error when a `SelectItem` has `value=""` (empty string). This is by design - Radix reserves empty string to represent "no selection" for placeholder display.
+
+**Error Location**: 
+- `CreateMilestoneTemplateDialog.tsx` - 3 occurrences (lines 154, 175, 196)
+- `EditMilestoneTemplateDialog.tsx` - 3 occurrences (lines 188, 209, 230)
 
 ## Solution
 
-### Part 1: Define Live Project Types
+Replace `value=""` with a special non-empty placeholder value like `"__all__"`, then handle this value in the `onValueChange` handler to convert it back to empty string for the form state.
 
-Add a constant in `src/constants/project.ts` that defines which project types are currently enabled for entrepreneurs:
+### Pattern to Apply
 
-```typescript
-// Project types currently enabled for entrepreneurs to create
-export const LIVE_PROJECT_TYPES: ProjectType[] = [
-  'פינוי־בינוי (מתחמים)',
-  'תמ"א 38/1 – חיזוק ותוספות',
-  'תמ"א 38/2 – הריסה ובנייה מחדש',
-];
-
-// Helper function to check if a project type is live
-export const isLiveProjectType = (type: string): boolean => {
-  return LIVE_PROJECT_TYPES.includes(type as ProjectType);
-};
-```
-
-This keeps the source of truth in one place - when you enable more categories in `ProjectTypeSelector`, you add them here too.
-
-### Part 2: Update Sorting Logic
-
-In `FeeTemplatesByProject.tsx`, update the sorting to prioritize:
-1. **First**: Live project types (פעיל)
-2. **Second**: Project types with templates (by count, descending)
-3. **Third**: Alphabetically
-
-```typescript
-import { isLiveProjectType } from "@/constants/project";
-
-const projectTypes = PROJECT_TYPES.map((type) => {
-  const summary = summaries?.find((s) => s.project_type === type);
-  return {
-    project_type: type,
-    template_count: summary?.template_count || 0,
-    is_live: isLiveProjectType(type),
-  };
-}).sort((a, b) => {
-  // First: Live project types at the top
-  if (a.is_live !== b.is_live) {
-    return a.is_live ? -1 : 1;
-  }
-  // Second: By template count (descending)
-  if (b.template_count !== a.template_count) {
-    return b.template_count - a.template_count;
-  }
-  // Third: Alphabetically
-  return a.project_type.localeCompare(b.project_type, 'he');
-});
-```
-
-### Part 3: Add Visual Badge
-
-Add a green "פעיל" (Active) badge to live project types:
-
+**Before:**
 ```tsx
-<CardContent>
-  <div className="flex items-center justify-between">
-    {project.is_live && (
-      <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-        פעיל
-      </Badge>
-    )}
-    {project.template_count > 0 && (
-      <Badge variant="default">
-        {project.template_count} תבניות
-      </Badge>
-    )}
-  </div>
-</CardContent>
+<SelectItem value="" className="text-right">הכל</SelectItem>
 ```
 
-### Visual Result
-
-```text
-┌─────────────────────────────────────┐
-│ 📁 פינוי־בינוי (מתחמים)             │
-│ פעיל                      5 תבניות │  ← Live + has templates
-└─────────────────────────────────────┘
-┌─────────────────────────────────────┐
-│ 📁 תמ"א 38/1 – חיזוק ותוספות        │
-│ פעיל                                │  ← Live, no templates yet
-└─────────────────────────────────────┘
-┌─────────────────────────────────────┐
-│ 📁 תמ"א 38/2 – הריסה ובנייה מחדש    │
-│ פעיל                                │  ← Live, no templates yet
-└─────────────────────────────────────┘
-─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-┌─────────────────────────────────────┐
-│ 📁 בתי אבות / מוסדות סיעודיים       │
-│                                     │  ← Not live, no badge
-└─────────────────────────────────────┘
+**After:**
+```tsx
+<SelectItem value="__all__" className="text-right">הכל</SelectItem>
 ```
+
+**Handler Update:**
+```tsx
+<Select
+  value={watch("project_type") || "__all__"}
+  onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
+>
+```
+
+---
+
+## Implementation
+
+### File 1: `CreateMilestoneTemplateDialog.tsx`
+
+**Lines 147-161 (Project Type Select):**
+```tsx
+<Select
+  dir="rtl"
+  value={watch("project_type") || "__all__"}
+  onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
+>
+  <SelectTrigger dir="rtl" className="text-right">
+    <SelectValue placeholder={t.dialog.projectTypeAll} />
+  </SelectTrigger>
+  <SelectContent dir="rtl">
+    <SelectItem value="__all__" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
+    {PROJECT_TYPE_OPTIONS.map((type) => (...))}
+  </SelectContent>
+</Select>
+```
+
+**Lines 166-182 (Municipality Select):**
+```tsx
+<Select
+  dir="rtl"
+  value={watch("municipality_id") || "__all__"}
+  onValueChange={(val) => setValue("municipality_id", val === "__all__" ? "" : val)}
+>
+  ...
+  <SelectItem value="__all__" className="text-right">{t.dialog.municipalityAll}</SelectItem>
+  ...
+</Select>
+```
+
+**Lines 187-203 (Advisor Specialty Select):**
+```tsx
+<Select
+  dir="rtl"
+  value={watch("advisor_specialty") || "__all__"}
+  onValueChange={(val) => setValue("advisor_specialty", val === "__all__" ? "" : val)}
+>
+  ...
+  <SelectItem value="__all__" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
+  ...
+</Select>
+```
+
+### File 2: `EditMilestoneTemplateDialog.tsx`
+
+Apply the same pattern to the 3 Select components in this file:
+- Project Type Select (around line 188)
+- Municipality Select (around line 209)
+- Advisor Specialty Select (around line 230)
 
 ---
 
@@ -109,25 +95,16 @@ Add a green "פעיל" (Active) badge to live project types:
 
 | File | Change |
 |------|--------|
-| `src/constants/project.ts` | Add `LIVE_PROJECT_TYPES` constant and `isLiveProjectType()` helper |
-| `src/pages/admin/FeeTemplatesByProject.tsx` | Update sorting logic, add "פעיל" badge for live types |
-
----
-
-## Future-Proofing
-
-When you enable more categories for entrepreneurs:
-1. Add the new project types to `LIVE_PROJECT_TYPES` array
-2. Update the `isEnabled` check in `ProjectTypeSelector` (same category logic)
-
-Both places stay in sync through the shared constants file.
+| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Replace 3 empty string values with `"__all__"`, update handlers |
+| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Replace 3 empty string values with `"__all__"`, update handlers |
 
 ---
 
 ## Testing Checklist
 
-1. The 3 Urban Renewal types appear first in the grid
-2. Each of the 3 shows a green "פעיל" badge
-3. Template count badges still display correctly alongside "פעיל"
-4. Non-live project types don't show the "פעיל" badge
-5. Clicking any card still navigates correctly
+1. Open Create Milestone Template dialog - no error
+2. Open Edit Milestone Template dialog - no error
+3. Select "הכל" option - form value becomes empty string
+4. Select a specific option - form value updates correctly
+5. Editing existing milestone with null values shows "הכל" selected
+6. Form submission works correctly with both selected and "all" options
