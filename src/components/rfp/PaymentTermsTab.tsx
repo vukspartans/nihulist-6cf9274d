@@ -269,7 +269,7 @@ export const PaymentTermsTab = ({
       </div>
 
       {/* Index Type Section */}
-      <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
+      <div className="p-3 border rounded-lg bg-muted/20 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <TrendingUp className="h-4 w-4 text-primary" />
           הצמדת מדד
