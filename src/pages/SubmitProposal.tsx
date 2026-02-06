@@ -1389,8 +1389,7 @@ const SubmitProposal = () => {
           onConfirm={handleFinalSubmit} 
           price={price} 
           timelineDays={timelineDays} 
-          scopeText={scopeText} 
-          fileCount={files.length} 
+          fileCount={files.length}
           hasSignature={!!signature}
           feeLineItems={[
             ...(entrepreneurData?.fee_items || []).map(item => ({
