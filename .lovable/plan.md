@@ -1,119 +1,174 @@
 
-# Fix: Foreign Key Constraint Violation in `submit_negotiation_response`
 
-## Problem
-The negotiation response fails with:
-```
-insert or update on table "proposal_versions" violates foreign key constraint "proposal_versions_created_by_fkey"
-```
+# Plan: RFP Invite Visibility During Active Negotiations
 
-## Root Cause
-The `submit_negotiation_response` function inserts `v_session.consultant_advisor_id` into the `created_by` column:
+## Problem Summary
 
-```sql
-created_by,
-v_session.consultant_advisor_id  -- This is advisors.id, NOT auth.users.id
-```
+When an RFP has an active negotiation session, the invite disappears from the "הזמנות להצעת מחיר" (RFP Invites) tab if the deadline passes. This creates a confusing experience where:
+- The vendor can see the project in "משא ומתן" (Negotiations) tab
+- But the same project is hidden from "הזמנות להצעת מחיר" tab
+- There's no clear link between the two views
 
-However, the `proposal_versions.created_by` column has a foreign key constraint:
-```sql
-created_by UUID REFERENCES auth.users(id)
-```
-
-The function is inserting an `advisors.id` into a column that expects an `auth.users.id`, causing the constraint violation.
+**Specific Example Found:**
+- Project: "ז'בוטינסקי 63, גבעתיים"
+- Invite deadline passed: 2026-01-17
+- Proposal status: `negotiation_requested`
+- Active negotiation session: `awaiting_response`
+- Result: Hidden from RFP Invites because deadline passed
 
 ## Solution
-Modify the function to look up the advisor's `user_id` from the `advisors` table and use that value for `created_by`.
 
-## Implementation
+### Part 1: Keep RFPs with Active Negotiations Visible
 
-Create a SQL migration that updates the function:
+Modify the `isInactiveInvite()` function to consider negotiation status. An invite should **NOT** be marked inactive if:
+- There's a submitted proposal with `has_active_negotiation = true`, OR
+- There's an active negotiation session (`status = 'awaiting_response'`)
+
+```text
+Current Logic:
+┌─────────────────────────────────┐
+│ isInactiveInvite = true if:    │
+│ • status = 'declined' OR       │
+│ • status = 'expired' OR        │
+│ • deadline_at < now()          │
+└─────────────────────────────────┘
+
+New Logic:
+┌─────────────────────────────────────────────────────────┐
+│ isInactiveInvite = true if:                            │
+│ • status = 'declined' OR                               │
+│ • status = 'expired' OR                                │
+│ • (deadline_at < now() AND NOT hasActiveNegotiation()) │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Part 2: Add Negotiation Badge to RFP Cards
+
+Add a visual indicator on RFP invite cards when there's an active negotiation:
+- Show "במשא ומתן" (In Negotiation) badge
+- Badge uses amber/orange styling to draw attention
+
+### Part 3: Add "Go to Negotiation" Button
+
+Add a button on RFP invite cards that links directly to the negotiation page when:
+- The proposal has `has_active_negotiation = true`
+- There's an active negotiation session for this proposal
+
+## Implementation Details
+
+### File: `src/pages/AdvisorDashboard.tsx`
+
+**Change 1: Fetch negotiation data and link to invites**
+
+Currently, the dashboard fetches proposals and negotiations separately. We need to create a mapping from `rfp_invite_id` to negotiation sessions.
+
+```typescript
+// Add: Create map of invite ID -> active negotiation session
+const [negotiationByInvite, setNegotiationByInvite] = useState<Map<string, NegotiationItem>>(new Map());
+
+// In fetchAdvisorData, after fetching negotiations:
+const negotiationInviteMap = new Map<string, NegotiationItem>();
+mappedNegotiations.forEach(neg => {
+  // Find the invite ID for this negotiation's proposal
+  const proposal = proposalData?.find(p => p.id === neg.proposal_id);
+  if (proposal?.rfp_invite_id) {
+    negotiationInviteMap.set(proposal.rfp_invite_id, neg);
+  }
+});
+setNegotiationByInvite(negotiationInviteMap);
+```
+
+**Change 2: Update `isInactiveInvite()` function**
+
+```typescript
+// Enhanced check: consider active negotiations
+const isInactiveInvite = (invite: RFPInvite) => {
+  if (['declined', 'expired'].includes(invite.status)) return true;
+  
+  // Check if there's an active negotiation for this invite
+  const hasActiveNegotiation = negotiationByInvite.has(invite.id);
+  
+  // If deadline passed but there's an active negotiation, keep it active
+  if (invite.deadline_at && new Date(invite.deadline_at) < new Date()) {
+    return !hasActiveNegotiation;
+  }
+  
+  return false;
+};
+```
+
+**Change 3: Add negotiation badge and button to RFP card**
+
+In the RFP invite card rendering section (around line 1080-1240):
+
+```tsx
+{/* Add negotiation badge next to status */}
+{negotiationByInvite.has(invite.id) && (
+  <Badge className="bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+    <Handshake className="h-3 w-3" />
+    במשא ומתן
+  </Badge>
+)}
+
+{/* Add "Go to Negotiation" button in the actions section */}
+{negotiationByInvite.has(invite.id) && (
+  <Button 
+    className="bg-amber-500 hover:bg-amber-600 text-white"
+    onClick={() => navigate(`/negotiation/${negotiationByInvite.get(invite.id)!.id}`)}
+  >
+    <Handshake className="h-4 w-4 me-2" />
+    מעבר למשא ומתן
+  </Button>
+)}
+```
+
+### Part 4: Update Expire Function (Database)
+
+Update the `expire_old_rfp_invites` database function to skip invites that have active negotiations:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.submit_negotiation_response(
-  p_session_id uuid,
-  p_consultant_message text DEFAULT NULL,
-  p_updated_line_items jsonb DEFAULT NULL,
-  p_milestone_adjustments jsonb DEFAULT NULL,
-  p_files jsonb DEFAULT NULL
-)
-RETURNS jsonb
+CREATE OR REPLACE FUNCTION public.expire_old_rfp_invites()
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-DECLARE
-  v_session negotiation_sessions%ROWTYPE;
-  v_proposal proposals%ROWTYPE;
-  v_advisor_user_id uuid;  -- NEW: Store advisor's auth user ID
-  v_new_version_id uuid;
-  v_new_version_number integer;
-  v_item jsonb;
-  v_new_price numeric;
-  v_line_items jsonb;
-  v_updated_fee_items jsonb;
 BEGIN
-  -- Get session with lock
-  SELECT * INTO v_session
-  FROM negotiation_sessions
-  WHERE id = p_session_id
-  FOR UPDATE;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Negotiation session not found';
-  END IF;
-
-  IF v_session.status != 'awaiting_response' THEN
-    RAISE EXCEPTION 'Session is not awaiting response';
-  END IF;
-
-  -- Get proposal
-  SELECT * INTO v_proposal
-  FROM proposals
-  WHERE id = v_session.proposal_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Proposal not found';
-  END IF;
-
-  -- NEW: Get the advisor's user_id for the created_by field
-  SELECT user_id INTO v_advisor_user_id
-  FROM advisors
-  WHERE id = v_session.consultant_advisor_id;
-
-  -- ... (rest of function unchanged until INSERT) ...
-
-  -- Create new proposal version
-  INSERT INTO proposal_versions (
-    -- ... columns ...
-    created_by
-  )
-  VALUES (
-    -- ... values ...
-    v_advisor_user_id  -- FIX: Use auth.users.id instead of advisors.id
-  );
-
-  -- ... rest of function ...
+  UPDATE public.rfp_invites ri
+  SET status = 'expired'::public.rfp_invite_status
+  WHERE ri.status IN ('pending', 'sent', 'opened')
+    AND ri.deadline_at < now()
+    AND ri.deadline_at IS NOT NULL
+    -- NEW: Don't expire if there's an active negotiation
+    AND NOT EXISTS (
+      SELECT 1 
+      FROM proposals p
+      JOIN negotiation_sessions ns ON ns.proposal_id = p.id
+      WHERE p.rfp_invite_id = ri.id
+        AND ns.status = 'awaiting_response'
+    );
 END;
 $$;
 ```
 
-## Technical Details
+## Summary of Changes
 
-The key changes:
-1. Declare `v_advisor_user_id uuid` variable
-2. Query `advisors.user_id` using `v_session.consultant_advisor_id`
-3. Use `v_advisor_user_id` in the INSERT instead of `v_session.consultant_advisor_id`
+| Component | Change |
+|-----------|--------|
+| `AdvisorDashboard.tsx` | Track negotiation by invite ID mapping |
+| `AdvisorDashboard.tsx` | Update `isInactiveInvite()` to consider negotiations |
+| `AdvisorDashboard.tsx` | Add "במשא ומתן" badge to cards |
+| `AdvisorDashboard.tsx` | Add "מעבר למשא ומתן" button |
+| `expire_old_rfp_invites` | Skip expiring invites with active negotiations |
 
-This ensures the `created_by` column receives a valid `auth.users.id` that satisfies the foreign key constraint.
+## Testing Checklist
 
-## Testing Plan
-1. Login as Vendor 2
-2. Navigate to Negotiations tab
-3. Open an active negotiation request
-4. Modify line item prices
-5. Submit response
-6. Verify:
-   - No foreign key error
-   - New proposal version created
-   - Session status updates to "responded"
+1. Login as `lior+sapak2@spartans.tech`
+2. Navigate to "הזמנות להצעת מחיר" tab
+3. Verify the "ז'בוטינסקי 63, גבעתיים" project is now visible
+4. Verify it shows "במשא ומתן" badge
+5. Click "מעבר למשא ומתן" button
+6. Verify it navigates to the negotiation page
+7. Toggle to "הצג הכל" and verify all invites display correctly
+8. Verify that truly expired RFPs (no negotiation) still show as inactive
+
