@@ -312,89 +312,84 @@ export const ServiceDetailsTab = ({
         onOpenChange={setChecklistOpen}
         className="border rounded-lg bg-card"
       >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
-          <div className="flex items-center gap-2">
-            <List className="h-4 w-4 text-primary" />
-            <span className="font-medium">רשימת שירותים</span>
-            {scopeItems.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {scopeItems.filter(i => i.is_included).length}/{scopeItems.length}
-              </Badge>
-            )}
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-2">
+              <List className="h-4 w-4 text-primary" />
+              <span className="font-medium">רשימת שירותים</span>
+              {scopeItems.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {scopeItems.filter(i => i.is_included).length}/{scopeItems.length}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div onClick={(e) => e.stopPropagation()}>
+                <LoadTemplateButton
+                  onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
+                  loading={loadingTemplates}
+                  disabled={!advisorType || !selectedCategoryId}
+                />
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${checklistOpen ? 'rotate-180' : ''}`} />
+            </div>
           </div>
-          <ChevronDown className={`h-4 w-4 transition-transform ${checklistOpen ? 'rotate-180' : ''}`} />
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
-          <div className="p-3 space-y-3">
-            {/* Template Selection with Load Button */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              {categories && categories.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Category Selection */}
-                  <Select
-                    dir="rtl"
-                    value={selectedCategoryId || ''}
-                    onValueChange={handleCategoryChange}
-                    disabled={loadingCategories}
-                  >
-                    <SelectTrigger className="text-right w-[180px]">
-                      <SelectValue placeholder="סוג תבנית..." />
-                    </SelectTrigger>
-                    <SelectContent dir="rtl">
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id} className="text-right">
-                          <div className="flex items-center gap-2">
-                            {cat.name}
-                            {cat.is_default && (
-                              <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <div className="p-3 space-y-2">
+            {/* Template Selection Dropdowns */}
+            {categories && categories.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Category Selection */}
+                <Select
+                  dir="rtl"
+                  value={selectedCategoryId || ''}
+                  onValueChange={handleCategoryChange}
+                  disabled={loadingCategories}
+                >
+                  <SelectTrigger className="text-right w-[180px]">
+                    <SelectValue placeholder="סוג תבנית..." />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id} className="text-right">
+                        <div className="flex items-center gap-2">
+                          {cat.name}
+                          {cat.is_default && (
+                            <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                  {/* Submission Method Selection */}
-                  <Select
-                    dir="rtl"
-                    value={selectedMethodId || ''}
-                    onValueChange={handleMethodChange}
-                    disabled={!selectedCategoryId || loadingMethods}
-                  >
-                    <SelectTrigger className="text-right w-[160px]">
-                      <SelectValue placeholder={loadingMethods ? "טוען..." : "שיטת הגשה..."} />
-                    </SelectTrigger>
-                    <SelectContent dir="rtl">
-                      {submissionMethods?.map((method) => (
-                        <SelectItem key={method.id} value={method.id} className="text-right">
-                          <div className="flex items-center gap-2">
-                            <FileStack className="h-3.5 w-3.5" />
-                            {method.method_label}
-                            {method.is_default && (
-                              <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {/* Load Template Button */}
-              <LoadTemplateButton
-                onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
-                loading={loadingTemplates}
-                disabled={!advisorType || !selectedCategoryId}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-right block text-sm">רשימת שירותים</Label>
-              <p className="text-xs text-muted-foreground text-right">
-                סמן את השירותים הנדרשים ושייך אותם לסעיפי שכ"ט
-              </p>
-            </div>
+                {/* Submission Method Selection */}
+                <Select
+                  dir="rtl"
+                  value={selectedMethodId || ''}
+                  onValueChange={handleMethodChange}
+                  disabled={!selectedCategoryId || loadingMethods}
+                >
+                  <SelectTrigger className="text-right w-[160px]">
+                    <SelectValue placeholder={loadingMethods ? "טוען..." : "שיטת הגשה..."} />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    {submissionMethods?.map((method) => (
+                      <SelectItem key={method.id} value={method.id} className="text-right">
+                        <div className="flex items-center gap-2">
+                          <FileStack className="h-3.5 w-3.5" />
+                          {method.method_label}
+                          {method.is_default && (
+                            <Badge variant="secondary" className="text-xs">ברירת מחדל</Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {loadingTemplates ? (
               <div className="flex items-center justify-center py-8">

@@ -303,7 +303,7 @@ export const FeeItemsTable = ({
         ))}
         
         {tableItems.length === 0 && (
-          <div className="border rounded-lg p-6 text-center text-muted-foreground">
+          <div className="border rounded-lg p-4 text-center text-muted-foreground">
             {advisorType ? 'לחץ על "טען תבנית" או "הוסף שורה"' : 'לחץ על "הוסף שורה" להוספת פריט שכ"ט'}
           </div>
         )}
@@ -418,7 +418,7 @@ export const FeeItemsTable = ({
             ))}
             {tableItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
                   {advisorType ? 'לחץ על "טען תבנית" או "הוסף שורה"' : 'לחץ על "הוסף שורה" להוספת פריט שכ"ט'}
                 </TableCell>
               </TableRow>

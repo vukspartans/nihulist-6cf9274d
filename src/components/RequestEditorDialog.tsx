@@ -822,7 +822,7 @@ export const RequestEditorDialog = ({
           <ScrollArea className="flex-1 min-h-0 overflow-hidden" dir="rtl">
             <div className="pr-4 pb-4">
               {/* Main Tab */}
-              <TabsContent value="main" className="mt-0 space-y-3" dir="rtl">
+              <TabsContent value="main" className="mt-0 space-y-2" dir="rtl">
                 {/* Request Title */}
                 <div className="space-y-1">
                   <Label htmlFor="request-title" className="block text-right">כותרת הבקשה</Label>
