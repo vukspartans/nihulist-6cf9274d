@@ -1,60 +1,119 @@
 
-# Fix: Add Missing Columns to `proposal_versions` Table
+# Fix: Foreign Key Constraint Violation in `submit_negotiation_response`
 
 ## Problem
 The negotiation response fails with:
 ```
-column "fee_line_items" of relation "proposal_versions" does not exist
+insert or update on table "proposal_versions" violates foreign key constraint "proposal_versions_created_by_fkey"
 ```
 
 ## Root Cause
-The `submit_negotiation_response` function attempts to insert data into the `proposal_versions` table using column names that don't exist:
+The `submit_negotiation_response` function inserts `v_session.consultant_advisor_id` into the `created_by` column:
 
-**Function expects these columns in `proposal_versions`:**
-- `fee_line_items` (JSONB)
-- `milestone_adjustments` (JSONB)
+```sql
+created_by,
+v_session.consultant_advisor_id  -- This is advisors.id, NOT auth.users.id
+```
 
-**Actual columns in `proposal_versions`:**
-- `line_items` (JSONB) - different name
-- `milestone_adjustments` - missing entirely
+However, the `proposal_versions.created_by` column has a foreign key constraint:
+```sql
+created_by UUID REFERENCES auth.users(id)
+```
 
-The `proposals` table correctly has both `fee_line_items` and `milestone_adjustments` columns, but the `proposal_versions` table was not updated to match when these columns were added to proposals.
+The function is inserting an `advisors.id` into a column that expects an `auth.users.id`, causing the constraint violation.
 
 ## Solution
-Add the missing columns to the `proposal_versions` table to align with the function's expectations and the `proposals` table schema.
+Modify the function to look up the advisor's `user_id` from the `advisors` table and use that value for `created_by`.
 
 ## Implementation
 
-**SQL Migration:**
+Create a SQL migration that updates the function:
 
 ```sql
--- Add fee_line_items column to proposal_versions (if not exists)
-ALTER TABLE proposal_versions 
-ADD COLUMN IF NOT EXISTS fee_line_items JSONB;
+CREATE OR REPLACE FUNCTION public.submit_negotiation_response(
+  p_session_id uuid,
+  p_consultant_message text DEFAULT NULL,
+  p_updated_line_items jsonb DEFAULT NULL,
+  p_milestone_adjustments jsonb DEFAULT NULL,
+  p_files jsonb DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_session negotiation_sessions%ROWTYPE;
+  v_proposal proposals%ROWTYPE;
+  v_advisor_user_id uuid;  -- NEW: Store advisor's auth user ID
+  v_new_version_id uuid;
+  v_new_version_number integer;
+  v_item jsonb;
+  v_new_price numeric;
+  v_line_items jsonb;
+  v_updated_fee_items jsonb;
+BEGIN
+  -- Get session with lock
+  SELECT * INTO v_session
+  FROM negotiation_sessions
+  WHERE id = p_session_id
+  FOR UPDATE;
 
--- Add milestone_adjustments column to proposal_versions (if not exists)
-ALTER TABLE proposal_versions 
-ADD COLUMN IF NOT EXISTS milestone_adjustments JSONB;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Negotiation session not found';
+  END IF;
+
+  IF v_session.status != 'awaiting_response' THEN
+    RAISE EXCEPTION 'Session is not awaiting response';
+  END IF;
+
+  -- Get proposal
+  SELECT * INTO v_proposal
+  FROM proposals
+  WHERE id = v_session.proposal_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Proposal not found';
+  END IF;
+
+  -- NEW: Get the advisor's user_id for the created_by field
+  SELECT user_id INTO v_advisor_user_id
+  FROM advisors
+  WHERE id = v_session.consultant_advisor_id;
+
+  -- ... (rest of function unchanged until INSERT) ...
+
+  -- Create new proposal version
+  INSERT INTO proposal_versions (
+    -- ... columns ...
+    created_by
+  )
+  VALUES (
+    -- ... values ...
+    v_advisor_user_id  -- FIX: Use auth.users.id instead of advisors.id
+  );
+
+  -- ... rest of function ...
+END;
+$$;
 ```
 
 ## Technical Details
 
-The `proposal_versions` table is used to store historical snapshots of proposals during the negotiation process. Each version should capture the complete state of the proposal, including:
-- Price and timeline
-- Scope and terms
-- Line item breakdown (`fee_line_items`)
-- Milestone payment schedule (`milestone_adjustments`)
+The key changes:
+1. Declare `v_advisor_user_id uuid` variable
+2. Query `advisors.user_id` using `v_session.consultant_advisor_id`
+3. Use `v_advisor_user_id` in the INSERT instead of `v_session.consultant_advisor_id`
 
-By adding these columns, the versioning system will correctly preserve all proposal data across negotiation iterations.
+This ensures the `created_by` column receives a valid `auth.users.id` that satisfies the foreign key constraint.
 
 ## Testing Plan
-1. Login as Vendor 2 (`vendor.test1+billding@example.com` / `TestPassword123!`)
+1. Login as Vendor 2
 2. Navigate to Negotiations tab
-3. Open an active negotiation request (status: awaiting_response)
+3. Open an active negotiation request
 4. Modify line item prices
 5. Submit response
 6. Verify:
-   - No column error
-   - New proposal version created with fee_line_items and milestone data
+   - No foreign key error
+   - New proposal version created
    - Session status updates to "responded"
-   - Entrepreneur can view the counter-offer
