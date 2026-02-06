@@ -1,171 +1,221 @@
 
 
-# Plan: UX Optimization for עריכת בקשה (RFP Editor) Dialog
+# Plan: Consistent "טען תבנית" (Load Template) Button Across All Tabs
 
-## Current Issues Identified
+## Current State Analysis
 
-### Issue 1: Redundant Status Message (User Highlighted)
-**Location**: Lines 1219-1224 in `RequestEditorDialog.tsx`
-```tsx
-<Alert className="mt-2 flex-shrink-0">
-  <Database className="h-4 w-4" />
-  <AlertDescription className="text-right">
-    השינויים נשמרים במאגר הנתונים ויישמרו גם לאחר רענון הדף
-  </AlertDescription>
-</Alert>
+### Existing Template Loading Implementations
+
+| Tab | Current Implementation | Button Style |
+|-----|------------------------|--------------|
+| **רשימת שירותים** (Services) | Auto-loads via dropdown selection + category hierarchy | No explicit button, uses dropdowns |
+| **שכר טרחה** (Fees) | `טען תבנית` button with `FileDown` icon | `variant="secondary"`, inconsistent style |
+| **תשלום** (Payment) | `טען תבנית` button with `Database` icon | `variant="ghost"`, small size, different design |
+
+**Problems:**
+1. No visual consistency between the three tabs
+2. Services tab uses dropdowns instead of a clear button
+3. Different icons, styles, and sizes
+4. No tooltip explaining the magic of template loading
+
+## Design: Unified Template Button Component
+
+Create a beautiful, consistent "Load Template" button that:
+- Uses a **Wand2** (magic wand) icon from Lucide
+- Has a distinctive gradient/accent style that stands out
+- Includes a tooltip on hover explaining the benefit
+- Works identically across all three tabs
+
+### Button Design Specification
+
+```text
++------------------------------------------+
+| [✨ Wand Icon]  טען תבנית                 |
++------------------------------------------+
+         ↓ Hover tooltip
++------------------------------------------+
+| לחיצה תטען תבנית מוכנה מראש שתסייע לך    |
+| למלא את הפרטים במהירות וביעילות          |
++------------------------------------------+
 ```
 
-**Problem**: This message takes up ~40px of valuable vertical space and provides information that:
-- Is already implied by the "שמור שינויים" (Save Changes) button
-- Is technical/developer-focused rather than user-focused
-- Persists permanently instead of appearing only when relevant
-
-**Solution**: Remove this static alert. Instead, provide subtle feedback:
-- Show a brief toast notification after successful save (already implemented)
-- Optionally add a small "saved" indicator near the save button when data is persisted
-
-### Issue 2: Excessive Spacing in Collapsible Sections
-**Location**: `ServiceDetailsTab.tsx` lines 306-600
-
-**Current**:
-- `p-4` padding on CollapsibleContent (16px all around)
-- `space-y-4` between sections (16px gaps)
-- `py-8` for empty state message (32px vertical padding)
-
-**Optimization**:
-- Reduce internal padding to `p-3` (12px)
-- Reduce empty state padding to `py-4`
-- Keep section spacing at `space-y-3` for visual separation
-
-### Issue 3: Service Checklist Empty State Takes Too Much Space
-**Current (line 458-461)**:
-```tsx
-<div className="text-center py-8 text-muted-foreground">
-  אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
-</div>
-```
-
-**Solution**: Reduce to `py-4` and make the message more compact
-
-### Issue 4: Template Selection Box Occupies Significant Space
-**Location**: Lines 329-400 in `ServiceDetailsTab.tsx`
-
-The template selection box with "בחירת תבנית" has:
-- `p-4` padding (16px)
-- Two dropdowns in a grid
-- A status text below
-
-**Optimization**:
-- Reduce padding to `p-3`
-- Make the layout more horizontal/compact on desktop
-- Remove redundant status text when space is limited
-
-### Issue 5: Footer Button Order (RTL Standard)
-Per memory `memory/style/rtl-footer-button-order`, the footer should follow RTL reading order: Cancel on right, primary action on left.
-
-**Current (lines 1226-1238)**:
-```tsx
-<DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
-  <Button variant="outline">ביטול</Button>
-  <Button>שמור שינויים</Button>
-</DialogFooter>
-```
-
-The `flex-col-reverse` and `sm:flex-row` may not produce the correct RTL order. Need to verify and ensure Cancel appears on the visual right.
+**Visual Properties:**
+- Primary button variant with subtle gradient background
+- Wand2 icon (magic wand) 
+- Text: "טען תבנית"
+- Loading state with Loader2 spinner
+- Tooltip with clear explanation on mouseover
 
 ---
 
 ## Technical Implementation
 
-### File 1: `src/components/RequestEditorDialog.tsx`
+### File 1: Create Reusable Component `src/components/rfp/LoadTemplateButton.tsx`
 
-**Change 1: Remove the redundant database Alert**
-Delete lines 1219-1224:
+A new reusable component that encapsulates the button design:
+
 ```tsx
-<Alert className="mt-2 flex-shrink-0">
-  <Database className="h-4 w-4" />
-  <AlertDescription className="text-right">
-    השינויים נשמרים במאגר הנתונים ויישמרו גם לאחר רענון הדף
-  </AlertDescription>
-</Alert>
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Wand2, Loader2 } from 'lucide-react';
+
+interface LoadTemplateButtonProps {
+  onClick: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
+}
+
+export const LoadTemplateButton = ({
+  onClick,
+  loading = false,
+  disabled = false,
+  className
+}: LoadTemplateButtonProps) => {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClick}
+            disabled={loading || disabled}
+            className={cn(
+              "gap-2 bg-gradient-to-r from-primary/10 to-primary/5",
+              "border-primary/30 hover:border-primary/50",
+              "hover:from-primary/20 hover:to-primary/10",
+              "text-primary font-medium",
+              className
+            )}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="h-4 w-4" />
+            )}
+            טען תבנית
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent 
+          side="top" 
+          dir="rtl" 
+          className="max-w-[250px] text-right"
+        >
+          <p>לחיצה תטען תבנית מוכנה מראש שתסייע לך למלא את הפרטים במהירות וביעילות</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 ```
 
-**Change 2: Fix footer RTL order**
-Update DialogFooter to ensure correct RTL visual order:
+### File 2: Update `src/components/rfp/ServiceDetailsTab.tsx`
+
+**Changes:**
+1. Remove the template selection dropdowns (category/method) from the checklist section
+2. Add the new LoadTemplateButton at the top of the checklist section
+3. Keep the loadTemplatesForCategory logic, but trigger it via the button
+
+**Current (lines 329-394):**
+Complex dropdown-based template selection
+
+**New:**
+Simple button that triggers template loading
+
 ```tsx
-<DialogFooter className="flex-shrink-0 flex flex-row-reverse gap-2 mt-4">
-  <Button onClick={handleSave} disabled={saving} className="...">
-    {saving ? <Loader2 /> : <Save />}
-    {saving ? 'שומר...' : 'שמור שינויים'}
-  </Button>
-  <Button variant="outline" onClick={handleCancel} disabled={saving}>
-    ביטול
-  </Button>
-</DialogFooter>
+{/* Load Template Button */}
+<LoadTemplateButton
+  onClick={() => loadTemplatesForCategory(selectedCategoryId)}
+  loading={loadingTemplates}
+  disabled={!advisorType}
+/>
 ```
 
-### File 2: `src/components/rfp/ServiceDetailsTab.tsx`
+### File 3: Update `src/components/rfp/FeeItemsTable.tsx`
 
-**Change 1: Reduce Collapsible section padding**
-Update CollapsibleContent from `p-4` to `p-3`:
+**Changes:**
+1. Replace the current "טען תבנית" button (lines 186-201) with LoadTemplateButton
+2. Remove FileDown icon import
+
+**Current (lines 186-201):**
 ```tsx
-<CollapsibleContent className="border-t">
-  <div className="p-3 space-y-3">  {/* was p-4 space-y-4 */}
+<Button
+  type="button"
+  variant="secondary"
+  size="sm"
+  onClick={loadTemplates}
+  disabled={loadingTemplates}
+  className="flex items-center gap-2 flex-row-reverse flex-1 sm:flex-none"
+>
+  {loadingTemplates ? (
+    <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    <FileDown className="h-4 w-4" />
+  )}
+  טען תבנית
+</Button>
 ```
 
-**Change 2: Reduce empty state padding**
-Update from `py-8` to `py-4`:
+**New:**
 ```tsx
-{scopeItems.length === 0 && (
-  <div className="text-center py-4 text-sm text-muted-foreground">
-    אין שירותים ברשימה. בחר תבנית או הוסף שירותים ידנית
-  </div>
-)}
+<LoadTemplateButton
+  onClick={loadTemplates}
+  loading={loadingTemplates}
+  disabled={!advisorType}
+/>
 ```
 
-**Change 3: Compact template selection box**
-Reduce internal padding and optimize layout:
+### File 4: Update `src/components/rfp/PaymentTermsTab.tsx`
+
+**Changes:**
+1. Replace the current "טען תבנית" button (lines 154-168) with LoadTemplateButton
+2. Remove Database icon import
+
+**Current (lines 154-168):**
 ```tsx
-<div className="p-3 bg-muted/30 rounded-lg border space-y-3">
-  <div className="flex items-center gap-2 text-sm font-medium">
-    <FolderOpen className="h-4 w-4 text-primary" />
-    בחירת תבנית
-  </div>
-  
-  <div className="grid grid-cols-2 gap-2">  {/* was gap-3 */}
-    {/* Category and Method selects */}
-  </div>
-  
-  {/* Remove the redundant status text - already visible in dropdowns */}
-</div>
+<Button
+  type="button"
+  variant="ghost"
+  size="sm"
+  onClick={loadTemplate}
+  disabled={loadingTemplate}
+  className="h-7 text-xs gap-1"
+>
+  {loadingTemplate ? (
+    <Loader2 className="h-3 w-3 animate-spin" />
+  ) : (
+    <Database className="h-3 w-3" />
+  )}
+  {loadingTemplate ? 'טוען...' : 'טען תבנית'}
+</Button>
 ```
 
-**Change 4: Reduce header padding in collapsible triggers**
-Update from `p-4` to `p-3`:
+**New:**
 ```tsx
-<CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
-```
-
-**Change 5: Compact service checklist items**
-Reduce item padding from `p-3` to `p-2.5`:
-```tsx
-<div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border hover:bg-muted transition-colors">
+<LoadTemplateButton
+  onClick={loadTemplate}
+  loading={loadingTemplate}
+/>
 ```
 
 ---
 
-## Space Savings Summary
+## Template Loading Logic Connection
 
-| Element | Before | After | Savings |
-|---------|--------|-------|---------|
-| Database Alert | ~48px | 0px | 48px |
-| Collapsible headers | 32px padding | 24px padding | 8px × 3 = 24px |
-| CollapsibleContent padding | 32px | 24px | 8px × 3 = 24px |
-| Empty state | 64px | 32px | 32px |
-| Template box | 32px padding | 24px padding | 8px |
-| Service items | 24px padding | 20px padding | 4px per item |
+All three tabs correctly fetch from the admin-managed tables:
 
-**Total vertical space saved**: ~150-200px (significant improvement for the dialog)
+| Tab | Database Table | Filter Fields |
+|-----|----------------|---------------|
+| Services | `default_service_scope_templates` | `advisor_specialty`, `category_id`, `display_order` |
+| Fee Items | `default_fee_item_templates` | `advisor_specialty`, `display_order` |
+| Milestones | `milestone_templates` | `advisor_specialty`, `category_id`, `display_order` |
+
+These tables are managed in the admin section at:
+- **Route:** `/heyadmin/fee-templates/{advisorType}/{projectType}`
+- **Component:** `FeeTemplatesByAdvisorProject.tsx`
+
+The connection is already correctly implemented in each tab's `loadTemplates` function.
 
 ---
 
@@ -173,72 +223,54 @@ Reduce item padding from `p-3` to `p-2.5`:
 
 | File | Changes |
 |------|---------|
-| `src/components/RequestEditorDialog.tsx` | Remove Alert, fix footer RTL order |
-| `src/components/rfp/ServiceDetailsTab.tsx` | Reduce padding throughout, compact template selection |
+| `src/components/rfp/LoadTemplateButton.tsx` | **NEW** - Create reusable button component |
+| `src/components/rfp/ServiceDetailsTab.tsx` | Replace dropdown-based selection with LoadTemplateButton |
+| `src/components/rfp/FeeItemsTable.tsx` | Replace existing button with LoadTemplateButton |
+| `src/components/rfp/PaymentTermsTab.tsx` | Replace existing button with LoadTemplateButton |
 
 ---
 
-## Visual Comparison
+## Visual Design
 
-**Before:**
-```text
-┌─────────────────────────────────────────────┐
-│ Dialog Header                               │
-├─────────────────────────────────────────────┤
-│ [Tabs: Services | Fees | Payment | Info]    │
-├─────────────────────────────────────────────┤
-│                                             │
-│  ▼ רשימת שירותים        (large padding)    │
-│  ┌─────────────────────────────────────┐    │
-│  │ בחירת תבנית           (large box)   │    │
-│  │ [Category ▼]    [Method ▼]          │    │
-│  │ Selected: Category • Method          │    │  ← Redundant
-│  └─────────────────────────────────────┘    │
-│                                             │
-│      (large empty state message)            │
-│                                             │
-│  ▼ הערות נוספות                             │
-│  ▼ קובץ פירוט                               │
-│                                             │
-├─────────────────────────────────────────────┤
-│ ⚠ השינויים נשמרים במאגר הנתונים...         │  ← REMOVE
-├─────────────────────────────────────────────┤
-│        [ביטול]  [שמור שינויים]              │
-└─────────────────────────────────────────────┘
+### Button States
+
+**Default State:**
+```
+┌────────────────────────────────┐
+│  ✨  טען תבנית                  │  ← Primary/10 gradient background
+│                                │    Primary border
+└────────────────────────────────┘
 ```
 
-**After:**
-```text
-┌─────────────────────────────────────────────┐
-│ Dialog Header                               │
-├─────────────────────────────────────────────┤
-│ [Tabs: Services | Fees | Payment | Info]    │
-├─────────────────────────────────────────────┤
-│ ▼ רשימת שירותים      (compact padding)     │
-│ ┌───────────────────────────────────────┐   │
-│ │ בחירת תבנית                           │   │
-│ │ [Category ▼]      [Method ▼]          │   │
-│ └───────────────────────────────────────┘   │
-│                                             │
-│   אין שירותים. בחר תבנית או הוסף ידנית      │  ← Compact
-│                                             │
-│ ▼ הערות נוספות                              │
-│ ▼ קובץ פירוט                                │
-├─────────────────────────────────────────────┤
-│  [שמור שינויים]              [ביטול]        │  ← RTL order
-└─────────────────────────────────────────────┘
+**Hover State:**
+```
+┌────────────────────────────────┐
+│  ✨  טען תבנית                  │  ← Darker gradient
+│                                │    Stronger border
+├────────────────────────────────┤
+│  לחיצה תטען תבנית מוכנה מראש   │  ← Tooltip appears
+│  שתסייע לך למלא במהירות        │
+└────────────────────────────────┘
+```
+
+**Loading State:**
+```
+┌────────────────────────────────┐
+│  ⟳  טען תבנית                  │  ← Spinner replaces wand
+│                                │    Button disabled
+└────────────────────────────────┘
 ```
 
 ---
 
 ## Testing Checklist
 
-1. Open "עריכת בקשה" dialog from project detail page
-2. Verify the database alert message is removed
-3. Verify collapsible sections have tighter padding
-4. Verify empty state message is more compact
-5. Verify footer buttons follow RTL order (Cancel on right, Save on left)
-6. Test on mobile viewport - verify usability is maintained
-7. Test save functionality - verify toast notification appears on success
-8. Verify all content is still accessible and functional
+1. Open "עריכת בקשה" dialog
+2. Go to "פירוט שירותים" tab - verify LoadTemplateButton appears with wand icon
+3. Hover over button - verify tooltip appears with explanation
+4. Click button - verify templates load from database
+5. Go to "שכר טרחה" tab - verify same button design
+6. Hover and click - verify consistency
+7. Go to "תשלום" tab - verify same button design
+8. Verify all templates load from admin-managed tables
 
