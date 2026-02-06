@@ -80,9 +80,9 @@ export function EditServiceScopeTemplateDialog({
               <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue placeholder="בחר סוג יועץ" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 {ADVISOR_EXPERTISE.map((expertise) => (
-                  <SelectItem key={expertise} value={expertise}>
+                  <SelectItem key={expertise} value={expertise} className="text-right">
                     {expertise}
                   </SelectItem>
                 ))}
@@ -108,9 +108,9 @@ export function EditServiceScopeTemplateDialog({
               <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 {DEFAULT_FEE_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
+                  <SelectItem key={category} value={category} className="text-right">
                     {category}
                   </SelectItem>
                 ))}
