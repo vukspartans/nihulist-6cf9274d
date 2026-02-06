@@ -1,122 +1,78 @@
 
-# Plan: Fix RTL Alignment in Template Management Page
 
-## Issues Identified
+# Plan: Simplify Project Type Cards Display
 
-### 1. Tab Order
-The current tab order is: שורות שכ"ט → שירותים → אבני דרך (left to right in DOM)
+## Current Behavior
 
-In RTL, this appears as: אבני דרך ← שירותים ← שורות שכ"ט (reversed visually)
+Each project type card shows a badge:
+- **"X תבניות"** - when templates exist (template_count > 0)
+- **"טרם הוגדר"** - when no templates exist (template_count = 0)
 
-**User Request**: The correct visual order from right to left should be:
-- שירותים (Services) - first/right
-- שכ"ט (Fee Items) - middle  
-- תשלום/אבני דרך (Milestones) - last/left
+## Analysis
 
-**Solution**: Reorder the TabsTrigger elements in the DOM so they appear correctly in RTL:
+The "טרם הוגדר" badge appears on every card that doesn't have templates yet. In the screenshot, all project types under "אדריכל" show this badge because no templates have been configured.
+
+**Purpose**: To indicate which project types have been configured vs. not.
+
+**Problem**: It adds visual clutter without providing actionable value - the user can click any project type regardless of whether templates exist.
+
+## Proposed Solution
+
+**Option: Show badge only when templates exist**
+
+Only display the template count badge when there are actual templates. Cards with no templates will simply not have a badge, keeping the UI cleaner.
+
+### Visual Result
+
+**Before:**
 ```
-DOM Order: services → fee-items → milestones
-RTL Visual: שירותים | שכ"ט | אבני דרך
+┌─────────────────────────┐
+│ 📁 בתי אבות / מוסדות    │
+│                 טרם הוגדר │  ← Badge on every empty card
+└─────────────────────────┘
 ```
 
-### 2. Table RTL
-The tables inherit `dir="rtl"` from the parent div, but need explicit handling for:
-- Action buttons should be on the right (first column in RTL)
-- Content should flow right-to-left
+**After:**
+```
+┌─────────────────────────┐
+│ 📁 בתי אבות / מוסדות    │
+│                         │  ← No badge = clean look
+└─────────────────────────┘
 
-**Solution**: Move the actions column to be first in the DOM (appears on right in RTL), and ensure tables have proper RTL inheritance.
+┌─────────────────────────┐
+│ 📁 מגורים בבנייה רוויה  │
+│                5 תבניות │  ← Badge only when content exists
+└─────────────────────────┘
+```
 
 ---
 
 ## Implementation
 
-### Part 1: Reorder Tabs (lines 156-179)
+**File**: `src/pages/admin/FeeTemplatesByProject.tsx`
+
+**Change**: Lines 94-98
 
 ```tsx
-<Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-  <TabsList className="grid w-full grid-cols-3" dir="rtl">
-    {/* Order: services first (right), fee-items (middle), milestones (left) */}
-    <TabsTrigger value="services" className="gap-2">
-      <Briefcase className="h-4 w-4" />
-      שירותים
-      {services && services.length > 0 && (
-        <Badge variant="secondary" className="mr-1">{services.length}</Badge>
-      )}
-    </TabsTrigger>
-    <TabsTrigger value="fee-items" className="gap-2">
-      <FileText className="h-4 w-4" />
-      שורות שכ"ט
-      {feeItems && feeItems.length > 0 && (
-        <Badge variant="secondary" className="mr-1">{feeItems.length}</Badge>
-      )}
-    </TabsTrigger>
-    <TabsTrigger value="milestones" className="gap-2">
-      <Milestone className="h-4 w-4" />
-      אבני דרך / תשלום
-      {milestones && milestones.length > 0 && (
-        <Badge variant="secondary" className="mr-1">{milestones.length}</Badge>
-      )}
-    </TabsTrigger>
-  </TabsList>
-  ...
-</Tabs>
-```
+// Before
+<CardContent>
+  <div className="flex items-center justify-end">
+    <Badge variant={project.template_count > 0 ? "default" : "secondary"}>
+      {project.template_count > 0 ? `${project.template_count} תבניות` : "טרם הוגדר"}
+    </Badge>
+  </div>
+</CardContent>
 
-### Part 2: Fix Table Column Order
-
-For each table, move the actions column to be **first** (so it appears on the right in RTL):
-
-**Fee Items Table:**
-```tsx
-<TableRow>
-  <TableHead className="w-24"></TableHead>  {/* Actions - now first (right in RTL) */}
-  <TableHead>תיאור</TableHead>
-  <TableHead>יחידה</TableHead>
-  <TableHead>כמות ברירת מחדל</TableHead>
-  <TableHead>סוג חיוב</TableHead>
-  <TableHead>סטטוס</TableHead>
-</TableRow>
-```
-
-And corresponding body cells:
-```tsx
-<TableRow key={item.id}>
-  <TableCell>
-    <div className="flex items-center gap-1">
-      <Button variant="ghost" size="icon" onClick={() => setEditingFeeItem(item)}>
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteFeeItemId(item.id)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
+// After
+<CardContent>
+  {project.template_count > 0 && (
+    <div className="flex items-center justify-end">
+      <Badge variant="default">
+        {project.template_count} תבניות
+      </Badge>
     </div>
-  </TableCell>
-  <TableCell className="font-medium">{item.description}</TableCell>
-  <TableCell>{item.unit}</TableCell>
-  <TableCell>{item.default_quantity || "-"}</TableCell>
-  <TableCell>{item.charge_type || "-"}</TableCell>
-  <TableCell>...</TableCell>
-</TableRow>
-```
-
-Apply same pattern to Services and Milestones tables.
-
-### Part 3: Change Default Tab
-
-Update initial state to start on "services" tab:
-```tsx
-const [activeTab, setActiveTab] = useState<string>("services");
-```
-
-### Part 4: Rename "אבני דרך" to "תשלום"
-
-Per user request, rename the milestones tab to reflect payment terms:
-```tsx
-<TabsTrigger value="milestones" className="gap-2">
-  <Milestone className="h-4 w-4" />
-  תשלום
-  ...
-</TabsTrigger>
+  )}
+</CardContent>
 ```
 
 ---
@@ -125,45 +81,14 @@ Per user request, rename the milestones tab to reflect payment terms:
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | Reorder tabs, fix table columns, rename milestone tab |
-
----
-
-## Visual Result
-
-### Before:
-```
-┌──────────────┬──────────────┬──────────────┐
-│  שורות שכ"ט  │   שירותים    │   אבני דרך   │  ← Wrong RTL order
-└──────────────┴──────────────┴──────────────┘
-
-│ תיאור │ יחידה │ כמות │ סוג חיוב │ סטטוס │ 🗑️ │  ← Actions on wrong side
-```
-
-### After:
-```
-┌──────────────┬──────────────┬──────────────┐
-│   שירותים    │  שורות שכ"ט  │    תשלום     │  ← Correct RTL order
-└──────────────┴──────────────┴──────────────┘
-
-│ 🗑️ │ תיאור │ יחידה │ כמות │ סוג חיוב │ סטטוס │  ← Actions on right
-```
+| `src/pages/admin/FeeTemplatesByProject.tsx` | Remove "טרם הוגדר" badge, show badge only when templates exist |
 
 ---
 
 ## Testing Checklist
 
-1. **Tab Bar**:
-   - [ ] שירותים appears on the far right
-   - [ ] שורות שכ"ט appears in the middle
-   - [ ] תשלום appears on the far left
-   - [ ] Default selected tab is שירותים
+1. Project types with 0 templates show no badge
+2. Project types with templates show "X תבניות" badge
+3. Cards are still clickable and navigate correctly
+4. Sorting still works (projects with templates first)
 
-2. **Tables**:
-   - [ ] Action buttons (edit/delete) appear on the right side
-   - [ ] Content columns flow right-to-left
-   - [ ] All text properly right-aligned
-
-3. **RTL Inheritance**:
-   - [ ] Card headers follow RTL (title right, button left)
-   - [ ] Empty states are centered
