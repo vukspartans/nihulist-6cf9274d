@@ -1,82 +1,60 @@
 
 
-## Fix: UUID Cast Error in Negotiation Response
+## Fix: Remove Invalid `updated_at` Reference in Proposals Update
 
 ### Problem
-When an advisor tries to submit a negotiation response, the database function `submit_negotiation_response` fails with:
+The `submit_negotiation_response` database function fails with:
 ```
-invalid input syntax for type uuid: "idx-1"
+column "updated_at" of relation "proposals" does not exist
 ```
 
-This happens because the function attempts to cast ALL `line_item_id` values to UUID on line 147, but many line items use synthetic IDs like `idx-1` (index-based fallback) or string IDs like `fee-1` (from JSONB data).
+### Root Cause
+In the migration I just applied, line 155 attempts to update `updated_at` on the `proposals` table:
+```sql
+UPDATE proposals SET
+  current_version = v_new_version_number,
+  price = v_new_price,
+  fee_line_items = COALESCE(v_updated_fee_items, fee_line_items),
+  status = 'resubmitted',
+  updated_at = NOW()  -- ERROR: This column doesn't exist!
+WHERE id = v_session.proposal_id;
+```
 
-### Root Cause Analysis
+However, the `proposals` table does NOT have an `updated_at` column (verified via schema query).
 
-1. **Frontend ID Generation**: The `NegotiationResponseView` generates IDs using:
-   ```typescript
-   const itemId = item.item_id || `idx-${item.item_number ?? idx}`;
-   ```
-   
-2. **Database Function Failure**: The `submit_negotiation_response` function at line 147:
-   ```sql
-   WHERE id = (v_item->>'line_item_id')::UUID
-   ```
-   This fails for non-UUID strings.
-
-3. **Test Data Impact**: The recently added test data uses IDs like `fee-1`, `fee-2` which are also not valid UUIDs.
+**Note:** The `negotiation_sessions` table DOES have `updated_at`, so line 164 is correct.
 
 ### Solution
-
-Modify the `submit_negotiation_response` database function to:
-1. Skip UUID-based operations for non-UUID line item IDs
-2. Only attempt database record lookups for valid UUID IDs
-3. Continue to update fee_line_items JSONB (which works with any ID format)
+Create a new migration to update the function, removing the `updated_at` reference from the proposals UPDATE statement.
 
 ### Implementation
 
-**File to modify:** Create new SQL migration
+**File:** `supabase/migrations/[timestamp]_fix_proposals_updated_at.sql`
+
+Update the `submit_negotiation_response` function with the corrected UPDATE statement:
 
 ```sql
--- In the loop that processes line items (lines 143-169):
-FOR v_item IN SELECT * FROM jsonb_array_elements(p_updated_line_items)
-LOOP
-  -- Check if line_item_id is a valid UUID before attempting DB lookup
-  IF (v_item->>'line_item_id') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
-    SELECT * INTO v_prev_line_item 
-    FROM public.proposal_line_items 
-    WHERE id = (v_item->>'line_item_id')::UUID;
-    
-    IF FOUND THEN
-      -- Insert/update logic for database-backed line items
-    END IF;
-  END IF;
-  -- JSONB updates continue to work for all IDs
-END LOOP;
+-- Update proposal with new version and price
+UPDATE proposals SET
+  current_version = v_new_version_number,
+  price = v_new_price,
+  fee_line_items = COALESCE(v_updated_fee_items, fee_line_items),
+  status = 'resubmitted'
+  -- Removed: updated_at = NOW() (column doesn't exist)
+WHERE id = v_session.proposal_id;
 ```
 
-### Changes Summary
+### Technical Summary
 
-| Location | Change |
-|----------|--------|
-| `submit_negotiation_response` function | Add UUID validation regex before casting |
-| Loop over `p_updated_line_items` | Skip DB operations for non-UUID IDs |
-| JSONB fee_line_items matching logic | Already uses string matching (line 97) - no change needed |
-
-### Technical Details
-
-The fix adds a PostgreSQL regex check before the UUID cast:
-```sql
--- UUID regex pattern
-'line_item_id' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-```
-
-This matches the pattern already used in `send-negotiation-request/index.ts` (line 246).
+| Line | Table | Issue | Fix |
+|------|-------|-------|-----|
+| 155 | `proposals` | `updated_at` doesn't exist | Remove the line |
+| 164 | `negotiation_sessions` | `updated_at` exists | Keep as-is |
 
 ### Testing After Fix
-
 1. Login as Vendor 2: `vendor.test1+billding@example.com` / `TestPassword123!`
 2. Navigate to Negotiations tab
 3. Open the active negotiation request
 4. Modify prices and submit response
-5. Verify no UUID cast error occurs
+5. Verify successful submission without errors
 
