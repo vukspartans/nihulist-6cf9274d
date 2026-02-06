@@ -3462,7 +3462,7 @@ export type Database = {
       submit_negotiation_response:
         | {
             Args: {
-              p_consultant_message: string
+              p_consultant_message?: string
               p_files?: Json
               p_milestone_adjustments?: Json
               p_session_id: string
