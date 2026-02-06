@@ -1,143 +1,160 @@
 
 
-# Plan: Simplify Template Creation Dialogs and Add Drag-and-Drop Ordering
+# Plan: Fix RTL and Enable All Service Details Modes in עריכת בקשה
 
-## Understanding the Issue
+## Problem Analysis
 
-The admin navigates through a specific hierarchy to get to the template creation page:
-1. Select **Advisor Type** (e.g., "עורך דין מקרקעין")
-2. Select **Project Type** (e.g., "פינוי־בינוי (מתחמים)")
-3. Arrives at the template management page where they can add Milestones, Fee Items, and Services
+### Issue 1: RTL Tab Order
+The current tab order in `ServiceDetailsTab.tsx` (line 310-323):
+```tsx
+<TabsList className="grid w-full grid-cols-3 flex-row-reverse">
+  <TabsTrigger value="free_text">מלל חופשי</TabsTrigger>   // Appears left
+  <TabsTrigger value="file">העלאת קובץ</TabsTrigger>        // Middle
+  <TabsTrigger value="checklist">רשימת שירותים</TabsTrigger> // Appears right
+</TabsList>
+```
 
-**Current Problem**: The creation dialogs (especially Milestones) still show fields for:
-- סוג פרויקט (Project Type) - already selected in navigation
-- התמחות יועץ (Advisor Specialty) - already selected in navigation  
-- עירייה (Municipality) - not relevant for this hierarchy
+**Requested order (right to left):**
+1. רשימת שירותים (checklist) - far right
+2. מלל חופשי (free_text) - middle
+3. העלאת קובץ (file) - far left
 
-These fields are redundant because the context is already known from the URL parameters.
+### Issue 2: Mutually Exclusive Modes
+Currently, users can only select ONE mode at a time. The entrepreneur should be able to:
+- Use the checklist to define structured service items
+- Add free text for additional notes/details
+- Upload a file with supplementary documentation
 
-## Comparison with RFP Creation Process
+All entered data should be saved and presented to the vendor.
 
-Looking at `PaymentTermsTab.tsx`, when entrepreneurs add milestones in the RFP wizard, they only enter:
-- **Description** (תיאור)
-- **Percentage** (אחוז)
+## Solution Approach
 
-This is the simple, streamlined approach that should be mirrored in the admin template creation.
+Change from tabs (exclusive) to collapsible accordion sections (inclusive). Each section can be opened and used independently:
 
-## Proposed Changes
-
-### 1. Simplify CreateMilestoneTemplateDialog
-
-**Remove Fields:**
-- סוג פרויקט dropdown (line 144-163)
-- עירייה dropdown (line 166-184)
-- התמחות יועץ dropdown (line 187-206)
-
-**Keep Fields:**
-- שם (Name) - required
-- שם באנגלית (English name) - optional
-- תיאור (Description)
-- אחוז מהסכום (Percentage) - required
-- סכום קבוע (Fixed amount) - optional
-- סוג טריגר (Trigger type) - important for automation
-
-**Auto-populate from props:**
-The `defaultAdvisorSpecialty` and `defaultProjectType` props are already passed from `FeeTemplatesByAdvisorProject.tsx` (lines 431-435). These should be used directly in submission without showing dropdowns.
-
-**Simplify Layout:**
-- Remove the tabs structure (basic/payment) since there are fewer fields
-- Single-page form like the RFP creation milestones
-
-### 2. Simplify CreateFeeItemTemplateDialog
-
-**Remove Field:**
-- סוג יועץ dropdown (lines 92-106) - already selected in navigation
-
-**Keep Fields:**
-- תיאור הפריט (Description) - required
-- יחידת מדידה (Unit)
-- כמות ברירת מחדל (Default quantity)
-- סוג חיוב (Charge type)
-- סמן כאופציונלי (Is optional toggle)
-
-### 3. Simplify CreateServiceScopeTemplateDialog
-
-**Remove Field:**
-- סוג יועץ dropdown (lines 87-100) - already selected in navigation
-
-**Keep Fields:**
-- שם השירות (Service name) - required
-- קטגוריית שכ"ט (Fee category)
-- סמן כאופציונלי (Is optional toggle)
-
-### 4. Add Drag-and-Drop Reordering to FeeTemplatesByAdvisorProject
-
-The page currently uses regular `Table` components (lines 199-248, 276-317, 347-392). These should be converted to use `SortableDataTable` (which already exists and works well).
-
-**Changes needed:**
-1. Import `SortableDataTable` component
-2. Add reorder hooks: `useReorderFeeItemTemplates`, `useReorderServiceScopeTemplates`, `useReorderMilestoneTemplates`
-3. Replace each `Table` with `SortableDataTable`
-4. Ensure the `display_order` field is present on all templates
-
----
+```text
++------------------------------------------+
+| ▼ רשימת שירותים                           |
+|   [Service checklist items...]           |
++------------------------------------------+
+| ▼ הערות נוספות (מלל חופשי)                 |
+|   [Free text area...]                    |
++------------------------------------------+
+| ▼ קובץ פירוט (אופציונלי)                   |
+|   [File upload area...]                  |
++------------------------------------------+
+```
 
 ## Technical Implementation
 
-### File 1: `CreateMilestoneTemplateDialog.tsx`
+### File 1: `src/components/rfp/ServiceDetailsTab.tsx`
 
 **Changes:**
-1. Remove the entire `<Tabs>` structure
-2. Remove the 3 dropdown fields (project_type, municipality_id, advisor_specialty)
-3. Create a simple single-form layout with:
-   - Name + Name (EN) row
-   - Description textarea
-   - Percentage + Fixed amount row
-   - Trigger type dropdown
-4. Use `defaultAdvisorSpecialty` and `defaultProjectType` props directly in submission
+1. Replace `Tabs` with `Collapsible` sections (already imported in the file)
+2. Remove `mode` and `onModeChange` props - no longer needed for single selection
+3. Keep all content handlers (freeText, file, scopeItems)
+4. Create 3 collapsible sections in the correct RTL order
 
-**New Simplified Structure:**
-```text
-+----------------------------------+
-| שם                 | שם באנגלית    |
-+----------------------------------+
-| תיאור                           |
-+----------------------------------+
-| אחוז מהסכום       | סכום קבוע     |
-+----------------------------------+
-| סוג טריגר                        |
-+----------------------------------+
-| [ביטול]                  [צור]   |
-+----------------------------------+
+**Updated Component Structure:**
+```tsx
+return (
+  <div className="space-y-4" dir="rtl">
+    {/* Section 1: Service Checklist (always first) */}
+    <Collapsible defaultOpen className="border rounded-lg">
+      <CollapsibleTrigger className="flex items-center justify-between w-full p-4">
+        <div className="flex items-center gap-2">
+          <List className="h-4 w-4" />
+          <span className="font-medium">רשימת שירותים</span>
+        </div>
+        <ChevronDown className="h-4 w-4" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="p-4 pt-0 border-t">
+        {/* Existing checklist content */}
+      </CollapsibleContent>
+    </Collapsible>
+
+    {/* Section 2: Free Text Notes */}
+    <Collapsible className="border rounded-lg">
+      <CollapsibleTrigger className="...">
+        <FileText className="h-4 w-4" />
+        הערות נוספות (מלל חופשי)
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {/* Existing textarea content */}
+      </CollapsibleContent>
+    </Collapsible>
+
+    {/* Section 3: File Upload */}
+    <Collapsible className="border rounded-lg">
+      <CollapsibleTrigger className="...">
+        <Upload className="h-4 w-4" />
+        קובץ פירוט (אופציונלי)
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {/* Existing file upload content */}
+      </CollapsibleContent>
+    </Collapsible>
+  </div>
+);
 ```
 
-### File 2: `CreateFeeItemTemplateDialog.tsx`
+### File 2: `src/types/rfpRequest.ts`
 
 **Changes:**
-1. Remove advisor_specialty dropdown (lines 92-106)
-2. Remove the `advisorSpecialty` state variable
-3. Use `defaultAdvisorSpecialty` prop directly in submission
+- Remove `ServiceDetailsMode` type (no longer needed)
+- Update `AdvisorTypeRequestData` interface to remove `serviceDetailsMode` field
 
-### File 3: `CreateServiceScopeTemplateDialog.tsx`
-
-**Changes:**
-1. Remove advisor_specialty dropdown (lines 87-100)
-2. Remove the `advisorSpecialty` state variable
-3. Use `defaultAdvisorSpecialty` prop directly in submission
-
-### File 4: `FeeTemplatesByAdvisorProject.tsx`
+### File 3: `src/components/RequestEditorDialog.tsx`
 
 **Changes:**
-1. Import `SortableDataTable` and reorder hooks
-2. Add `display_order` property to columns
-3. Replace all 3 `<Table>` components with `<SortableDataTable>`
-4. Add `onReorder` handlers for each table
+- Remove `serviceDetailsMode` from form data handling
+- Update `ServiceDetailsTab` usage to remove mode props
+- Keep all other data persistence (freeText, file, scopeItems)
 
-### File 5: Edit Dialogs (EditMilestoneTemplateDialog, EditFeeItemTemplateDialog, EditServiceScopeTemplateDialog)
+### File 4: `src/hooks/useRFPDraft.ts`
 
 **Changes:**
-- Similar simplification as create dialogs
-- Keep fields read-only or hidden for advisor_specialty/project_type since they're tied to the context
+- Remove `service_details_mode` from save/load logic (backward compatible - field can remain in DB but ignored)
+
+### File 5: `src/pages/SubmitProposal.tsx`
+
+**Changes:**
+- Update vendor view to display ALL service detail sections (not just one based on mode)
+- Show checklist items if present
+- Show free text if present
+- Show file if present
+
+**Updated Display Logic:**
+```tsx
+{/* Show checklist items if any */}
+{entrepreneurData?.service_scope_items?.length > 0 && (
+  <div>
+    <Label>רשימת שירותים נדרשים</Label>
+    {/* Render checklist items */}
+  </div>
+)}
+
+{/* Show free text if any */}
+{entrepreneurData?.service_details_text && (
+  <div>
+    <Label>הערות נוספות מהיזם</Label>
+    <div className="...">{entrepreneurData.service_details_text}</div>
+  </div>
+)}
+
+{/* Show file if uploaded */}
+{entrepreneurData?.service_details_file && (
+  <div>
+    <Label>קובץ פירוט שירותים</Label>
+    <a href={...}>{entrepreneurData.service_details_file.name}</a>
+  </div>
+)}
+```
+
+### File 6: `src/hooks/useRFP.tsx`
+
+**Changes:**
+- Update RFP sending logic to always save all three data types
+- Remove mode-based conditional saving
 
 ---
 
@@ -145,35 +162,49 @@ The page currently uses regular `Table` components (lines 199-248, 276-317, 347-
 
 | File | Changes |
 |------|---------|
-| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Remove tabs, remove 3 dropdowns, simplify to single form |
-| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Remove 3 dropdowns, hide advisor/project fields |
-| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Remove advisor_specialty dropdown |
-| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Remove advisor_specialty dropdown |
-| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Remove advisor_specialty dropdown |
-| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Remove advisor_specialty dropdown |
-| `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | Add SortableDataTable for drag-and-drop reordering |
-| `src/hooks/useRFPTemplatesAdmin.ts` | Add reorder mutations if not present |
+| `src/components/rfp/ServiceDetailsTab.tsx` | Replace Tabs with Collapsible sections, RTL order |
+| `src/types/rfpRequest.ts` | Remove ServiceDetailsMode, update interface |
+| `src/components/RequestEditorDialog.tsx` | Remove mode handling from form data |
+| `src/hooks/useRFPDraft.ts` | Update save/load to handle all fields always |
+| `src/hooks/useRFP.tsx` | Always save all service details data |
+| `src/pages/SubmitProposal.tsx` | Display all service details sections to vendor |
 
 ---
 
-## Ordering Behavior
+## Backward Compatibility
 
-When the entrepreneur loads templates in the RFP wizard:
-1. Templates are fetched filtered by `advisor_specialty` and `project_type`
-2. They are ordered by `display_order` (ascending)
-3. The order defined by admin via drag-and-drop is preserved
+The `service_details_mode` column will remain in the database but will be ignored. New RFPs will save all data regardless of which sections the user fills out. Existing RFPs will continue to work - the vendor view will simply show whatever data exists.
 
-This is already implemented in the hooks (e.g., `useMilestoneTemplatesByAdvisorProject` orders by `display_order`).
+---
+
+## UX Flow After Changes
+
+**For Entrepreneur (RFP Creation):**
+1. Open "פירוט שירותים" tab
+2. See 3 collapsible sections (checklist expanded by default)
+3. Fill in checklist items (services to include/exclude)
+4. Optionally expand and add free text notes
+5. Optionally expand and upload a file
+6. All data is saved and sent to vendors
+
+**For Vendor (SubmitProposal):**
+1. Open "פרטי הבקשה" tab
+2. See all filled sections from entrepreneur:
+   - Service checklist (if any items defined)
+   - Free text notes (if provided)
+   - File attachment (if uploaded)
 
 ---
 
 ## Testing Checklist
 
-1. Navigate to /heyadmin/fee-templates/{advisor}/{project}
-2. Click "הוסף אבן דרך" - verify simplified dialog with no redundant dropdowns
-3. Click "הוסף שורה" - verify no advisor dropdown
-4. Click "הוסף שירות" - verify no advisor dropdown
-5. Create a new milestone with just name + percentage - verify it saves with correct advisor/project
-6. Drag and drop rows to reorder - verify order persists
-7. Load templates in RFP wizard - verify they appear in admin-defined order
+1. Open "עריכת בקשה" dialog
+2. Go to "פירוט שירותים" tab
+3. Verify collapsible sections appear in RTL order (checklist first)
+4. Add items to checklist, add free text, upload file
+5. Save and close dialog
+6. Re-open dialog - verify all data persisted
+7. Send RFP to vendor
+8. As vendor, open SubmitProposal page
+9. Verify all three data types are visible
 
