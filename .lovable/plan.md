@@ -1,64 +1,60 @@
 
-# Fix: Resolve Function Overload Ambiguity
+# Fix: Add Missing Columns to `proposal_versions` Table
 
 ## Problem
-PostgREST cannot determine which database function to call because there are two overloaded versions of `submit_negotiation_response` with ambiguous signatures:
-
-**Function 1 (5-arg canonical):**
-- `p_session_id uuid`
-- `p_consultant_message text DEFAULT NULL`
-- `p_updated_line_items jsonb DEFAULT NULL`
-- `p_milestone_adjustments jsonb DEFAULT NULL`
-- `p_files jsonb DEFAULT NULL`
-
-**Function 2 (3-arg wrapper):**
-- `p_session_id uuid`
-- `p_updated_line_items jsonb`
-- `p_consultant_message text DEFAULT NULL`
-
-When the edge function calls the RPC with `{p_session_id, p_updated_line_items, p_consultant_message}`, PostgREST sees that both functions could match and throws an ambiguity error.
-
-## Solution
-Drop the 3-arg wrapper function entirely. The 5-arg canonical function already has default values for `p_milestone_adjustments` and `p_files`, so existing calls will work without modification.
-
-## Implementation Steps
-
-### Step 1: Create Database Migration
-Create a new SQL migration that drops the 3-arg function:
-
-```sql
--- Drop the ambiguous 3-arg wrapper
-DROP FUNCTION IF EXISTS public.submit_negotiation_response(uuid, jsonb, text);
+The negotiation response fails with:
+```
+column "fee_line_items" of relation "proposal_versions" does not exist
 ```
 
-### Step 2: Update TypeScript Types
-After the migration, update `src/integrations/supabase/types.ts` to remove the duplicate function signature and keep only the 5-arg version.
+## Root Cause
+The `submit_negotiation_response` function attempts to insert data into the `proposal_versions` table using column names that don't exist:
+
+**Function expects these columns in `proposal_versions`:**
+- `fee_line_items` (JSONB)
+- `milestone_adjustments` (JSONB)
+
+**Actual columns in `proposal_versions`:**
+- `line_items` (JSONB) - different name
+- `milestone_adjustments` - missing entirely
+
+The `proposals` table correctly has both `fee_line_items` and `milestone_adjustments` columns, but the `proposal_versions` table was not updated to match when these columns were added to proposals.
+
+## Solution
+Add the missing columns to the `proposal_versions` table to align with the function's expectations and the `proposals` table schema.
+
+## Implementation
+
+**SQL Migration:**
+
+```sql
+-- Add fee_line_items column to proposal_versions (if not exists)
+ALTER TABLE proposal_versions 
+ADD COLUMN IF NOT EXISTS fee_line_items JSONB;
+
+-- Add milestone_adjustments column to proposal_versions (if not exists)
+ALTER TABLE proposal_versions 
+ADD COLUMN IF NOT EXISTS milestone_adjustments JSONB;
+```
 
 ## Technical Details
 
-The edge function (`send-negotiation-response/index.ts`) currently calls:
-```javascript
-supabase.rpc("submit_negotiation_response", {
-  p_session_id: session_id,
-  p_updated_line_items: updated_line_items || [],
-  p_consultant_message: consultant_message,
-})
-```
+The `proposal_versions` table is used to store historical snapshots of proposals during the negotiation process. Each version should capture the complete state of the proposal, including:
+- Price and timeline
+- Scope and terms
+- Line item breakdown (`fee_line_items`)
+- Milestone payment schedule (`milestone_adjustments`)
 
-After removing the 3-arg wrapper, this call will correctly resolve to the 5-arg function since:
-- `p_session_id` matches
-- `p_updated_line_items` matches
-- `p_consultant_message` matches
-- `p_milestone_adjustments` uses default `NULL`
-- `p_files` uses default `NULL`
+By adding these columns, the versioning system will correctly preserve all proposal data across negotiation iterations.
 
 ## Testing Plan
-1. Login as Vendor 2 (`vendor.test1+billding@example.com`)
+1. Login as Vendor 2 (`vendor.test1+billding@example.com` / `TestPassword123!`)
 2. Navigate to Negotiations tab
-3. Open an active negotiation request
+3. Open an active negotiation request (status: awaiting_response)
 4. Modify line item prices
 5. Submit response
 6. Verify:
-   - No ambiguity error
-   - New proposal version created
+   - No column error
+   - New proposal version created with fee_line_items and milestone data
    - Session status updates to "responded"
+   - Entrepreneur can view the counter-offer
