@@ -3459,25 +3459,16 @@ export type Database = {
               result_rfp_id: string
             }[]
           }
-      submit_negotiation_response:
-        | {
-            Args: {
-              p_consultant_message?: string
-              p_files?: Json
-              p_milestone_adjustments?: Json
-              p_session_id: string
-              p_updated_line_items?: Json
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_consultant_message?: string
-              p_session_id: string
-              p_updated_line_items: Json
-            }
-            Returns: Json
-          }
+      submit_negotiation_response: {
+        Args: {
+          p_consultant_message?: string
+          p_files?: Json
+          p_milestone_adjustments?: Json
+          p_session_id: string
+          p_updated_line_items?: Json
+        }
+        Returns: Json
+      }
       use_magic_link: { Args: { p_token: string }; Returns: Json }
       validate_magic_link: { Args: { p_token: string }; Returns: Json }
     }
