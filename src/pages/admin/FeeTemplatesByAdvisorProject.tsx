@@ -54,7 +54,7 @@ export default function FeeTemplatesByAdvisorProject() {
   const decodedAdvisorType = decodeURIComponent(advisorType || "");
   const decodedProjectType = decodeURIComponent(projectType || "");
 
-  const [activeTab, setActiveTab] = useState<string>("fee-items");
+  const [activeTab, setActiveTab] = useState<string>("services");
 
   // Fee Items state
   const [createFeeItemDialogOpen, setCreateFeeItemDialogOpen] = useState(false);
@@ -152,16 +152,9 @@ export default function FeeTemplatesByAdvisorProject() {
           </div>
         </div>
 
-        {/* Content Tabs: Fee Items, Services, Milestones */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="fee-items" className="gap-2">
-              <FileText className="h-4 w-4" />
-              שורות שכ"ט
-              {feeItems && feeItems.length > 0 && (
-                <Badge variant="secondary" className="mr-1">{feeItems.length}</Badge>
-              )}
-            </TabsTrigger>
+        {/* Content Tabs: Services, Fee Items, Milestones - ordered for RTL */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+          <TabsList className="grid w-full grid-cols-3" dir="rtl">
             <TabsTrigger value="services" className="gap-2">
               <Briefcase className="h-4 w-4" />
               שירותים
@@ -169,9 +162,16 @@ export default function FeeTemplatesByAdvisorProject() {
                 <Badge variant="secondary" className="mr-1">{services.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="fee-items" className="gap-2">
+              <FileText className="h-4 w-4" />
+              שורות שכ"ט
+              {feeItems && feeItems.length > 0 && (
+                <Badge variant="secondary" className="mr-1">{feeItems.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="milestones" className="gap-2">
               <Milestone className="h-4 w-4" />
-              אבני דרך
+              תשלום
               {milestones && milestones.length > 0 && (
                 <Badge variant="secondary" className="mr-1">{milestones.length}</Badge>
               )}
@@ -196,33 +196,20 @@ export default function FeeTemplatesByAdvisorProject() {
                 {feeItemsLoading ? (
                   <Skeleton className="h-32" />
                 ) : feeItems && feeItems.length > 0 ? (
-                  <Table>
+                  <Table dir="rtl">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">תיאור</TableHead>
-                        <TableHead className="text-right">יחידה</TableHead>
-                        <TableHead className="text-right">כמות ברירת מחדל</TableHead>
-                        <TableHead className="text-right">סוג חיוב</TableHead>
-                        <TableHead className="text-right">סטטוס</TableHead>
                         <TableHead className="w-24"></TableHead>
+                        <TableHead className="text-start">תיאור</TableHead>
+                        <TableHead className="text-start">יחידה</TableHead>
+                        <TableHead className="text-start">כמות ברירת מחדל</TableHead>
+                        <TableHead className="text-start">סוג חיוב</TableHead>
+                        <TableHead className="text-start">סטטוס</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {feeItems.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            {item.description}
-                          </TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell>{item.default_quantity || "-"}</TableCell>
-                          <TableCell>{item.charge_type || "-"}</TableCell>
-                          <TableCell>
-                            {item.is_optional ? (
-                              <Badge variant="secondary">אופציונלי</Badge>
-                            ) : (
-                              <Badge variant="default">חובה</Badge>
-                            )}
-                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Button
@@ -241,6 +228,19 @@ export default function FeeTemplatesByAdvisorProject() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.description}
+                          </TableCell>
+                          <TableCell>{item.unit}</TableCell>
+                          <TableCell>{item.default_quantity || "-"}</TableCell>
+                          <TableCell>{item.charge_type || "-"}</TableCell>
+                          <TableCell>
+                            {item.is_optional ? (
+                              <Badge variant="secondary">אופציונלי</Badge>
+                            ) : (
+                              <Badge variant="default">חובה</Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -273,27 +273,18 @@ export default function FeeTemplatesByAdvisorProject() {
                 {servicesLoading ? (
                   <Skeleton className="h-32" />
                 ) : services && services.length > 0 ? (
-                  <Table>
+                  <Table dir="rtl">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">שם השירות</TableHead>
-                        <TableHead className="text-right">קטגוריית שכ"ט</TableHead>
-                        <TableHead className="text-right">סטטוס</TableHead>
                         <TableHead className="w-24"></TableHead>
+                        <TableHead className="text-start">שם השירות</TableHead>
+                        <TableHead className="text-start">קטגוריית שכ"ט</TableHead>
+                        <TableHead className="text-start">סטטוס</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {services.map((service) => (
                         <TableRow key={service.id}>
-                          <TableCell className="font-medium">{service.task_name}</TableCell>
-                          <TableCell>{service.default_fee_category || "-"}</TableCell>
-                          <TableCell>
-                            {service.is_optional ? (
-                              <Badge variant="secondary">אופציונלי</Badge>
-                            ) : (
-                              <Badge variant="default">חובה</Badge>
-                            )}
-                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Button
@@ -312,6 +303,15 @@ export default function FeeTemplatesByAdvisorProject() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{service.task_name}</TableCell>
+                          <TableCell>{service.default_fee_category || "-"}</TableCell>
+                          <TableCell>
+                            {service.is_optional ? (
+                              <Badge variant="secondary">אופציונלי</Badge>
+                            ) : (
+                              <Badge variant="default">חובה</Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -344,29 +344,19 @@ export default function FeeTemplatesByAdvisorProject() {
                 {milestonesLoading ? (
                   <Skeleton className="h-32" />
                 ) : milestones && milestones.length > 0 ? (
-                  <Table>
+                  <Table dir="rtl">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">שם</TableHead>
-                        <TableHead className="text-right">אחוז מהסכום</TableHead>
-                        <TableHead className="text-right">טריגר</TableHead>
-                        <TableHead className="text-right">סטטוס</TableHead>
                         <TableHead className="w-24"></TableHead>
+                        <TableHead className="text-start">שם</TableHead>
+                        <TableHead className="text-start">אחוז מהסכום</TableHead>
+                        <TableHead className="text-start">טריגר</TableHead>
+                        <TableHead className="text-start">סטטוס</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {milestones.map((milestone) => (
                         <TableRow key={milestone.id}>
-                          <TableCell className="font-medium">{milestone.name}</TableCell>
-                          <TableCell>{milestone.percentage_of_total}%</TableCell>
-                          <TableCell>{getTriggerLabel(milestone.trigger_type)}</TableCell>
-                          <TableCell>
-                            {milestone.is_active ? (
-                              <Badge variant="default">פעיל</Badge>
-                            ) : (
-                              <Badge variant="secondary">לא פעיל</Badge>
-                            )}
-                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Button
@@ -385,6 +375,16 @@ export default function FeeTemplatesByAdvisorProject() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{milestone.name}</TableCell>
+                          <TableCell>{milestone.percentage_of_total}%</TableCell>
+                          <TableCell>{getTriggerLabel(milestone.trigger_type)}</TableCell>
+                          <TableCell>
+                            {milestone.is_active ? (
+                              <Badge variant="default">פעיל</Badge>
+                            ) : (
+                              <Badge variant="secondary">לא פעיל</Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
