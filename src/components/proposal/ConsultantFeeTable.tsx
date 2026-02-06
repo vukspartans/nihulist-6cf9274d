@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Trash2, AlertCircle, MessageSquare, Lock } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, MessageSquare, Shield, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
 
@@ -125,30 +125,56 @@ export function ConsultantFeeTable({
 
               return (
                 <>
-                  <TableRow 
-                    key={itemId}
-                    className={cn(
-                      "bg-primary/5 border-r-4 border-r-primary/30",
-                      needsComment && "bg-orange-50 dark:bg-orange-950/20 border-r-orange-400"
-                    )}
-                  >
+                <TableRow 
+                  key={itemId}
+                  className={cn(
+                    // MUST items - warm + thick border
+                    !item.is_optional && "bg-amber-50/60 dark:bg-amber-950/30 border-r-4 border-r-amber-500",
+                    // OPTIONAL items - neutral + thin border
+                    item.is_optional && "bg-slate-50/50 dark:bg-slate-900/20 border-r-2 border-r-slate-300",
+                    // Warning override for validation
+                    needsComment && "bg-orange-50 dark:bg-orange-950/20 border-r-orange-400"
+                  )}
+                >
                     <TableCell className="text-center font-medium">
                       {item.item_number}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Lock className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>פריט מוגדר ע"י היזם</TooltipContent>
-                        </Tooltip>
-                        <span>{item.description}</span>
-                        {item.is_optional && (
-                          <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {/* Icon based on type */}
+                      <Tooltip>
+                        <TooltipTrigger>
+                          {item.is_optional ? (
+                            <Info className="h-3.5 w-3.5 text-slate-400" />
+                          ) : (
+                            <Shield className="h-3.5 w-3.5 text-amber-600" />
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {item.is_optional ? 'פריט אופציונלי' : 'פריט חובה - מוגדר ע"י היזם'}
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      {/* Description text with weight based on type */}
+                      <span className={cn(
+                        !item.is_optional && "font-medium"
+                      )}>
+                        {item.description}
+                      </span>
+                      
+                      {/* Badge - always show, style based on type */}
+                      <Badge 
+                        className={cn(
+                          "text-xs shrink-0 ml-1",
+                          item.is_optional 
+                            ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
                         )}
-                      </div>
-                    </TableCell>
+                      >
+                        {item.is_optional ? 'אופציונלי' : 'חובה'}
+                      </Badge>
+                    </div>
+                  </TableCell>
                     <TableCell className="text-center">
                       {UNIT_LABELS[item.unit] || item.unit}
                     </TableCell>
@@ -229,19 +255,57 @@ export function ConsultantFeeTable({
 
               return (
                 <>
-                  <TableRow key={itemId} className="bg-green-50/50 dark:bg-green-950/20">
+                <TableRow 
+                  key={itemId} 
+                  className={cn(
+                    !item.is_optional && "bg-amber-50/60 dark:bg-amber-950/30 border-r-4 border-r-amber-500",
+                    item.is_optional && "bg-slate-50/50 dark:bg-slate-900/20 border-r-2 border-r-slate-300"
+                  )}
+                >
                     <TableCell className="text-center font-medium text-green-700">
                       {entrepreneurItems.length + index + 1}
                     </TableCell>
-                    <TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {/* Icon based on type */}
+                      <Tooltip>
+                        <TooltipTrigger>
+                          {item.is_optional ? (
+                            <Info className="h-3.5 w-3.5 text-slate-400" />
+                          ) : (
+                            <Shield className="h-3.5 w-3.5 text-amber-600" />
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {item.is_optional ? 'פריט אופציונלי' : 'פריט חובה'}
+                        </TooltipContent>
+                      </Tooltip>
+                      
                       <Input
                         type="text"
                         value={item.description}
                         onChange={(e) => onUpdateAdditionalItem(index, 'description', e.target.value)}
                         placeholder="תיאור הפריט"
-                        className="border-green-300 focus:ring-green-400"
+                        className={cn(
+                          "flex-1",
+                          !item.is_optional && "border-amber-300 focus:ring-amber-400",
+                          item.is_optional && "border-slate-300 focus:ring-slate-400"
+                        )}
                       />
-                    </TableCell>
+                      
+                      {/* Badge - always show */}
+                      <Badge 
+                        className={cn(
+                          "text-xs shrink-0 whitespace-nowrap",
+                          item.is_optional 
+                            ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
+                        )}
+                      >
+                        {item.is_optional ? 'אופציונלי' : 'חובה'}
+                      </Badge>
+                    </div>
+                  </TableCell>
                     <TableCell>
                       <select
                         value={item.unit}
