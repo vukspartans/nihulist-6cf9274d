@@ -1,191 +1,183 @@
 
+# תכנית: הבחנה חזותית בין פריטי חובה ואופציונליים בטבלת הרחה
 
-# תכנית: אופטימיזציה של פופאפ "אישור הצעת מחיר"
+## סיכום השינויים
 
-## סיכום הבקשות
+שלוש שיפורים ישירים ל-`src/components/proposal/ConsultantFeeTable.tsx`:
 
-| # | בקשה | סטטוס נוכחי |
-|---|------|-------------|
-| 1 | הסרת טקסט ה-disclaimer העליון | קיים וחוזר על עצמו |
-| 2 | אנימציית הבהוב ל-checkbox | לא קיים |
-| 3 | אופטימיזציית מרחב וגודל אלמנטים | יש מקום לשיפור |
+### 1. ייבוא Icons חדשים
+הוספת `Shield` ו-`Info` מ-`lucide-react`:
+```tsx
+import { Plus, Trash2, AlertCircle, MessageSquare, Lock, Shield, Info } from 'lucide-react';
+```
+
+### 2. עדכון עיצוב שורות Entrepreneur (שורות 126-151)
+
+**MUST items** (items.is_optional === false):
+- רקע חם: `bg-amber-50/60 dark:bg-amber-950/30`
+- בורדר עבה ימני: `border-r-4 border-r-amber-500`
+- Icon: Shield בצבע amber
+- Badge: "חובה" עם רקע amber
+- טקסט: bold (`font-medium`)
+
+**OPTIONAL items** (items.is_optional === true):
+- רקע ניטרלי: `bg-slate-50/50 dark:bg-slate-900/20`
+- בורדר דק ימני: `border-r-2 border-r-slate-300`
+- Icon: Info בצבע slate
+- Badge: "אופציונלי" עם רקע slate
+- טקסט: normal weight
+
+### 3. עדכון שורות Consultant-Added items (שורות 225-243)
+
+הוספת אותה הבחנה לפריטים שהיועץ מוסיף בעצמו.
 
 ---
 
-## שינוי 1: הסרת הטקסט הכפול
+## קובץ לעדכון
 
-### המצב הנוכחי (שורות 418-421)
-התיבה הכתומה מכילה שני חלקים:
-1. **טקסט חשוב** (מיותר): "חשוב: חתימתך מאשרת את תנאי ההצעה ומחייבת את הארגון שלך כלפי היועץ."
-2. **ה-checkbox** (הכרחי): "אני מאשר/ת כי יש לי את הסמכות המשפטית..."
+`src/components/proposal/ConsultantFeeTable.tsx`
 
-### הפתרון
-להסיר את הטקסט העליון ולהשאיר רק את ה-checkbox, תוך שמירה על הרקע הכתום כאינדיקציה חזותית לחשיבות.
+### שינוי 1: Imports (שורה 8)
+```tsx
+import { Plus, Trash2, AlertCircle, MessageSquare, Lock, Shield, Info } from 'lucide-react';
+```
 
----
+### שינוי 2: Entrepreneur items TableRow styling (שורות 128-133)
+```tsx
+<TableRow 
+  key={itemId}
+  className={cn(
+    // MUST items - warm + thick border
+    !item.is_optional && "bg-amber-50/60 dark:bg-amber-950/30 border-r-4 border-r-amber-500",
+    // OPTIONAL items - neutral + thin border
+    item.is_optional && "bg-slate-50/50 dark:bg-slate-900/20 border-r-2 border-r-slate-300",
+    // Warning override for validation
+    needsComment && "bg-orange-50 dark:bg-orange-950/20 border-r-orange-400"
+  )}
+>
+```
 
-## שינוי 2: אנימציית הבהוב ל-Checkbox
-
-### הלוגיקה
-- הבהוב מתחיל **2 שניות לאחר הופעת השלב**
-- הבהוב פועל למשך **3 שניות** (או עד סימון)
-- האנימציה מפסיקה מיד כאשר ה-checkbox מסומן
-
-### מימוש
-1. הוספת keyframe `checkbox-blink` ב-Tailwind
-2. שימוש ב-`useState` ו-`useEffect` לשליטה בזמנים
-3. הפעלת class אנימציה רק כשפעיל
-
-```typescript
-// לוגיקה חדשה
-const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
-
-useEffect(() => {
-  if (step === 'signature' && !authorizationAccepted) {
-    // התחל הבהוב אחרי 2 שניות
-    const startTimer = setTimeout(() => {
-      setShowBlinkAnimation(true);
-    }, 2000);
+### שינוי 3: Entrepreneur items description cell (שורות 138-150)
+```tsx
+<TableCell>
+  <div className="flex items-center gap-2">
+    {/* Icon based on type */}
+    <Tooltip>
+      <TooltipTrigger>
+        {item.is_optional ? (
+          <Info className="h-3.5 w-3.5 text-slate-400" />
+        ) : (
+          <Shield className="h-3.5 w-3.5 text-amber-600" />
+        )}
+      </TooltipTrigger>
+      <TooltipContent>
+        {item.is_optional ? 'פריט אופציונלי' : 'פריט חובה - מוגדר ע"י היזם'}
+      </TooltipContent>
+    </Tooltip>
     
-    // עצור הבהוב אחרי 5 שניות (2 + 3)
-    const stopTimer = setTimeout(() => {
-      setShowBlinkAnimation(false);
-    }, 5000);
+    {/* Description text with weight based on type */}
+    <span className={cn(
+      !item.is_optional && "font-medium"
+    )}>
+      {item.description}
+    </span>
     
-    return () => {
-      clearTimeout(startTimer);
-      clearTimeout(stopTimer);
-    };
-  } else {
-    setShowBlinkAnimation(false);
-  }
-}, [step, authorizationAccepted]);
-```
-
-### אנימציה מוצעת
-```css
-@keyframes checkbox-blink {
-  0%, 100% { 
-    box-shadow: 0 0 0 0 hsl(45 93% 47% / 0);
-    transform: scale(1);
-  }
-  50% { 
-    box-shadow: 0 0 0 6px hsl(45 93% 47% / 0.4);
-    transform: scale(1.1);
-  }
-}
-```
-
----
-
-## שינוי 3: אופטימיזציית מרחב ו-UI
-
-### שיפורים מוצעים
-
-| אזור | שינוי |
-|------|-------|
-| תיבת Authorization | הקטנת padding מ-`p-3 sm:p-4` ל-`p-2.5 sm:p-3` |
-| מרווח בין אלמנטים | הקטנה מ-`space-y-3 sm:space-y-4` ל-`space-y-2.5 sm:space-y-3` |
-| SignatureCanvas | כבר משתמש ב-`compact` - בסדר |
-| טקסט אישור | הקטנת גובל שורה (`leading-snug` במקום `leading-relaxed`) |
-
----
-
-## קבצים לעדכון
-
-| # | קובץ | שינוי |
-|---|------|-------|
-| 1 | `tailwind.config.ts` | הוספת keyframe `checkbox-blink` |
-| 2 | `src/components/ProposalApprovalDialog.tsx` | הסרת disclaimer + הוספת לוגיקת הבהוב + אופטימיזציית spacing |
-
----
-
-## פרטים טכניים
-
-### שינוי 1: `tailwind.config.ts`
-
-הוספת keyframe ואנימציה:
-
-```typescript
-keyframes: {
-  // ... existing
-  'checkbox-blink': {
-    '0%, 100%': {
-      boxShadow: '0 0 0 0 hsl(45 93% 47% / 0)',
-      transform: 'scale(1)'
-    },
-    '50%': {
-      boxShadow: '0 0 0 6px hsl(45 93% 47% / 0.4)',
-      transform: 'scale(1.1)'
-    }
-  }
-},
-animation: {
-  // ... existing
-  'checkbox-blink': 'checkbox-blink 0.8s ease-in-out infinite'
-}
-```
-
-### שינוי 2: `ProposalApprovalDialog.tsx`
-
-**הוספת State וEffect (אחרי שורה 82):**
-```tsx
-const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
-
-useEffect(() => {
-  if (step === 'signature' && !authorizationAccepted) {
-    const startTimer = setTimeout(() => setShowBlinkAnimation(true), 2000);
-    const stopTimer = setTimeout(() => setShowBlinkAnimation(false), 5000);
-    return () => {
-      clearTimeout(startTimer);
-      clearTimeout(stopTimer);
-    };
-  } else {
-    setShowBlinkAnimation(false);
-  }
-}, [step, authorizationAccepted]);
-```
-
-**הסרת הטקסט והאופטימיזציה (שורות 416-435):**
-
-לפני:
-```tsx
-<div className="bg-amber-50/50 ... space-y-3">
-  <p className="text-xs sm:text-sm text-amber-800">
-    <strong>חשוב:</strong> חתימתך מאשרת...
-  </p>
-  <Separator className="bg-amber-200" />
-  <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
-    <Checkbox ... />
-    <span className="... leading-relaxed">...</span>
-  </label>
-</div>
-```
-
-אחרי:
-```tsx
-<div className="bg-amber-50/50 ... p-2.5 sm:p-3">
-  <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
-    <Checkbox
-      ...
+    {/* Badge - always show, style based on type */}
+    <Badge 
       className={cn(
-        "mt-0.5 shrink-0",
-        showBlinkAnimation && "animate-checkbox-blink"
+        "text-xs shrink-0 ml-1",
+        item.is_optional 
+          ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+          : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
+      )}
+    >
+      {item.is_optional ? 'אופציונלי' : 'חובה'}
+    </Badge>
+  </div>
+</TableCell>
+```
+
+### שינוי 4: Consultant-added items TableRow (שורה 232)
+```tsx
+<TableRow 
+  key={itemId} 
+  className={cn(
+    !item.is_optional && "bg-amber-50/60 dark:bg-amber-950/30 border-r-4 border-r-amber-500",
+    item.is_optional && "bg-slate-50/50 dark:bg-slate-900/20 border-r-2 border-r-slate-300"
+  )}
+>
+```
+
+### שינוי 5: Consultant-added items description cell (שורות 236-243)
+```tsx
+<TableCell>
+  <div className="flex items-center gap-2">
+    {/* Icon based on type */}
+    <Tooltip>
+      <TooltipTrigger>
+        {item.is_optional ? (
+          <Info className="h-3.5 w-3.5 text-slate-400" />
+        ) : (
+          <Shield className="h-3.5 w-3.5 text-amber-600" />
+        )}
+      </TooltipTrigger>
+      <TooltipContent>
+        {item.is_optional ? 'פריט אופציונלי' : 'פריט חובה'}
+      </TooltipContent>
+    </Tooltip>
+    
+    <Input
+      type="text"
+      value={item.description}
+      onChange={(e) => onUpdateAdditionalItem(index, 'description', e.target.value)}
+      placeholder="תיאור הפריט"
+      className={cn(
+        "flex-1",
+        !item.is_optional && "border-amber-300 focus:ring-amber-400",
+        item.is_optional && "border-slate-300 focus:ring-slate-400"
       )}
     />
-    <span className="... leading-snug">
-      אני מאשר/ת כי יש לי את הסמכות המשפטית להתחייב בשם הארגון לתנאי הצעה זו
-      <span className="text-destructive me-1">*</span>
-    </span>
-  </label>
-</div>
+    
+    {/* Badge - always show */}
+    <Badge 
+      className={cn(
+        "text-xs shrink-0 whitespace-nowrap",
+        item.is_optional 
+          ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+          : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
+      )}
+    >
+      {item.is_optional ? 'אופציונלי' : 'חובה'}
+    </Badge>
+  </div>
+</TableCell>
 ```
 
 ---
 
-## תוצאה צפויה
+## תוצאה חזותית
 
-1. **מרחב חסכוני יותר** - הסרת ~30px של טקסט מיותר
-2. **חוויית משתמש משופרת** - הבהוב מושך תשומת לב ל-checkbox
-3. **עיצוב נקי יותר** - ללא כפילויות מידע
+**MUST items** (חובה):
+- 🛡️ Shield icon + amber
+- `bg-amber-50/60` background
+- `border-r-4 border-r-amber-500` thick right border
+- `חובה` badge (amber background)
+- **bold** text
 
+**OPTIONAL items** (אופציונלי):
+- ℹ️ Info icon + slate
+- `bg-slate-50/50` background
+- `border-r-2 border-r-slate-300` thin right border
+- `אופציונלי` badge (slate background)
+- normal text weight
+
+---
+
+## עקרונות עיצוב
+
+✅ **ניגודיות** - WCAG AA compliant עבור כל הצבעים
+✅ **RTL** - `border-r` לבורדר בצד ימין
+✅ **Dark mode** - כל צבע עם וריאנט dark
+✅ **Accessibility** - tooltips מסבירות כל icon
+✅ **Zero guessing** - badges ברורים ותמיד נראים
+✅ **וקטוריים** - Shield ו-Info קלים להבחנה אפילו בהדפס בשחור-לבן
