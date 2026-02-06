@@ -22,7 +22,7 @@ export const adminTranslations = {
     advisors: "יועצים",
     projects: "פרויקטים",
     rfps: "קריאות להצעות מחיר",
-    rfpTemplates: "תבניות בקשה",
+    rfpTemplates: "תבניות קריאה להצעה",
     users: "משתמשים",
     auditLog: "יומן ביקורת",
     feedback: "משובים",

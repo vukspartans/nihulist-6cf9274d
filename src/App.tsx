@@ -41,7 +41,7 @@ import TaskTemplatesManagement from "./pages/admin/TaskTemplatesManagement";
 import PaymentCategoriesManagement from "./pages/admin/PaymentCategoriesManagement";
 import PaymentStatusesManagement from "./pages/admin/PaymentStatusesManagement";
 import MilestoneTemplatesManagement from "./pages/admin/MilestoneTemplatesManagement";
-import RFPTemplatesManagement from "./pages/admin/RFPTemplatesManagement";
+
 import FeeTemplatesHierarchy from "./pages/admin/FeeTemplatesHierarchy";
 import FeeTemplatesByProject from "./pages/admin/FeeTemplatesByProject";
 import FeeTemplateCategories from "./pages/admin/FeeTemplateCategories";
@@ -237,7 +237,7 @@ const AppContent = () => {
             <Route path="/heyadmin/advisors" element={<AdminRoute><AdvisorsManagement /></AdminRoute>} />
             <Route path="/heyadmin/projects" element={<AdminRoute><ProjectsManagement /></AdminRoute>} />
             <Route path="/heyadmin/rfps" element={<AdminRoute><RFPsManagement /></AdminRoute>} />
-            <Route path="/heyadmin/rfp-templates" element={<AdminRoute><RFPTemplatesManagement /></AdminRoute>} />
+            
             <Route path="/heyadmin/fee-templates" element={<AdminRoute><FeeTemplatesHierarchy /></AdminRoute>} />
             <Route path="/heyadmin/fee-templates/:advisorType" element={<AdminRoute><FeeTemplatesByProject /></AdminRoute>} />
             <Route path="/heyadmin/fee-templates/:advisorType/:projectType" element={<AdminRoute><FeeTemplateCategories /></AdminRoute>} />
