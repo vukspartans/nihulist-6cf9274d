@@ -1,176 +1,186 @@
 
+# Plan: Simplify RFP Template Structure
 
-# Plan: Consolidate and Rename Template Management Pages
+## Current Problem Analysis
 
-## Summary
+The current 4-level hierarchy (Advisor Type → Project Type → Category → Submission Method) is overly complex and has issues:
 
-Rename `תבניות שכר טרחה` to `תבניות קריאה להצעה` and remove the duplicate `תבניות בקשה` menu item. The hierarchical structure is already correctly implemented.
+1. **Category table is empty** - No categories exist in `fee_template_categories`
+2. **Templates bypass hierarchy** - Current templates in `default_fee_item_templates` are only keyed by `advisor_specialty`, ignoring category/method
+3. **Entrepreneur confusion** - The `ServiceDetailsTab` tries to show category/method selectors but finds no data
+4. **Over-engineering** - Most advisors need just one template set per project type
 
-## Current State Analysis
+## Proposed Solution: 3-Level Hierarchy
 
-| Menu Item | Route | Page | Status |
-|-----------|-------|------|--------|
-| תבניות בקשה | `/heyadmin/rfp-templates` | `RFPTemplatesManagement.tsx` | **Remove** (old flat view) |
-| תבניות שכר טרחה | `/heyadmin/fee-templates` | `FeeTemplatesHierarchy.tsx` | **Keep & Rename** |
-
-The hierarchical fee templates system is correctly structured:
-```text
+```
 Level 1: סוג יועץ (Advisor Type)
-    └── Level 2: סוג פרויקט (Project Type) 
-        └── Level 3: קטגוריות תבניות (Categories: רישוי, תב"ע, etc.)
-            └── Level 4: שיטות הגשה (Submission Methods: פאושלי, כמותי, שעתי)
-                ├── שורות סעיפים (Fee Items)
-                ├── שירותים (Services) 
-                └── אבני דרך (Milestones)
+    └── Level 2: סוג פרויקט (Project Type)
+        └── Templates (3 Tabs):
+            ├── שורות שכ"ט (Fee Items)
+            ├── שירותים (Services)
+            └── אבני דרך (Milestones)
 ```
+
+The "submission method" (lump_sum/quantity/hourly) becomes a **property** of each fee item row, not a separate hierarchy level.
 
 ---
 
-## Implementation
+## Implementation Changes
 
-### 1. Update Admin Menu (`AdminLayout.tsx`)
+### Part 1: Admin Interface Simplification
 
-**Remove** the old `תבניות בקשה` entry and **rename** `תבניות שכר טרחה`:
+#### A. Remove Category Level
+**File: `FeeTemplatesByProject.tsx`**
+- When clicking a project type, go directly to templates view (not categories)
+- Route: `/heyadmin/fee-templates/{advisorType}/{projectType}` → Templates page
+
+#### B. Create New Unified Templates Page
+**New File: `FeeTemplatesByAdvisorProject.tsx`**
+- Replace `FeeTemplateCategories.tsx` and `FeeTemplateSubmissionMethods.tsx` with a single page
+- Shows 3 tabs directly: Fee Items, Services, Milestones
+- Templates are filtered by `advisor_specialty` + `project_type`
+
+#### C. Update Routes
+**File: `App.tsx`**
+- Remove: `/heyadmin/fee-templates/:advisorType/:projectType/:categoryId` route
+- Keep: `/heyadmin/fee-templates/:advisorType/:projectType` → New unified page
+
+### Part 2: Database Queries Update
+
+Update template loading to use `advisor_specialty` + `project_type`:
 
 ```typescript
-// Before (lines 66-67):
-{ title: adminTranslations.navigation.rfpTemplates, url: "/heyadmin/rfp-templates", icon: FileStack },
-{ title: "תבניות שכר טרחה", url: "/heyadmin/fee-templates", icon: Wallet },
+// Fee Items
+supabase.from('default_fee_item_templates')
+  .select('*')
+  .eq('advisor_specialty', advisorType)
+  .or(`project_type.eq.${projectType},project_type.is.null`)
+  .order('display_order');
 
-// After:
-{ title: "תבניות קריאה להצעה", url: "/heyadmin/fee-templates", icon: FileStack },
+// Services
+supabase.from('default_service_scope_templates')
+  .select('*')
+  .eq('advisor_specialty', advisorType)
+  .or(`project_type.eq.${projectType},project_type.is.null`)
+  .order('display_order');
+
+// Milestones
+supabase.from('milestone_templates')
+  .select('*')
+  .or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`)
+  .or(`project_type.eq.${projectType},project_type.is.null`)
+  .order('display_order');
 ```
 
-### 2. Update Translation Constants (`adminTranslations.ts`)
+### Part 3: Entrepreneur Flow Simplification
 
-Update `rfpTemplates` key for consistency (optional, since we're using hardcoded string now):
+#### A. Simplify `ServiceDetailsTab.tsx`
+- Remove category/method dropdowns
+- Load templates directly based on `advisorType` + `projectType`
+- Auto-load on component mount when in checklist mode
 
-```typescript
-navigation: {
-  // ...
-  rfpTemplates: "תבניות קריאה להצעה",  // Updated name
-}
-```
+#### B. Simplify `FeeItemsTable.tsx` 
+- Update `loadTemplates()` to filter by `advisorType` + `projectType`
+- Remove any category/method dependencies
 
-### 3. Update Page Titles
+#### C. Simplify `PaymentTermsTab.tsx`
+- Update `loadTemplate()` to filter by `advisorType` + `projectType`
+- Remove `categoryId` prop dependency
 
-**File: `FeeTemplatesHierarchy.tsx`** (line 34-35):
-```tsx
-// Before:
-<h1>ניהול תבניות שכר טרחה</h1>
+### Part 4: Vendor Type Sync
 
-// After:
-<h1>ניהול תבניות קריאה להצעה</h1>
-```
+#### A. Update Advisory Types Source
+The ADVISOR_EXPERTISE constant in `advisor.ts` should be the canonical source. Ensure:
 
-**File: `FeeTemplatesByProject.tsx`** (line 51-56):
-- Update subtitle for clarity
-
-**File: `FeeTemplateCategories.tsx`** (lines 93-98):
-- Keep current titles (they're already generic)
-
-**File: `FeeTemplateSubmissionMethods.tsx`** (lines 139-141):
-- Keep current titles
-
-### 4. Route Cleanup (Optional)
-
-The old route `/heyadmin/rfp-templates` can be kept for backwards compatibility or removed:
-
-**Option A: Remove entirely** (in `App.tsx`):
-```tsx
-// Remove this line:
-<Route path="/heyadmin/rfp-templates" element={<AdminRoute><RFPTemplatesManagement /></AdminRoute>} />
-```
-
-**Option B: Redirect to new route** (preserve old links):
-```tsx
-<Route path="/heyadmin/rfp-templates" element={<Navigate to="/heyadmin/fee-templates" replace />} />
-```
-
-I recommend **Option A** since this is internal admin navigation.
+1. Admin template pages use `ADVISOR_EXPERTISE` from `advisor.ts`
+2. RFP wizard continues to use JSON from Supabase Storage (this is intentional - allows dynamic updates)
+3. Document that adding new advisor types requires updating both:
+   - `src/constants/advisor.ts` (for admin)
+   - `json/advisors_projects_full.json` in Supabase Storage (for wizard)
 
 ---
 
-## Files to Modify
+## File Changes Summary
 
-| File | Change |
-|------|--------|
-| `src/components/admin/AdminLayout.tsx` | Remove old menu item, rename remaining one |
-| `src/constants/adminTranslations.ts` | Update translation key |
-| `src/pages/admin/FeeTemplatesHierarchy.tsx` | Update page title |
-| `src/App.tsx` | Remove old route (optional) |
+| Action | File | Change |
+|--------|------|--------|
+| Create | `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | New unified templates page with 3 tabs |
+| Modify | `src/pages/admin/FeeTemplatesByProject.tsx` | Click goes to new page, not categories |
+| Delete | `src/pages/admin/FeeTemplateCategories.tsx` | No longer needed |
+| Modify | `src/pages/admin/FeeTemplateSubmissionMethods.tsx` | Rename/repurpose for the new page |
+| Modify | `src/App.tsx` | Update routes |
+| Modify | `src/components/rfp/ServiceDetailsTab.tsx` | Remove category/method selectors |
+| Modify | `src/components/rfp/FeeItemsTable.tsx` | Filter by advisor + project type |
+| Modify | `src/components/rfp/PaymentTermsTab.tsx` | Remove categoryId dependency |
+| Modify | `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add project_type field |
 
 ---
 
-## Visual Changes
+## New Admin Templates Page Structure
 
-### Before (Admin Menu):
 ```
-📋 ניהול
-  ├── יזמים
-  ├── יועצים
-  ├── פרויקטים
-  ├── קריאות להצעות מחיר
-  ├── תבניות בקשה          ← REMOVE
-  ├── תבניות שכר טרחה       ← RENAME
-  ├── משתמשים
-  └── ...
-```
-
-### After (Admin Menu):
-```
-📋 ניהול
-  ├── יזמים
-  ├── יועצים
-  ├── פרויקטים
-  ├── קריאות להצעות מחיר
-  ├── תבניות קריאה להצעה   ← Consolidated & renamed
-  ├── משתמשים
-  └── ...
+┌─────────────────────────────────────────────────────────────┐
+│ ← חזרה לסוגי פרויקטים                                        │
+│                                                             │
+│ אדריכל > מגורים בבנייה רוויה                                │
+│ ═══════════════════════════════════════════════════════════ │
+│                                                             │
+│ ┌────────────┬────────────┬─────────────┐                  │
+│ │ שורות שכ"ט │  שירותים   │  אבני דרך   │ ← Tabs           │
+│ └────────────┴────────────┴─────────────┘                  │
+│                                                             │
+│ ┌───────────────────────────────────────────────────────┐  │
+│ │ + הוסף שורה                                           │  │
+│ ├───────────────────────────────────────────────────────┤  │
+│ │ תיאור          │ יחידה │ סוג חיוב │ אופציונלי │  🗑️  │  │
+│ │ הכנת תכנית     │ פאושלי │ חד פעמי │    ❌     │  🗑️  │  │
+│ │ ליווי מול רשויות │ שעתי  │ שעתי    │    ✓     │  🗑️  │  │
+│ └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Project Type Display Enhancement
+## Entrepreneur Template Loading (After Changes)
 
-As requested, project types with existing templates should appear first. This requires updating `FeeTemplatesByProject.tsx`:
+When entrepreneur opens RFP editor for "אדריכל" on a "מגורים" project:
 
-```typescript
-// Sort project types: those with categories first, then by name
-const sortedProjectTypes = projectTypes.sort((a, b) => {
-  // First by category count (descending)
-  if (b.category_count !== a.category_count) {
-    return b.category_count - a.category_count;
-  }
-  // Then alphabetically by name
-  return a.project_type.localeCompare(b.project_type, 'he');
-});
-```
+1. `ServiceDetailsTab` loads services from `default_service_scope_templates` where `advisor_specialty = 'אדריכל'` AND (`project_type = 'מגורים'` OR `project_type IS NULL`)
 
-Also add a visual indicator:
-```tsx
-<Badge variant={project.category_count > 0 ? "default" : "secondary"}>
-  {project.category_count > 0 ? "פעיל" : "טרם הוגדר"}
-</Badge>
-```
+2. `FeeItemsTable` loads fee items from `default_fee_item_templates` with same filter
+
+3. `PaymentTermsTab` loads milestones from `milestone_templates` with same filter
+
+No category or submission method selection required - it just works.
+
+---
+
+## Migration Considerations
+
+- The `fee_template_categories` and `fee_submission_methods` tables can be kept for now (they're empty anyway)
+- Future cleanup: Remove the tables after confirming the new structure works
+- Existing templates in `default_fee_item_templates` already have `advisor_specialty` - just need to add `project_type` values where applicable
 
 ---
 
 ## Testing Checklist
 
-1. Navigate to `/heyadmin` and verify:
-   - [ ] Only ONE templates menu item appears: `תבניות קריאה להצעה`
-   - [ ] Old `תבניות בקשה` is gone
-   
-2. Click `תבניות קריאה להצעה`:
-   - [ ] Shows advisor type grid
-   - [ ] Title reads `ניהול תבניות קריאה להצעה`
+1. **Admin Flow**:
+   - Navigate to תבניות קריאה להצעה
+   - Select advisor type (e.g., אדריכל)
+   - Select project type (e.g., מגורים בבנייה רוויה)
+   - See 3 tabs: שורות שכ"ט, שירותים, אבני דרך
+   - Add/edit/delete templates in each tab
+   - Verify templates save with correct advisor_specialty + project_type
 
-3. Navigate through hierarchy:
-   - [ ] Advisor → Project Type (sorted by activity)
-   - [ ] Project Type → Categories
-   - [ ] Category → Submission Methods with 3 tabs (שורות סעיפים, שירותים, אבני דרך)
+2. **Entrepreneur Flow**:
+   - Create RFP for project
+   - Open Request Editor for an advisor
+   - Click "טען תבנית" in Fee Items tab → loads templates
+   - Switch to Services tab in checklist mode → auto-loads services
+   - Switch to Payment tab → click "טען תבנית" → loads milestones
+   - Submit RFP and verify data is correct
 
-4. Test old route:
-   - [ ] `/heyadmin/rfp-templates` returns 404 or redirects (based on chosen option)
-
+3. **Vendor Type Sync**:
+   - All advisor types from `advisor.ts` should appear in admin
+   - Active project types should appear first with badges
