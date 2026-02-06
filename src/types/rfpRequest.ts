@@ -18,6 +18,8 @@ export type ChargeType =
 
 export type ServiceDetailsMode = 'free_text' | 'file' | 'checklist';
 
+export type DurationUnit = 'months' | 'hours' | 'visits' | 'units';
+
 export interface RFPFeeItem {
   id?: string;
   item_number: number;
@@ -28,6 +30,9 @@ export interface RFPFeeItem {
   charge_type: ChargeType;
   is_optional: boolean;
   display_order: number;
+  // Recurring payment fields
+  duration?: number;          // Number of periods (months/hours/visits)
+  duration_unit?: DurationUnit;
 }
 
 export interface ServiceScopeItem {

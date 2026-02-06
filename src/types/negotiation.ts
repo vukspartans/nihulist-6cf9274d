@@ -176,6 +176,10 @@ export interface FeeLineItem {
   comment?: string;
   is_entrepreneur_defined?: boolean;
   is_optional?: boolean;
+  // Recurring payment fields
+  charge_type?: string;
+  duration?: number;
+  duration_unit?: string;
 }
 
 // Milestone from proposal JSON

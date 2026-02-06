@@ -11,6 +11,8 @@ export interface FeeLineItem {
   unitPrice?: number;
   total?: number;
   isOptional?: boolean;
+  chargeType?: string;
+  duration?: number;
 }
 
 export interface ProposalPDFData {

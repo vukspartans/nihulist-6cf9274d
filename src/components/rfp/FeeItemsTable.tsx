@@ -6,7 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, FileDown, Loader2 } from 'lucide-react';
 import { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
-import { FEE_UNITS, CHARGE_TYPES } from '@/constants/rfpUnits';
+import { 
+  FEE_UNITS, 
+  CHARGE_TYPES, 
+  isRecurringChargeType, 
+  getDurationUnitLabel,
+  DEFAULT_DURATIONS,
+  CHARGE_TYPE_TO_DURATION_UNIT
+} from '@/constants/rfpUnits';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -41,7 +48,9 @@ export const FeeItemsTable = ({
       unit_price: undefined,
       charge_type: 'one_time',
       is_optional: isOptional,
-      display_order: targetItems.length
+      display_order: targetItems.length,
+      duration: undefined,
+      duration_unit: undefined
     };
     
     setItems([...targetItems, newItem]);
@@ -65,7 +74,32 @@ export const FeeItemsTable = ({
     const setItems = isOptional ? onOptionalItemsChange : onItemsChange;
     
     const newItems = [...targetItems];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const currentItem = newItems[index];
+    
+    // Handle charge_type changes - auto-set duration fields
+    if (field === 'charge_type') {
+      const chargeType = value as ChargeType;
+      if (isRecurringChargeType(chargeType)) {
+        // Set default duration when switching to recurring
+        newItems[index] = { 
+          ...currentItem, 
+          [field]: value,
+          duration: DEFAULT_DURATIONS[chargeType] || 1,
+          duration_unit: (CHARGE_TYPE_TO_DURATION_UNIT[chargeType] as any) || undefined
+        };
+      } else {
+        // Clear duration when switching to one-time
+        newItems[index] = { 
+          ...currentItem, 
+          [field]: value,
+          duration: undefined,
+          duration_unit: undefined
+        };
+      }
+    } else {
+      newItems[index] = { ...currentItem, [field]: value };
+    }
+    
     setItems(newItems);
   };
 
@@ -235,7 +269,7 @@ export const FeeItemsTable = ({
               </div>
             </div>
             
-            {/* Row 4: Charge Type (full width - removed price) */}
+            {/* Row 4: Charge Type */}
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">סוג החיוב</Label>
               <Select
@@ -255,6 +289,26 @@ export const FeeItemsTable = ({
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Row 5: Duration (only for recurring) */}
+            {isRecurringChargeType(item.charge_type) && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">משך (תקופות)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.duration || ''}
+                    onChange={(e) => updateItem(index, 'duration', Number(e.target.value) || 1, isOptional)}
+                    placeholder="12"
+                    className="flex-1 text-center"
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {getDurationUnitLabel(item.charge_type)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ))}
         
@@ -265,7 +319,7 @@ export const FeeItemsTable = ({
         )}
       </div>
 
-      {/* Desktop Table - removed price column */}
+      {/* Desktop Table - added duration column */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -275,6 +329,7 @@ export const FeeItemsTable = ({
               <TableHead className="w-24 text-right">יחידה</TableHead>
               <TableHead className="w-20 text-center">כמות</TableHead>
               <TableHead className="w-28 text-right">סוג החיוב</TableHead>
+              <TableHead className="w-24 text-right">משך</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -338,6 +393,26 @@ export const FeeItemsTable = ({
                     </SelectContent>
                   </Select>
                 </TableCell>
+                {/* Duration column */}
+                <TableCell>
+                  {isRecurringChargeType(item.charge_type) ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.duration || ''}
+                        onChange={(e) => updateItem(index, 'duration', Number(e.target.value) || 1, isOptional)}
+                        className="w-14 text-center"
+                        placeholder="12"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {getDurationUnitLabel(item.charge_type)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Button
                     type="button"
@@ -353,7 +428,7 @@ export const FeeItemsTable = ({
             ))}
             {tableItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {advisorType ? 'לחץ על "טען תבנית" או "הוסף שורה"' : 'לחץ על "הוסף שורה" להוספת פריט שכ"ט'}
                 </TableCell>
               </TableRow>

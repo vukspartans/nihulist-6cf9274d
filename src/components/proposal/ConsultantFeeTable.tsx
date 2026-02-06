@@ -8,6 +8,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Plus, Trash2, AlertCircle, MessageSquare, Shield, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
+import { 
+  getChargeTypeLabel, 
+  getDurationUnitLabel, 
+  isRecurringChargeType,
+  calculateFeeItemTotal 
+} from '@/constants/rfpUnits';
 
 // Unit display labels in Hebrew
 const UNIT_LABELS: Record<FeeUnit, string> = {
@@ -82,17 +88,24 @@ export function ConsultantFeeTable({
     return isNaN(num) ? null : num;
   };
 
+  // Calculate row total including duration for recurring items
+  const calculateRowTotal = (item: RFPFeeItem, price: number | null): number => {
+    return calculateFeeItemTotal(
+      price ?? 0,
+      item.quantity,
+      item.charge_type,
+      item.duration
+    );
+  };
+
   // Calculate totals
   const entrepreneurTotal = entrepreneurItems.reduce((sum, item) => {
     const price = consultantPrices[item.id || ''] ?? 0;
-    const qty = item.quantity || 1;
-    return sum + (price * qty);
+    return sum + calculateRowTotal(item, price);
   }, 0);
 
   const additionalTotal = additionalItems.reduce((sum, item) => {
-    const price = item.consultant_unit_price ?? 0;
-    const qty = item.quantity || 1;
-    return sum + (price * qty);
+    return sum + calculateRowTotal(item, item.consultant_unit_price ?? 0);
   }, 0);
 
   const grandTotal = entrepreneurTotal + additionalTotal;
@@ -103,14 +116,12 @@ export function ConsultantFeeTable({
   
   const mandatoryTotal = mandatoryItems.reduce((sum, item) => {
     const price = consultantPrices[item.id || ''] ?? 0;
-    const qty = item.quantity || 1;
-    return sum + (price * qty);
+    return sum + calculateRowTotal(item, price);
   }, 0);
   
   const optionalTotal = optionalItems.reduce((sum, item) => {
     const price = consultantPrices[item.id || ''] ?? 0;
-    const qty = item.quantity || 1;
-    return sum + (price * qty);
+    return sum + calculateRowTotal(item, price);
   }, 0);
 
   const totalItemsCount = entrepreneurItems.length + additionalItems.length;
@@ -152,7 +163,9 @@ export function ConsultantFeeTable({
               const hasComment = rowComments[itemId]?.trim();
               const needsComment = (price === null || price === undefined) && !hasComment;
               const isExpanded = expandedComments.has(itemId);
-              const rowTotal = (price ?? 0) * (item.quantity || 1);
+              const rowTotal = calculateRowTotal(item, price ?? null);
+              const isRecurring = isRecurringChargeType(item.charge_type);
+              const durationLabel = getDurationUnitLabel(item.charge_type);
 
               return (
                 <>
@@ -222,7 +235,14 @@ export function ConsultantFeeTable({
                       {UNIT_LABELS[item.unit] || item.unit}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.quantity}
+                      <div className="flex flex-col items-center">
+                        <span>{item.quantity}</span>
+                        {isRecurring && item.duration && (
+                          <span className="text-xs text-muted-foreground">
+                            × {item.duration} {durationLabel}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="relative">
@@ -241,7 +261,14 @@ export function ConsultantFeeTable({
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-medium">
-                      {rowTotal > 0 ? `₪${formatPrice(rowTotal)}` : '-'}
+                      <div className="flex flex-col items-center">
+                        <span>{rowTotal > 0 ? `₪${formatPrice(rowTotal)}` : '-'}</span>
+                        {isRecurring && price && item.duration && (
+                          <span className="text-xs text-muted-foreground">
+                            ₪{formatPrice(price)}/{getChargeTypeLabel(item.charge_type)}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
@@ -294,7 +321,9 @@ export function ConsultantFeeTable({
             {additionalItems.map((item, index) => {
               const itemId = `add-${index}`;
               const isExpanded = expandedComments.has(itemId);
-              const rowTotal = (item.consultant_unit_price ?? 0) * (item.quantity || 1);
+              const rowTotal = calculateRowTotal(item, item.consultant_unit_price ?? null);
+              const isRecurring = isRecurringChargeType(item.charge_type);
+              const durationLabel = getDurationUnitLabel(item.charge_type);
 
               return (
                 <>
@@ -368,6 +397,11 @@ export function ConsultantFeeTable({
                         min={1}
                         className="w-16 text-center"
                       />
+                      {isRecurring && item.duration && (
+                        <span className="text-xs text-muted-foreground block mt-1">
+                          × {item.duration} {durationLabel}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="relative">
@@ -383,7 +417,14 @@ export function ConsultantFeeTable({
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-medium text-green-700">
-                      {rowTotal > 0 ? `₪${formatPrice(rowTotal)}` : '-'}
+                      <div className="flex flex-col items-center">
+                        <span>{rowTotal > 0 ? `₪${formatPrice(rowTotal)}` : '-'}</span>
+                        {isRecurring && item.consultant_unit_price && item.duration && (
+                          <span className="text-xs text-muted-foreground">
+                            ₪{formatPrice(item.consultant_unit_price)}/{getChargeTypeLabel(item.charge_type)}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <Button

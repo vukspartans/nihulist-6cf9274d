@@ -13,7 +13,13 @@ import { NegotiationDialog, EntrepreneurNegotiationView } from '@/components/neg
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
-import { getFeeUnitLabel } from '@/constants/rfpUnits';
+import { 
+  getFeeUnitLabel, 
+  getChargeTypeLabel, 
+  getDurationUnitLabel, 
+  isRecurringChargeType,
+  calculateFeeItemTotal 
+} from '@/constants/rfpUnits';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
 import { format, addDays } from 'date-fns';
@@ -38,6 +44,8 @@ interface FeeLineItem {
   total?: number;
   is_optional?: boolean;
   comment?: string;
+  charge_type?: string;
+  duration?: number;
 }
 
 interface MilestoneAdjustment {
@@ -205,10 +213,15 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const consultantNotes = proposal.consultant_request_notes || '';
   const consultantFiles = proposal.consultant_request_files || [];
 
-  // Helper function to calculate item total
+  // Helper function to calculate item total (including duration for recurring items)
   const getItemTotal = (item: FeeLineItem): number => {
     if (item.total !== undefined && item.total !== null && item.total > 0) return item.total;
-    return (item.unit_price || 0) * (item.quantity || 1);
+    return calculateFeeItemTotal(
+      item.unit_price,
+      item.quantity,
+      item.charge_type || 'one_time',
+      item.duration
+    );
   };
 
   // Separate mandatory and optional fee items
