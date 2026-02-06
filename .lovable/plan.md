@@ -1,198 +1,122 @@
 
-# Plan: Template Management Cleanup and RTL Fixes
+# Plan: Fix RTL Alignment in Template Management Page
 
-## Problem Summary
+## Issues Identified
 
-Based on the current codebase analysis, I've identified three main issues:
+### 1. Tab Order
+The current tab order is: שורות שכ"ט → שירותים → אבני דרך (left to right in DOM)
 
-### 1. Outdated Category Count Displays
-The advisor type cards in `FeeTemplatesHierarchy.tsx` (line 69) show "X קטגוריות" which is no longer relevant since we removed the category hierarchy. Similarly, `FeeTemplatesByProject.tsx` (line 95-96) shows "פעיל" / "טרם הוגדר" based on `category_count` which is always 0.
+In RTL, this appears as: אבני דרך ← שירותים ← שורות שכ"ט (reversed visually)
 
-### 2. Template Field Alignment Issues
-Comparing Admin template dialogs with Entrepreneur RFP forms:
+**User Request**: The correct visual order from right to left should be:
+- שירותים (Services) - first/right
+- שכ"ט (Fee Items) - middle  
+- תשלום/אבני דרך (Milestones) - last/left
 
-| Field | Admin Template | Entrepreneur FeeItemsTable | Status |
-|-------|----------------|---------------------------|--------|
-| Description | Yes | Yes | OK |
-| Unit | Yes | Yes | OK |
-| Quantity | Yes | Yes | OK |
-| Charge Type | Yes | Yes | OK |
-| Duration | **Missing** | Yes | **Need to add** |
-| Is Optional | Yes | Yes | OK |
+**Solution**: Reorder the TabsTrigger elements in the DOM so they appear correctly in RTL:
+```
+DOM Order: services → fee-items → milestones
+RTL Visual: שירותים | שכ"ט | אבני דרך
+```
 
-The admin fee item template dialog doesn't include `duration` field, but the entrepreneur form now supports it.
+### 2. Table RTL
+The tables inherit `dir="rtl"` from the parent div, but need explicit handling for:
+- Action buttons should be on the right (first column in RTL)
+- Content should flow right-to-left
 
-### 3. RTL Alignment Issues
-Several components need RTL fixes:
-- Dialog footers have button order issues (Cancel should be on the right in RTL)
-- Some Select components missing `dir="rtl"` on SelectContent
-- Table headers using `text-right` instead of `text-start` (logical property)
+**Solution**: Move the actions column to be first in the DOM (appears on right in RTL), and ensure tables have proper RTL inheritance.
 
 ---
 
-## Solution
+## Implementation
 
-### Part 1: Update Advisor Type Cards (FeeTemplatesHierarchy.tsx)
+### Part 1: Reorder Tabs (lines 156-179)
 
-**Current (lines 68-72):**
 ```tsx
-<div className="flex items-center gap-4 text-sm text-muted-foreground">
-  <span>{advisor.category_count} קטגוריות</span>
-  <span>•</span>
-  <span>{advisor.template_count} תבניות</span>
-</div>
+<Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+  <TabsList className="grid w-full grid-cols-3" dir="rtl">
+    {/* Order: services first (right), fee-items (middle), milestones (left) */}
+    <TabsTrigger value="services" className="gap-2">
+      <Briefcase className="h-4 w-4" />
+      שירותים
+      {services && services.length > 0 && (
+        <Badge variant="secondary" className="mr-1">{services.length}</Badge>
+      )}
+    </TabsTrigger>
+    <TabsTrigger value="fee-items" className="gap-2">
+      <FileText className="h-4 w-4" />
+      שורות שכ"ט
+      {feeItems && feeItems.length > 0 && (
+        <Badge variant="secondary" className="mr-1">{feeItems.length}</Badge>
+      )}
+    </TabsTrigger>
+    <TabsTrigger value="milestones" className="gap-2">
+      <Milestone className="h-4 w-4" />
+      אבני דרך / תשלום
+      {milestones && milestones.length > 0 && (
+        <Badge variant="secondary" className="mr-1">{milestones.length}</Badge>
+      )}
+    </TabsTrigger>
+  </TabsList>
+  ...
+</Tabs>
 ```
 
-**Updated:**
+### Part 2: Fix Table Column Order
+
+For each table, move the actions column to be **first** (so it appears on the right in RTL):
+
+**Fee Items Table:**
 ```tsx
-<div className="text-sm text-muted-foreground">
-  {advisor.template_count > 0 ? (
-    <span>{advisor.template_count} תבניות</span>
-  ) : (
-    <span className="text-muted-foreground/60">טרם הוגדרו תבניות</span>
-  )}
-</div>
+<TableRow>
+  <TableHead className="w-24"></TableHead>  {/* Actions - now first (right in RTL) */}
+  <TableHead>תיאור</TableHead>
+  <TableHead>יחידה</TableHead>
+  <TableHead>כמות ברירת מחדל</TableHead>
+  <TableHead>סוג חיוב</TableHead>
+  <TableHead>סטטוס</TableHead>
+</TableRow>
 ```
 
-Also update `useAdvisorTypeSummary` hook to count templates directly without categories.
-
-### Part 2: Update Project Type Cards (FeeTemplatesByProject.tsx)
-
-**Current approach:** Based on `category_count` from `fee_template_categories` table (always 0)
-
-**New approach:** Count actual templates from all 3 tables:
-- `default_fee_item_templates` where `advisor_specialty` + `project_type`
-- `default_service_scope_templates` where `advisor_specialty` + `project_type`
-- `milestone_templates` where `advisor_specialty` + `project_type`
-
-**Display logic:**
+And corresponding body cells:
 ```tsx
-<Badge variant={hasTemplates ? "default" : "secondary"}>
-  {hasTemplates ? `${totalTemplates} תבניות` : "טרם הוגדר"}
-</Badge>
-```
-
-### Part 3: Add Duration Field to Admin Fee Item Dialog
-
-Update `CreateFeeItemTemplateDialog.tsx` and `EditFeeItemTemplateDialog.tsx`:
-
-Add state:
-```tsx
-const [duration, setDuration] = useState<number | undefined>(undefined);
-```
-
-Add conditional field (when charge_type is recurring):
-```tsx
-{isRecurringChargeType(chargeType) && (
-  <div className="space-y-2">
-    <Label htmlFor="duration">משך ברירת מחדל</Label>
-    <div className="flex items-center gap-2">
-      <Input
-        id="duration"
-        type="number"
-        min={1}
-        value={duration || ''}
-        onChange={(e) => setDuration(parseInt(e.target.value) || undefined)}
-        className="text-right"
-        placeholder="12"
-      />
-      <span className="text-sm text-muted-foreground">
-        {getDurationUnitLabel(chargeType)}
-      </span>
+<TableRow key={item.id}>
+  <TableCell>
+    <div className="flex items-center gap-1">
+      <Button variant="ghost" size="icon" onClick={() => setEditingFeeItem(item)}>
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteFeeItemId(item.id)}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </div>
-  </div>
-)}
+  </TableCell>
+  <TableCell className="font-medium">{item.description}</TableCell>
+  <TableCell>{item.unit}</TableCell>
+  <TableCell>{item.default_quantity || "-"}</TableCell>
+  <TableCell>{item.charge_type || "-"}</TableCell>
+  <TableCell>...</TableCell>
+</TableRow>
 ```
 
-### Part 4: RTL Fixes
+Apply same pattern to Services and Milestones tables.
 
-#### A. Dialog Footer Button Order
-All dialog footers should follow RTL standard (per memory):
-- Primary action on far left
-- Cancel in center
-- Utility actions on far right
+### Part 3: Change Default Tab
 
-**Fix pattern:**
+Update initial state to start on "services" tab:
 ```tsx
-<DialogFooter className="flex-row-reverse gap-2">
-  <Button type="button" variant="outline" onClick={onClose}>
-    ביטול
-  </Button>
-  <Button type="submit">
-    {isPending ? "שומר..." : "שמור"}
-  </Button>
-</DialogFooter>
+const [activeTab, setActiveTab] = useState<string>("services");
 ```
 
-Files to fix:
-- `CreateFeeItemTemplateDialog.tsx`
-- `CreateServiceScopeTemplateDialog.tsx`
-- `CreateMilestoneTemplateDialog.tsx`
-- `EditFeeItemTemplateDialog.tsx`
-- `EditServiceScopeTemplateDialog.tsx`
-- `EditMilestoneTemplateDialog.tsx`
+### Part 4: Rename "אבני דרך" to "תשלום"
 
-#### B. Table Headers
-Change `text-right` to `text-start` for automatic RTL/LTR compatibility:
+Per user request, rename the milestones tab to reflect payment terms:
 ```tsx
-<TableHead className="text-start">תיאור</TableHead>
-```
-
-Already using correct approach in `FeeTemplatesByAdvisorProject.tsx`.
-
-#### C. SelectContent RTL
-Ensure all SelectContent have proper RTL:
-```tsx
-<SelectContent dir="rtl">
-```
-
----
-
-## Updated Hook: useProjectTypeSummary
-
-Replace category-based counting with template-based counting:
-
-```typescript
-export function useProjectTypeSummary(advisorSpecialty: string) {
-  return useQuery({
-    queryKey: [HIERARCHY_KEY, "project-summary", advisorSpecialty],
-    queryFn: async () => {
-      // Count fee item templates per project type
-      const { data: feeItems } = await supabase
-        .from("default_fee_item_templates")
-        .select("project_type")
-        .eq("advisor_specialty", advisorSpecialty);
-
-      // Count service templates per project type  
-      const { data: services } = await supabase
-        .from("default_service_scope_templates")
-        .select("project_type")
-        .eq("advisor_specialty", advisorSpecialty);
-
-      // Count milestone templates per project type
-      const { data: milestones } = await supabase
-        .from("milestone_templates")
-        .select("project_type")
-        .eq("advisor_specialty", advisorSpecialty);
-
-      // Aggregate counts by project type
-      const projectMap = new Map<string, number>();
-      
-      [...(feeItems || []), ...(services || []), ...(milestones || [])].forEach((t) => {
-        const pt = t.project_type || null;
-        if (pt) {
-          projectMap.set(pt, (projectMap.get(pt) || 0) + 1);
-        }
-      });
-
-      return Array.from(projectMap.entries()).map(([project_type, template_count]) => ({
-        project_type,
-        template_count,
-      }));
-    },
-    enabled: !!advisorSpecialty,
-  });
-}
+<TabsTrigger value="milestones" className="gap-2">
+  <Milestone className="h-4 w-4" />
+  תשלום
+  ...
+</TabsTrigger>
 ```
 
 ---
@@ -201,40 +125,45 @@ export function useProjectTypeSummary(advisorSpecialty: string) {
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/FeeTemplatesHierarchy.tsx` | Replace category count with template count display |
-| `src/pages/admin/FeeTemplatesByProject.tsx` | Use template count instead of category count |
-| `src/hooks/useFeeTemplateHierarchy.ts` | Update `useAdvisorTypeSummary` and `useProjectTypeSummary` to count templates |
-| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add duration field, fix RTL footer |
-| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Add duration field, fix RTL footer |
-| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Fix RTL footer button order |
-| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Fix RTL footer button order |
-| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Fix RTL footer button order |
-| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Fix RTL footer button order |
+| `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | Reorder tabs, fix table columns, rename milestone tab |
+
+---
+
+## Visual Result
+
+### Before:
+```
+┌──────────────┬──────────────┬──────────────┐
+│  שורות שכ"ט  │   שירותים    │   אבני דרך   │  ← Wrong RTL order
+└──────────────┴──────────────┴──────────────┘
+
+│ תיאור │ יחידה │ כמות │ סוג חיוב │ סטטוס │ 🗑️ │  ← Actions on wrong side
+```
+
+### After:
+```
+┌──────────────┬──────────────┬──────────────┐
+│   שירותים    │  שורות שכ"ט  │    תשלום     │  ← Correct RTL order
+└──────────────┴──────────────┴──────────────┘
+
+│ 🗑️ │ תיאור │ יחידה │ כמות │ סוג חיוב │ סטטוס │  ← Actions on right
+```
 
 ---
 
 ## Testing Checklist
 
-1. **Advisor Type Grid (FeeTemplatesHierarchy)**:
-   - [ ] Shows "X תבניות" when templates exist
-   - [ ] Shows "טרם הוגדרו תבניות" when empty
-   - [ ] No reference to "קטגוריות"
+1. **Tab Bar**:
+   - [ ] שירותים appears on the far right
+   - [ ] שורות שכ"ט appears in the middle
+   - [ ] תשלום appears on the far left
+   - [ ] Default selected tab is שירותים
 
-2. **Project Type Grid (FeeTemplatesByProject)**:
-   - [ ] Active projects (with templates) sorted first
-   - [ ] Shows badge with "X תבניות" or "טרם הוגדר"
-   - [ ] Click navigates to template management page
+2. **Tables**:
+   - [ ] Action buttons (edit/delete) appear on the right side
+   - [ ] Content columns flow right-to-left
+   - [ ] All text properly right-aligned
 
-3. **Create Fee Item Dialog**:
-   - [ ] Duration field appears when charge_type is recurring
-   - [ ] Duration field hidden for one_time
-   - [ ] Buttons in correct RTL order (Cancel right, Submit left)
-
-4. **Edit Fee Item Dialog**:
-   - [ ] Duration field pre-populated if exists
-   - [ ] Duration field conditional on charge_type
-
-5. **All RTL Elements**:
-   - [ ] Dialog footers have correct button order
-   - [ ] Select dropdowns properly RTL aligned
-   - [ ] Table headers use logical properties
+3. **RTL Inheritance**:
+   - [ ] Card headers follow RTL (title right, button left)
+   - [ ] Empty states are centered
