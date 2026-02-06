@@ -1,302 +1,340 @@
 
 
-# Refined UX Specification: Milestone Change Window
+# Test Data Seeding for Milestone & Payment Terms Flow
 
-## Executive Summary
+## Overview
 
-This specification defines the exact copy and behavior for communicating milestone editability rules to **consultants** (יועץ) on the proposal submission and negotiation response screens. All terminology has been aligned with actual system actions.
-
----
-
-## 1. Terminology Alignment Matrix
-
-| Concept | CORRECT Term (Hebrew) | CORRECT Term (English) | INCORRECT Terms to Avoid |
-|---------|----------------------|------------------------|--------------------------|
-| Stop milestone edits | נעולים / נעול | Locked | "Frozen", "Disabled" |
-| Consultant withdraws their proposal | ביטול ההצעה / ביטול | Cancel (proposal) | "Decline", "Reject", "Withdraw" |
-| Entrepreneur declines proposal | דחייה | Reject | Do not use from consultant perspective |
-| Create new proposal | הגש הצעה חדשה | Submit new proposal | "Restart", "Redo" |
-| Send proposal | הגשה | Submit | "Send", "Deliver" |
-| Proposal awaiting response | בהמתנה לאישור | Awaiting approval | Avoid "pending" |
+Create comprehensive SQL seed data for testing the milestone change window and payment terms UX flow. The test data will cover all states in the proposal lifecycle: pre-submission (editable), submitted (locked), and negotiation (limited changes).
 
 ---
 
-## 2. User Perspective: Consultant (יועץ)
+## 1. Test Data Requirements
 
-All copy on proposal submission and negotiation screens is written from the **consultant's perspective**. The consultant:
-- Submits their proposal
-- Can edit milestones **until** they submit
-- Cannot edit milestones **after** submission
-- Must cancel their own proposal to make structural changes
+Based on the UX specification and image reference, we need test data for:
 
----
-
-## 3. Refined Copy by Location
-
-### 3.1 Primary Explanation (Pre-Submission)
-
-**Location**: `ConsultantPaymentTerms.tsx` — shown above milestone table
-
-**Hebrew (RTL)**:
-```
-כותרת: חלון שינויים
-גוף: ניתן לערוך אבני דרך עד להגשת ההצעה.
-      לאחר ההגשה, אבני הדרך נעולות.
-      לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.
-```
-
-**English (for reference)**:
-```
-Title: Change Window
-Body: Milestones can be edited until the proposal is submitted.
-      After submission, milestones are locked.
-      To change milestones after submission, the proposal must be canceled and a new proposal submitted.
-```
-
-**Design Specifications**:
-- Container: `Alert` with `border-amber-200 bg-amber-50/50`
-- Icon: `AlertCircle` (no emoji)
-- Typography: Title as `font-medium`, body as `text-sm`
-- No decorative symbols or emojis
+| Scenario | RFP Invite Status | Proposal Status | Milestones | Payment Terms |
+|----------|-------------------|-----------------|------------|---------------|
+| **Pre-Submission** | `opened` | None | Editable by consultant | שוטף +30, 5 milestones |
+| **Submitted** | `submitted` | `submitted` | Locked (read-only) | שוטף +30, consultant adjustments |
+| **Negotiation Active** | `submitted` | `negotiation_requested` | Percentages editable | Original terms visible |
+| **Accepted** | `submitted` | `accepted` | Fully locked | Final approved terms |
 
 ---
 
-### 3.2 Helper Text (Optional Tip)
+## 2. Data Structure
 
-**Location**: Below milestone table, before submit button
+### 2.1 Payment Terms (rfp_invites.payment_terms)
 
-**Hebrew**:
-```
-ודא שאחוזי התשלום נכונים לפני ההגשה.
-```
-
-**English**:
-```
-Verify payment percentages before submission.
-```
-
-**Design**: `text-xs text-muted-foreground`, no icon
-
----
-
-### 3.3 Tooltip (On Milestone Section Header)
-
-**Location**: Info icon next to "אבני דרך ותנאי תשלום" heading
-
-**Hebrew**:
-```
-אבני דרך ניתנות לעריכה עד להגשת ההצעה.
+```json
+{
+  "payment_term_type": "net_30",
+  "index_type": "cpi",
+  "index_base_month": "2026-02",
+  "milestone_payments": [
+    { "description": "מקדמה עם החתימה על ההסכם", "percentage": 20, "trigger": "עם חתימה" },
+    { "description": "עם אישור תכנית ההגשה", "percentage": 25, "trigger": "" },
+    { "description": "לאחר הגשה לוועדה", "percentage": 25, "trigger": "" },
+    { "description": "עם קבלת היתר", "percentage": 20, "trigger": "" },
+    { "description": "עם סיום הפיקוח העליון", "percentage": 10, "trigger": "" }
+  ],
+  "notes": "התשלום כולל מע\"מ"
+}
 ```
 
-**English**:
-```
-Milestones are editable until the proposal is submitted.
-```
+### 2.2 Consultant Milestone Adjustments (proposals.milestone_adjustments)
 
-**Constraint**: Single sentence only; do not repeat full explanation
-
----
-
-### 3.4 Read-Only State Label (Post-Submission)
-
-**Location**: Inline badge or text when milestone inputs are disabled
-
-**Hebrew**:
-```
-נעול לאחר הגשה
-```
-
-**English**:
-```
-Locked after submission
-```
-
-**Design**: 
-- Badge: `bg-muted text-muted-foreground border`
-- Icon: `Lock` (h-3 w-3)
-- Displayed inline next to disabled inputs OR as a banner above table
-
----
-
-### 3.5 Negotiation State Clarification
-
-**Location**: `NegotiationResponseView.tsx` — Milestones tab
-
-**Hebrew**:
-```
-כותרת: שינויים באבני דרך
-גוף: במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.
-      שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה והגשת הצעה חדשה.
-```
-
-**English**:
-```
-Title: Milestone Changes
-Body: During negotiation, prices and milestone percentages can be updated.
-      Structural changes (adding or removing milestones) require canceling the proposal and submitting a new one.
-```
-
-**Design**: `Alert` with `border-blue-200 bg-blue-50/50`
-
----
-
-## 4. State-Based Display Logic
-
-| Proposal Status | Milestones Editable? | Display |
-|-----------------|---------------------|---------|
-| `draft` | Yes | Primary explanation (change window) |
-| `submitted` | No | Locked label + disabled inputs |
-| `negotiation_requested` | Percentages only | Negotiation clarification alert |
-| `resubmitted` | No | Locked label |
-| `accepted` | No | Locked label |
-| `canceled` | N/A | Proposal no longer visible |
-
----
-
-## 5. Validation & Error States
-
-### 5.1 Milestone Total Validation
-
-**Error (when sum ≠ 100%)**:
-```
-Hebrew: סה"כ אחוזי אבני דרך חייב להיות 100%. כרגע: {total}%.
-English: Total milestone percentages must equal 100%. Current: {total}%.
-```
-
-### 5.2 Attempt to Edit Locked Milestones
-
-If a user somehow triggers an edit action on a locked field (edge case):
-```
-Hebrew: לא ניתן לערוך אבני דרך לאחר הגשת ההצעה.
-English: Milestones cannot be edited after proposal submission.
+```json
+[
+  {
+    "id": "ent-milestone-0",
+    "description": "מקדמה עם החתימה על ההסכם",
+    "entrepreneur_percentage": 20,
+    "consultant_percentage": 15,
+    "is_entrepreneur_defined": true
+  },
+  {
+    "id": "ent-milestone-1",
+    "description": "עם אישור תכנית ההגשה",
+    "entrepreneur_percentage": 25,
+    "consultant_percentage": 25,
+    "is_entrepreneur_defined": true
+  },
+  {
+    "id": "new-consultant-1",
+    "description": "תכניות לביצוע",
+    "entrepreneur_percentage": null,
+    "consultant_percentage": 20,
+    "is_entrepreneur_defined": false
+  },
+  {
+    "id": "ent-milestone-2",
+    "description": "לאחר הגשה לוועדה",
+    "entrepreneur_percentage": 25,
+    "consultant_percentage": 20,
+    "is_entrepreneur_defined": true
+  },
+  {
+    "id": "ent-milestone-3",
+    "description": "עם קבלת היתר",
+    "entrepreneur_percentage": 20,
+    "consultant_percentage": 15,
+    "is_entrepreneur_defined": true
+  },
+  {
+    "id": "ent-milestone-4",
+    "description": "עם סיום הפיקוח העליון",
+    "entrepreneur_percentage": 10,
+    "consultant_percentage": 5,
+    "is_entrepreneur_defined": true
+  }
+]
 ```
 
 ---
 
-## 6. Accessibility Requirements
+## 3. Migration Script
 
-| Requirement | Implementation |
-|-------------|----------------|
-| RTL Support | `dir="rtl"` on container, `text-right` alignment |
-| Keyboard Navigation | Tooltip accessible via Tab, Enter to activate |
-| Screen Readers | Alert has `role="status"`, disabled fields have `aria-disabled="true"` |
-| Color Independence | Lock icon + text label, not just color change |
+Create a new SQL migration file to seed comprehensive test data:
+
+### File: `supabase/migrations/YYYYMMDDHHMMSS_seed_milestone_test_data.sql`
+
+```sql
+-- Test Data for Milestone & Payment Terms Flow Testing
+-- Uses existing TEST_ONLY__ project and advisors
+
+-- 1. Create a new RFP for milestone testing
+INSERT INTO rfps (id, project_id, subject, body_html, sent_at)
+VALUES (
+  'aaaaaaaa-test-mile-0001-000000000001',
+  'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004', -- TEST_ONLY__Sandbox Project 001
+  'בקשה להצעת מחיר - בדיקת אבני דרך',
+  '<p>בקשה לבדיקת תהליך אבני דרך ותנאי תשלום</p>',
+  now()
+);
+
+-- 2. Create RFP invite with full milestone data (Pre-submission scenario)
+INSERT INTO rfp_invites (
+  id, rfp_id, email, advisor_id, advisor_type, status,
+  submit_token, deadline_at, payment_terms,
+  request_title, request_content
+)
+VALUES (
+  'aaaaaaaa-test-mile-0002-000000000001',
+  'aaaaaaaa-test-mile-0001-000000000001',
+  'vendor.test+billding@example.com',
+  'c7b93dfd-58f6-43d8-aabf-5cce18f3119d', -- TEST_ONLY__Vendor Consulting Ltd
+  'יועץ בדיקות (TEST)',
+  'opened',
+  encode(gen_random_bytes(32), 'hex'),
+  now() + interval '7 days',
+  '{
+    "payment_term_type": "net_30",
+    "index_type": "cpi",
+    "index_base_month": "2026-02",
+    "milestone_payments": [
+      { "description": "מקדמה עם החתימה על ההסכם", "percentage": 20, "trigger": "עם חתימה" },
+      { "description": "עם אישור תכנית ההגשה", "percentage": 25, "trigger": "" },
+      { "description": "לאחר הגשה לוועדה", "percentage": 25, "trigger": "" },
+      { "description": "עם קבלת היתר", "percentage": 20, "trigger": "" },
+      { "description": "עם סיום הפיקוח העליון", "percentage": 10, "trigger": "" }
+    ],
+    "notes": "התשלום כולל מע\"מ"
+  }'::jsonb,
+  'בדיקת אבני דרך - מקרה טרם הגשה',
+  'הזמנה להגשת הצעת מחיר עם 5 אבני דרך מוגדרות מראש'
+);
+
+-- 3. Create second invite with proposal (Submitted scenario - locked)
+INSERT INTO rfp_invites (
+  id, rfp_id, email, advisor_id, advisor_type, status,
+  submit_token, deadline_at, payment_terms,
+  request_title, request_content
+)
+VALUES (
+  'aaaaaaaa-test-mile-0002-000000000002',
+  'aaaaaaaa-test-mile-0001-000000000001',
+  'vendor.test1+billding@example.com',
+  'affcee25-5666-438a-a4bc-136d106f59ba', -- TEST_ONLY__Vendor Consulting 2 Ltd
+  'יועץ בדיקות (TEST)',
+  'submitted',
+  encode(gen_random_bytes(32), 'hex'),
+  now() + interval '7 days',
+  '{
+    "payment_term_type": "net_30",
+    "index_type": "cpi",
+    "index_base_month": "2026-02",
+    "milestone_payments": [
+      { "description": "מקדמה עם החתימה על ההסכם", "percentage": 20, "trigger": "עם חתימה" },
+      { "description": "עם אישור תכנית ההגשה", "percentage": 25, "trigger": "" },
+      { "description": "לאחר הגשה לוועדה", "percentage": 25, "trigger": "" },
+      { "description": "עם קבלת היתר", "percentage": 20, "trigger": "" },
+      { "description": "עם סיום הפיקוח העליון", "percentage": 10, "trigger": "" }
+    ],
+    "notes": "התשלום כולל מע\"מ"
+  }'::jsonb,
+  'בדיקת אבני דרך - מקרה לאחר הגשה',
+  'הזמנה להגשת הצעת מחיר - הצעה הוגשה ונעולה'
+);
+
+-- 4. Create proposal with milestone adjustments (Submitted - Locked scenario)
+INSERT INTO proposals (
+  id, project_id, advisor_id, rfp_invite_id,
+  supplier_name, price, timeline_days,
+  status, submitted_at,
+  milestone_adjustments,
+  conditions_json,
+  scope_text
+)
+VALUES (
+  'aaaaaaaa-test-mile-0003-000000000001',
+  'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004',
+  'affcee25-5666-438a-a4bc-136d106f59ba', -- TEST_ONLY__Vendor Consulting 2 Ltd
+  'aaaaaaaa-test-mile-0002-000000000002',
+  'TEST_ONLY__Vendor Consulting 2 Ltd',
+  85000,
+  120,
+  'submitted',
+  now() - interval '2 hours',
+  '[
+    {
+      "id": "ent-milestone-0",
+      "description": "מקדמה עם החתימה על ההסכם",
+      "entrepreneur_percentage": 20,
+      "consultant_percentage": 15,
+      "is_entrepreneur_defined": true
+    },
+    {
+      "id": "ent-milestone-1",
+      "description": "עם אישור תכנית ההגשה",
+      "entrepreneur_percentage": 25,
+      "consultant_percentage": 25,
+      "is_entrepreneur_defined": true
+    },
+    {
+      "id": "new-consultant-1",
+      "description": "תכניות לביצוע",
+      "entrepreneur_percentage": null,
+      "consultant_percentage": 20,
+      "is_entrepreneur_defined": false
+    },
+    {
+      "id": "ent-milestone-2",
+      "description": "לאחר הגשה לוועדה",
+      "entrepreneur_percentage": 25,
+      "consultant_percentage": 20,
+      "is_entrepreneur_defined": true
+    },
+    {
+      "id": "ent-milestone-3",
+      "description": "עם קבלת היתר",
+      "entrepreneur_percentage": 20,
+      "consultant_percentage": 15,
+      "is_entrepreneur_defined": true
+    },
+    {
+      "id": "ent-milestone-4",
+      "description": "עם סיום הפיקוח העליון",
+      "entrepreneur_percentage": 10,
+      "consultant_percentage": 5,
+      "is_entrepreneur_defined": true
+    }
+  ]'::jsonb,
+  '{
+    "payment_terms": "שוטף + 30",
+    "payment_term_type": "net_30",
+    "index_linked": true,
+    "index_type": "cpi"
+  }'::jsonb,
+  'שירותי ייעוץ מלאים הכוללים: תכנון ראשוני, הכנת מסמכים להגשה, ליווי מול הרשויות, פיקוח עליון'
+);
+
+-- 5. Create negotiation session for testing negotiation state
+INSERT INTO negotiation_sessions (
+  id, project_id, proposal_id, consultant_advisor_id,
+  initiator_id, status, created_at,
+  initiator_message, milestone_adjustments,
+  target_reduction_percent
+)
+VALUES (
+  'aaaaaaaa-test-mile-0004-000000000001',
+  'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004',
+  'aaaaaaaa-test-mile-0003-000000000001',
+  'affcee25-5666-438a-a4bc-136d106f59ba',
+  'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0001', -- TEST_ONLY__ Entrepreneur
+  'pending',
+  now() - interval '1 hour',
+  'נבקש לבחון אפשרות להפחתת מקדמה ל-10% ופריסה שונה של האחוזים',
+  '[
+    {
+      "id": "ent-milestone-0",
+      "description": "מקדמה עם החתימה על ההסכם",
+      "original_percentage": 15,
+      "requested_percentage": 10,
+      "status": "pending"
+    }
+  ]'::jsonb,
+  5
+);
+```
 
 ---
 
-## 7. Files to Modify
+## 4. Test Scenarios Covered
 
-| File | Changes |
-|------|---------|
-| `src/components/proposal/ConsultantPaymentTerms.tsx` | Add primary explanation Alert, add helper text, add read-only badge |
-| `src/pages/SubmitProposal.tsx` | Add tooltip to milestone section header |
-| `src/components/negotiation/NegotiationResponseView.tsx` | Add negotiation state clarification alert in Milestones tab |
+| ID | Scenario | How to Test |
+|----|----------|-------------|
+| **1** | Pre-submission milestones editable | Login as `vendor.test+billding@example.com`, open invite `aaaaaaaa-test-mile-0002-000000000001` |
+| **2** | Post-submission locked | Login as `vendor.test1+billding@example.com`, view proposal `aaaaaaaa-test-mile-0003-000000000001` |
+| **3** | Negotiation active | Same as #2, negotiation session exists |
+| **4** | Entrepreneur view | Login as project owner, view proposals with milestone adjustments |
 
 ---
 
-## 8. Final Copy Summary
+## 5. Cleanup Script (Optional)
 
-### Proposal Submission Screen (Editable State)
-
-**Alert Box:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ ⚠ חלון שינויים                                                  │
-│                                                                 │
-│ ניתן לערוך אבני דרך עד להגשת ההצעה.                             │
-│ לאחר ההגשה, אבני הדרך נעולות.                                   │
-│ לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Proposal Submission Screen (Locked State)
-
-**Inline Badge:**
-```
-┌───────────────────────┐
-│ 🔒 נעול לאחר הגשה      │
-└───────────────────────┘
-```
-
-### Negotiation Response Screen (Milestones Tab)
-
-**Alert Box:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ ℹ שינויים באבני דרך                                              │
-│                                                                 │
-│ במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.              │
-│ שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה         │
-│ והגשת הצעה חדשה.                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Tooltip
-
-```
-אבני דרך ניתנות לעריכה עד להגשת ההצעה.
+```sql
+-- To remove test data after testing
+DELETE FROM negotiation_sessions WHERE id = 'aaaaaaaa-test-mile-0004-000000000001';
+DELETE FROM proposals WHERE id = 'aaaaaaaa-test-mile-0003-000000000001';
+DELETE FROM rfp_invites WHERE rfp_id = 'aaaaaaaa-test-mile-0001-000000000001';
+DELETE FROM rfps WHERE id = 'aaaaaaaa-test-mile-0001-000000000001';
 ```
 
 ---
 
-## 9. Implementation Code Snippets
+## 6. Expected Outcomes
 
-### Primary Alert (ConsultantPaymentTerms.tsx)
+After running the migration:
 
-```tsx
-<Alert className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
-  <AlertCircle className="h-4 w-4 text-amber-600" />
-  <AlertDescription className="text-amber-800 dark:text-amber-200">
-    <p className="font-medium mb-1">חלון שינויים</p>
-    <p className="text-sm">
-      ניתן לערוך אבני דרך עד להגשת ההצעה.
-    </p>
-    <p className="text-sm mt-1">
-      לאחר ההגשה, אבני הדרך נעולות.
-      לשינוי אבני דרך לאחר ההגשה, יש לבטל את ההצעה ולהגיש הצעה חדשה.
-    </p>
-  </AlertDescription>
-</Alert>
-```
+1. **Vendor 1** (`vendor.test+billding@example.com`) will see:
+   - RFP invite with 5 pre-defined milestones from entrepreneur
+   - Editable milestone table with "Change Window" alert
+   - Can add/modify milestones before submission
 
-### Locked State Badge
+2. **Vendor 2** (`vendor.test1+billding@example.com`) will see:
+   - Submitted proposal with milestone adjustments visible
+   - "Locked after submission" badge
+   - Active negotiation request from entrepreneur
 
-```tsx
-<Badge variant="secondary" className="gap-1 text-muted-foreground">
-  <Lock className="h-3 w-3" />
-  נעול לאחר הגשה
-</Badge>
-```
-
-### Negotiation Clarification Alert
-
-```tsx
-<Alert className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
-  <Info className="h-4 w-4 text-blue-600" />
-  <AlertDescription className="text-blue-800 dark:text-blue-200">
-    <p className="font-medium mb-1">שינויים באבני דרך</p>
-    <p className="text-sm">
-      במסגרת המשא ומתן ניתן לעדכן מחירים ואחוזי אבני דרך.
-    </p>
-    <p className="text-sm mt-1">
-      שינוי מבני (הוספה או הסרה של אבני דרך) מחייב ביטול ההצעה והגשת הצעה חדשה.
-    </p>
-  </AlertDescription>
-</Alert>
-```
+3. **Entrepreneur** (project owner) will see:
+   - Proposal comparison with consultant's milestone adjustments
+   - Ability to request negotiation on percentages
+   - Clear indication of original vs consultant-modified milestones
 
 ---
 
-## 10. Review Checklist
+## 7. Implementation Files
 
-| Criterion | Status |
-|-----------|--------|
-| User perspective consistency (consultant) | ✓ |
-| Terminology alignment (cancel vs reject) | ✓ |
-| No emojis in legal explanations | ✓ |
-| RTL support | ✓ |
-| Accessibility (keyboard, screen reader) | ✓ |
-| Single-sentence tooltips | ✓ |
-| Disabled state explanation | ✓ |
-| Negotiation does not contradict lock rule | ✓ |
+| # | File | Action |
+|---|------|--------|
+| 1 | `supabase/migrations/[timestamp]_seed_milestone_test_data.sql` | **Create** - SQL seed script |
+
+---
+
+## 8. Test Credentials (from memory)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Test Vendor 1 | `vendor.test+billding@example.com` | `Billding2026!` |
+| Test Vendor 2 | `vendor.test1+billding@example.com` | `TestPassword123!` |
 
