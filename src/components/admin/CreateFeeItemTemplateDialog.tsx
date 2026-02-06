@@ -95,9 +95,9 @@ export function CreateFeeItemTemplateDialog({
               <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue placeholder="בחר סוג יועץ" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 {ADVISOR_EXPERTISE.map((expertise) => (
-                  <SelectItem key={expertise} value={expertise}>
+                  <SelectItem key={expertise} value={expertise} className="text-right">
                     {expertise}
                   </SelectItem>
                 ))}
@@ -124,13 +124,13 @@ export function CreateFeeItemTemplateDialog({
                 <SelectTrigger dir="rtl" className="text-right">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {FEE_UNITS.map((u) => (
-                    <SelectItem key={u.value} value={u.value}>
-                      {u.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <SelectContent dir="rtl">
+                {FEE_UNITS.map((u) => (
+                  <SelectItem key={u.value} value={u.value} className="text-right">
+                    {u.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
               </Select>
             </div>
 
@@ -154,9 +154,9 @@ export function CreateFeeItemTemplateDialog({
               <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 {CHARGE_TYPES.map((ct) => (
-                  <SelectItem key={ct.value} value={ct.value}>
+                  <SelectItem key={ct.value} value={ct.value} className="text-right">
                     {ct.label}
                   </SelectItem>
                 ))}
