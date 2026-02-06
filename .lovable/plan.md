@@ -1,68 +1,64 @@
 
-## Fix: Incorrect Status Check in `submit_negotiation_response`
+# Fix: Resolve Function Overload Ambiguity
 
-### Problem
-The negotiation response fails with:
-```
-invalid input value for enum negotiation_status: "pending"
-```
+## Problem
+PostgREST cannot determine which database function to call because there are two overloaded versions of `submit_negotiation_response` with ambiguous signatures:
 
-### Root Cause
-The canonical `submit_negotiation_response` function (5-arg version) contains an incorrect status check on line 31:
+**Function 1 (5-arg canonical):**
+- `p_session_id uuid`
+- `p_consultant_message text DEFAULT NULL`
+- `p_updated_line_items jsonb DEFAULT NULL`
+- `p_milestone_adjustments jsonb DEFAULT NULL`
+- `p_files jsonb DEFAULT NULL`
 
-```sql
-IF v_session.status != 'pending' THEN
-    RAISE EXCEPTION 'Session is not in pending status';
-END IF;
-```
+**Function 2 (3-arg wrapper):**
+- `p_session_id uuid`
+- `p_updated_line_items jsonb`
+- `p_consultant_message text DEFAULT NULL`
 
-However, the `negotiation_status` enum only contains these valid values:
-- `open`
-- `awaiting_response`
-- `responded`
-- `resolved`
-- `cancelled`
+When the edge function calls the RPC with `{p_session_id, p_updated_line_items, p_consultant_message}`, PostgREST sees that both functions could match and throws an ambiguity error.
 
-The correct status to check is `'awaiting_response'` (the status set when an entrepreneur sends a negotiation request to an advisor).
+## Solution
+Drop the 3-arg wrapper function entirely. The 5-arg canonical function already has default values for `p_milestone_adjustments` and `p_files`, so existing calls will work without modification.
 
-### Evidence
-Database query confirmed all active sessions have status `awaiting_response`:
+## Implementation Steps
 
-| Session ID | Status |
-|------------|--------|
-| aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa005 | awaiting_response |
-| 6bc769a0-3f7d-429b-9782-1987a854296c | awaiting_response |
-
-### Solution
-Update the database function to check for `'awaiting_response'` instead of `'pending'`:
+### Step 1: Create Database Migration
+Create a new SQL migration that drops the 3-arg function:
 
 ```sql
-IF v_session.status != 'awaiting_response' THEN
-    RAISE EXCEPTION 'Session is not awaiting response';
-END IF;
+-- Drop the ambiguous 3-arg wrapper
+DROP FUNCTION IF EXISTS public.submit_negotiation_response(uuid, jsonb, text);
 ```
 
-### Implementation
+### Step 2: Update TypeScript Types
+After the migration, update `src/integrations/supabase/types.ts` to remove the duplicate function signature and keep only the 5-arg version.
 
-**File:** New SQL migration
+## Technical Details
 
-Replace the status check in the `submit_negotiation_response` function:
-
-```sql
--- Before (incorrect):
-IF v_session.status != 'pending' THEN
-    RAISE EXCEPTION 'Session is not in pending status';
-END IF;
-
--- After (correct):
-IF v_session.status != 'awaiting_response' THEN
-    RAISE EXCEPTION 'Session is not awaiting response';
-END IF;
+The edge function (`send-negotiation-response/index.ts`) currently calls:
+```javascript
+supabase.rpc("submit_negotiation_response", {
+  p_session_id: session_id,
+  p_updated_line_items: updated_line_items || [],
+  p_consultant_message: consultant_message,
+})
 ```
 
-### Testing After Fix
-1. Login as Vendor 2: `vendor.test1+billding@example.com` / `TestPassword123!`
+After removing the 3-arg wrapper, this call will correctly resolve to the 5-arg function since:
+- `p_session_id` matches
+- `p_updated_line_items` matches
+- `p_consultant_message` matches
+- `p_milestone_adjustments` uses default `NULL`
+- `p_files` uses default `NULL`
+
+## Testing Plan
+1. Login as Vendor 2 (`vendor.test1+billding@example.com`)
 2. Navigate to Negotiations tab
-3. Open the active negotiation request (status: awaiting_response)
-4. Modify prices and submit response
-5. Verify successful submission without errors
+3. Open an active negotiation request
+4. Modify line item prices
+5. Submit response
+6. Verify:
+   - No ambiguity error
+   - New proposal version created
+   - Session status updates to "responded"
