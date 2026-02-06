@@ -228,10 +228,12 @@ export const useRFP = () => {
         console.log('[useRFP] Processing advisor type:', advisorType, 'invites:', inviteIds.length);
 
         // Update rfp_invites with service details and payment terms
+        // Now saves ALL service details regardless of mode (all fields are inclusive)
         const updateData: Record<string, any> = {};
         
         if (typeData.serviceDetails) {
-          updateData.service_details_mode = typeData.serviceDetails.mode;
+          // Always save all service details - no longer mode-based
+          updateData.service_details_mode = typeData.serviceDetails.mode || 'checklist';
           updateData.service_details_text = typeData.serviceDetails.freeText || null;
           updateData.service_details_file = typeData.serviceDetails.file || null;
         }
@@ -251,8 +253,8 @@ export const useRFP = () => {
           }
         }
 
-        // Save service scope items (checklist mode)
-        if (typeData.serviceDetails?.mode === 'checklist' && typeData.serviceDetails.scopeItems) {
+        // Save service scope items (always save if present, regardless of mode)
+        if (typeData.serviceDetails?.scopeItems && typeData.serviceDetails.scopeItems.length > 0) {
           const scopeItems = typeData.serviceDetails.scopeItems.map((item, index) => ({
             rfp_invite_id: inviteIds[0], // Use first invite as reference
             task_name: item.task_name,

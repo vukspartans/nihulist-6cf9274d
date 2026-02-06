@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -987,16 +988,45 @@ const SubmitProposal = () => {
                     </div>
                   )}
 
-                  {entrepreneurData?.service_details_mode === 'free_text' && entrepreneurData.service_details_text && (
+                  {/* Show service scope items (checklist) if present */}
+                  {entrepreneurData?.service_scope_items && entrepreneurData.service_scope_items.length > 0 && (
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">פירוט השירותים</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">רשימת שירותים נדרשים</Label>
+                      <div className="mt-2 space-y-2">
+                        {entrepreneurData.service_scope_items.map((item, index) => (
+                          <div 
+                            key={index}
+                            className={`flex items-center gap-2 p-2 border rounded-lg ${item.is_included ? 'bg-muted/30' : 'bg-muted/10 opacity-60'}`}
+                          >
+                            <span className={`flex-1 ${!item.is_included ? 'line-through text-muted-foreground' : ''}`}>
+                              {item.task_name}
+                            </span>
+                            {item.is_optional && (
+                              <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                            )}
+                            {item.is_included ? (
+                              <Badge variant="secondary" className="text-xs">נדרש</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">לא נדרש</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show free text if present (regardless of mode) */}
+                  {entrepreneurData?.service_details_text && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">הערות נוספות מהיזם</Label>
                       <div className="mt-1 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-right">
                         {entrepreneurData.service_details_text}
                       </div>
                     </div>
                   )}
 
-                  {entrepreneurData?.service_details_mode === 'file' && entrepreneurData.service_details_file && (
+                  {/* Show file if uploaded (regardless of mode) */}
+                  {entrepreneurData?.service_details_file && (
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">קובץ פירוט שירותים</Label>
                       <a
