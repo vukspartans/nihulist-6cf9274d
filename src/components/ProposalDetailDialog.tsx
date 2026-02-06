@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
 import { getFeeUnitLabel } from '@/constants/rfpUnits';
+import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -1097,13 +1098,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       {entrepreneurPaymentTerms?.payment_term_type && (
                         <p className="text-xs">
                           <span className="font-medium">תנאי תשלום: </span>
-                          {entrepreneurPaymentTerms.payment_term_type === 'net_30' && 'שוטף + 30'}
-                          {entrepreneurPaymentTerms.payment_term_type === 'net_60' && 'שוטף + 60'}
-                          {entrepreneurPaymentTerms.payment_term_type === 'net_90' && 'שוטף + 90'}
-                          {entrepreneurPaymentTerms.payment_term_type === 'current' && 'שוטף'}
-                          {entrepreneurPaymentTerms.payment_term_type === 'upon_completion' && 'בסיום העבודה'}
-                          {entrepreneurPaymentTerms.payment_term_type === 'milestone' && 'לפי אבני דרך'}
-                          {!['net_30', 'net_60', 'net_90', 'current', 'upon_completion', 'milestone'].includes(entrepreneurPaymentTerms.payment_term_type) && entrepreneurPaymentTerms.payment_term_type}
+                          {getPaymentTermLabel(entrepreneurPaymentTerms.payment_term_type)}
                         </p>
                       )}
                       {entrepreneurPaymentTerms?.advance_percent && entrepreneurPaymentTerms.advance_percent > 0 && (

@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PAYMENT_TERM_TYPES, getPaymentTermLabel, PaymentTermType } from '@/constants/paymentTerms';
 
 export interface ConsultantMilestone {
   id: string;
@@ -26,10 +27,6 @@ export interface ConsultantMilestone {
   trigger?: string;
   is_entrepreneur_defined: boolean;
 }
-
-export type PaymentTermType = 
-  | 'immediate' | 'current' | 'net_15' | 'net_30' 
-  | 'net_45' | 'net_60' | 'net_75' | 'net_90' | 'net_120';
 
 interface ConsultantPaymentTermsProps {
   entrepreneurTerms: PaymentTerms | null;
@@ -308,31 +305,17 @@ export function ConsultantPaymentTerms({
                 <SelectTrigger>
                   <SelectValue placeholder="בחר תנאי תשלום" />
                 </SelectTrigger>
-              <SelectContent>
-                  <SelectItem value="immediate">תשלום מיידי</SelectItem>
-                  <SelectItem value="current">שוטף</SelectItem>
-                  <SelectItem value="net_15">שוטף + 15</SelectItem>
-                  <SelectItem value="net_30">שוטף + 30</SelectItem>
-                  <SelectItem value="net_45">שוטף + 45</SelectItem>
-                  <SelectItem value="net_60">שוטף + 60</SelectItem>
-                  <SelectItem value="net_75">שוטף + 75</SelectItem>
-                  <SelectItem value="net_90">שוטף + 90</SelectItem>
-                  <SelectItem value="net_120">שוטף + 120</SelectItem>
+                <SelectContent>
+                  {PAYMENT_TERM_TYPES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {entrepreneurPaymentType && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  היזם ביקש: {
-                    entrepreneurPaymentType === 'immediate' ? 'תשלום מיידי' :
-                    entrepreneurPaymentType === 'current' ? 'שוטף' : 
-                    entrepreneurPaymentType === 'net_15' ? 'שוטף + 15' :
-                    entrepreneurPaymentType === 'net_30' ? 'שוטף + 30' :
-                    entrepreneurPaymentType === 'net_45' ? 'שוטף + 45' :
-                    entrepreneurPaymentType === 'net_60' ? 'שוטף + 60' :
-                    entrepreneurPaymentType === 'net_75' ? 'שוטף + 75' :
-                    entrepreneurPaymentType === 'net_90' ? 'שוטף + 90' :
-                    entrepreneurPaymentType === 'net_120' ? 'שוטף + 120' : entrepreneurPaymentType
-                  }
+                  היזם ביקש: {getPaymentTermLabel(entrepreneurPaymentType)}
                 </p>
               )}
             </div>

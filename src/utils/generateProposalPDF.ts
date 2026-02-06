@@ -2,6 +2,8 @@
  * Generates a PDF of a proposal using browser print functionality
  */
 
+import { getPaymentTermLabel } from '@/constants/paymentTerms';
+
 export interface FeeLineItem {
   description: string;
   quantity?: number;
@@ -21,6 +23,7 @@ export interface ProposalPDFData {
   scopeText?: string;
   conditions?: {
     payment_terms?: string;
+    payment_term_type?: string;
     assumptions?: string;
     exclusions?: string;
     validity_days?: number;
@@ -148,12 +151,17 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
   // Generate conditions section
   let conditionsHtml = '';
   if (data.conditions) {
-    const { payment_terms, assumptions, exclusions, validity_days } = data.conditions;
-    if (payment_terms || assumptions || exclusions || validity_days) {
+    const { payment_terms, payment_term_type, assumptions, exclusions, validity_days } = data.conditions;
+    // Prefer payment_term_type (structured) over payment_terms (free text)
+    const paymentTermDisplay = payment_term_type 
+      ? getPaymentTermLabel(payment_term_type)
+      : payment_terms;
+    
+    if (paymentTermDisplay || assumptions || exclusions || validity_days) {
       conditionsHtml = `
         <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">תנאים</h3>
         <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px;">
-          ${payment_terms ? `<p style="margin-bottom: 8px;"><strong>תנאי תשלום:</strong> ${payment_terms}</p>` : ''}
+          ${paymentTermDisplay ? `<p style="margin-bottom: 8px;"><strong>תנאי תשלום:</strong> ${paymentTermDisplay}</p>` : ''}
           ${assumptions ? `<p style="margin-bottom: 8px;"><strong>הנחות יסוד:</strong> ${assumptions}</p>` : ''}
           ${exclusions ? `<p style="margin-bottom: 8px;"><strong>לא כולל:</strong> ${exclusions}</p>` : ''}
           ${validity_days ? `<p style="margin-bottom: 8px;"><strong>תוקף ההצעה:</strong> ${validity_days} ימים</p>` : ''}

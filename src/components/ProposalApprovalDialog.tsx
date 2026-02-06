@@ -6,8 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare, Check } from 'lucide-react';
+import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare, Check, Banknote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,6 +46,7 @@ interface ProposalApprovalDialogProps {
     scope_text?: string;
     conditions_json?: {
       payment_terms?: string;
+      payment_term_type?: string;
       assumptions?: string;
       exclusions?: string;
       validity_days?: number;
@@ -377,6 +379,19 @@ export const ProposalApprovalDialog = ({
                     </div>
                   </div>
                 )}
+
+                {/* Payment Terms - Clear Display */}
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3" dir="rtl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-sm">תנאי תשלום</span>
+                    </div>
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-sm px-3">
+                      {getPaymentTermLabel(proposal.conditions_json?.payment_term_type)}
+                    </Badge>
+                  </div>
+                </div>
 
                 {/* Price Breakdown Summary */}
                 <div className="bg-muted/40 rounded-lg p-3 sm:p-4 space-y-2 border" dir="rtl">
