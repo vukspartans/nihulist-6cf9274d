@@ -24,9 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useUpdateMilestoneTemplate, useMilestoneTemplate } from "@/hooks/useMilestoneTemplates";
-import { useMunicipalities } from "@/hooks/useMunicipalities";
-import { PROJECT_TYPE_OPTIONS } from "@/constants/project";
-import { EXPERTISE_OPTIONS } from "@/constants/advisor";
 import { TRIGGER_TYPES, type UpdateMilestoneTemplateInput } from "@/types/milestoneTemplate";
 import { adminTranslations } from "@/constants/adminTranslations";
 import { MilestoneTaskLinker } from "./MilestoneTaskLinker";
@@ -50,7 +47,6 @@ export function EditMilestoneTemplateDialog({
 
   const updateMilestone = useUpdateMilestoneTemplate();
   const { data: milestone, isLoading } = useMilestoneTemplate(milestoneId || "");
-  const { data: municipalities = [] } = useMunicipalities();
 
   const {
     register,
@@ -69,9 +65,6 @@ export function EditMilestoneTemplateDialog({
         name: milestone.name,
         name_en: milestone.name_en || "",
         description: milestone.description || "",
-        project_type: milestone.project_type || "",
-        municipality_id: milestone.municipality_id || "",
-        advisor_specialty: milestone.advisor_specialty || "",
         percentage_of_total: milestone.percentage_of_total,
         fixed_amount: milestone.fixed_amount || undefined,
         currency: milestone.currency,
@@ -87,9 +80,6 @@ export function EditMilestoneTemplateDialog({
     const submitData = {
       ...data,
       id: milestoneId,
-      project_type: data.project_type || null,
-      municipality_id: data.municipality_id || null,
-      advisor_specialty: data.advisor_specialty || null,
       fixed_amount: data.fixed_amount || null,
     };
 
@@ -131,21 +121,22 @@ export function EditMilestoneTemplateDialog({
               </Alert>
             )}
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
+              <TabsList className="grid w-full grid-cols-2" dir="rtl">
                 <TabsTrigger value="basic">{t.dialog.basicTab}</TabsTrigger>
-                <TabsTrigger value="payment">{t.dialog.paymentTab}</TabsTrigger>
                 <TabsTrigger value="tasks">{t.dialog.tasksTab}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
+                {/* Name Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">{t.dialog.nameLabel}</Label>
+                    <Label htmlFor="name">{t.dialog.nameLabel} *</Label>
                     <Input
                       id="name"
                       {...register("name", { required: true })}
                       placeholder={t.dialog.namePlaceholder}
+                      className="text-right"
                     />
                     {errors.name && (
                       <p className="text-xs text-destructive">שדה חובה</p>
@@ -163,6 +154,7 @@ export function EditMilestoneTemplateDialog({
                   </div>
                 </div>
 
+                {/* Description */}
                 <div className="space-y-2">
                   <Label htmlFor="description">{t.dialog.descriptionLabel}</Label>
                   <Textarea
@@ -170,94 +162,15 @@ export function EditMilestoneTemplateDialog({
                     {...register("description")}
                     placeholder="תיאור אבן הדרך..."
                     rows={2}
+                    className="text-right"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t.dialog.projectTypeLabel}</Label>
-                    <Select
-                      dir="rtl"
-                      value={watch("project_type") || "__all__"}
-                      onValueChange={(val) => setValue("project_type", val === "__all__" ? "" : val)}
-                    >
-                      <SelectTrigger dir="rtl" className="text-right">
-                        <SelectValue placeholder={t.dialog.projectTypeAll} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        <SelectItem value="__all__" className="text-right">{t.dialog.projectTypeAll}</SelectItem>
-                        {PROJECT_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value} className="text-right">
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t.dialog.municipalityLabel}</Label>
-                    <Select
-                      dir="rtl"
-                      value={watch("municipality_id") || "__all__"}
-                      onValueChange={(val) => setValue("municipality_id", val === "__all__" ? "" : val)}
-                    >
-                      <SelectTrigger dir="rtl" className="text-right">
-                        <SelectValue placeholder={t.dialog.municipalityAll} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        <SelectItem value="__all__" className="text-right">{t.dialog.municipalityAll}</SelectItem>
-                        {municipalities.map((m) => (
-                          <SelectItem key={m.id} value={m.id} className="text-right">
-                            {m.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t.dialog.advisorSpecialtyLabel}</Label>
-                    <Select
-                      dir="rtl"
-                      value={watch("advisor_specialty") || "__all__"}
-                      onValueChange={(val) => setValue("advisor_specialty", val === "__all__" ? "" : val)}
-                    >
-                      <SelectTrigger dir="rtl" className="text-right">
-                        <SelectValue placeholder={t.dialog.advisorSpecialtyAll} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        <SelectItem value="__all__" className="text-right">{t.dialog.advisorSpecialtyAll}</SelectItem>
-                        {EXPERTISE_OPTIONS.map((exp) => (
-                          <SelectItem key={exp.value} value={exp.value} className="text-right">
-                            {exp.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="is_active">סטטוס</Label>
-                    <p className="text-xs text-muted-foreground">
-                      אבני דרך לא פעילות לא יוצגו בפרויקטים חדשים
-                    </p>
-                  </div>
-                  <Switch
-                    id="is_active"
-                    checked={watch("is_active") ?? true}
-                    onCheckedChange={(checked) => setValue("is_active", checked)}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="payment" className="space-y-4 mt-4">
+                {/* Payment Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="percentage_of_total">
-                      {t.dialog.percentageLabel}
+                      {t.dialog.percentageLabel} *
                     </Label>
                     <div className="relative">
                       <Input
@@ -272,7 +185,8 @@ export function EditMilestoneTemplateDialog({
                           min: 0,
                           max: 100,
                         })}
-                        className="pl-8"
+                        className="pl-8 text-right"
+                        dir="ltr"
                       />
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         %
@@ -296,7 +210,8 @@ export function EditMilestoneTemplateDialog({
                         step="0.01"
                         min="0"
                         {...register("fixed_amount", { valueAsNumber: true })}
-                        className="pl-10"
+                        className="pl-10 text-right"
+                        dir="ltr"
                       />
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         ₪
@@ -305,6 +220,7 @@ export function EditMilestoneTemplateDialog({
                   </div>
                 </div>
 
+                {/* Trigger Type */}
                 <div className="space-y-2">
                   <Label>{t.dialog.triggerTypeLabel}</Label>
                   <Select
@@ -325,6 +241,21 @@ export function EditMilestoneTemplateDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Status Toggle */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="is_active">סטטוס</Label>
+                    <p className="text-xs text-muted-foreground">
+                      אבני דרך לא פעילות לא יוצגו בפרויקטים חדשים
+                    </p>
+                  </div>
+                  <Switch
+                    id="is_active"
+                    checked={watch("is_active") ?? true}
+                    onCheckedChange={(checked) => setValue("is_active", checked)}
+                  />
                 </div>
               </TabsContent>
 

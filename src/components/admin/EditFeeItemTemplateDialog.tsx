@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ADVISOR_EXPERTISE } from "@/constants/advisor";
 import { FEE_UNITS, CHARGE_TYPES } from "@/constants/rfpUnits";
 import { useUpdateFeeItemTemplate, FeeItemTemplate } from "@/hooks/useRFPTemplatesAdmin";
 
@@ -32,7 +31,6 @@ export function EditFeeItemTemplateDialog({
   onOpenChange,
   template,
 }: EditFeeItemTemplateDialogProps) {
-  const [advisorSpecialty, setAdvisorSpecialty] = useState("");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("lump_sum");
   const [defaultQuantity, setDefaultQuantity] = useState<number>(1);
@@ -43,7 +41,6 @@ export function EditFeeItemTemplateDialog({
 
   useEffect(() => {
     if (template) {
-      setAdvisorSpecialty(template.advisor_specialty);
       setDescription(template.description);
       setUnit(template.unit);
       setDefaultQuantity(template.default_quantity ?? 1);
@@ -55,13 +52,12 @@ export function EditFeeItemTemplateDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!template || !advisorSpecialty || !description.trim()) {
+    if (!template || !description.trim()) {
       return;
     }
 
     await updateMutation.mutateAsync({
       id: template.id,
-      advisor_specialty: advisorSpecialty,
       description: description.trim(),
       unit,
       default_quantity: defaultQuantity,
@@ -80,22 +76,6 @@ export function EditFeeItemTemplateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="advisor_specialty">סוג יועץ *</Label>
-            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
-              <SelectTrigger dir="rtl" className="text-right">
-                <SelectValue placeholder="בחר סוג יועץ" />
-              </SelectTrigger>
-              <SelectContent dir="rtl">
-                {ADVISOR_EXPERTISE.map((expertise) => (
-                  <SelectItem key={expertise} value={expertise} className="text-right">
-                    {expertise}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="description">תיאור הפריט *</Label>
             <Input
@@ -135,6 +115,7 @@ export function EditFeeItemTemplateDialog({
                 value={defaultQuantity}
                 onChange={(e) => setDefaultQuantity(parseFloat(e.target.value) || 1)}
                 className="text-right"
+                dir="ltr"
               />
             </div>
           </div>
@@ -174,7 +155,7 @@ export function EditFeeItemTemplateDialog({
             </Button>
             <Button
               type="submit"
-              disabled={updateMutation.isPending || !advisorSpecialty || !description.trim()}
+              disabled={updateMutation.isPending || !description.trim()}
             >
               {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
             </Button>

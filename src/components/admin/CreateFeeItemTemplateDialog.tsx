@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ADVISOR_EXPERTISE } from "@/constants/advisor";
 import { FEE_UNITS, CHARGE_TYPES } from "@/constants/rfpUnits";
 import { useCreateFeeItemTemplate } from "@/hooks/useRFPTemplatesAdmin";
 
@@ -34,7 +33,6 @@ export function CreateFeeItemTemplateDialog({
   defaultAdvisorSpecialty,
   defaultProjectType,
 }: CreateFeeItemTemplateDialogProps) {
-  const [advisorSpecialty, setAdvisorSpecialty] = useState(defaultAdvisorSpecialty || "");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("lump_sum");
   const [defaultQuantity, setDefaultQuantity] = useState<number>(1);
@@ -46,12 +44,12 @@ export function CreateFeeItemTemplateDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!advisorSpecialty || !description.trim()) {
+    if (!defaultAdvisorSpecialty || !description.trim()) {
       return;
     }
 
     await createMutation.mutateAsync({
-      advisor_specialty: advisorSpecialty,
+      advisor_specialty: defaultAdvisorSpecialty,
       description: description.trim(),
       unit,
       default_quantity: defaultQuantity,
@@ -70,7 +68,6 @@ export function CreateFeeItemTemplateDialog({
   };
 
   const resetForm = () => {
-    setAdvisorSpecialty(defaultAdvisorSpecialty || "");
     setDescription("");
     setUnit("lump_sum");
     setDefaultQuantity(1);
@@ -89,22 +86,6 @@ export function CreateFeeItemTemplateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="advisor_specialty">סוג יועץ *</Label>
-            <Select dir="rtl" value={advisorSpecialty} onValueChange={setAdvisorSpecialty}>
-              <SelectTrigger dir="rtl" className="text-right">
-                <SelectValue placeholder="בחר סוג יועץ" />
-              </SelectTrigger>
-              <SelectContent dir="rtl">
-                {ADVISOR_EXPERTISE.map((expertise) => (
-                  <SelectItem key={expertise} value={expertise} className="text-right">
-                    {expertise}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="description">תיאור הפריט *</Label>
             <Input
@@ -144,6 +125,7 @@ export function CreateFeeItemTemplateDialog({
                 value={defaultQuantity}
                 onChange={(e) => setDefaultQuantity(parseFloat(e.target.value) || 1)}
                 className="text-right"
+                dir="ltr"
               />
             </div>
           </div>
@@ -183,7 +165,7 @@ export function CreateFeeItemTemplateDialog({
             </Button>
             <Button
               type="submit"
-              disabled={createMutation.isPending || !advisorSpecialty || !description.trim()}
+              disabled={createMutation.isPending || !description.trim()}
             >
               {createMutation.isPending ? "יוצר..." : "צור פריט"}
             </Button>

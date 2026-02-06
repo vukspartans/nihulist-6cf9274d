@@ -7,14 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,13 +22,17 @@ import {
   useServiceScopeTemplatesByAdvisorProject,
   useDeleteFeeItemTemplate,
   useDeleteServiceScopeTemplate,
+  useReorderFeeItemTemplates,
+  useReorderServiceScopeTemplates,
   FeeItemTemplate,
   ServiceScopeTemplate,
 } from "@/hooks/useRFPTemplatesAdmin";
 import {
   useMilestoneTemplatesByAdvisorProject,
   useDeleteMilestoneTemplate,
+  useReorderMilestoneTemplates,
 } from "@/hooks/useMilestoneTemplates";
+import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
 import { CreateFeeItemTemplateDialog } from "@/components/admin/CreateFeeItemTemplateDialog";
 import { EditFeeItemTemplateDialog } from "@/components/admin/EditFeeItemTemplateDialog";
 import { CreateServiceScopeTemplateDialog } from "@/components/admin/CreateServiceScopeTemplateDialog";
@@ -90,6 +86,11 @@ export default function FeeTemplatesByAdvisorProject() {
   const deleteServiceMutation = useDeleteServiceScopeTemplate();
   const deleteMilestoneMutation = useDeleteMilestoneTemplate();
 
+  // Reorder mutations
+  const reorderFeeItemsMutation = useReorderFeeItemTemplates();
+  const reorderServicesMutation = useReorderServiceScopeTemplates();
+  const reorderMilestonesMutation = useReorderMilestoneTemplates();
+
   const handleBack = () => {
     navigate(`/heyadmin/fee-templates/${encodeURIComponent(decodedAdvisorType)}`);
   };
@@ -122,6 +123,163 @@ export default function FeeTemplatesByAdvisorProject() {
     const found = TRIGGER_TYPES.find((t) => t.value === triggerType);
     return found?.label || triggerType;
   };
+
+  // Column definitions for SortableDataTable
+  const feeItemColumns: Column<FeeItemTemplate & { display_order: number }>[] = [
+    {
+      header: "",
+      cell: (item) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingFeeItem(item);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteFeeItemId(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+    {
+      header: "תיאור",
+      accessorKey: "description",
+    },
+    {
+      header: "יחידה",
+      accessorKey: "unit",
+    },
+    {
+      header: "כמות ברירת מחדל",
+      cell: (item) => item.default_quantity || "-",
+    },
+    {
+      header: "סוג חיוב",
+      cell: (item) => item.charge_type || "-",
+    },
+    {
+      header: "סטטוס",
+      cell: (item) =>
+        item.is_optional ? (
+          <Badge variant="secondary">אופציונלי</Badge>
+        ) : (
+          <Badge variant="default">חובה</Badge>
+        ),
+    },
+  ];
+
+  const serviceColumns: Column<ServiceScopeTemplate & { display_order: number }>[] = [
+    {
+      header: "",
+      cell: (item) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingService(item);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteServiceId(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+    {
+      header: "שם השירות",
+      accessorKey: "task_name",
+    },
+    {
+      header: 'קטגוריית שכ"ט',
+      cell: (item) => item.default_fee_category || "-",
+    },
+    {
+      header: "סטטוס",
+      cell: (item) =>
+        item.is_optional ? (
+          <Badge variant="secondary">אופציונלי</Badge>
+        ) : (
+          <Badge variant="default">חובה</Badge>
+        ),
+    },
+  ];
+
+  const milestoneColumns: Column<MilestoneTemplate & { display_order: number }>[] = [
+    {
+      header: "",
+      cell: (item) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingMilestone(item);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteMilestoneId(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+    {
+      header: "שם",
+      accessorKey: "name",
+    },
+    {
+      header: "אחוז מהסכום",
+      cell: (item) => `${item.percentage_of_total}%`,
+    },
+    {
+      header: "טריגר",
+      cell: (item) => getTriggerLabel(item.trigger_type),
+    },
+    {
+      header: "סטטוס",
+      cell: (item) =>
+        item.is_active ? (
+          <Badge variant="default">פעיל</Badge>
+        ) : (
+          <Badge variant="secondary">לא פעיל</Badge>
+        ),
+    },
+  ];
 
   return (
     <AdminLayout>
@@ -196,56 +354,12 @@ export default function FeeTemplatesByAdvisorProject() {
                 {feeItemsLoading ? (
                   <Skeleton className="h-32" />
                 ) : feeItems && feeItems.length > 0 ? (
-                  <Table dir="rtl">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-24"></TableHead>
-                        <TableHead className="text-start">תיאור</TableHead>
-                        <TableHead className="text-start">יחידה</TableHead>
-                        <TableHead className="text-start">כמות ברירת מחדל</TableHead>
-                        <TableHead className="text-start">סוג חיוב</TableHead>
-                        <TableHead className="text-start">סטטוס</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {feeItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setEditingFeeItem(item)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => setDeleteFeeItemId(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {item.description}
-                          </TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell>{item.default_quantity || "-"}</TableCell>
-                          <TableCell>{item.charge_type || "-"}</TableCell>
-                          <TableCell>
-                            {item.is_optional ? (
-                              <Badge variant="secondary">אופציונלי</Badge>
-                            ) : (
-                              <Badge variant="default">חובה</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <SortableDataTable
+                    data={feeItems}
+                    columns={feeItemColumns}
+                    onReorder={(orderedIds) => reorderFeeItemsMutation.mutate(orderedIds)}
+                    isReordering={reorderFeeItemsMutation.isPending}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>אין שורות שכר טרחה. הוסף שורה ראשונה כדי להתחיל.</p>
@@ -273,50 +387,12 @@ export default function FeeTemplatesByAdvisorProject() {
                 {servicesLoading ? (
                   <Skeleton className="h-32" />
                 ) : services && services.length > 0 ? (
-                  <Table dir="rtl">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-24"></TableHead>
-                        <TableHead className="text-start">שם השירות</TableHead>
-                        <TableHead className="text-start">קטגוריית שכ"ט</TableHead>
-                        <TableHead className="text-start">סטטוס</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {services.map((service) => (
-                        <TableRow key={service.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setEditingService(service)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => setDeleteServiceId(service.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{service.task_name}</TableCell>
-                          <TableCell>{service.default_fee_category || "-"}</TableCell>
-                          <TableCell>
-                            {service.is_optional ? (
-                              <Badge variant="secondary">אופציונלי</Badge>
-                            ) : (
-                              <Badge variant="default">חובה</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <SortableDataTable
+                    data={services}
+                    columns={serviceColumns}
+                    onReorder={(orderedIds) => reorderServicesMutation.mutate(orderedIds)}
+                    isReordering={reorderServicesMutation.isPending}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>אין שירותים. הוסף שירות ראשון כדי להתחיל.</p>
@@ -344,52 +420,12 @@ export default function FeeTemplatesByAdvisorProject() {
                 {milestonesLoading ? (
                   <Skeleton className="h-32" />
                 ) : milestones && milestones.length > 0 ? (
-                  <Table dir="rtl">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-24"></TableHead>
-                        <TableHead className="text-start">שם</TableHead>
-                        <TableHead className="text-start">אחוז מהסכום</TableHead>
-                        <TableHead className="text-start">טריגר</TableHead>
-                        <TableHead className="text-start">סטטוס</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {milestones.map((milestone) => (
-                        <TableRow key={milestone.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setEditingMilestone(milestone)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => setDeleteMilestoneId(milestone.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{milestone.name}</TableCell>
-                          <TableCell>{milestone.percentage_of_total}%</TableCell>
-                          <TableCell>{getTriggerLabel(milestone.trigger_type)}</TableCell>
-                          <TableCell>
-                            {milestone.is_active ? (
-                              <Badge variant="default">פעיל</Badge>
-                            ) : (
-                              <Badge variant="secondary">לא פעיל</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <SortableDataTable
+                    data={milestones}
+                    columns={milestoneColumns}
+                    onReorder={(orderedIds) => reorderMilestonesMutation.mutate(orderedIds)}
+                    isReordering={reorderMilestonesMutation.isPending}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>אין אבני דרך. הוסף אבן דרך ראשונה כדי להתחיל.</p>
