@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Download, Loader2, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { ExportPDFButton } from '@/components/ui/ExportPDFButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
 import { useToast } from '@/hooks/use-toast';
@@ -99,6 +99,8 @@ export function ConfirmProposalDialog({
           unitPrice: item.unit_price || item.total,
           total: item.total,
           isOptional: item.is_optional || false,
+          chargeType: item.charge_type,
+          duration: item.duration,
         })),
         milestones: milestones.map(m => ({
           description: m.description,
@@ -296,21 +298,10 @@ export function ConfirmProposalDialog({
         {/* Sticky Footer with RTL-compliant layout */}
         <AlertDialogFooter className="px-6 py-4 border-t bg-background flex-shrink-0" dir="rtl">
           <div className="flex w-full items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPDF}
-              disabled={isExporting}
-              className="gap-2"
-              aria-label="ייצוא ל-PDF"
-            >
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              ייצוא ל-PDF
-            </Button>
+            <ExportPDFButton 
+              onClick={handleExportPDF} 
+              loading={isExporting}
+            />
             <div className="flex gap-2">
               <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
               <AlertDialogAction 

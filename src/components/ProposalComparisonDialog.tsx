@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, FileText, Trash2, RefreshCw, MessageSquare, HelpCircle, ChevronDown, ChevronUp, FileIcon, ExternalLink, Eye, EyeOff, Building2 } from 'lucide-react';
+import { TrendingUp, Clock, Award, CheckCircle, XCircle, Sparkles, AlertCircle, CheckCircle2, Download, Trash2, RefreshCw, MessageSquare, HelpCircle, ChevronDown, ChevronUp, FileIcon, ExternalLink, Eye, EyeOff, Building2 } from 'lucide-react';
+import { ExportPDFButton } from '@/components/ui/ExportPDFButton';
 import { ProposalApprovalDialog } from './ProposalApprovalDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useProposalEvaluation } from '@/hooks/useProposalEvaluation';
@@ -640,15 +641,7 @@ export const ProposalComparisonDialog = ({
                     Excel
                     <Download className="w-4 h-4" />
                   </Button>
-                  <Button
-                    onClick={handleExportPDF}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    PDF
-                    <FileText className="w-4 h-4" />
-                  </Button>
+                  <ExportPDFButton onClick={handleExportPDF} />
                 </>
               )}
               <Button

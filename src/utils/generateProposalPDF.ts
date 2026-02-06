@@ -19,10 +19,15 @@ export interface ProposalPDFData {
   advisorName?: string;
   supplierName?: string;
   projectName: string;
+  advisorType?: string;           // Advisor specialty (e.g., "יועץ תנועה")
   price: number;
   timelineDays: number;
   submittedAt: string;
+  currency?: string;              // Currency code (default: ILS)
   scopeText?: string;
+  consultantNotes?: string;       // Notes from consultant
+  selectedServices?: string[];    // Services selected by consultant
+  servicesNotes?: string;         // Service-specific notes
   conditions?: {
     payment_terms?: string;
     payment_term_type?: string;
@@ -40,10 +45,12 @@ export interface ProposalPDFData {
 }
 
 export async function generateProposalPDF(data: ProposalPDFData): Promise<void> {
+  const currencyCode = data.currency || 'ILS';
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
       style: 'currency',
-      currency: 'ILS',
+      currency: currencyCode,
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -61,10 +68,33 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
   const completionDate = new Date(submissionDate);
   completionDate.setDate(completionDate.getDate() + data.timelineDays);
 
-  // Helper to calculate item total safely
+  // Helper to calculate item total safely - includes duration for recurring items
   const getItemTotal = (item: FeeLineItem): number => {
-    if (item.total !== undefined && item.total !== null && !isNaN(item.total)) return item.total;
-    return (item.unitPrice || 0) * (item.quantity || 1);
+    // Use explicit total if available and valid
+    if (item.total !== undefined && item.total !== null && !isNaN(item.total) && item.total > 0) {
+      return item.total;
+    }
+    
+    const basePrice = (item.unitPrice || 0) * (item.quantity || 1);
+    
+    // Apply duration multiplier for recurring charges
+    if (item.chargeType && item.chargeType !== 'one_time' && item.duration && item.duration > 0) {
+      return basePrice * item.duration;
+    }
+    
+    return basePrice;
+  };
+
+  // Get charge type label for display
+  const getChargeTypeDisplay = (chargeType?: string): string => {
+    const labels: Record<string, string> = {
+      'one_time': 'חד פעמי',
+      'monthly': 'חודשי',
+      'hourly': 'לשעה',
+      'per_visit': 'לביקור',
+      'per_unit': 'ליחידה',
+    };
+    return chargeType ? labels[chargeType] || chargeType : '';
   };
 
   // Generate fee table rows
@@ -73,16 +103,33 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
     const mandatoryItems = data.feeItems.filter(item => !item.isOptional);
     const optionalItems = data.feeItems.filter(item => item.isOptional);
     
-    const generateRows = (items: FeeLineItem[]) => items.map((item, idx) => `
-      <tr>
-        <td style="padding: 8px; border: 1px solid #e5e7eb;">${idx + 1}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb;">${item.description}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'יחידה'}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(getItemTotal(item))}</td>
-      </tr>
-    `).join('');
+    const generateRows = (items: FeeLineItem[]) => items.map((item, idx) => {
+      const isRecurring = item.chargeType && item.chargeType !== 'one_time' && item.duration;
+      const itemTotal = getItemTotal(item);
+      
+      // Build description with recurring info
+      let descriptionHtml = item.description;
+      if (isRecurring && item.unitPrice) {
+        descriptionHtml += `<br/><span style="font-size: 11px; color: #6b7280;">
+          ${formatCurrency(item.unitPrice)}/${getChargeTypeDisplay(item.chargeType)} × ${item.duration}
+        </span>`;
+      }
+      
+      return `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #e5e7eb;">${idx + 1}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb;">${descriptionHtml}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'יחידה'}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(itemTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Calculate totals
+    const mandatoryTotal = mandatoryItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+    const optionalTotal = optionalItems.reduce((sum, item) => sum + getItemTotal(item), 0);
 
     if (mandatoryItems.length > 0) {
       feeTableHtml += `
@@ -100,9 +147,12 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
           </thead>
           <tbody>
             ${generateRows(mandatoryItems)}
+            <tr style="background-color: #f0fdf4;">
+              <td colspan="5" style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">סה״כ פריטי חובה</td>
+              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 700; color: #059669;">${formatCurrency(mandatoryTotal)}</td>
+            </tr>
           </tbody>
         </table>
-        <p style="font-size: 11px; color: #6b7280; text-align: right; margin-top: 8px;">* כל המחירים ללא מע"מ</p>
       `;
     }
 
@@ -110,18 +160,44 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
       feeTableHtml += `
         <h4 style="margin-top: 16px; margin-bottom: 8px; color: #6b7280;">פריטים אופציונליים</h4>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; width: 40px;">#</th>
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">תיאור</th>
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 60px;">כמות</th>
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 80px;">יחידה</th>
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">מחיר יחידה</th>
+              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">סה״כ</th>
+            </tr>
+          </thead>
           <tbody>
             ${generateRows(optionalItems)}
+            <tr style="background-color: #f8fafc;">
+              <td colspan="5" style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">סה״כ אופציונלי</td>
+              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600; color: #64748b;">${formatCurrency(optionalTotal)}</td>
+            </tr>
           </tbody>
         </table>
       `;
     }
+
+    // Grand total
+    if (mandatoryItems.length > 0 || optionalItems.length > 0) {
+      const grandTotal = mandatoryTotal + optionalTotal;
+      feeTableHtml += `
+        <div style="margin-top: 12px; padding: 12px; background-color: #eff6ff; border-radius: 8px; text-align: left;">
+          <span style="font-weight: bold; font-size: 16px;">סה״כ כללי: ${formatCurrency(grandTotal)}</span>
+        </div>
+      `;
+    }
+
+    feeTableHtml += `<p style="font-size: 11px; color: #6b7280; text-align: right; margin-top: 8px;">* כל המחירים ללא מע"מ | הצעה תקפה ל-${data.conditions?.validity_days || 30} יום</p>`;
   }
 
   // Generate milestones table
   let milestonesHtml = '';
   if (data.milestones && data.milestones.length > 0) {
-    // Calculate mandatory total for milestone amounts
+    // Calculate base amount for milestones (mandatory items or total price)
     const mandatoryTotal = (data.feeItems || [])
       .filter(item => !item.isOptional)
       .reduce((sum, item) => sum + getItemTotal(item), 0);
@@ -147,6 +223,29 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
           `).join('')}
         </tbody>
       </table>
+    `;
+  }
+
+  // Generate consultant notes section
+  let consultantNotesHtml = '';
+  if (data.consultantNotes) {
+    consultantNotesHtml = `
+      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">הערות היועץ</h3>
+      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px; white-space: pre-wrap; border-right: 3px solid #3b82f6;">
+        ${data.consultantNotes}
+      </div>
+    `;
+  }
+
+  // Generate selected services section
+  let servicesHtml = '';
+  if (data.selectedServices && data.selectedServices.length > 0) {
+    servicesHtml = `
+      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">שירותים נבחרים</h3>
+      <ul style="padding-right: 20px; font-size: 14px; margin: 0;">
+        ${data.selectedServices.map(service => `<li style="margin-bottom: 4px;">${service}</li>`).join('')}
+      </ul>
+      ${data.servicesNotes ? `<p style="margin-top: 8px; font-size: 13px; color: #6b7280;">${data.servicesNotes}</p>` : ''}
     `;
   }
 
@@ -263,7 +362,8 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
       <div class="header">
         <h1>הצעת מחיר</h1>
         <p style="font-size: 18px; color: #4b5563;">${data.projectName}</p>
-        <p style="font-size: 14px; color: #6b7280;">${data.supplierName}</p>
+        ${data.advisorType ? `<p style="font-size: 14px; color: #6b7280;">${data.advisorType}</p>` : ''}
+        <p style="font-size: 14px; color: #6b7280;">${data.supplierName || data.advisorName || ''}</p>
       </div>
 
       <div class="info-grid">
@@ -294,6 +394,8 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
 
       ${feeTableHtml}
       ${milestonesHtml}
+      ${consultantNotesHtml}
+      ${servicesHtml}
       ${conditionsHtml}
       ${signatureHtml}
 
@@ -309,8 +411,56 @@ export async function generateProposalPDF(data: ProposalPDFData): Promise<void> 
   if (printWindow) {
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.onload = () => {
+    
+    // Wait for images to load before printing
+    const images = printWindow.document.querySelectorAll('img');
+    let loadedCount = 0;
+    const totalImages = images.length;
+
+    const triggerPrint = () => {
+      printWindow.focus();
       printWindow.print();
     };
+
+    if (totalImages === 0) {
+      // No images, print immediately after load
+      printWindow.onload = triggerPrint;
+    } else {
+      // Wait for all images to load
+      let checkComplete = false;
+      
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+          if (loadedCount === totalImages && !checkComplete) {
+            checkComplete = true;
+            triggerPrint();
+          }
+        } else {
+          img.onload = () => {
+            loadedCount++;
+            if (loadedCount === totalImages && !checkComplete) {
+              checkComplete = true;
+              triggerPrint();
+            }
+          };
+          img.onerror = () => {
+            loadedCount++;
+            if (loadedCount === totalImages && !checkComplete) {
+              checkComplete = true;
+              triggerPrint();
+            }
+          };
+        }
+      });
+
+      // Fallback timeout in case images take too long
+      setTimeout(() => {
+        if (!checkComplete) {
+          checkComplete = true;
+          triggerPrint();
+        }
+      }, 3000);
+    }
   }
 }

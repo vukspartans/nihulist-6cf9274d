@@ -28,8 +28,9 @@ import {
   FileText, Banknote, Clock, Download, CheckCircle, XCircle, AlertCircle, Calendar,
   Eye, Sparkles, RefreshCw, Loader2, Building2, MapPin, Star, Globe, Linkedin,
   Users, Target, FolderDown, Briefcase, FileCheck, Scale, FileImage, 
-  FileSpreadsheet, File, Printer, CalendarCheck, MessageSquare, ListChecks, CreditCard
+  FileSpreadsheet, File, CalendarCheck, MessageSquare, ListChecks, CreditCard
 } from 'lucide-react';
+import { ExportPDFButton } from '@/components/ui/ExportPDFButton';
 
 interface UploadedFile { name: string; url: string; size: number; type: string; }
 interface AdvisorInfo { id: string; company_name: string | null; logo_url: string | null; expertise: string[] | null; rating: number | null; location: string | null; founding_year: number | null; office_size: string | null; website: string | null; linkedin_url: string | null; }
@@ -426,10 +427,13 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       await generateProposalPDF({
         supplierName: proposal.supplier_name,
         projectName: projectName || 'פרויקט',
+        advisorType: rfpContext?.advisor_type || undefined,
         price: displayPrice,
         timelineDays: proposal.timeline_days,
         submittedAt: proposal.submitted_at,
+        currency: proposal.currency,
         scopeText: displayScopeText,
+        consultantNotes: proposal.consultant_request_notes,
         conditions: proposal.conditions_json,
         feeItems: feeLineItems.map((item) => ({
           description: item.description || item.name || '',
@@ -438,6 +442,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
           unitPrice: item.unit_price,
           total: getItemTotal(item),
           isOptional: item.is_optional,
+          chargeType: item.charge_type,
+          duration: item.duration,
         })),
         milestones: milestoneAdjustments.map((m) => ({
           description: m.description,
@@ -646,14 +652,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleExportPDF}>
-                      <Printer className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>ייצוא PDF</TooltipContent>
-                </Tooltip>
+                <ExportPDFButton onClick={handleExportPDF} showText={false} className="h-8 w-8" />
                 {getStatusBadge(proposal.status)}
               </div>
             </div>
