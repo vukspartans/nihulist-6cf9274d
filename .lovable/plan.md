@@ -1,163 +1,143 @@
 
 
-# Plan: Fix RTL Alignment in CreateMilestoneTemplateDialog
+# Plan: Simplify Template Creation Dialogs and Add Drag-and-Drop Ordering
 
-## Issues Identified
+## Understanding the Issue
 
-After comparing `CreateMilestoneTemplateDialog.tsx` with the properly aligned `CreateFeeItemTemplateDialog.tsx` and `CreateTaskTemplateDialog.tsx`, I found the following RTL issues:
+The admin navigates through a specific hierarchy to get to the template creation page:
+1. Select **Advisor Type** (e.g., "עורך דין מקרקעין")
+2. Select **Project Type** (e.g., "פינוי־בינוי (מתחמים)")
+3. Arrives at the template management page where they can add Milestones, Fee Items, and Services
 
-### Issue 1: Tabs Component Missing `dir="rtl"`
+**Current Problem**: The creation dialogs (especially Milestones) still show fields for:
+- סוג פרויקט (Project Type) - already selected in navigation
+- התמחות יועץ (Advisor Specialty) - already selected in navigation  
+- עירייה (Municipality) - not relevant for this hierarchy
 
-The Tabs component doesn't have `dir="rtl"`, causing the tab order to display incorrectly (left-to-right instead of right-to-left).
+These fields are redundant because the context is already known from the URL parameters.
 
-**Current:**
-```tsx
-<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-```
+## Comparison with RFP Creation Process
 
-**Fix:**
-```tsx
-<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
-```
+Looking at `PaymentTermsTab.tsx`, when entrepreneurs add milestones in the RFP wizard, they only enter:
+- **Description** (תיאור)
+- **Percentage** (אחוז)
 
-### Issue 2: Input Fields Missing `text-right` Class
+This is the simple, streamlined approach that should be mirrored in the admin template creation.
 
-Hebrew text inputs should have `text-right` for proper alignment. Compare with `CreateFeeItemTemplateDialog` which has `className="text-right"` on inputs.
+## Proposed Changes
 
-**Current:**
-```tsx
-<Input
-  id="name"
-  {...register("name", { required: true })}
-  placeholder={t.dialog.namePlaceholder}
-/>
-```
+### 1. Simplify CreateMilestoneTemplateDialog
 
-**Fix:**
-```tsx
-<Input
-  id="name"
-  {...register("name", { required: true })}
-  placeholder={t.dialog.namePlaceholder}
-  className="text-right"
-/>
-```
+**Remove Fields:**
+- סוג פרויקט dropdown (line 144-163)
+- עירייה dropdown (line 166-184)
+- התמחות יועץ dropdown (line 187-206)
 
-### Issue 3: Textarea Missing `text-right` Class
+**Keep Fields:**
+- שם (Name) - required
+- שם באנגלית (English name) - optional
+- תיאור (Description)
+- אחוז מהסכום (Percentage) - required
+- סכום קבוע (Fixed amount) - optional
+- סוג טריגר (Trigger type) - important for automation
 
-Same issue for the description textarea.
+**Auto-populate from props:**
+The `defaultAdvisorSpecialty` and `defaultProjectType` props are already passed from `FeeTemplatesByAdvisorProject.tsx` (lines 431-435). These should be used directly in submission without showing dropdowns.
 
-### Issue 4: Number Inputs Need RTL Optimization
+**Simplify Layout:**
+- Remove the tabs structure (basic/payment) since there are fewer fields
+- Single-page form like the RFP creation milestones
 
-Per memory `memory/ui/rtl-numerical-input-alignment`, number inputs should use `text-right` and `dir="ltr"` for proper number display while maintaining RTL context.
+### 2. Simplify CreateFeeItemTemplateDialog
 
-**Current:**
-```tsx
-<Input
-  id="percentage_of_total"
-  type="number"
-  ...
-  className="pl-8"
-/>
-```
+**Remove Field:**
+- סוג יועץ dropdown (lines 92-106) - already selected in navigation
 
-**Fix:**
-```tsx
-<Input
-  id="percentage_of_total"
-  type="number"
-  ...
-  className="pl-8 text-right"
-  dir="ltr"
-/>
-```
+**Keep Fields:**
+- תיאור הפריט (Description) - required
+- יחידת מדידה (Unit)
+- כמות ברירת מחדל (Default quantity)
+- סוג חיוב (Charge type)
+- סמן כאופציונלי (Is optional toggle)
 
-### Issue 5: TabsList Missing `flex-row-reverse`
+### 3. Simplify CreateServiceScopeTemplateDialog
 
-For proper RTL tab order, the tabs should appear in reverse visual order (first tab on right).
+**Remove Field:**
+- סוג יועץ dropdown (lines 87-100) - already selected in navigation
 
-**Current:**
-```tsx
-<TabsList className="grid w-full grid-cols-2">
-```
+**Keep Fields:**
+- שם השירות (Service name) - required
+- קטגוריית שכ"ט (Fee category)
+- סמן כאופציונלי (Is optional toggle)
 
-**Fix:**
-```tsx
-<TabsList className="grid w-full grid-cols-2" dir="rtl">
-```
+### 4. Add Drag-and-Drop Reordering to FeeTemplatesByAdvisorProject
+
+The page currently uses regular `Table` components (lines 199-248, 276-317, 347-392). These should be converted to use `SortableDataTable` (which already exists and works well).
+
+**Changes needed:**
+1. Import `SortableDataTable` component
+2. Add reorder hooks: `useReorderFeeItemTemplates`, `useReorderServiceScopeTemplates`, `useReorderMilestoneTemplates`
+3. Replace each `Table` with `SortableDataTable`
+4. Ensure the `display_order` field is present on all templates
 
 ---
 
-## Complete Changes
+## Technical Implementation
 
-### File: `src/components/admin/CreateMilestoneTemplateDialog.tsx`
+### File 1: `CreateMilestoneTemplateDialog.tsx`
 
-| Line | Change |
-|------|--------|
-| 101 | Add `dir="rtl"` to Tabs component |
-| 102 | Add `dir="rtl"` to TabsList component |
-| 111-115 | Add `className="text-right"` to name Input |
-| 123-128 | Keep `dir="ltr"` on English name input (already correct) |
-| 134-139 | Add `className="text-right"` to description Textarea |
-| 215-228 | Add `dir="ltr"` and `text-right` to percentage Input |
-| 245-252 | Add `dir="ltr"` and `text-right` to fixed_amount Input |
+**Changes:**
+1. Remove the entire `<Tabs>` structure
+2. Remove the 3 dropdown fields (project_type, municipality_id, advisor_specialty)
+3. Create a simple single-form layout with:
+   - Name + Name (EN) row
+   - Description textarea
+   - Percentage + Fixed amount row
+   - Trigger type dropdown
+4. Use `defaultAdvisorSpecialty` and `defaultProjectType` props directly in submission
 
----
-
-## Implementation Details
-
-```tsx
-// Line 101: Add dir="rtl" to Tabs
-<Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4" dir="rtl">
-
-// Line 102: Add dir="rtl" to TabsList  
-<TabsList className="grid w-full grid-cols-2" dir="rtl">
-
-// Line 111: Add text-right to name Input
-<Input
-  id="name"
-  {...register("name", { required: true })}
-  placeholder={t.dialog.namePlaceholder}
-  className="text-right"
-/>
-
-// Line 134: Add text-right to description Textarea
-<Textarea
-  id="description"
-  {...register("description")}
-  placeholder="תיאור אבן הדרך..."
-  rows={2}
-  className="text-right"
-/>
-
-// Line 215: Fix percentage input with dir="ltr" and text-right
-<Input
-  id="percentage_of_total"
-  type="number"
-  step="0.01"
-  min="0"
-  max="100"
-  {...register("percentage_of_total", {
-    required: true,
-    valueAsNumber: true,
-    min: 0,
-    max: 100,
-  })}
-  className="pl-8 text-right"
-  dir="ltr"
-/>
-
-// Line 245: Fix fixed_amount input with dir="ltr" and text-right
-<Input
-  id="fixed_amount"
-  type="number"
-  step="0.01"
-  min="0"
-  {...register("fixed_amount", { valueAsNumber: true })}
-  className="pl-10 text-right"
-  dir="ltr"
-/>
+**New Simplified Structure:**
+```text
++----------------------------------+
+| שם                 | שם באנגלית    |
++----------------------------------+
+| תיאור                           |
++----------------------------------+
+| אחוז מהסכום       | סכום קבוע     |
++----------------------------------+
+| סוג טריגר                        |
++----------------------------------+
+| [ביטול]                  [צור]   |
++----------------------------------+
 ```
+
+### File 2: `CreateFeeItemTemplateDialog.tsx`
+
+**Changes:**
+1. Remove advisor_specialty dropdown (lines 92-106)
+2. Remove the `advisorSpecialty` state variable
+3. Use `defaultAdvisorSpecialty` prop directly in submission
+
+### File 3: `CreateServiceScopeTemplateDialog.tsx`
+
+**Changes:**
+1. Remove advisor_specialty dropdown (lines 87-100)
+2. Remove the `advisorSpecialty` state variable
+3. Use `defaultAdvisorSpecialty` prop directly in submission
+
+### File 4: `FeeTemplatesByAdvisorProject.tsx`
+
+**Changes:**
+1. Import `SortableDataTable` and reorder hooks
+2. Add `display_order` property to columns
+3. Replace all 3 `<Table>` components with `<SortableDataTable>`
+4. Add `onReorder` handlers for each table
+
+### File 5: Edit Dialogs (EditMilestoneTemplateDialog, EditFeeItemTemplateDialog, EditServiceScopeTemplateDialog)
+
+**Changes:**
+- Similar simplification as create dialogs
+- Keep fields read-only or hidden for advisor_specialty/project_type since they're tied to the context
 
 ---
 
@@ -165,17 +145,35 @@ For proper RTL tab order, the tabs should appear in reverse visual order (first 
 
 | File | Changes |
 |------|---------|
-| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Add RTL attributes to Tabs, TabsList, Inputs, and Textarea |
+| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Remove tabs, remove 3 dropdowns, simplify to single form |
+| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Remove 3 dropdowns, hide advisor/project fields |
+| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Remove advisor_specialty dropdown |
+| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Remove advisor_specialty dropdown |
+| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Remove advisor_specialty dropdown |
+| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Remove advisor_specialty dropdown |
+| `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | Add SortableDataTable for drag-and-drop reordering |
+| `src/hooks/useRFPTemplatesAdmin.ts` | Add reorder mutations if not present |
+
+---
+
+## Ordering Behavior
+
+When the entrepreneur loads templates in the RFP wizard:
+1. Templates are fetched filtered by `advisor_specialty` and `project_type`
+2. They are ordered by `display_order` (ascending)
+3. The order defined by admin via drag-and-drop is preserved
+
+This is already implemented in the hooks (e.g., `useMilestoneTemplatesByAdvisorProject` orders by `display_order`).
 
 ---
 
 ## Testing Checklist
 
-1. Open "הוספת אבן דרך חדשה" dialog
-2. Verify tabs appear with "פרטי בסיס" on the RIGHT and "פרטי תשלום" on the LEFT
-3. Verify all text inputs are right-aligned
-4. Verify number inputs display numbers correctly (LTR) but remain positioned correctly in RTL context
-5. Verify dropdown options are right-aligned
-6. Verify buttons appear in correct RTL order (Cancel right, Create left)
-7. Verify the dialog title and labels are right-aligned
+1. Navigate to /heyadmin/fee-templates/{advisor}/{project}
+2. Click "הוסף אבן דרך" - verify simplified dialog with no redundant dropdowns
+3. Click "הוסף שורה" - verify no advisor dropdown
+4. Click "הוסף שירות" - verify no advisor dropdown
+5. Create a new milestone with just name + percentage - verify it saves with correct advisor/project
+6. Drag and drop rows to reorder - verify order persists
+7. Load templates in RFP wizard - verify they appear in admin-defined order
 
