@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useProjectTypeSummary } from "@/hooks/useFeeTemplateHierarchy";
-import { PROJECT_TYPES } from "@/constants/project";
+import { PROJECT_TYPES, isLiveProjectType } from "@/constants/project";
 import { Folder, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function FeeTemplatesByProject() {
@@ -21,13 +21,18 @@ export default function FeeTemplatesByProject() {
     return {
       project_type: type,
       template_count: summary?.template_count || 0,
+      is_live: isLiveProjectType(type),
     };
   }).sort((a, b) => {
-    // First by template count (descending) - active projects first
+    // First: Live project types at the top
+    if (a.is_live !== b.is_live) {
+      return a.is_live ? -1 : 1;
+    }
+    // Second: By template count (descending)
     if (b.template_count !== a.template_count) {
       return b.template_count - a.template_count;
     }
-    // Then alphabetically by name
+    // Third: Alphabetically
     return a.project_type.localeCompare(b.project_type, 'he');
   });
 
@@ -91,13 +96,20 @@ export default function FeeTemplatesByProject() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {project.template_count > 0 && (
-                    <div className="flex items-center justify-end">
-                      <Badge variant="default">
+                  <div className="flex items-center justify-between">
+                    {project.is_live && (
+                      <Badge variant="success">
+                        פעיל
+                      </Badge>
+                    )}
+                    {project.template_count > 0 ? (
+                      <Badge variant="default" className={!project.is_live ? "mr-auto" : ""}>
                         {project.template_count} תבניות
                       </Badge>
-                    </div>
-                  )}
+                    ) : (
+                      <span />
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
