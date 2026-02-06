@@ -1,273 +1,359 @@
 
+# Product Specification: Revised Price Offer (הגשת הצעה מעודכנת)
 
-# תכנית שיפורי UX: טבלת תמחור והגשת הצעות
+## 1. User Intent
 
-## סיכום המשימה
+**Primary Goal**: Enable a consultant to submit a new/revised price offer during an ongoing negotiation, after an initial proposal has already been submitted and a negotiation session is active.
 
-שיפור הבהירות, ביטחון קבלת ההחלטות, והפחתת בלבול בשלב הגשת ההצעה - באמצעות עדכוני microcopy, היררכיה ויזואלית, ותוויות עזר.
-
----
-
-## 1. עדכוני Microcopy - טקסטים חדשים
-
-### כותרות וכותרות משנה
-
-| מיקום | טקסט נוכחי | טקסט חדש | נימוק UX |
-|-------|------------|----------|----------|
-| כותרת טבלה | `פירוט פריטים (4)` | `פירוט שכר טרחה (4 פריטים)` | מדויק יותר - מבהיר שזה breakdown של עלויות |
-| תיאור משנה | חסר | `הזן מחיר עבור כל פריט. פריטי חובה חייבים להיכלל בהצעה.` | מבהיר את הכלל הבסיסי מראש |
-
-### כותרות עמודות
-
-| עמודה נוכחית | עמודה חדשה | נימוק |
-|--------------|------------|-------|
-| `תיאור` | `השירות` | קצר וברור יותר |
-| `כמות` | `כמות` | ללא שינוי |
-| `יחידה` | `יחידת מדידה` | מדויק יותר למשתמשים לא טכניים |
-| `מחיר` | `מחיר ליחידה` | מבהיר שזה per-unit |
-| `יעד` | **להסיר** | לא ברור - מציג מחיר מקורי/מומלץ? מבלבל |
-| `הנחה חדשה` | `הנחה (%)` | פשוט וברור |
-| `סה"כ` | `סה"כ לפריט` | מבדיל מהסה"כ הכללי |
-
-### תגיות חובה/אופציונלי
-
-| סטטוס | תגית נוכחית | תגית חדשה | עיצוב |
-|-------|-------------|-----------|-------|
-| חובה | `חובה` | `🛡️ חובה` | Badge כתום בולט עם אייקון Shield |
-| אופציונלי | `אופציונלי` | `ℹ️ אופציונלי - לבחירתך` | Badge אפור עם הסבר קצר |
+**User Story**: 
+> As a Consultant, after submitting my initial price offer and receiving a negotiation request from the Entrepreneur, I want to submit a revised price offer that addresses the Entrepreneur's requested changes, so that we can reach an agreement without starting a new proposal process.
 
 ---
 
-## 2. הבחנה חזותית: חובה vs אופציונלי
+## 2. Current System State Analysis
 
-### פריטי חובה (MUST)
+### Existing Flow (What Already Works)
+The system already supports the "revised offer" concept through the negotiation response mechanism:
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ 🛡️ │ מבנה מרפאת אלופאתיה  │ קומפ' │ 1 │ ₪350 │ -30% │ ₪350   │
-│    │ [Badge: חובה]        │       │   │      │      │        │
-├──────────────────────────────────────────────────────────────────────┤
-│ רקע: bg-amber-50/60 | בורדר ימני: border-r-4 border-r-amber-500    │
-└──────────────────────────────────────────────────────────────────────┘
-```
+| Step | Action | Status |
+|------|--------|--------|
+| 1 | Consultant submits initial proposal | `status: submitted` |
+| 2 | Entrepreneur initiates negotiation | `negotiation_sessions` created, proposal `status: negotiation_requested` |
+| 3 | Consultant responds with counter-offer | `send-negotiation-response` edge function creates `proposal_versions` entry |
+| 4 | Proposal status updated | `status: resubmitted` |
 
-**סגנון:**
-- רקע: `bg-amber-50/60` (צהוב-כתום עדין)
-- בורדר ימני: `border-r-4 border-r-amber-500` (עבה ובולט)
-- אייקון: `Shield` בצבע amber
-- Badge: `bg-amber-100 text-amber-800 border border-amber-200`
-- טקסט תיאור: `font-medium` (מודגש קלות)
-
-### פריטי אופציונלי (OPTIONAL)
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ ℹ️ │ אבזור פנים              │ קומפ' │ 1 │ ₪2,500 │  -  │ ₪2,500 │
-│    │ [Badge: אופציונלי]      │       │   │        │     │        │
-├──────────────────────────────────────────────────────────────────────┤
-│ רקע: bg-slate-50/50 | בורדר ימני: border-r-2 border-r-slate-300    │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-**סגנון:**
-- רקע: `bg-slate-50/50` (אפור ניטרלי)
-- בורדר ימני: `border-r-2 border-r-slate-300` (דק יותר)
-- אייקון: `Info` בצבע slate
-- Badge: `bg-slate-100 text-slate-700 border border-slate-200`
-- טקסט תיאור: `font-normal`
+### Key Components Involved
+- `NegotiationResponseView.tsx` - Consultant's view for responding to negotiation requests
+- `send-negotiation-response/index.ts` - Edge function that creates new proposal version
+- `submit_negotiation_response` - Database RPC that handles versioning
+- `proposal_versions` table - Stores version history
+- `NegotiationStepsTimeline.tsx` - Displays offer history (V1, V2, etc.)
 
 ---
 
-## 3. הסברי הנחות (Discount Explainer)
+## 3. Feature Name & Terminology
 
-### Helper Text להנחות
+| Hebrew | English | Context |
+|--------|---------|---------|
+| הגשת הצעת מחיר מעודכנת | Submit Revised Price Offer | Primary action label |
+| הצעה נגדית | Counter-Offer | Current terminology in code |
+| הצעה V2 / V3 | Offer V2 / V3 | Version labels in timeline |
+| עדכון הצעה | Update Offer | Alternative terminology |
 
-**מיקום:** מעל הטבלה או כ-tooltip על עמודת "הנחה"
-
-**טקסט:**
-```
-💡 הנחות מיוחדות: הנחות אלו הוצעו על ידי הקבלן כחלק מהמשא ומתן.
-   המחיר המוצג הוא המחיר הסופי לאחר ההנחה.
-```
-
-**עיצוב:**
-```tsx
-<div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3 mb-4 text-sm">
-  <div className="flex items-start gap-2">
-    <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-    <div>
-      <p className="font-medium text-amber-800">לגבי ההנחות המוצגות</p>
-      <p className="text-amber-700 text-xs mt-1">
-        הנחות אלו הוצעו על ידי הספק במסגרת המשא ומתן. 
-        העמודה "סה"כ לפריט" מציגה את המחיר הסופי לאחר ההנחה.
-      </p>
-    </div>
-  </div>
-</div>
-```
+**Recommendation**: Standardize on "הצעה מעודכנת" (Revised Offer) for user-facing UI, keeping "הצעה נגדית" (Counter-Offer) as a secondary/legal term.
 
 ---
 
-## 4. שורת סיכום משופרת
+## 4. Exact UI Action and Button Behavior
 
-### סיכום נוכחי vs מוצע
+### 4.1 Entry Points for "Revised Price Offer"
 
-**לפני:**
+**Location 1: Advisor Dashboard - Negotiations Tab**
 ```
-סה"כ: ₪4,750 | 9% הנחה
+┌─────────────────────────────────────────────────────────────────┐
+│ 📋 משא ומתן פעיל                                                │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ 🏗️ פרויקט: מבנה מרפאת אלופאתיה                               │ │
+│ │ מחיר מקורי: ₪55,000 → מחיר יעד: ₪50,000 (-9%)              │ │
+│ │                                                             │ │
+│ │ [הגב לבקשה] ← Primary CTA (existing)                        │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**אחרי:**
-```tsx
-<TableFooter>
-  {/* שורת סה"כ חובה */}
-  <TableRow className="bg-amber-50/30">
-    <TableCell colSpan={5} className="text-right font-medium">
-      סה"כ פריטי חובה:
-    </TableCell>
-    <TableCell className="text-center font-bold text-amber-700">
-      ₪2,250
-    </TableCell>
-  </TableRow>
-  
-  {/* שורת סה"כ אופציונלי (אם יש) */}
-  <TableRow className="bg-slate-50/30">
-    <TableCell colSpan={5} className="text-right font-medium text-slate-600">
-      סה"כ פריטים אופציונליים:
-    </TableCell>
-    <TableCell className="text-center font-medium text-slate-600">
-      ₪2,500
-    </TableCell>
-  </TableRow>
-  
-  {/* שורת סה"כ הצעה */}
-  <TableRow className="bg-primary/10 border-t-2 border-primary">
-    <TableCell colSpan={5} className="text-right font-bold text-lg">
-      סה"כ הצעה:
-    </TableCell>
-    <TableCell className="text-center font-bold text-lg text-primary">
-      ₪4,750
-    </TableCell>
-  </TableRow>
-</TableFooter>
+**Location 2: Negotiation Response Page (`/negotiation/:sessionId`)**
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│ Tab: תגובה (Response)                                           │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ סיכום ההצעה שלך                                              │ │
+│ │ ┌───────────┬───────────┬───────────┐                        │ │
+│ │ │ מחיר מקורי│ יעד היזם  │ ההצעה שלך │                        │ │
+│ │ │ ₪55,000  │ ₪50,000  │ ₪52,000  │                        │ │
+│ │ └───────────┴───────────┴───────────┘                        │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ הודעה ליזם (אופציונלי)                                       │ │
+│ │ ┌─────────────────────────────────────────────────────────┐ │ │
+│ │ │ [Textarea: הוסף הערות או הסברים להצעה המעודכנת...]      │ │ │
+│ │ └─────────────────────────────────────────────────────────┘ │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  [דחה בקשה]  [קבל מחיר יעד]  [🔵 הגש הצעת מחיר מעודכנת]         │
+│                               ↑ PRIMARY CTA                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Button Specifications
+
+| Button | Current Label | Proposed Label | Variant | Icon |
+|--------|---------------|----------------|---------|------|
+| Submit Counter-Offer | שלח הצעה נגדית | הגש הצעת מחיר מעודכנת | Primary (blue) | Send |
+| Accept Target Price | קבל מחיר יעד | אשר מחיר יעד | Outline (green) | Check |
+| Decline Request | דחה בקשה | דחה בקשה | Destructive (red) | XCircle |
+
+### 4.3 Button Click Behavior
+
+**On Click "הגש הצעת מחיר מעודכנת":**
+
+1. **Pre-flight Validation** (client-side):
+   - Verify all mandatory items have prices ≥ 0
+   - Verify milestone percentages sum to 100% (if applicable)
+   - Verify `newTotal > 0` (prevent zero/negative offers)
+
+2. **Confirmation Dialog** (new requirement):
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚠️ אישור הגשת הצעה מעודכנת                                      │
+│                                                                 │
+│ אתה עומד להגיש הצעת מחיר מעודכנת:                               │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ מחיר מקורי: ₪55,000                                         │ │
+│ │ מחיר חדש: ₪52,000                                           │ │
+│ │ הפחתה: -5.5%                                                │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ⚠️ שים לב: זוהי הצעה מחייבת. לאחר ההגשה, היזם יקבל הודעה       │
+│ וההצעה תהיה זמינה לאישור. לא ניתן לבטל הגשה.                    │
+│                                                                 │
+│                              [ביטול]  [🔵 אשר והגש הצעה]        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+3. **On Confirm**:
+   - Call `send-negotiation-response` edge function
+   - Create new `proposal_versions` entry
+   - Update `proposals.status` to `resubmitted`
+   - Update `negotiation_sessions.status` to `responded`
+   - Send email notification to Entrepreneur
+   - Create in-app notification
+
+4. **Success State**:
+   - Toast: "ההצעה המעודכנת נשלחה בהצלחה"
+   - Redirect to Advisor Dashboard
+   - Timeline shows new "הצעה V2" entry
 
 ---
 
-## 5. הדגשת "ערך מומלץ" (Best Value)
+## 5. State Changes and Validation Rules
 
-### Badge למחיר הנמוך ביותר
+### 5.1 State Machine
 
-```tsx
-{isLowestPrice && (
-  <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs gap-1">
-    <Star className="h-3 w-3" />
-    המחיר הנמוך ביותר
-  </Badge>
-)}
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     PROPOSAL STATUS FLOW                         │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  [submitted] ────────────────────────────────────────────────►   │
+│       │                                                          │
+│       ▼                                                          │
+│  [negotiation_requested] ◄──── Entrepreneur initiates            │
+│       │                                                          │
+│       ├──► [resubmitted] ◄──── Consultant submits revised offer  │
+│       │         │                                                │
+│       │         ├──► [accepted] ◄──── Entrepreneur approves      │
+│       │         │                                                │
+│       │         └──► [negotiation_requested] ◄── Another round   │
+│       │                                                          │
+│       └──► [cancelled] ◄──── Consultant declines negotiation     │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### Highlight לשורה מומלצת
+### 5.2 Negotiation Session Status
 
-```tsx
-<TableRow 
-  className={cn(
-    isRecommended && "ring-2 ring-green-400 ring-offset-1 bg-green-50/50"
-  )}
->
+| Status | Meaning | Consultant Can Respond? |
+|--------|---------|------------------------|
+| `open` | Session created, awaiting details | No |
+| `awaiting_response` | Ready for consultant response | ✅ Yes |
+| `responded` | Consultant submitted revised offer | No |
+| `resolved` | Entrepreneur accepted/rejected | No |
+| `cancelled` | Session cancelled | No |
+
+### 5.3 Validation Rules
+
+**Price Validation:**
+```typescript
+// Minimum: Must be greater than 0
+if (newTotal <= 0) {
+  throw new Error("סכום ההצעה חייב להיות גדול מאפס");
+}
+
+// Maximum: No upper limit, but warn if higher than original
+if (newTotal > originalTotal) {
+  showWarning("ההצעה החדשה גבוהה מההצעה המקורית - האם להמשיך?");
+}
+
+// Reasonable change: Warn if discount > 50%
+const discountPercent = ((originalTotal - newTotal) / originalTotal) * 100;
+if (discountPercent > 50) {
+  showWarning("ההנחה המוצעת עולה על 50% - האם אתה בטוח?");
+}
 ```
+
+**Milestone Validation:**
+```typescript
+const totalPercentage = milestoneResponses.reduce(
+  (sum, m) => sum + m.advisorResponsePercentage, 0
+);
+if (Math.abs(totalPercentage - 100) > 0.01) {
+  throw new Error(`סה"כ אחוזי אבני דרך חייב להיות 100% (כרגע: ${totalPercentage}%)`);
+}
+```
+
+**Rate Limiting:**
+- Maximum 3 revised offers per proposal per hour
+- Prevents spam/abuse
 
 ---
 
-## 6. Call to Action משופר
+## 6. Constraints and Edge Cases
 
-### כפתור הגשה נוכחי vs מוצע
+### 6.1 Permission Constraints
 
-**לפני:**
-```tsx
-<Button>שלח הצעה</Button>
+| Constraint | Rule |
+|------------|------|
+| User Role | Only `advisor` role can submit revised offers |
+| Session Ownership | `consultant_advisor_id` must match current user's advisor ID |
+| Session Status | Only `awaiting_response` sessions allow submission |
+| Time Limit | Session must not be expired (if deadline exists) |
+
+### 6.2 Edge Cases
+
+| Edge Case | System Behavior |
+|-----------|-----------------|
+| **Simultaneous Edits** | Last write wins; optimistic locking via `updated_at` check |
+| **Same Price Submitted** | Allow submission (counts as confirmation of original offer) |
+| **Network Failure During Submit** | Show retry option; don't create duplicate versions |
+| **Session Cancelled While Editing** | On submit, show error "בקשת המשא ומתן בוטלה" |
+| **Browser Closed Mid-Edit** | No auto-save; user must resubmit |
+| **Multiple Browser Tabs** | Warn on navigation; prevent duplicate submissions |
+| **Zero Line Items** | Allow submission with total price only (non-itemized) |
+| **Negative Discount (Price Increase)** | Allow with warning confirmation |
+
+### 6.3 Maximum Revisions Constraint
+
+**Business Rule**: No hard limit on number of revisions, but:
+- Each revision is logged in `proposal_versions`
+- Timeline displays all versions (V1, V2, V3...)
+- Entrepreneur sees full negotiation history
+
+---
+
+## 7. Expected System Behavior After Submission
+
+### 7.1 Database Updates
+
+| Table | Field | Update |
+|-------|-------|--------|
+| `proposals` | `status` | `'resubmitted'` |
+| `proposals` | `price` | New total price |
+| `proposals` | `current_version` | Incremented |
+| `proposals` | `fee_line_items` | Updated JSONB with new prices |
+| `proposal_versions` | (new row) | Snapshot of revised offer |
+| `negotiation_sessions` | `status` | `'responded'` |
+| `negotiation_sessions` | `responded_at` | Current timestamp |
+| `negotiation_sessions` | `consultant_response_message` | Message text |
+| `activity_log` | (new row) | `action: 'negotiation_responded'` |
+
+### 7.2 Notifications
+
+**Email to Entrepreneur:**
+```
+Subject: הצעה מעודכנת התקבלה - {project_name}
+
+שלום {entrepreneur_name},
+
+היועץ {advisor_company} שלח הצעה מעודכנת לפרויקט {project_name}:
+
+• מחיר קודם: ₪{previous_price}
+• מחיר חדש: ₪{new_price}
+• הפחתה: {reduction_percent}%
+
+{consultant_message if provided}
+
+[לצפייה בהצעה המעודכנת]
 ```
 
-**אחרי:**
-```tsx
-<div className="space-y-3 mt-6">
-  {/* הסבר לפני הכפתור */}
-  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm" dir="rtl">
-    <p className="font-medium text-blue-800 flex items-center gap-2">
-      <AlertCircle className="h-4 w-4" />
-      שים לב: זוהי הגשת הצעה רשמית
-    </p>
-    <p className="text-blue-700 text-xs mt-1">
-      לחיצה על הכפתור תגיש את ההצעה ליזם. לא ניתן לבטל הגשה לאחר מכן.
-    </p>
-  </div>
-  
-  {/* כפתור ראשי */}
-  <Button 
-    className="w-full h-12 text-base font-bold gap-2 bg-primary hover:bg-primary/90"
-    disabled={!isValid}
-  >
-    <Send className="h-5 w-5" />
-    הגש הצעת מחיר רשמית
-  </Button>
-  
-  {/* מידע משלים */}
-  <p className="text-xs text-muted-foreground text-center">
-    סה"כ להגשה: ₪{formatPrice(grandTotal)} (ללא מע"מ)
-  </p>
-</div>
+**In-App Notification:**
+- Type: `negotiation_response`
+- Priority: 2 (high)
+- Target: `project.owner_id`
+
+### 7.3 UI Updates
+
+**Advisor Dashboard:**
+- Negotiation card moves from "פעיל" to "הוגש"
+- Status badge: "הצעה נשלחה ✓"
+
+**Entrepreneur Project View:**
+- Proposal card shows "🔄 הצעה מעודכנת" badge
+- Timeline shows new "הצעה V{n}" entry
+- "קבל הצעה" button remains active
+
+**Negotiation Timeline:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 📄 01/02/2026  הצעה מקורית         ₪55,000    [הוגשה] [צפה] │
+│ 💬 03/02/2026  בקשה לשינויים                 [משא ומתן] [צפה]│
+│ 🔄 05/02/2026  הצעה V2              ₪52,000    [הוגשה] [צפה] │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
+### 7.4 Audit Trail
 
-## 7. קבצים לעדכון
-
-| # | קובץ | שינויים |
-|---|------|---------|
-| 1 | `src/components/proposal/ConsultantFeeTable.tsx` | כותרות עמודות, helper text הנחות, סיכום משופר |
-| 2 | `src/pages/SubmitProposal.tsx` | CTA משופר, הסבר הגשה רשמית |
-| 3 | `src/components/ProposalApprovalDialog.tsx` | microcopy לפריטי חובה/אופציונלי |
-| 4 | `src/components/ProposalComparisonTable.tsx` | Best value badge, tooltip להנחות |
-
----
-
-## 8. סיכום שינויי Microcopy
-
-### לטבלת שכ"ט (ConsultantFeeTable)
-
-| אלמנט | טקסט נוכחי | טקסט חדש |
-|-------|------------|----------|
-| כותרת טבלה | - | `פירוט שכר טרחה` |
-| תיאור משנה | - | `הזן מחיר ליחידה עבור כל פריט. פריטי חובה יכללו תמיד בהצעה.` |
-| עמודה "מחיר ליחידה" | `מחיר` | `מחיר ליחידה (₪)` |
-| עמודה "סה"כ" | `סה"כ` | `סה"כ לפריט` |
-| שורת סה"כ | `סה"כ הצעה:` | `סה"כ הצעת מחיר:` |
-| Tooltip חובה | `פריט מוגדר ע"י היזם` | `פריט חובה - חייב להיכלל בהצעה` |
-| Tooltip אופציונלי | `פריט אופציונלי` | `פריט אופציונלי - הכללתו לבחירתך` |
-
-### לכפתור הגשה (SubmitProposal)
-
-| אלמנט | טקסט נוכחי | טקסט חדש |
-|-------|------------|----------|
-| כפתור | `שלח הצעה` | `הגש הצעת מחיר רשמית` |
-| הסבר | - | `לחיצה תגיש את ההצעה ליזם. לא ניתן לבטל לאחר מכן.` |
-| Footer | `* כל המחירים ללא מע"מ` | `* כל המחירים ללא מע"מ | הצעה תקפה ל-30 יום` |
-
-### לדיאלוג אישור (ProposalApprovalDialog)
-
-| אלמנט | טקסט נוכחי | טקסט חדש |
-|-------|------------|----------|
-| כותרת חובה | `פריטי חובה` | `פריטים כלולים (חובה)` |
-| כותרת אופציונלי | `פריטים אופציונליים` | `פריטים נוספים לבחירה` |
-| הסבר אופציונלי | `(בחר כדי להוסיף)` | `סמן פריטים להוספה לסכום הסופי` |
+| Field | Value |
+|-------|-------|
+| `actor_id` | Consultant's user ID |
+| `actor_type` | `'advisor'` |
+| `action` | `'negotiation_responded'` |
+| `entity_type` | `'proposal'` |
+| `entity_id` | Proposal UUID |
+| `project_id` | Project UUID |
+| `meta` | `{ session_id, new_version_id, new_version_number, new_price }` |
 
 ---
 
-## 9. עקרונות עיצוב
+## 8. Implementation Files to Modify
 
-- **ניגודיות**: WCAG AA compliant בכל הצבעים
-- **RTL**: תמיכה מלאה עם `border-r` ו-`text-right`
-- **Dark Mode**: כל צבע עם וריאנט dark
-- **Accessibility**: tooltips מסבירות, תיוג ARIA
-- **Zero Guessing**: badges ותוויות ברורות ותמיד נראות
+### 8.1 UI Changes
 
+| File | Change |
+|------|--------|
+| `src/components/negotiation/NegotiationResponseView.tsx` | Update CTA label to "הגש הצעת מחיר מעודכנת", add confirmation dialog |
+| `src/pages/AdvisorDashboard.tsx` | Update status display for responded negotiations |
+| `src/components/NegotiationStepsTimeline.tsx` | Ensure V2+ labels are clear |
+
+### 8.2 Logic Changes
+
+| File | Change |
+|------|--------|
+| `src/hooks/useNegotiation.ts` | Add rate limiting check before submission |
+| `supabase/functions/send-negotiation-response/index.ts` | Already handles versioning correctly |
+
+### 8.3 Microcopy Updates
+
+| Location | Current | Updated |
+|----------|---------|---------|
+| Submit Button | שלח הצעה נגדית | הגש הצעת מחיר מעודכנת |
+| Confirmation Title | (none) | אישור הגשת הצעה מעודכנת |
+| Success Toast | (generic) | ההצעה המעודכנת נשלחה בהצלחה |
+| Tab Label | תגובה | הגש הצעה מעודכנת |
+
+---
+
+## 9. Summary
+
+The "Revised Price Offer" feature is **already implemented** in the current codebase through the `NegotiationResponseView` component and `send-negotiation-response` edge function. The recommended changes are:
+
+1. **Rename CTA** from "שלח הצעה נגדית" to "הגש הצעת מחיר מעודכנת"
+2. **Add Confirmation Dialog** with price summary and binding warning
+3. **Improve Microcopy** for clarity and legal compliance
+4. **Add Rate Limiting** to prevent abuse
+5. **Standardize Terminology** across all UI components
+
+The versioning, email notifications, and audit logging are already fully functional.
