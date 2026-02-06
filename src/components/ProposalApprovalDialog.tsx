@@ -275,7 +275,7 @@ export const ProposalApprovalDialog = ({
                   <div className="space-y-2" dir="rtl">
                     <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
                       <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
-                      פריטי חובה
+                      פריטים כלולים (חובה)
                     </h4>
                     <div className="border rounded-lg overflow-hidden bg-background">
                       <div className="overflow-x-auto">
@@ -319,9 +319,9 @@ export const ProposalApprovalDialog = ({
                   <div className="space-y-2" dir="rtl">
                     <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
-                      פריטים אופציונליים
+                      פריטים נוספים לבחירה
                       <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">
-                        (בחר כדי להוסיף)
+                        (סמן פריטים להוספה לסכום הסופי)
                       </span>
                     </h4>
                     <div className="border rounded-lg overflow-hidden bg-blue-50/30 dark:bg-blue-950/20">
