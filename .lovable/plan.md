@@ -1,186 +1,240 @@
 
-# Plan: Simplify RFP Template Structure
+# Plan: Template Management Cleanup and RTL Fixes
 
-## Current Problem Analysis
+## Problem Summary
 
-The current 4-level hierarchy (Advisor Type → Project Type → Category → Submission Method) is overly complex and has issues:
+Based on the current codebase analysis, I've identified three main issues:
 
-1. **Category table is empty** - No categories exist in `fee_template_categories`
-2. **Templates bypass hierarchy** - Current templates in `default_fee_item_templates` are only keyed by `advisor_specialty`, ignoring category/method
-3. **Entrepreneur confusion** - The `ServiceDetailsTab` tries to show category/method selectors but finds no data
-4. **Over-engineering** - Most advisors need just one template set per project type
+### 1. Outdated Category Count Displays
+The advisor type cards in `FeeTemplatesHierarchy.tsx` (line 69) show "X קטגוריות" which is no longer relevant since we removed the category hierarchy. Similarly, `FeeTemplatesByProject.tsx` (line 95-96) shows "פעיל" / "טרם הוגדר" based on `category_count` which is always 0.
 
-## Proposed Solution: 3-Level Hierarchy
+### 2. Template Field Alignment Issues
+Comparing Admin template dialogs with Entrepreneur RFP forms:
 
-```
-Level 1: סוג יועץ (Advisor Type)
-    └── Level 2: סוג פרויקט (Project Type)
-        └── Templates (3 Tabs):
-            ├── שורות שכ"ט (Fee Items)
-            ├── שירותים (Services)
-            └── אבני דרך (Milestones)
-```
+| Field | Admin Template | Entrepreneur FeeItemsTable | Status |
+|-------|----------------|---------------------------|--------|
+| Description | Yes | Yes | OK |
+| Unit | Yes | Yes | OK |
+| Quantity | Yes | Yes | OK |
+| Charge Type | Yes | Yes | OK |
+| Duration | **Missing** | Yes | **Need to add** |
+| Is Optional | Yes | Yes | OK |
 
-The "submission method" (lump_sum/quantity/hourly) becomes a **property** of each fee item row, not a separate hierarchy level.
+The admin fee item template dialog doesn't include `duration` field, but the entrepreneur form now supports it.
+
+### 3. RTL Alignment Issues
+Several components need RTL fixes:
+- Dialog footers have button order issues (Cancel should be on the right in RTL)
+- Some Select components missing `dir="rtl"` on SelectContent
+- Table headers using `text-right` instead of `text-start` (logical property)
 
 ---
 
-## Implementation Changes
+## Solution
 
-### Part 1: Admin Interface Simplification
+### Part 1: Update Advisor Type Cards (FeeTemplatesHierarchy.tsx)
 
-#### A. Remove Category Level
-**File: `FeeTemplatesByProject.tsx`**
-- When clicking a project type, go directly to templates view (not categories)
-- Route: `/heyadmin/fee-templates/{advisorType}/{projectType}` → Templates page
+**Current (lines 68-72):**
+```tsx
+<div className="flex items-center gap-4 text-sm text-muted-foreground">
+  <span>{advisor.category_count} קטגוריות</span>
+  <span>•</span>
+  <span>{advisor.template_count} תבניות</span>
+</div>
+```
 
-#### B. Create New Unified Templates Page
-**New File: `FeeTemplatesByAdvisorProject.tsx`**
-- Replace `FeeTemplateCategories.tsx` and `FeeTemplateSubmissionMethods.tsx` with a single page
-- Shows 3 tabs directly: Fee Items, Services, Milestones
-- Templates are filtered by `advisor_specialty` + `project_type`
+**Updated:**
+```tsx
+<div className="text-sm text-muted-foreground">
+  {advisor.template_count > 0 ? (
+    <span>{advisor.template_count} תבניות</span>
+  ) : (
+    <span className="text-muted-foreground/60">טרם הוגדרו תבניות</span>
+  )}
+</div>
+```
 
-#### C. Update Routes
-**File: `App.tsx`**
-- Remove: `/heyadmin/fee-templates/:advisorType/:projectType/:categoryId` route
-- Keep: `/heyadmin/fee-templates/:advisorType/:projectType` → New unified page
+Also update `useAdvisorTypeSummary` hook to count templates directly without categories.
 
-### Part 2: Database Queries Update
+### Part 2: Update Project Type Cards (FeeTemplatesByProject.tsx)
 
-Update template loading to use `advisor_specialty` + `project_type`:
+**Current approach:** Based on `category_count` from `fee_template_categories` table (always 0)
+
+**New approach:** Count actual templates from all 3 tables:
+- `default_fee_item_templates` where `advisor_specialty` + `project_type`
+- `default_service_scope_templates` where `advisor_specialty` + `project_type`
+- `milestone_templates` where `advisor_specialty` + `project_type`
+
+**Display logic:**
+```tsx
+<Badge variant={hasTemplates ? "default" : "secondary"}>
+  {hasTemplates ? `${totalTemplates} תבניות` : "טרם הוגדר"}
+</Badge>
+```
+
+### Part 3: Add Duration Field to Admin Fee Item Dialog
+
+Update `CreateFeeItemTemplateDialog.tsx` and `EditFeeItemTemplateDialog.tsx`:
+
+Add state:
+```tsx
+const [duration, setDuration] = useState<number | undefined>(undefined);
+```
+
+Add conditional field (when charge_type is recurring):
+```tsx
+{isRecurringChargeType(chargeType) && (
+  <div className="space-y-2">
+    <Label htmlFor="duration">משך ברירת מחדל</Label>
+    <div className="flex items-center gap-2">
+      <Input
+        id="duration"
+        type="number"
+        min={1}
+        value={duration || ''}
+        onChange={(e) => setDuration(parseInt(e.target.value) || undefined)}
+        className="text-right"
+        placeholder="12"
+      />
+      <span className="text-sm text-muted-foreground">
+        {getDurationUnitLabel(chargeType)}
+      </span>
+    </div>
+  </div>
+)}
+```
+
+### Part 4: RTL Fixes
+
+#### A. Dialog Footer Button Order
+All dialog footers should follow RTL standard (per memory):
+- Primary action on far left
+- Cancel in center
+- Utility actions on far right
+
+**Fix pattern:**
+```tsx
+<DialogFooter className="flex-row-reverse gap-2">
+  <Button type="button" variant="outline" onClick={onClose}>
+    ביטול
+  </Button>
+  <Button type="submit">
+    {isPending ? "שומר..." : "שמור"}
+  </Button>
+</DialogFooter>
+```
+
+Files to fix:
+- `CreateFeeItemTemplateDialog.tsx`
+- `CreateServiceScopeTemplateDialog.tsx`
+- `CreateMilestoneTemplateDialog.tsx`
+- `EditFeeItemTemplateDialog.tsx`
+- `EditServiceScopeTemplateDialog.tsx`
+- `EditMilestoneTemplateDialog.tsx`
+
+#### B. Table Headers
+Change `text-right` to `text-start` for automatic RTL/LTR compatibility:
+```tsx
+<TableHead className="text-start">תיאור</TableHead>
+```
+
+Already using correct approach in `FeeTemplatesByAdvisorProject.tsx`.
+
+#### C. SelectContent RTL
+Ensure all SelectContent have proper RTL:
+```tsx
+<SelectContent dir="rtl">
+```
+
+---
+
+## Updated Hook: useProjectTypeSummary
+
+Replace category-based counting with template-based counting:
 
 ```typescript
-// Fee Items
-supabase.from('default_fee_item_templates')
-  .select('*')
-  .eq('advisor_specialty', advisorType)
-  .or(`project_type.eq.${projectType},project_type.is.null`)
-  .order('display_order');
+export function useProjectTypeSummary(advisorSpecialty: string) {
+  return useQuery({
+    queryKey: [HIERARCHY_KEY, "project-summary", advisorSpecialty],
+    queryFn: async () => {
+      // Count fee item templates per project type
+      const { data: feeItems } = await supabase
+        .from("default_fee_item_templates")
+        .select("project_type")
+        .eq("advisor_specialty", advisorSpecialty);
 
-// Services
-supabase.from('default_service_scope_templates')
-  .select('*')
-  .eq('advisor_specialty', advisorType)
-  .or(`project_type.eq.${projectType},project_type.is.null`)
-  .order('display_order');
+      // Count service templates per project type  
+      const { data: services } = await supabase
+        .from("default_service_scope_templates")
+        .select("project_type")
+        .eq("advisor_specialty", advisorSpecialty);
 
-// Milestones
-supabase.from('milestone_templates')
-  .select('*')
-  .or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`)
-  .or(`project_type.eq.${projectType},project_type.is.null`)
-  .order('display_order');
-```
+      // Count milestone templates per project type
+      const { data: milestones } = await supabase
+        .from("milestone_templates")
+        .select("project_type")
+        .eq("advisor_specialty", advisorSpecialty);
 
-### Part 3: Entrepreneur Flow Simplification
+      // Aggregate counts by project type
+      const projectMap = new Map<string, number>();
+      
+      [...(feeItems || []), ...(services || []), ...(milestones || [])].forEach((t) => {
+        const pt = t.project_type || null;
+        if (pt) {
+          projectMap.set(pt, (projectMap.get(pt) || 0) + 1);
+        }
+      });
 
-#### A. Simplify `ServiceDetailsTab.tsx`
-- Remove category/method dropdowns
-- Load templates directly based on `advisorType` + `projectType`
-- Auto-load on component mount when in checklist mode
-
-#### B. Simplify `FeeItemsTable.tsx` 
-- Update `loadTemplates()` to filter by `advisorType` + `projectType`
-- Remove any category/method dependencies
-
-#### C. Simplify `PaymentTermsTab.tsx`
-- Update `loadTemplate()` to filter by `advisorType` + `projectType`
-- Remove `categoryId` prop dependency
-
-### Part 4: Vendor Type Sync
-
-#### A. Update Advisory Types Source
-The ADVISOR_EXPERTISE constant in `advisor.ts` should be the canonical source. Ensure:
-
-1. Admin template pages use `ADVISOR_EXPERTISE` from `advisor.ts`
-2. RFP wizard continues to use JSON from Supabase Storage (this is intentional - allows dynamic updates)
-3. Document that adding new advisor types requires updating both:
-   - `src/constants/advisor.ts` (for admin)
-   - `json/advisors_projects_full.json` in Supabase Storage (for wizard)
-
----
-
-## File Changes Summary
-
-| Action | File | Change |
-|--------|------|--------|
-| Create | `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | New unified templates page with 3 tabs |
-| Modify | `src/pages/admin/FeeTemplatesByProject.tsx` | Click goes to new page, not categories |
-| Delete | `src/pages/admin/FeeTemplateCategories.tsx` | No longer needed |
-| Modify | `src/pages/admin/FeeTemplateSubmissionMethods.tsx` | Rename/repurpose for the new page |
-| Modify | `src/App.tsx` | Update routes |
-| Modify | `src/components/rfp/ServiceDetailsTab.tsx` | Remove category/method selectors |
-| Modify | `src/components/rfp/FeeItemsTable.tsx` | Filter by advisor + project type |
-| Modify | `src/components/rfp/PaymentTermsTab.tsx` | Remove categoryId dependency |
-| Modify | `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add project_type field |
-
----
-
-## New Admin Templates Page Structure
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ← חזרה לסוגי פרויקטים                                        │
-│                                                             │
-│ אדריכל > מגורים בבנייה רוויה                                │
-│ ═══════════════════════════════════════════════════════════ │
-│                                                             │
-│ ┌────────────┬────────────┬─────────────┐                  │
-│ │ שורות שכ"ט │  שירותים   │  אבני דרך   │ ← Tabs           │
-│ └────────────┴────────────┴─────────────┘                  │
-│                                                             │
-│ ┌───────────────────────────────────────────────────────┐  │
-│ │ + הוסף שורה                                           │  │
-│ ├───────────────────────────────────────────────────────┤  │
-│ │ תיאור          │ יחידה │ סוג חיוב │ אופציונלי │  🗑️  │  │
-│ │ הכנת תכנית     │ פאושלי │ חד פעמי │    ❌     │  🗑️  │  │
-│ │ ליווי מול רשויות │ שעתי  │ שעתי    │    ✓     │  🗑️  │  │
-│ └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+      return Array.from(projectMap.entries()).map(([project_type, template_count]) => ({
+        project_type,
+        template_count,
+      }));
+    },
+    enabled: !!advisorSpecialty,
+  });
+}
 ```
 
 ---
 
-## Entrepreneur Template Loading (After Changes)
+## Files to Modify
 
-When entrepreneur opens RFP editor for "אדריכל" on a "מגורים" project:
-
-1. `ServiceDetailsTab` loads services from `default_service_scope_templates` where `advisor_specialty = 'אדריכל'` AND (`project_type = 'מגורים'` OR `project_type IS NULL`)
-
-2. `FeeItemsTable` loads fee items from `default_fee_item_templates` with same filter
-
-3. `PaymentTermsTab` loads milestones from `milestone_templates` with same filter
-
-No category or submission method selection required - it just works.
-
----
-
-## Migration Considerations
-
-- The `fee_template_categories` and `fee_submission_methods` tables can be kept for now (they're empty anyway)
-- Future cleanup: Remove the tables after confirming the new structure works
-- Existing templates in `default_fee_item_templates` already have `advisor_specialty` - just need to add `project_type` values where applicable
+| File | Change |
+|------|--------|
+| `src/pages/admin/FeeTemplatesHierarchy.tsx` | Replace category count with template count display |
+| `src/pages/admin/FeeTemplatesByProject.tsx` | Use template count instead of category count |
+| `src/hooks/useFeeTemplateHierarchy.ts` | Update `useAdvisorTypeSummary` and `useProjectTypeSummary` to count templates |
+| `src/components/admin/CreateFeeItemTemplateDialog.tsx` | Add duration field, fix RTL footer |
+| `src/components/admin/EditFeeItemTemplateDialog.tsx` | Add duration field, fix RTL footer |
+| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Fix RTL footer button order |
+| `src/components/admin/EditServiceScopeTemplateDialog.tsx` | Fix RTL footer button order |
+| `src/components/admin/CreateMilestoneTemplateDialog.tsx` | Fix RTL footer button order |
+| `src/components/admin/EditMilestoneTemplateDialog.tsx` | Fix RTL footer button order |
 
 ---
 
 ## Testing Checklist
 
-1. **Admin Flow**:
-   - Navigate to תבניות קריאה להצעה
-   - Select advisor type (e.g., אדריכל)
-   - Select project type (e.g., מגורים בבנייה רוויה)
-   - See 3 tabs: שורות שכ"ט, שירותים, אבני דרך
-   - Add/edit/delete templates in each tab
-   - Verify templates save with correct advisor_specialty + project_type
+1. **Advisor Type Grid (FeeTemplatesHierarchy)**:
+   - [ ] Shows "X תבניות" when templates exist
+   - [ ] Shows "טרם הוגדרו תבניות" when empty
+   - [ ] No reference to "קטגוריות"
 
-2. **Entrepreneur Flow**:
-   - Create RFP for project
-   - Open Request Editor for an advisor
-   - Click "טען תבנית" in Fee Items tab → loads templates
-   - Switch to Services tab in checklist mode → auto-loads services
-   - Switch to Payment tab → click "טען תבנית" → loads milestones
-   - Submit RFP and verify data is correct
+2. **Project Type Grid (FeeTemplatesByProject)**:
+   - [ ] Active projects (with templates) sorted first
+   - [ ] Shows badge with "X תבניות" or "טרם הוגדר"
+   - [ ] Click navigates to template management page
 
-3. **Vendor Type Sync**:
-   - All advisor types from `advisor.ts` should appear in admin
-   - Active project types should appear first with badges
+3. **Create Fee Item Dialog**:
+   - [ ] Duration field appears when charge_type is recurring
+   - [ ] Duration field hidden for one_time
+   - [ ] Buttons in correct RTL order (Cancel right, Submit left)
+
+4. **Edit Fee Item Dialog**:
+   - [ ] Duration field pre-populated if exists
+   - [ ] Duration field conditional on charge_type
+
+5. **All RTL Elements**:
+   - [ ] Dialog footers have correct button order
+   - [ ] Select dropdowns properly RTL aligned
+   - [ ] Table headers use logical properties
