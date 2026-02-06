@@ -120,9 +120,9 @@ export function ConfirmProposalDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0" dir="rtl">
         <AlertDialogHeader className="px-6 pt-6 pb-2">
-          <AlertDialogTitle>סקירה אחרונה לפני הגשה</AlertDialogTitle>
+          <AlertDialogTitle>סיכום לפני הגשת הצעה רשמית</AlertDialogTitle>
           <AlertDialogDescription>
-            אנא בדקו את הפרטים הבאים לפני הגשת ההצעה
+            אנא בדקו את הפרטים הבאים לפני הגשת ההצעה. לאחר ההגשה לא ניתן לבטל.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
@@ -136,10 +136,10 @@ export function ConfirmProposalDialog({
               </p>
             </div>
             
-            {/* Fee Line Items Breakdown */}
+            {/* Fee Line Items Breakdown - Mandatory */}
             {mandatoryItems.length > 0 && (
-              <div className="p-4 border rounded-lg">
-                <Label className="text-muted-foreground text-xs mb-3 block">פירוט שכר טרחה</Label>
+              <div className="p-4 border rounded-lg bg-amber-50/30 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים כלולים (חובה)</Label>
                 <div className="space-y-2">
                   {mandatoryItems.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-muted last:border-0">
@@ -157,8 +157,8 @@ export function ConfirmProposalDialog({
 
             {/* Optional Items */}
             {optionalItems.length > 0 && (
-              <div className="p-4 border rounded-lg border-dashed">
-                <Label className="text-muted-foreground text-xs mb-3 block">פריטים אופציונליים</Label>
+              <div className="p-4 border rounded-lg border-dashed bg-slate-50/30 dark:bg-slate-900/20">
+                <Label className="text-muted-foreground text-xs mb-3 block font-semibold">פריטים נוספים (אופציונלי)</Label>
                 <div className="space-y-2">
                   {optionalItems.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm py-1">
@@ -166,7 +166,7 @@ export function ConfirmProposalDialog({
                       <span className="font-medium">{formatCurrency(item.total)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center pt-2 text-muted-foreground">
+                  <div className="flex justify-between items-center pt-2 text-slate-600 dark:text-slate-400">
                     <span>סה״כ אופציונלי</span>
                     <span>{formatCurrency(totalOptional)}</span>
                   </div>
@@ -234,8 +234,8 @@ export function ConfirmProposalDialog({
           </Button>
           <div className="flex gap-2">
             <AlertDialogCancel>חזרה לעריכה</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirm}>
-              אישור והגשת הצעה
+            <AlertDialogAction onClick={onConfirm} className="bg-primary hover:bg-primary/90 font-bold">
+              הגש הצעת מחיר רשמית
             </AlertDialogAction>
           </div>
         </AlertDialogFooter>

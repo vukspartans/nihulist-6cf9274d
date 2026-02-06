@@ -318,13 +318,14 @@ export const ProposalComparisonTable = ({
 
                       {/* Total Price */}
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <span className="font-bold text-primary">
                             {formatCurrency(proposal.price)}
                           </span>
                           {isLowestPrice && (
-                            <Badge variant="success" className="text-xs px-1 py-0">
-                              נמוך
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border border-green-200 dark:border-green-700 text-xs px-1.5 py-0 gap-0.5">
+                              <ArrowDown className="h-3 w-3" />
+                              הנמוך ביותר
                             </Badge>
                           )}
                         </div>
@@ -402,9 +403,9 @@ export const ProposalComparisonTable = ({
                                         <TableCell className="text-xs font-medium">{formatCurrency(itemTotal)}</TableCell>
                                         <TableCell className="text-xs">
                                           {item.is_optional ? (
-                                            <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                                            <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs">אופציונלי</Badge>
                                           ) : (
-                                            <Badge variant="secondary" className="text-xs">חובה</Badge>
+                                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700 text-xs">חובה</Badge>
                                           )}
                                         </TableCell>
                                       </TableRow>

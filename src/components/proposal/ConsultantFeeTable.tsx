@@ -97,18 +97,49 @@ export function ConsultantFeeTable({
 
   const grandTotal = entrepreneurTotal + additionalTotal;
 
+  // Calculate mandatory vs optional totals
+  const mandatoryItems = entrepreneurItems.filter(item => !item.is_optional);
+  const optionalItems = entrepreneurItems.filter(item => item.is_optional);
+  
+  const mandatoryTotal = mandatoryItems.reduce((sum, item) => {
+    const price = consultantPrices[item.id || ''] ?? 0;
+    const qty = item.quantity || 1;
+    return sum + (price * qty);
+  }, 0);
+  
+  const optionalTotal = optionalItems.reduce((sum, item) => {
+    const price = consultantPrices[item.id || ''] ?? 0;
+    const qty = item.quantity || 1;
+    return sum + (price * qty);
+  }, 0);
+
+  const totalItemsCount = entrepreneurItems.length + additionalItems.length;
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
+        {/* Table Header with Title and Description */}
+        <div className="space-y-1">
+          <h3 className="font-semibold text-base flex items-center gap-2">
+            פירוט שכר טרחה
+            <Badge variant="secondary" className="text-xs">
+              {totalItemsCount} פריטים
+            </Badge>
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            הזן מחיר ליחידה עבור כל פריט. פריטי חובה יכללו תמיד בהצעה.
+          </p>
+        </div>
+
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="w-12 text-center">#</TableHead>
-              <TableHead className="min-w-[200px]">תיאור הפריט</TableHead>
-              <TableHead className="w-24 text-center">יחידה</TableHead>
+              <TableHead className="min-w-[200px]">השירות</TableHead>
+              <TableHead className="w-24 text-center">יחידת מדידה</TableHead>
               <TableHead className="w-20 text-center">כמות</TableHead>
-              <TableHead className="w-32 text-center">מחיר ליחידה</TableHead>
-              <TableHead className="w-28 text-center">סה"כ</TableHead>
+              <TableHead className="w-32 text-center">מחיר ליחידה (₪)</TableHead>
+              <TableHead className="w-28 text-center">סה"כ לפריט</TableHead>
               <TableHead className="w-16 text-center">הערות</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -151,7 +182,9 @@ export function ConsultantFeeTable({
                           )}
                         </TooltipTrigger>
                         <TooltipContent>
-                          {item.is_optional ? 'פריט אופציונלי' : 'פריט חובה - מוגדר ע"י היזם'}
+                          {item.is_optional 
+                            ? 'פריט אופציונלי - הכללתו לבחירתך' 
+                            : 'פריט חובה - חייב להיכלל בהצעה'}
                         </TooltipContent>
                       </Tooltip>
                       
@@ -165,13 +198,23 @@ export function ConsultantFeeTable({
                       {/* Badge - always show, style based on type */}
                       <Badge 
                         className={cn(
-                          "text-xs shrink-0 ml-1",
+                          "text-xs shrink-0 ml-1 gap-1",
                           item.is_optional 
                             ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
                             : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
                         )}
                       >
-                        {item.is_optional ? 'אופציונלי' : 'חובה'}
+                        {item.is_optional ? (
+                          <>
+                            <Info className="h-3 w-3" />
+                            אופציונלי
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="h-3 w-3" />
+                            חובה
+                          </>
+                        )}
                       </Badge>
                     </div>
                   </TableCell>
@@ -388,29 +431,47 @@ export function ConsultantFeeTable({
             })}
           </TableBody>
           <TableFooter>
-            <TableRow>
+            {/* Mandatory items total */}
+            <TableRow className="bg-amber-50/30 dark:bg-amber-950/20">
               <TableCell colSpan={5} className="text-right font-medium">
-                סה"כ פריטי יזם:
+                סה"כ פריטי חובה:
               </TableCell>
-              <TableCell className="text-center font-bold">
-                ₪{formatPrice(entrepreneurTotal)}
+              <TableCell className="text-center font-bold text-amber-700 dark:text-amber-400">
+                ₪{formatPrice(mandatoryTotal)}
               </TableCell>
               <TableCell colSpan={2}></TableCell>
             </TableRow>
+            
+            {/* Optional items total (if any) */}
+            {optionalTotal > 0 && (
+              <TableRow className="bg-slate-50/30 dark:bg-slate-900/20">
+                <TableCell colSpan={5} className="text-right font-medium text-slate-600 dark:text-slate-400">
+                  סה"כ פריטים אופציונליים:
+                </TableCell>
+                <TableCell className="text-center font-medium text-slate-600 dark:text-slate-400">
+                  ₪{formatPrice(optionalTotal)}
+                </TableCell>
+                <TableCell colSpan={2}></TableCell>
+              </TableRow>
+            )}
+            
+            {/* Consultant additional items */}
             {additionalItems.length > 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-medium text-green-700">
-                  סה"כ פריטים נוספים:
+                <TableCell colSpan={5} className="text-right font-medium text-green-700 dark:text-green-400">
+                  סה"כ פריטים נוספים (שלך):
                 </TableCell>
-                <TableCell className="text-center font-bold text-green-700">
+                <TableCell className="text-center font-bold text-green-700 dark:text-green-400">
                   ₪{formatPrice(additionalTotal)}
                 </TableCell>
                 <TableCell colSpan={2}></TableCell>
               </TableRow>
             )}
-            <TableRow className="bg-primary/10">
+            
+            {/* Grand total */}
+            <TableRow className="bg-primary/10 border-t-2 border-primary">
               <TableCell colSpan={5} className="text-right font-bold text-lg">
-                סה"כ הצעה:
+                סה"כ הצעת מחיר:
               </TableCell>
               <TableCell className="text-center font-bold text-lg text-primary">
                 ₪{formatPrice(grandTotal)}
@@ -420,9 +481,9 @@ export function ConsultantFeeTable({
           </TableFooter>
         </Table>
         
-        {/* VAT Disclaimer */}
+        {/* VAT Disclaimer - Enhanced */}
         <p className="text-xs text-muted-foreground text-right mt-2">
-          * כל המחירים ללא מע"מ
+          * כל המחירים ללא מע"מ | הצעה תקפה ל-30 יום
         </p>
 
         <div className="flex gap-2">

@@ -1337,6 +1337,17 @@ const SubmitProposal = () => {
                 </div>
               )}
 
+              {/* Official Submission Warning */}
+              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950/20">
+                <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription className="text-blue-900 dark:text-blue-200">
+                  <strong>שים לב: זוהי הגשת הצעה רשמית</strong>
+                  <p className="text-sm mt-1">
+                    לחיצה על הכפתור תגיש את ההצעה ליזם. לא ניתן לבטל הגשה לאחר מכן.
+                  </p>
+                </AlertDescription>
+              </Alert>
+
               <div className="flex justify-between items-center">
                 <Button type="button" variant="outline" onClick={() => setActiveTab('files')} className="gap-2">
                   <ArrowRight className="h-4 w-4" />
@@ -1345,13 +1356,18 @@ const SubmitProposal = () => {
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="gap-2 shadow-lg hover:shadow-xl transition-all" 
+                  className="gap-2 shadow-lg hover:shadow-xl transition-all h-12 text-base font-bold" 
                   disabled={submitting}
                 >
-                  <Send className="h-4 w-4" />
-                  {submitting ? "שולח..." : "סיכום ואישור"}
+                  <Send className="h-5 w-5" />
+                  {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
                 </Button>
               </div>
+              
+              {/* Footer info */}
+              <p className="text-xs text-muted-foreground text-center">
+                סה"כ להגשה: ₪{parseFloat(price || '0').toLocaleString('he-IL')} (ללא מע"מ)
+              </p>
             </TabsContent>
           </Tabs>
         </form>
