@@ -186,7 +186,7 @@ export const useProposalApproval = () => {
           body: {
             proposal_id: proposalId,
             rejection_reason: reason,
-            test_mode: true, // Set to false in production
+            test_mode: false,
           },
         })
         .then(({ data: emailData, error: emailError }) => {

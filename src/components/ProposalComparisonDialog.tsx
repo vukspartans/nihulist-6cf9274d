@@ -99,6 +99,7 @@ interface ProposalComparisonDialogProps {
   proposalIds: string[];
   advisorType: string;
   projectId: string;
+  onStatusChange?: () => void;
 }
 
 export const ProposalComparisonDialog = ({
@@ -107,6 +108,7 @@ export const ProposalComparisonDialog = ({
   proposalIds,
   advisorType,
   projectId,
+  onStatusChange,
 }: ProposalComparisonDialogProps) => {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1189,6 +1191,7 @@ export const ProposalComparisonDialog = ({
             setApprovalDialogOpen(false);
             setSelectedProposal(null);  // Reset selection to update UI
             fetchProposals();            // Refresh data
+            onStatusChange?.();          // Notify parent of status change
           }}
         />
       )}

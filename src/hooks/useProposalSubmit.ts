@@ -452,7 +452,7 @@ export const useProposalSubmit = () => {
         .invoke('notify-proposal-submitted', {
           body: {
             proposal_id: proposal.id,
-            test_mode: true,
+            test_mode: false,
           },
         })
         .then(({ data: emailData, error: emailError }) => {
