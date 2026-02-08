@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardStats } from "@/components/DashboardStats";
 import { ProjectFilters } from "@/components/ProjectFilters";
 import { UserHeader } from "@/components/UserHeader";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProjectSummary } from "@/types/project";
 import NavigationLogo from "@/components/NavigationLogo";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,14 @@ const getPhaseStatusColor = (phase: string | null) => {
   return 'bg-orange-500';
 };
 
+// Notification item interface for NotificationsDropdown
+interface ProposalNotification {
+  id: string;
+  projectId: string;
+  projectName: string;
+  advisorType?: string;
+  createdAt: string;
+}
 
 const Dashboard = () => {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -52,6 +61,7 @@ const Dashboard = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [unseenProposalCounts, setUnseenProposalCounts] = useState<Record<string, number>>({});
+  const [proposalNotifications, setProposalNotifications] = useState<ProposalNotification[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, loading: authLoading } = useAuth();
@@ -161,7 +171,7 @@ const Dashboard = () => {
       
       // Fetch unseen proposal counts for all projects
       if (data && data.length > 0) {
-        fetchUnseenProposalCounts(data.map(p => p.id));
+        fetchUnseenProposalCounts(data.map(p => p.id), data);
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -175,19 +185,27 @@ const Dashboard = () => {
     }
   };
 
-  const fetchUnseenProposalCounts = async (projectIds: string[]) => {
+  const fetchUnseenProposalCounts = async (projectIds: string[], projectsData?: ProjectSummary[]) => {
     try {
-      // Calculate 24 hours ago
-      const twentyFourHoursAgo = new Date();
-      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
+      // Fetch ALL unseen proposals (removed 24-hour filter)
+      // Include both 'submitted' and 'resubmitted' (counter-offers)
       const { data, error } = await supabase
         .from('proposals')
-        .select('project_id')
+        .select(`
+          id,
+          project_id,
+          supplier_name,
+          submitted_at,
+          status,
+          rfp_invite:rfp_invites!rfp_invite_id (
+            advisor_type
+          )
+        `)
         .in('project_id', projectIds)
         .is('seen_by_entrepreneur_at', null)
-        .eq('status', 'submitted')
-        .gte('submitted_at', twentyFourHoursAgo.toISOString()); // Within last 24 hours
+        .in('status', ['submitted', 'resubmitted']) // Include counter-offers
+        .order('submitted_at', { ascending: false })
+        .limit(20); // Limit for notifications dropdown
 
       if (error) {
         console.error('[Dashboard] Error fetching unseen proposal counts:', error);
@@ -200,8 +218,24 @@ const Dashboard = () => {
         counts[p.project_id] = (counts[p.project_id] || 0) + 1;
       });
       
-      console.info('[Dashboard] Unseen proposal counts (24h + unseen):', counts);
+      console.info('[Dashboard] Unseen proposal counts:', counts);
       setUnseenProposalCounts(counts);
+
+      // Build notifications for dropdown (use passed projectsData or current projects state)
+      const projectsMap = (projectsData || projects).reduce((acc, p) => {
+        acc[p.id] = p.name;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const notifications: ProposalNotification[] = (data || []).slice(0, 10).map(p => ({
+        id: p.id,
+        projectId: p.project_id,
+        projectName: projectsMap[p.project_id] || 'פרויקט',
+        advisorType: (p.rfp_invite as any)?.advisor_type || undefined,
+        createdAt: p.submitted_at,
+      }));
+
+      setProposalNotifications(notifications);
     } catch (error) {
       console.error('[Dashboard] Error in fetchUnseenProposalCounts:', error);
     }
@@ -304,6 +338,10 @@ const Dashboard = () => {
         <div className="flex items-center justify-between gap-2">
           <NavigationLogo size="sm" className="flex-shrink-0" />
           <div className="flex items-center gap-2">
+            <NotificationsDropdown 
+              notifications={proposalNotifications} 
+              type="proposal" 
+            />
             <Button
               onClick={() => navigate("/projects/new")}
               variant="tech"

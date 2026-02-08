@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.cleanup-unused-negotiation-files]
 verify_jwt = false
+
+[functions.notify-proposal-resubmitted]
+verify_jwt = true
