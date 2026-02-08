@@ -1,176 +1,94 @@
 
+# Plan: Standardize File Upload Size Limits to 20MB
 
-# Bug Analysis & Action Plan: Email Notifications and Approval Dialog Issues
+## Current State Analysis
 
-## Summary of Reported Bugs
+The codebase has inconsistent file upload limits scattered across multiple files:
 
-| Bug | Description | Root Cause Found |
-|-----|-------------|------------------|
-| **Bug 1** | Entrepreneurs not receiving emails about received proposals | `test_mode: true` hardcoded - emails go to test address |
-| **Bug 2** | Approval dialog not closing / status not updating | `ProposalComparisonDialog` not calling parent's `onStatusChange` |
+| File | Current Limit | Issue |
+|------|---------------|-------|
+| `src/utils/storageQuota.ts` | 10 MB | Outdated constant |
+| `src/utils/constants.ts` | 5 MB (FILE_LIMITS.MAX_FILE_SIZE_MB) | Incorrect constant |
+| `src/components/FileUpload.tsx` | 20 MB (default) | ✅ Correct |
+| `src/components/negotiation/NegotiationResponseView.tsx` | 10 MB (override) | Hardcoded override |
+| `src/components/ProjectFilesManager.tsx` | 20 MB | ✅ Correct |
+| `src/components/negotiation/NegotiationDialog.tsx` | 20 MB | ✅ Correct |
 
----
+## Root Cause
 
-## Bug 1: Entrepreneurs Not Receiving Email Updates About Proposals
+1. **`storageQuota.ts`**: Line 9 has `MAX_FILE_SIZE: 10485760` (10 MB)
+2. **`constants.ts`**: Line 37 has `MAX_FILE_SIZE_MB: 5` (5 MB)
+3. **`NegotiationResponseView.tsx`**: Line 1522 has hardcoded `maxSize={10 * 1024 * 1024}` override
 
-### Root Cause: **CRITICAL - test_mode is hardcoded to `true`**
+The hardcoded 10MB override in `NegotiationResponseView.tsx` is likely why users see the 10MB limit when uploading files in negotiations.
 
-**Location**: `src/hooks/useProposalSubmit.ts` lines 451-457
+## Implementation Plan
 
+### Change 1: Update `src/utils/storageQuota.ts` (Line 9)
+
+**FROM:**
 ```typescript
-supabase.functions
-  .invoke('notify-proposal-submitted', {
-    body: {
-      proposal_id: proposal.id,
-      test_mode: true,  // ← BUG: Always sends to test email!
-    },
-  })
+MAX_FILE_SIZE: 10485760, // 10 MB per file
 ```
 
-When `test_mode: true`, the edge function sends emails to a hardcoded test address (`lior+billding@spartans.tech`) instead of the actual entrepreneur.
-
-**Edge Function Logic** (from `notify-proposal-submitted/index.ts` lines 113-118):
+**TO:**
 ```typescript
-const recipientEmail = test_mode 
-  ? 'lior+billding@spartans.tech'  // ← Test address
-  : entrepreneurProfile.email;      // ← Real entrepreneur email
+MAX_FILE_SIZE: 20971520, // 20 MB per file
 ```
 
-### Fix Required
+### Change 2: Update `src/utils/constants.ts` (Line 37)
 
-Change `test_mode: true` to `test_mode: false` in `useProposalSubmit.ts` line 455.
-
-### Same Issue in Other Places
-
-Also found in `useProposalApproval.ts` line 189 for rejected proposal notifications:
+**FROM:**
 ```typescript
-test_mode: true, // Set to false in production
+MAX_FILE_SIZE_MB: 5,
 ```
 
----
-
-## Bug 2: Approval Dialog Not Closing / Status Not Updating
-
-### Root Cause: Missing `onStatusChange` callback propagation
-
-**Issue 1: ProposalComparisonDialog doesn't pass `onStatusChange`**
-
-When the comparison dialog is opened from `ProjectDetail.tsx`, the `onStatusChange` prop is passed, but when `ProposalApprovalDialog` completes, only `fetchProposals()` is called - not the parent's `onStatusChange`.
-
-**Current Code** (`ProposalComparisonDialog.tsx` lines 1188-1192):
+**TO:**
 ```typescript
-onSuccess={() => {
-  setApprovalDialogOpen(false);
-  setSelectedProposal(null);
-  fetchProposals();  // ← Only refetches internal data
-  // Missing: onStatusChange?.(); to notify parent
-}}
+MAX_FILE_SIZE_MB: 20,
 ```
 
-**Working Code** (`ProposalDetailDialog.tsx` line 1200):
+### Change 3: Fix `src/components/negotiation/NegotiationResponseView.tsx` (Line 1522)
+
+**FROM:**
 ```typescript
-onSuccess={()=>{ onStatusChange?.(); onSuccess?.(); onOpenChange(false); }}
-// ↑ Correctly chains all callbacks
+<FileUpload
+  maxFiles={5}
+  maxSize={10 * 1024 * 1024}
+  onUpload={setAdvisorUploadedFiles}
+  advisorId={session?.proposal?.advisor_id}
 ```
 
-**Issue 2: Parent dialog may not update**
-
-Even with `fetchProposals()`, the parent components that render `ProposalComparisonDialog` may not be aware of the status change because:
-1. React Query invalidation happens in the hook, but the comparison dialog uses local state (`proposals`)
-2. The comparison dialog's internal `fetchProposals()` may not trigger a re-render in `ProjectDetail.tsx`
-
-### Fix Required
-
-1. Update `ProposalComparisonDialog`'s `onSuccess` handler to call parent's `onStatusChange`:
-
+**TO:**
 ```typescript
-onSuccess={() => {
-  setApprovalDialogOpen(false);
-  setSelectedProposal(null);
-  fetchProposals();
-  onStatusChange?.();  // ← Add this line
-}}
+<FileUpload
+  maxFiles={5}
+  maxSize={20 * 1024 * 1024}
+  onUpload={setAdvisorUploadedFiles}
+  advisorId={session?.proposal?.advisor_id}
 ```
-
-2. Verify that `ProposalComparisonDialog` receives and uses `onStatusChange` prop from parent.
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/hooks/useProposalSubmit.ts` | Change `test_mode: true` to `false` (line 455) |
-| `src/hooks/useProposalApproval.ts` | Change `test_mode: true` to `false` (line 189) |
-| `src/components/ProposalComparisonDialog.tsx` | Add `onStatusChange?.()` to onSuccess callback |
-
----
-
-## Technical Details
-
-### Change 1: Fix test_mode in useProposalSubmit.ts
-
-**Line 455**: Change from:
-```typescript
-test_mode: true,
-```
-To:
-```typescript
-test_mode: false,
-```
-
-### Change 2: Fix test_mode in useProposalApproval.ts
-
-**Line 189**: Change from:
-```typescript
-test_mode: true, // Set to false in production
-```
-To:
-```typescript
-test_mode: false,
-```
-
-### Change 3: Add onStatusChange to ProposalComparisonDialog
-
-**Lines 1188-1192**: Change from:
-```typescript
-onSuccess={() => {
-  setApprovalDialogOpen(false);
-  setSelectedProposal(null);
-  fetchProposals();
-}}
-```
-To:
-```typescript
-onSuccess={() => {
-  setApprovalDialogOpen(false);
-  setSelectedProposal(null);
-  fetchProposals();
-  onStatusChange?.();  // Notify parent of status change
-}}
-```
-
----
 
 ## Testing Checklist
 
-After implementation:
+1. **Upload 15MB File to Negotiation**
+   - Login as advisor
+   - Navigate to a negotiation response view
+   - Attempt to upload a 15MB file
+   - Verify upload succeeds without "file too large" error
 
-1. **Email Notifications**
-   - Submit a proposal as advisor
-   - Verify entrepreneur receives email at their actual email address (not test address)
-   - Check edge function logs for successful delivery
+2. **Upload 25MB File to Negotiation**
+   - Attempt to upload a 25MB file
+   - Verify upload fails with appropriate error message
+   - Confirm error message shows 20MB as the limit
 
-2. **Approval Dialog Flow**
-   - Open project detail page
-   - Click on "Compare Proposals" button
-   - Select a proposal and click "Approve"
-   - Complete approval with signature
-   - Verify approval dialog closes
-   - Verify comparison dialog shows updated status immediately
-   - Verify project detail page shows "Approved" status
+3. **Verify All Flows Accept 20MB**
+   - Project files manager
+   - Negotiation response files
+   - Proposal attachments
+   - All should consistently accept files up to 20MB
 
-3. **Rejection Email**
-   - Reject a proposal from comparison dialog
-   - Verify advisor receives rejection email at their actual email address
+## Impact
 
+- Users can now upload files up to 20MB consistently across all features
+- No more confusion about different limits in different areas
+- Constants are now aligned with actual component defaults
