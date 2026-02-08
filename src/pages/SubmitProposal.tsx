@@ -105,6 +105,7 @@ const SubmitProposal = () => {
   const [signature, setSignature] = useState<any>(null);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
 
   // Fee table state
   const [consultantPrices, setConsultantPrices] = useState<Record<string, number | null>>({});
@@ -236,6 +237,13 @@ const SubmitProposal = () => {
     }
   }, [entrepreneurData]);
 
+  // Initialize payment term type from entrepreneur data
+  useEffect(() => {
+    if (entrepreneurData?.payment_terms?.payment_term_type) {
+      setPaymentTermType(entrepreneurData.payment_terms.payment_term_type as typeof paymentTermType);
+    }
+  }, [entrepreneurData]);
+
   // Initialize selected services from entrepreneur data
   useEffect(() => {
     if (entrepreneurData?.service_scope_items && selectedServices.length === 0) {
@@ -363,6 +371,20 @@ const SubmitProposal = () => {
       setIsDraftDirty(true);
     }
   }, [price, consultantPrices, additionalFeeItems, rowComments, selectedServices, servicesNotes, consultantMilestones, consultantRequestNotes, conditions, declarationAccepted, files, consultantRequestFiles, signature, paymentTermType, paymentTermsComment]);
+
+  // Blink animation for declaration checkbox on signature tab
+  useEffect(() => {
+    if (activeTab === 'signature' && !declarationAccepted) {
+      const startTimer = setTimeout(() => setShowBlinkAnimation(true), 2000);
+      const stopTimer = setTimeout(() => setShowBlinkAnimation(false), 5000);
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    } else {
+      setShowBlinkAnimation(false);
+    }
+  }, [activeTab, declarationAccepted]);
 
   // Auto-save on tab change
   useEffect(() => {
@@ -1342,7 +1364,11 @@ const SubmitProposal = () => {
                     <Checkbox 
                       id="declaration" 
                       checked={declarationAccepted} 
-                      onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)} 
+                      onCheckedChange={(checked) => setDeclarationAccepted(checked as boolean)}
+                      className={cn(
+                        "mt-0.5 shrink-0",
+                        showBlinkAnimation && "animate-checkbox-blink"
+                      )}
                     />
                     <Label htmlFor="declaration" className="text-sm cursor-pointer">
                       אני מצהיר/ה כי אני מוסמך/ת לפעול בשם היועץ/המשרד וכי חתימתי מחייבת את היועץ/המשרד. ההצעה תקפה למשך 90 יום משליחת ההצעה.
