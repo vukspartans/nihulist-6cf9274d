@@ -1519,7 +1519,7 @@ export const NegotiationResponseView = ({
               <CardContent>
                 <FileUpload
                   maxFiles={5}
-                  maxSize={10 * 1024 * 1024}
+                  maxSize={20 * 1024 * 1024}
                   onUpload={setAdvisorUploadedFiles}
                   advisorId={session?.proposal?.advisor_id}
                   existingFiles={advisorUploadedFiles}

@@ -34,7 +34,7 @@ export const CACHE_TIMES = {
 // File Upload Limits
 export const FILE_LIMITS = {
   MAX_FILES: 10,
-  MAX_FILE_SIZE_MB: 5,
+  MAX_FILE_SIZE_MB: 20,
   MAX_TOTAL_SIZE_MB: 50,
   ALLOWED_TYPES: [
     'application/pdf',

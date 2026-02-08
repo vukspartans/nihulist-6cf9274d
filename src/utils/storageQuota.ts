@@ -6,7 +6,7 @@
 export const STORAGE_LIMITS = {
   MAX_PROJECT_BYTES: 524288000, // 500 MB per project
   MAX_PROJECT_FILES: 100,
-  MAX_FILE_SIZE: 10485760, // 10 MB per file
+  MAX_FILE_SIZE: 20971520, // 20 MB per file
 } as const;
 
 /**
