@@ -53,6 +53,13 @@ interface ConfirmProposalDialogProps {
   milestones?: MilestoneItem[];
   projectName?: string;
   advisorName?: string;
+  conditions?: {
+    payment_terms?: string;
+    assumptions?: string;
+    exclusions?: string;
+    validity_days?: number;
+  };
+  scopeText?: string;
 }
 
 const formatAmount = (amount: number) => {
@@ -71,6 +78,8 @@ export function ConfirmProposalDialog({
   milestones = [],
   projectName = 'פרויקט',
   advisorName = 'יועץ',
+  conditions,
+  scopeText,
 }: ConfirmProposalDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
@@ -106,6 +115,8 @@ export function ConfirmProposalDialog({
           description: m.description,
           percentage: m.percentage,
         })),
+        conditions: conditions,
+        scopeText: scopeText,
       };
       
       await generateProposalPDF(pdfData);

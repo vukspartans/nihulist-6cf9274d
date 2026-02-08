@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { FileText, Upload, List, Plus, X, Loader2, FolderOpen, FileStack, ChevronDown, Wand2 } from 'lucide-react';
+import { FileText, Upload, List, Plus, X, Loader2, FileStack, ChevronDown } from 'lucide-react';
 import { LoadTemplateButton } from './LoadTemplateButton';
 import { ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
