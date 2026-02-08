@@ -1421,6 +1421,8 @@ const SubmitProposal = () => {
           timelineDays={timelineDays} 
           fileCount={files.length}
           hasSignature={!!signature}
+          conditions={conditions}
+          scopeText={servicesNotes || scopeText}
           feeLineItems={[
             ...(entrepreneurData?.fee_items || []).map(item => ({
               description: item.description,

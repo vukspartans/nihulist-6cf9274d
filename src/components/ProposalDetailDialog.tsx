@@ -434,6 +434,8 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         currency: proposal.currency,
         scopeText: displayScopeText,
         consultantNotes: proposal.consultant_request_notes,
+        selectedServices: proposal.selected_services?.map((s: any) => typeof s === 'string' ? s : s.name || s.description),
+        servicesNotes: proposal.services_notes,
         conditions: proposal.conditions_json,
         feeItems: feeLineItems.map((item) => ({
           description: item.description || item.name || '',
