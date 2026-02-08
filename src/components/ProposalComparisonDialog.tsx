@@ -1185,7 +1185,11 @@ export const ProposalComparisonDialog = ({
           open={approvalDialogOpen}
           onOpenChange={setApprovalDialogOpen}
           proposal={selectedProposal}
-          onSuccess={fetchProposals}
+          onSuccess={() => {
+            setApprovalDialogOpen(false);
+            setSelectedProposal(null);  // Reset selection to update UI
+            fetchProposals();            // Refresh data
+          }}
         />
       )}
 

@@ -16,19 +16,27 @@ interface NotificationItem {
   projectName: string;
   advisorType?: string;
   createdAt: string;
+  projectId?: string; // For proposal notifications
 }
 
 interface NotificationsDropdownProps {
   notifications: NotificationItem[];
+  type?: 'rfp' | 'proposal'; // Different navigation behavior
 }
 
-export const NotificationsDropdown = ({ notifications }: NotificationsDropdownProps) => {
+export const NotificationsDropdown = ({ notifications, type = 'rfp' }: NotificationsDropdownProps) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   
-  const handleNotificationClick = (inviteId: string) => {
+  const handleNotificationClick = (notification: NotificationItem) => {
     setOpen(false);
-    navigate(`/invite/${inviteId}/details`);
+    if (type === 'proposal') {
+      // For proposals, navigate to project detail with received tab
+      navigate(`/projects/${notification.projectId || notification.id}?tab=received`);
+    } else {
+      // For RFPs, navigate to invite details
+      navigate(`/invite/${notification.id}/details`);
+    }
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -74,7 +82,7 @@ export const NotificationsDropdown = ({ notifications }: NotificationsDropdownPr
               {notifications.map((notification) => (
                 <button
                   key={notification.id}
-                  onClick={() => handleNotificationClick(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                   className="w-full p-3 text-right hover:bg-muted/50 transition-colors flex items-start gap-3"
                 >
                   <div className="shrink-0 mt-0.5">
