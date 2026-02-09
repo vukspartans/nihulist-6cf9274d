@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, FileText, Briefcase, Milestone, Star, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Trash2, Pencil, FileText, Briefcase, Milestone, Star, Copy } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   useFeeItemTemplatesByCategory,
   useServiceScopeTemplatesByCategory,
@@ -79,8 +83,14 @@ export default function FeeTemplatesByCategory() {
 
   // Services state
   const [createServiceDialogOpen, setCreateServiceDialogOpen] = useState(false);
+  const [createServiceHeader, setCreateServiceHeader] = useState<string | undefined>(undefined);
   const [editingService, setEditingService] = useState<ServiceScopeTemplate | null>(null);
   const [deleteServiceId, setDeleteServiceId] = useState<string | null>(null);
+  const [createHeaderDialogOpen, setCreateHeaderDialogOpen] = useState(false);
+  const [newHeaderName, setNewHeaderName] = useState("");
+  const [editingHeaderName, setEditingHeaderName] = useState<string | null>(null);
+  const [editedHeaderName, setEditedHeaderName] = useState("");
+  const [deleteHeaderName, setDeleteHeaderName] = useState<string | null>(null);
 
   // Milestones state
   const [createMilestoneDialogOpen, setCreateMilestoneDialogOpen] = useState(false);
@@ -224,27 +234,55 @@ export default function FeeTemplatesByCategory() {
     },
   ];
 
-  const serviceColumns: Column<ServiceScopeTemplate & { display_order: number }>[] = [
-    {
-      header: "",
-      cell: (item) => (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setEditingService(item); }}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteServiceId(item.id); }}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-    { header: "שם השירות", accessorKey: "task_name" },
-    { header: 'קטגוריית שכ"ט', cell: (item) => item.default_fee_category || "-" },
-    {
-      header: "סטטוס",
-      cell: (item) => item.is_optional ? <Badge variant="secondary">אופציונלי</Badge> : <Badge variant="default">חובה</Badge>,
-    },
-  ];
+  // Group services by default_fee_category for two-level view
+  const groupedServices = useMemo(() => {
+    if (!services) return {};
+    const groups: Record<string, ServiceScopeTemplate[]> = {};
+    for (const svc of services) {
+      const key = svc.default_fee_category || "כללי";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(svc);
+    }
+    return groups;
+  }, [services]);
+
+  const headerNames = useMemo(() => Object.keys(groupedServices), [groupedServices]);
+
+  const handleCreateHeader = () => {
+    if (!newHeaderName.trim() || !decodedAdvisorType) return;
+    // Create a placeholder service under this header
+    setNewHeaderName("");
+    setCreateHeaderDialogOpen(false);
+    // Open the service creation dialog with the new header pre-filled
+    setCreateServiceHeader(newHeaderName.trim());
+    setCreateServiceDialogOpen(true);
+  };
+
+  const handleRenameHeader = async () => {
+    if (!editingHeaderName || !editedHeaderName.trim() || !services) return;
+    // Update all services under the old header name to use the new name
+    const affectedServices = services.filter(s => (s.default_fee_category || "כללי") === editingHeaderName);
+    for (const svc of affectedServices) {
+      await supabase
+        .from("default_service_scope_templates")
+        .update({ default_fee_category: editedHeaderName.trim() })
+        .eq("id", svc.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["service-scope-templates-admin"], exact: false });
+    toast({ title: "כותרת עודכנה בהצלחה" });
+    setEditingHeaderName(null);
+    setEditedHeaderName("");
+  };
+
+  const handleDeleteHeader = () => {
+    if (!deleteHeaderName || !services) return;
+    // Delete all services under this header
+    const affectedServices = services.filter(s => (s.default_fee_category || "כללי") === deleteHeaderName);
+    for (const svc of affectedServices) {
+      deleteServiceMutation.mutate(svc.id);
+    }
+    setDeleteHeaderName(null);
+  };
 
   const milestoneColumns: Column<MilestoneTemplate & { display_order: number }>[] = [
     {
@@ -489,31 +527,125 @@ export default function FeeTemplatesByCategory() {
 
           {/* Services Tab */}
           <TabsContent value="services">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">שירותים</CardTitle>
-                <Button size="sm" onClick={() => setCreateServiceDialogOpen(true)} className="gap-2">
+            <div className="space-y-4">
+              {/* Top bar */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">שירותים</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCreateHeaderDialogOpen(true)}
+                  className="gap-2"
+                >
                   <Plus className="h-4 w-4" />
-                  הוסף שירות
+                  הוסף כותרת
                 </Button>
-              </CardHeader>
-              <CardContent>
-                {servicesLoading ? (
-                  <Skeleton className="h-32" />
-                ) : services && services.length > 0 ? (
-                  <SortableDataTable
-                    data={services}
-                    columns={serviceColumns}
-                    onReorder={(orderedIds) => reorderServicesMutation.mutate(orderedIds)}
-                    isReordering={reorderServicesMutation.isPending}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>אין שירותים. הוסף שירות ראשון כדי להתחיל.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {servicesLoading ? (
+                <Skeleton className="h-32" />
+              ) : headerNames.length > 0 ? (
+                <div className="space-y-3">
+                  {headerNames.map((headerName) => {
+                    const items = groupedServices[headerName] || [];
+                    const requiredCount = items.filter(i => !i.is_optional).length;
+                    return (
+                      <Collapsible key={headerName} defaultOpen>
+                        <Card>
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="flex flex-row items-center justify-between py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=closed]_&]:-rotate-90" />
+                                <span className="font-semibold">{headerName}</span>
+                                {requiredCount > 0 && (
+                                  <Badge variant="default" className="text-xs">{requiredCount} חובה</Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs">{items.length} שירותים</Badge>
+                              </div>
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  title="ערוך כותרת"
+                                  onClick={() => {
+                                    setEditingHeaderName(headerName);
+                                    setEditedHeaderName(headerName);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  title="מחק כותרת"
+                                  onClick={() => setDeleteHeaderName(headerName)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1 mr-2"
+                                  onClick={() => {
+                                    setCreateServiceHeader(headerName);
+                                    setCreateServiceDialogOpen(true);
+                                  }}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  הוסף שירות
+                                </Button>
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-0 pb-2 px-4">
+                              {items.length > 0 ? (
+                                <div className="divide-y divide-border">
+                                  {items.map((svc) => (
+                                    <div key={svc.id} className="flex items-center justify-between py-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm">{svc.task_name}</span>
+                                        {svc.is_optional ? (
+                                          <Badge variant="secondary" className="text-xs">אופציונלי</Badge>
+                                        ) : (
+                                          <Badge variant="default" className="text-xs">חובה</Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingService(svc)}>
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteServiceId(svc.id)}>
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground py-2">אין שירותים בכותרת זו</p>
+                              )}
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-8 text-muted-foreground">
+                    <p className="mb-3">אין שירותים. הוסף כותרת ראשונה כדי להתחיל.</p>
+                    <Button variant="outline" onClick={() => setCreateHeaderDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      הוסף כותרת
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* Milestones Tab */}
@@ -578,16 +710,84 @@ export default function FeeTemplatesByCategory() {
       {/* Service Dialogs */}
       <CreateServiceScopeTemplateDialog
         open={createServiceDialogOpen}
-        onOpenChange={setCreateServiceDialogOpen}
+        onOpenChange={(open) => {
+          setCreateServiceDialogOpen(open);
+          if (!open) setCreateServiceHeader(undefined);
+        }}
         defaultAdvisorSpecialty={decodedAdvisorType}
         defaultProjectType={decodedProjectType}
         defaultCategoryId={categoryId}
+        defaultHeader={createServiceHeader}
       />
       <EditServiceScopeTemplateDialog
         open={!!editingService}
         onOpenChange={(open) => !open && setEditingService(null)}
         template={editingService}
+        availableHeaders={headerNames}
       />
+
+      {/* Create Header Dialog */}
+      <Dialog open={createHeaderDialogOpen} onOpenChange={setCreateHeaderDialogOpen}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוספת כותרת חדשה</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>כותרת *</Label>
+            <Input
+              value={newHeaderName}
+              onChange={(e) => setNewHeaderName(e.target.value)}
+              placeholder="לדוגמה: היקף העבודה"
+              className="text-right"
+            />
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setCreateHeaderDialogOpen(false)}>ביטול</Button>
+            <Button onClick={handleCreateHeader} disabled={!newHeaderName.trim()}>
+              צור כותרת
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Header Dialog */}
+      <Dialog open={!!editingHeaderName} onOpenChange={(open) => !open && setEditingHeaderName(null)}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>עריכת כותרת</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>שם הכותרת *</Label>
+            <Input
+              value={editedHeaderName}
+              onChange={(e) => setEditedHeaderName(e.target.value)}
+              className="text-right"
+            />
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setEditingHeaderName(null)}>ביטול</Button>
+            <Button onClick={handleRenameHeader} disabled={!editedHeaderName.trim()}>
+              שמור
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Header Confirmation */}
+      <AlertDialog open={!!deleteHeaderName} onOpenChange={() => setDeleteHeaderName(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת כותרת "{deleteHeaderName}"</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את כל השירותים ({groupedServices[deleteHeaderName || ""]?.length || 0}) תחת כותרת זו. האם להמשיך?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteHeader} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">מחק</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Milestone Dialogs */}
       <CreateMilestoneTemplateDialog

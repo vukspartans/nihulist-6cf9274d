@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ interface CreateServiceScopeTemplateDialogProps {
   defaultAdvisorSpecialty?: string;
   defaultCategoryId?: string;
   defaultProjectType?: string;
+  defaultHeader?: string;
 }
 
 export function CreateServiceScopeTemplateDialog({
@@ -34,12 +35,17 @@ export function CreateServiceScopeTemplateDialog({
   defaultAdvisorSpecialty,
   defaultCategoryId,
   defaultProjectType,
+  defaultHeader,
 }: CreateServiceScopeTemplateDialogProps) {
   const [taskName, setTaskName] = useState("");
-  const [feeCategory, setFeeCategory] = useState("כללי");
+  const [feeCategory, setFeeCategory] = useState(defaultHeader || "כללי");
   const [isOptional, setIsOptional] = useState(false);
 
   const createMutation = useCreateServiceScopeTemplate();
+
+  useEffect(() => {
+    if (defaultHeader) setFeeCategory(defaultHeader);
+  }, [defaultHeader]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +72,7 @@ export function CreateServiceScopeTemplateDialog({
 
   const resetForm = () => {
     setTaskName("");
-    setFeeCategory("כללי");
+    setFeeCategory(defaultHeader || "כללי");
     setIsOptional(false);
   };
 
@@ -81,6 +87,13 @@ export function CreateServiceScopeTemplateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {defaultHeader && (
+            <div className="space-y-2">
+              <Label>כותרת</Label>
+              <Input value={defaultHeader} readOnly className="text-right bg-muted" />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="task_name">שם השירות *</Label>
             <Input
@@ -93,21 +106,23 @@ export function CreateServiceScopeTemplateDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="fee_category">קטגוריית שכ"ט</Label>
-            <Select dir="rtl" value={feeCategory} onValueChange={setFeeCategory}>
-              <SelectTrigger dir="rtl" className="text-right">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent dir="rtl">
-                {DEFAULT_FEE_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category} className="text-right">
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!defaultHeader && (
+            <div className="space-y-2">
+              <Label htmlFor="fee_category">כותרת (קטגוריה)</Label>
+              <Select dir="rtl" value={feeCategory} onValueChange={setFeeCategory}>
+                <SelectTrigger dir="rtl" className="text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  {DEFAULT_FEE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category} className="text-right">
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <Label htmlFor="is_optional">סמן כאופציונלי</Label>
