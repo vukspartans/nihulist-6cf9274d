@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +55,7 @@ import { getIndexLabel } from "@/constants/indexTypes";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 export default function FeeTemplatesByCategory() {
   const { advisorType, projectType, categoryId } = useParams<{
@@ -323,20 +326,137 @@ export default function FeeTemplatesByCategory() {
 
           {/* Fee Items Tab - with Submission Method Sub-Tabs */}
           <TabsContent value="fee-items">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">שורות שכר טרחה</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCreateMethodDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    הוסף שיטת הגשה
-                  </Button>
-                  {effectiveMethodId && (
+            <div className="space-y-4">
+              {/* Submission Methods Table */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg">שיטת ההגשה</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">ברירת מחדל</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateMethodDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      הוסף
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {methodsLoading ? (
+                    <Skeleton className="h-20" />
+                  ) : methods && methods.length > 0 ? (
+                    <RadioGroup
+                      dir="rtl"
+                      value={methods.find((m) => m.is_default)?.id || ""}
+                      onValueChange={(val) => handleSetDefaultMethod(val)}
+                    >
+                      <Table>
+                        <TableBody>
+                          {methods.map((method) => (
+                            <TableRow
+                              key={method.id}
+                              className={cn(
+                                "cursor-pointer",
+                                effectiveMethodId === method.id && "bg-muted/50"
+                              )}
+                              onClick={() => setActiveMethodId(method.id)}
+                            >
+                              <TableCell className="w-[100px]">
+                                <div className="flex items-center gap-1">
+                                  {methods.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      title="העתק שורות"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCopyingFromMethodId(method.id);
+                                      }}
+                                    >
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive"
+                                    title="מחק שיטה"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteMethodMutation.mutate(method.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {method.method_label}
+                                {effectiveMethodId === method.id && (
+                                  <Badge variant="secondary" className="mr-2 text-xs">נבחר</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="w-[80px] text-center" onClick={(e) => e.stopPropagation()}>
+                                <RadioGroupItem value={method.id} />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </RadioGroup>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <p className="mb-3">הוסף שיטת הגשה ראשונה (פאושלי, כמותי, שעתי) כדי להתחיל.</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCreateMethodDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        הוסף שיטת הגשה
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Copy target picker */}
+              {copyingFromMethodId && methods && (
+                <Card className="border-dashed border-primary">
+                  <CardContent className="py-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">העתק שורות מ-{methods.find(m => m.id === copyingFromMethodId)?.method_label} אל:</span>
+                      {methods
+                        .filter((m) => m.id !== copyingFromMethodId)
+                        .map((m) => (
+                          <Button
+                            key={m.id}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyFeeItems(copyingFromMethodId, m.id)}
+                          >
+                            {m.method_label}
+                          </Button>
+                        ))}
+                      <Button variant="ghost" size="sm" onClick={() => setCopyingFromMethodId(null)}>
+                        ביטול
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Fee Items Table */}
+              {effectiveMethodId && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg">
+                      שורות שכ"ט — {methods?.find(m => m.id === effectiveMethodId)?.method_label}
+                    </CardTitle>
                     <Button
                       size="sm"
                       onClick={() => setCreateFeeItemDialogOpen(true)}
@@ -345,80 +465,8 @@ export default function FeeTemplatesByCategory() {
                       <Plus className="h-4 w-4" />
                       הוסף שורה
                     </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Submission Method Sub-Tabs */}
-                {methodsLoading ? (
-                  <Skeleton className="h-10 mb-4" />
-                ) : methods && methods.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 flex-wrap border-b pb-3">
-                      {methods.map((method) => (
-                        <div key={method.id} className="flex items-center gap-1">
-                          <Button
-                            variant={effectiveMethodId === method.id ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setActiveMethodId(method.id)}
-                            className="gap-1"
-                          >
-                            {method.method_label}
-                            {method.is_default && (
-                              <Star className="h-3 w-3 fill-current" />
-                            )}
-                          </Button>
-                          {!method.is_default && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title="קבע כברירת מחדל"
-                              onClick={() => handleSetDefaultMethod(method.id)}
-                            >
-                              <Star className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {/* Copy button */}
-                      {methods.length > 1 && effectiveMethodId && (
-                        <div className="mr-auto">
-                          {copyingFromMethodId ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">העתק אל:</span>
-                              {methods
-                                .filter((m) => m.id !== copyingFromMethodId)
-                                .map((m) => (
-                                  <Button
-                                    key={m.id}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCopyFeeItems(copyingFromMethodId, m.id)}
-                                  >
-                                    {m.method_label}
-                                  </Button>
-                                ))}
-                              <Button variant="ghost" size="sm" onClick={() => setCopyingFromMethodId(null)}>
-                                ביטול
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCopyingFromMethodId(effectiveMethodId)}
-                              className="gap-1"
-                            >
-                              <Copy className="h-3 w-3" />
-                              העתק שורות
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Fee Items Table */}
+                  </CardHeader>
+                  <CardContent>
                     {feeItemsLoading ? (
                       <Skeleton className="h-32" />
                     ) : feeItems && feeItems.length > 0 ? (
@@ -433,22 +481,10 @@ export default function FeeTemplatesByCategory() {
                         <p>אין שורות שכר טרחה בשיטה זו. הוסף שורה ראשונה כדי להתחיל.</p>
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="mb-4">הוסף שיטת הגשה ראשונה (פאושלי, כמותי, שעתי) כדי להתחיל.</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCreateMethodDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      הוסף שיטת הגשה
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* Services Tab */}
