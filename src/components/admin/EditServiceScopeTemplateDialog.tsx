@@ -24,12 +24,14 @@ interface EditServiceScopeTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template: ServiceScopeTemplate | null;
+  availableHeaders?: string[];
 }
 
 export function EditServiceScopeTemplateDialog({
   open,
   onOpenChange,
   template,
+  availableHeaders,
 }: EditServiceScopeTemplateDialogProps) {
   const [taskName, setTaskName] = useState("");
   const [feeCategory, setFeeCategory] = useState("כללי");
@@ -83,13 +85,17 @@ export function EditServiceScopeTemplateDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fee_category">קטגוריית שכ"ט</Label>
+            <Label htmlFor="fee_category">כותרת (קטגוריה)</Label>
             <Select dir="rtl" value={feeCategory} onValueChange={setFeeCategory}>
               <SelectTrigger dir="rtl" className="text-right">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent dir="rtl">
-                {DEFAULT_FEE_CATEGORIES.map((category) => (
+                {/* Show available headers from the grouped view, plus defaults */}
+                {[...new Set([
+                  ...(availableHeaders || []),
+                  ...DEFAULT_FEE_CATEGORIES,
+                ])].map((category) => (
                   <SelectItem key={category} value={category} className="text-right">
                     {category}
                   </SelectItem>
