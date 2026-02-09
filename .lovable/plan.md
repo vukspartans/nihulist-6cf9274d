@@ -1,48 +1,68 @@
 
 
-# Fix: RTL Alignment in Create Category Dialog + Submission Method Tabs Polish
+# Services Tab: Two-Level Header + Items Structure
 
-## Changes Required
+## What the client wants
 
-### 1. Fix RTL alignment in `CreateFeeCategoryDialog.tsx`
-The Select dropdown for "מדד ברירת מחדל" needs proper RTL styling:
-- Add `dir="rtl"` to `Select`, `SelectTrigger`, and `SelectContent`
-- Add `className="text-right"` to `SelectTrigger`
-- Placeholder "בחר מדד" is already set but may not show since `indexType` defaults to `cpi` -- keep it as-is since it has a default value
+Based on the reference image, the Services (שירותים) tab inside a category should have a **two-level structure**:
 
-### 2. Fix RTL alignment in `CreateSubmissionMethodDialog.tsx`
-Same RTL fix for the method type Select dropdown.
+1. **Headers (כותרות)** - group titles like "היקף העבודה", "ליווי מול רשויות"
+2. **Service items** - nested under each header with description, optional toggle, edit/delete
 
-### 3. Polish Submission Method tabs in `FeeTemplatesByCategory.tsx`
-Based on the client's reference image, the "שיטת ההגשה" (Submission Method) section inside the category detail page needs refinement:
-- Move submission method tabs to be more prominent -- currently they're inside the "שורות שכ"ט" tab as sub-buttons. The client's reference shows them as a **top-level tab-like row** within the category page with:
-  - Radio-style default selector (circle indicator) on each method
-  - Icons for edit/delete/copy per method
-  - A prominent "+ הוסף" button on the left
-  - "ברירת מחדל" label column on the left side
-- The current implementation already has the core logic (method tabs, default toggle, copy functionality) but the visual layout needs to match the client's wireframe
+### UI Flow:
+- **"+ הוסף כותרת"** button at the top creates a new header (simple dialog with just a title field)
+- Each header is displayed as a collapsible section with its own **"+ הוסף שירות"** button
+- Service items under each header show: description, optional badge, edit/delete icons
+- Creating a service item opens a dialog pre-filled with the selected header name
 
-### Technical Details
+## Technical Approach
+
+Use the existing `default_fee_category` column on `default_service_scope_templates` as the grouping key for headers. No schema changes needed.
+
+### Changes:
+
+**1. `src/pages/admin/FeeTemplatesByCategory.tsx` - Services Tab section (lines 490-517)**
+
+Replace the flat SortableDataTable with a grouped view:
+- Group services by `default_fee_category` to create header sections
+- Each header section is a Card/Collapsible with:
+  - Header title on the right
+  - Edit (pencil) and Delete (trash) icons for the header
+  - "חובה" badge count
+  - "+ הוסף שירות" button on the left
+- Under each header: a list of service items with edit/delete/optional badge
+- Top-level "+ הוסף כותרת" button opens a simple dialog
+
+**2. Create a simple "Create Header" dialog** (inline or small component)
+
+- Single field: "כותרת *" with placeholder "היקף העבודה"
+- This just registers a new `default_fee_category` value (stored in a local list or as an empty service scope template marked as header)
+
+Since `default_fee_category` is a free-text field, creating a "header" means:
+- Adding the header name to the `DEFAULT_FEE_CATEGORIES` list is not practical (it's per-category)
+- Instead: create a service scope template with `task_name` = header name and a special marker (e.g., `default_fee_category` = the header name itself), OR
+- Simpler: just use the `default_fee_category` field as-is. When creating a new "כותרת", we simply create a placeholder service template with `task_name = default_fee_category = headerName`. The grouping logic in the UI groups all services by their `default_fee_category` value.
+
+**Best approach**: Group services by `default_fee_category` in the UI. The "+ הוסף כותרת" button adds a new category name to a local list. The "+ הוסף שירות" button pre-fills `default_fee_category` with the header name. Services without a category go under a "כללי" default group.
+
+**3. Update `CreateServiceScopeTemplateDialog.tsx`**
+
+- Accept a `defaultHeader` prop that pre-fills the `default_fee_category` field
+- The dialog shows: header name (read-only, pre-filled), description (task_name), free text field, optional toggle
+
+**4. Update `EditServiceScopeTemplateDialog.tsx`**
+
+- Allow changing the header (fee category) assignment
+
+## Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/admin/CreateFeeCategoryDialog.tsx` | Add `dir="rtl"` and `className="text-right"` to Select components |
-| `src/components/admin/CreateSubmissionMethodDialog.tsx` | Add `dir="rtl"` and `className="text-right"` to Select components |
-| `src/pages/admin/FeeTemplatesByCategory.tsx` | Restructure submission method section to match reference: table-like row layout with radio default, action icons (edit, delete, copy), and prominent add button |
+| `src/pages/admin/FeeTemplatesByCategory.tsx` | Rewrite Services tab section to group by `default_fee_category` with collapsible headers, add "Create Header" inline dialog |
+| `src/components/admin/CreateServiceScopeTemplateDialog.tsx` | Accept `defaultHeader` prop to pre-fill the fee category |
+| `src/constants/rfpUnits.ts` | No change needed - headers are dynamic per category |
 
-### Visual Layout Target (from reference image)
+## No database changes required
 
-The submission methods section should display as a structured table/list:
-```text
-שיטת ההגשה          ברירת מחדל    + הוסף
------------------------------------------
-[icons] פאושלי        (o)
-[icons] כמותי         ( )
-[icons] שעתי          ( )
-```
-Where:
-- Each row has action icons (copy, edit, delete) on the right
-- Method name in the center
-- Radio-style default selector on the left
-- "+ הוסף" button aligned to the left of the header
+The existing `default_fee_category` column on `default_service_scope_templates` serves as the grouping key.
 
