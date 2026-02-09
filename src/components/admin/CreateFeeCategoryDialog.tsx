@@ -83,8 +83,8 @@ export function CreateFeeCategoryDialog({
 
           <div className="space-y-2">
             <Label htmlFor="index-type">מדד ברירת מחדל</Label>
-            <Select value={indexType} onValueChange={setIndexType}>
-              <SelectTrigger id="index-type">
+            <Select dir="rtl" value={indexType} onValueChange={setIndexType}>
+              <SelectTrigger id="index-type" className="text-right">
                 <SelectValue placeholder="בחר מדד" />
               </SelectTrigger>
               <SelectContent>

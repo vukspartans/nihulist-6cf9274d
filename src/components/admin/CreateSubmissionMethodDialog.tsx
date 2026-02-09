@@ -66,10 +66,11 @@ export function CreateSubmissionMethodDialog({
           <div className="space-y-2">
             <Label htmlFor="method-type">סוג שיטת הגשה</Label>
             <Select
+              dir="rtl"
               value={methodType}
               onValueChange={(value) => setMethodType(value as typeof methodType)}
             >
-              <SelectTrigger id="method-type">
+              <SelectTrigger id="method-type" className="text-right">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
