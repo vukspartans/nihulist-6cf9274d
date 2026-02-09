@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,17 +16,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Star, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Star, BarChart3, AlertTriangle } from "lucide-react";
 import {
   useFeeTemplateCategories,
   useCreateFeeCategory,
   useUpdateFeeCategory,
   useDeleteFeeCategory,
 } from "@/hooks/useFeeTemplateHierarchy";
+import { supabase } from "@/integrations/supabase/client";
 import { CreateFeeCategoryDialog } from "@/components/admin/CreateFeeCategoryDialog";
 import { EditFeeCategoryDialog } from "@/components/admin/EditFeeCategoryDialog";
 import { getIndexLabel } from "@/constants/indexTypes";
 import type { FeeTemplateCategory } from "@/types/feeTemplateHierarchy";
+
+function useOrphanTemplateCount(advisorSpecialty: string) {
+  return useQuery({
+    queryKey: ["orphan-templates", advisorSpecialty],
+    queryFn: async () => {
+      const [fees, services, milestones] = await Promise.all([
+        supabase.from("default_fee_item_templates").select("id", { count: "exact", head: true })
+          .eq("advisor_specialty", advisorSpecialty).is("category_id", null),
+        supabase.from("default_service_scope_templates").select("id", { count: "exact", head: true })
+          .eq("advisor_specialty", advisorSpecialty).is("category_id", null),
+        supabase.from("milestone_templates").select("id", { count: "exact", head: true })
+          .eq("advisor_specialty", advisorSpecialty).is("category_id", null),
+      ]);
+      return (fees.count || 0) + (services.count || 0) + (milestones.count || 0);
+    },
+    staleTime: 60_000,
+  });
+}
 
 export default function FeeTemplatesByAdvisorProject() {
   const { advisorType, projectType } = useParams<{
@@ -41,6 +61,7 @@ export default function FeeTemplatesByAdvisorProject() {
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
 
   const { data: categories, isLoading } = useFeeTemplateCategories(decodedAdvisorType, decodedProjectType);
+  const { data: orphanCount } = useOrphanTemplateCount(decodedAdvisorType);
   const createMutation = useCreateFeeCategory();
   const updateMutation = useUpdateFeeCategory();
   const deleteMutation = useDeleteFeeCategory();
@@ -106,6 +127,18 @@ export default function FeeTemplatesByAdvisorProject() {
           </div>
         </div>
 
+        {/* Orphan Templates Notice */}
+        {orphanCount && orphanCount > 0 && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="py-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+              <p className="text-sm text-destructive">
+                יש {orphanCount} תבניות קיימות שלא שויכו לסוג תבנית. צור סוג תבנית ושייך אותן.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Template Type Cards */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -118,19 +151,37 @@ export default function FeeTemplatesByAdvisorProject() {
             {categories.map((category) => (
               <Card
                 key={category.id}
-                className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/30 relative"
+                className="cursor-pointer hover:shadow-md transition-shadow border hover:border-primary/30"
                 onClick={() => handleCategoryClick(category)}
               >
-                {category.is_default && (
-                  <div className="absolute top-2 left-2">
-                    <Badge variant="default" className="gap-1">
-                      <Star className="h-3 w-3" />
-                      ברירת מחדל
-                    </Badge>
-                  </div>
-                )}
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{category.name}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCategory(category);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteCategoryId(category.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -139,8 +190,14 @@ export default function FeeTemplatesByAdvisorProject() {
                       מדד: {getIndexLabel(category.default_index_type)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    {!category.is_default && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                    {category.is_default ? (
+                      <Badge variant="default" className="gap-1">
+                        <Star className="h-3 w-3" />
+                        ברירת מחדל
+                      </Badge>
+                    ) : (
                       <Button
                         variant="outline"
                         size="sm"
@@ -153,27 +210,6 @@ export default function FeeTemplatesByAdvisorProject() {
                         קבע כברירת מחדל
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingCategory(category);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteCategoryId(category.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -181,10 +217,16 @@ export default function FeeTemplatesByAdvisorProject() {
           </div>
         ) : (
           <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">
-                אין סוגי תבניות. הוסף סוג תבנית ראשון כדי להתחיל.
-              </p>
+            <CardContent className="py-12 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <Plus className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">אין סוגי תבניות עדיין</p>
+                <p className="text-sm text-muted-foreground">
+                  צור סוגי תבניות כמו "הכנת תב"ע", "הכנת מצגת לדיירים", "רישוי" וכו׳
+                </p>
+              </div>
               <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 הוסף סוג תבנית
