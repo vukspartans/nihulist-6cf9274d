@@ -424,3 +424,51 @@ export function useReorderServiceScopeTemplates() {
     },
   });
 }
+
+// ============ CATEGORY-SCOPED HOOKS ============
+
+export function useFeeItemTemplatesByCategory(
+  categoryId: string,
+  submissionMethodId?: string | null
+) {
+  return useQuery({
+    queryKey: [FEE_ITEM_QUERY_KEY, "by-category", categoryId, submissionMethodId],
+    queryFn: async () => {
+      let query = supabase
+        .from("default_fee_item_templates")
+        .select("*")
+        .eq("category_id", categoryId)
+        .order("display_order", { ascending: true });
+
+      if (submissionMethodId) {
+        query = query.eq("submission_method_id", submissionMethodId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as FeeItemTemplate[];
+    },
+    enabled: !!categoryId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useServiceScopeTemplatesByCategory(categoryId: string) {
+  return useQuery({
+    queryKey: [SERVICE_SCOPE_QUERY_KEY, "by-category", categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("default_service_scope_templates")
+        .select("*")
+        .eq("category_id", categoryId)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      return data as ServiceScopeTemplate[];
+    },
+    enabled: !!categoryId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}

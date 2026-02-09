@@ -25,6 +25,8 @@ interface CreateFeeItemTemplateDialogProps {
   onOpenChange: (open: boolean) => void;
   defaultAdvisorSpecialty?: string;
   defaultProjectType?: string;
+  defaultCategoryId?: string;
+  defaultSubmissionMethodId?: string;
 }
 
 export function CreateFeeItemTemplateDialog({
@@ -32,6 +34,8 @@ export function CreateFeeItemTemplateDialog({
   onOpenChange,
   defaultAdvisorSpecialty,
   defaultProjectType,
+  defaultCategoryId,
+  defaultSubmissionMethodId,
 }: CreateFeeItemTemplateDialogProps) {
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("lump_sum");
@@ -56,7 +60,9 @@ export function CreateFeeItemTemplateDialog({
       charge_type: chargeType,
       is_optional: isOptional,
       project_type: defaultProjectType,
-    });
+      ...(defaultCategoryId && { category_id: defaultCategoryId }),
+      ...(defaultSubmissionMethodId && { submission_method_id: defaultSubmissionMethodId }),
+    } as any);
 
     // Reset form
     setDescription("");

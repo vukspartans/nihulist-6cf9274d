@@ -45,6 +45,7 @@ import MilestoneTemplatesManagement from "./pages/admin/MilestoneTemplatesManage
 import FeeTemplatesHierarchy from "./pages/admin/FeeTemplatesHierarchy";
 import FeeTemplatesByProject from "./pages/admin/FeeTemplatesByProject";
 import FeeTemplatesByAdvisorProject from "./pages/admin/FeeTemplatesByAdvisorProject";
+import FeeTemplatesByCategory from "./pages/admin/FeeTemplatesByCategory";
 import NegotiationResponse from "./pages/NegotiationResponse";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import LicensingManagement from "./pages/admin/LicensingManagement";
@@ -240,6 +241,7 @@ const AppContent = () => {
             <Route path="/heyadmin/fee-templates" element={<AdminRoute><FeeTemplatesHierarchy /></AdminRoute>} />
             <Route path="/heyadmin/fee-templates/:advisorType" element={<AdminRoute><FeeTemplatesByProject /></AdminRoute>} />
             <Route path="/heyadmin/fee-templates/:advisorType/:projectType" element={<AdminRoute><FeeTemplatesByAdvisorProject /></AdminRoute>} />
+            <Route path="/heyadmin/fee-templates/:advisorType/:projectType/:categoryId" element={<AdminRoute><FeeTemplatesByCategory /></AdminRoute>} />
             <Route path="/heyadmin/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
             <Route path="/heyadmin/feedback" element={<AdminRoute><FeedbackManagement /></AdminRoute>} />
             <Route path="/heyadmin/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
