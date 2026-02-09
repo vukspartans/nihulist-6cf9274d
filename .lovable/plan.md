@@ -1,65 +1,48 @@
 
 
-# Fix: Template Types Level & Empty Page Bug
+# Fix: RTL Alignment in Create Category Dialog + Submission Method Tabs Polish
 
-## Issues Identified
+## Changes Required
 
-### Issue 1: Empty page when entering a project type
-- The project type card shows "1 תבנית" for תמ"א 38/2 because `useProjectTypeSummary` counts templates from all 3 tables regardless of `category_id`
-- But when clicking into it, `FeeTemplatesByAdvisorProject` shows Template Type cards from `fee_template_categories` — which is **empty** (0 rows in DB)
-- Existing templates have `category_id = NULL` and `project_type = NULL`, so they don't belong to any category yet
+### 1. Fix RTL alignment in `CreateFeeCategoryDialog.tsx`
+The Select dropdown for "מדד ברירת מחדל" needs proper RTL styling:
+- Add `dir="rtl"` to `Select`, `SelectTrigger`, and `SelectContent`
+- Add `className="text-right"` to `SelectTrigger`
+- Placeholder "בחר מדד" is already set but may not show since `indexType` defaults to `cpi` -- keep it as-is since it has a default value
 
-### Issue 2: Template Type creation flow needs polish
-- The Create/Edit dialogs exist but need verification that they work end-to-end
-- The client wants: a list of Template Types (e.g., הכנת תב"ע, הכנת מצגת לדיירים, רישוי) with a "Default" button on the left side, and an index (מדד) selector per template type
+### 2. Fix RTL alignment in `CreateSubmissionMethodDialog.tsx`
+Same RTL fix for the method type Select dropdown.
 
----
+### 3. Polish Submission Method tabs in `FeeTemplatesByCategory.tsx`
+Based on the client's reference image, the "שיטת ההגשה" (Submission Method) section inside the category detail page needs refinement:
+- Move submission method tabs to be more prominent -- currently they're inside the "שורות שכ"ט" tab as sub-buttons. The client's reference shows them as a **top-level tab-like row** within the category page with:
+  - Radio-style default selector (circle indicator) on each method
+  - Icons for edit/delete/copy per method
+  - A prominent "+ הוסף" button on the left
+  - "ברירת מחדל" label column on the left side
+- The current implementation already has the core logic (method tabs, default toggle, copy functionality) but the visual layout needs to match the client's wireframe
 
-## Plan
-
-### Step 1: Fix Empty State UX on FeeTemplatesByAdvisorProject
-Show a clear onboarding state when no categories exist yet, with:
-- A descriptive message explaining the admin needs to create template types first
-- A prominent "Create Template Type" button
-- If there are existing "orphan" templates (with `category_id = NULL`), show a notice: "יש X תבניות שלא שויכו לסוג תבנית" with an option to assign them later
-
-### Step 2: Fix Template Count on Project Cards
-Update `useProjectTypeSummary` to also count templates with `project_type = NULL` (global templates). Currently, templates with `project_type = NULL` for אדריכל are being counted but misleadingly shown under specific project types.
-
-Alternatively, show a separate "כללי (ללא סוג פרויקט)" card for templates without a project type.
-
-### Step 3: Polish the Template Type Card Layout per Client Reference
-Based on the client's reference image, each template type card should display:
-- Template type name (e.g., הכנת תב"ע) as the card title
-- "ברירת מחדל" (Default) button aligned to the LEFT side of the card
-- Index type (מדד) badge displayed on the card
-- Edit and Delete action buttons
-- The card should be clickable to drill into the 3-tab template management
-
-### Step 4: Ensure Create Category Dialog Works End-to-End
-Verify `CreateFeeCategoryDialog` properly passes:
-- `advisor_specialty` from URL params
-- `project_type` from URL params
-- `name` from user input
-- `default_index_type` from dropdown selection
-- `is_default` from toggle
-
----
-
-## Technical Details
-
-### Files to Modify
+### Technical Details
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/FeeTemplatesByAdvisorProject.tsx` | Improve empty state UX, add orphan template notice, polish card layout per client reference |
-| `src/hooks/useFeeTemplateHierarchy.ts` | Fix `useProjectTypeSummary` to handle NULL project_type templates correctly — either exclude them from specific project counts or show them separately |
+| `src/components/admin/CreateFeeCategoryDialog.tsx` | Add `dir="rtl"` and `className="text-right"` to Select components |
+| `src/components/admin/CreateSubmissionMethodDialog.tsx` | Add `dir="rtl"` and `className="text-right"` to Select components |
+| `src/pages/admin/FeeTemplatesByCategory.tsx` | Restructure submission method section to match reference: table-like row layout with radio default, action icons (edit, delete, copy), and prominent add button |
 
-### Database State
-- `fee_template_categories`: 0 rows (empty) — needs admin to create entries
-- `default_fee_item_templates`: 6 rows for אדריכל with `category_id = NULL`, `project_type = NULL`
-- These orphan templates need a migration path: either auto-assign to a default category or let admin manually assign them
+### Visual Layout Target (from reference image)
 
-### No Schema Changes Needed
-All required columns (`category_id`, `default_index_type`, `is_default`) already exist in the `fee_template_categories` table.
+The submission methods section should display as a structured table/list:
+```text
+שיטת ההגשה          ברירת מחדל    + הוסף
+-----------------------------------------
+[icons] פאושלי        (o)
+[icons] כמותי         ( )
+[icons] שעתי          ( )
+```
+Where:
+- Each row has action icons (copy, edit, delete) on the right
+- Method name in the center
+- Radio-style default selector on the left
+- "+ הוסף" button aligned to the left of the header
 
