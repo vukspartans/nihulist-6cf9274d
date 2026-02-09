@@ -4,7 +4,6 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -16,30 +15,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, FileText, Briefcase, Milestone } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Star, BarChart3 } from "lucide-react";
 import {
-  useFeeItemTemplatesByAdvisorProject,
-  useServiceScopeTemplatesByAdvisorProject,
-  useDeleteFeeItemTemplate,
-  useDeleteServiceScopeTemplate,
-  useReorderFeeItemTemplates,
-  useReorderServiceScopeTemplates,
-  FeeItemTemplate,
-  ServiceScopeTemplate,
-} from "@/hooks/useRFPTemplatesAdmin";
-import {
-  useMilestoneTemplatesByAdvisorProject,
-  useDeleteMilestoneTemplate,
-  useReorderMilestoneTemplates,
-} from "@/hooks/useMilestoneTemplates";
-import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
-import { CreateFeeItemTemplateDialog } from "@/components/admin/CreateFeeItemTemplateDialog";
-import { EditFeeItemTemplateDialog } from "@/components/admin/EditFeeItemTemplateDialog";
-import { CreateServiceScopeTemplateDialog } from "@/components/admin/CreateServiceScopeTemplateDialog";
-import { EditServiceScopeTemplateDialog } from "@/components/admin/EditServiceScopeTemplateDialog";
-import { CreateMilestoneTemplateDialog } from "@/components/admin/CreateMilestoneTemplateDialog";
-import { EditMilestoneTemplateDialog } from "@/components/admin/EditMilestoneTemplateDialog";
-import { TRIGGER_TYPES, type MilestoneTemplate } from "@/types/milestoneTemplate";
+  useFeeTemplateCategories,
+  useCreateFeeCategory,
+  useUpdateFeeCategory,
+  useDeleteFeeCategory,
+} from "@/hooks/useFeeTemplateHierarchy";
+import { CreateFeeCategoryDialog } from "@/components/admin/CreateFeeCategoryDialog";
+import { EditFeeCategoryDialog } from "@/components/admin/EditFeeCategoryDialog";
+import { getIndexLabel } from "@/constants/indexTypes";
+import type { FeeTemplateCategory } from "@/types/feeTemplateHierarchy";
 
 export default function FeeTemplatesByAdvisorProject() {
   const { advisorType, projectType } = useParams<{
@@ -50,236 +36,39 @@ export default function FeeTemplatesByAdvisorProject() {
   const decodedAdvisorType = decodeURIComponent(advisorType || "");
   const decodedProjectType = decodeURIComponent(projectType || "");
 
-  const [activeTab, setActiveTab] = useState<string>("services");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<FeeTemplateCategory | null>(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
 
-  // Fee Items state
-  const [createFeeItemDialogOpen, setCreateFeeItemDialogOpen] = useState(false);
-  const [editingFeeItem, setEditingFeeItem] = useState<FeeItemTemplate | null>(null);
-  const [deleteFeeItemId, setDeleteFeeItemId] = useState<string | null>(null);
-
-  // Services state
-  const [createServiceDialogOpen, setCreateServiceDialogOpen] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceScopeTemplate | null>(null);
-  const [deleteServiceId, setDeleteServiceId] = useState<string | null>(null);
-
-  // Milestones state
-  const [createMilestoneDialogOpen, setCreateMilestoneDialogOpen] = useState(false);
-  const [editingMilestone, setEditingMilestone] = useState<MilestoneTemplate | null>(null);
-  const [deleteMilestoneId, setDeleteMilestoneId] = useState<string | null>(null);
-
-  // Fetch data using new hooks (filter by advisor + project type)
-  const { data: feeItems, isLoading: feeItemsLoading } = useFeeItemTemplatesByAdvisorProject(
-    decodedAdvisorType,
-    decodedProjectType
-  );
-  const { data: services, isLoading: servicesLoading } = useServiceScopeTemplatesByAdvisorProject(
-    decodedAdvisorType,
-    decodedProjectType
-  );
-  const { data: milestones, isLoading: milestonesLoading } = useMilestoneTemplatesByAdvisorProject(
-    decodedAdvisorType,
-    decodedProjectType
-  );
-
-  // Delete mutations
-  const deleteFeeItemMutation = useDeleteFeeItemTemplate();
-  const deleteServiceMutation = useDeleteServiceScopeTemplate();
-  const deleteMilestoneMutation = useDeleteMilestoneTemplate();
-
-  // Reorder mutations
-  const reorderFeeItemsMutation = useReorderFeeItemTemplates();
-  const reorderServicesMutation = useReorderServiceScopeTemplates();
-  const reorderMilestonesMutation = useReorderMilestoneTemplates();
+  const { data: categories, isLoading } = useFeeTemplateCategories(decodedAdvisorType, decodedProjectType);
+  const createMutation = useCreateFeeCategory();
+  const updateMutation = useUpdateFeeCategory();
+  const deleteMutation = useDeleteFeeCategory();
 
   const handleBack = () => {
     navigate(`/heyadmin/fee-templates/${encodeURIComponent(decodedAdvisorType)}`);
   };
 
-  const handleDeleteFeeItem = () => {
-    if (deleteFeeItemId) {
-      deleteFeeItemMutation.mutate(deleteFeeItemId, {
-        onSuccess: () => setDeleteFeeItemId(null),
+  const handleCategoryClick = (category: FeeTemplateCategory) => {
+    navigate(
+      `/heyadmin/fee-templates/${encodeURIComponent(decodedAdvisorType)}/${encodeURIComponent(decodedProjectType)}/${category.id}`
+    );
+  };
+
+  const handleSetDefault = (category: FeeTemplateCategory) => {
+    updateMutation.mutate({
+      id: category.id,
+      is_default: true,
+    });
+  };
+
+  const handleDelete = () => {
+    if (deleteCategoryId) {
+      deleteMutation.mutate(deleteCategoryId, {
+        onSuccess: () => setDeleteCategoryId(null),
       });
     }
   };
-
-  const handleDeleteService = () => {
-    if (deleteServiceId) {
-      deleteServiceMutation.mutate(deleteServiceId, {
-        onSuccess: () => setDeleteServiceId(null),
-      });
-    }
-  };
-
-  const handleDeleteMilestone = () => {
-    if (deleteMilestoneId) {
-      deleteMilestoneMutation.mutate(deleteMilestoneId, {
-        onSuccess: () => setDeleteMilestoneId(null),
-      });
-    }
-  };
-
-  const getTriggerLabel = (triggerType: string) => {
-    const found = TRIGGER_TYPES.find((t) => t.value === triggerType);
-    return found?.label || triggerType;
-  };
-
-  // Column definitions for SortableDataTable
-  const feeItemColumns: Column<FeeItemTemplate & { display_order: number }>[] = [
-    {
-      header: "",
-      cell: (item) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingFeeItem(item);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteFeeItemId(item.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-    {
-      header: "תיאור",
-      accessorKey: "description",
-    },
-    {
-      header: "יחידה",
-      accessorKey: "unit",
-    },
-    {
-      header: "כמות ברירת מחדל",
-      cell: (item) => item.default_quantity || "-",
-    },
-    {
-      header: "סוג חיוב",
-      cell: (item) => item.charge_type || "-",
-    },
-    {
-      header: "סטטוס",
-      cell: (item) =>
-        item.is_optional ? (
-          <Badge variant="secondary">אופציונלי</Badge>
-        ) : (
-          <Badge variant="default">חובה</Badge>
-        ),
-    },
-  ];
-
-  const serviceColumns: Column<ServiceScopeTemplate & { display_order: number }>[] = [
-    {
-      header: "",
-      cell: (item) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingService(item);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteServiceId(item.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-    {
-      header: "שם השירות",
-      accessorKey: "task_name",
-    },
-    {
-      header: 'קטגוריית שכ"ט',
-      cell: (item) => item.default_fee_category || "-",
-    },
-    {
-      header: "סטטוס",
-      cell: (item) =>
-        item.is_optional ? (
-          <Badge variant="secondary">אופציונלי</Badge>
-        ) : (
-          <Badge variant="default">חובה</Badge>
-        ),
-    },
-  ];
-
-  const milestoneColumns: Column<MilestoneTemplate & { display_order: number }>[] = [
-    {
-      header: "",
-      cell: (item) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingMilestone(item);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteMilestoneId(item.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-    {
-      header: "שם",
-      accessorKey: "name",
-    },
-    {
-      header: "אחוז מהסכום",
-      cell: (item) => `${item.percentage_of_total}%`,
-    },
-    {
-      header: "טריגר",
-      cell: (item) => getTriggerLabel(item.trigger_type),
-    },
-    {
-      header: "סטטוס",
-      cell: (item) =>
-        item.is_active ? (
-          <Badge variant="default">פעיל</Badge>
-        ) : (
-          <Badge variant="secondary">לא פעיל</Badge>
-        ),
-    },
-  ];
 
   return (
     <AdminLayout>
@@ -304,233 +93,147 @@ export default function FeeTemplatesByAdvisorProject() {
                 <span>{decodedProjectType}</span>
               </div>
               <h1 className="text-2xl font-bold text-foreground">
-                ניהול תבניות
+                סוגי תבניות
               </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                בחר סוג תבנית לניהול השירותים, שורות שכ"ט ואבני דרך התשלום
+              </p>
             </div>
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              הוסף סוג תבנית
+            </Button>
           </div>
         </div>
 
-        {/* Content Tabs: Services, Fee Items, Milestones - ordered for RTL */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-          <TabsList className="grid w-full grid-cols-3" dir="rtl">
-            <TabsTrigger value="services" className="gap-2">
-              <Briefcase className="h-4 w-4" />
-              שירותים
-              {services && services.length > 0 && (
-                <Badge variant="secondary" className="mr-1">{services.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="fee-items" className="gap-2">
-              <FileText className="h-4 w-4" />
-              שורות שכ"ט
-              {feeItems && feeItems.length > 0 && (
-                <Badge variant="secondary" className="mr-1">{feeItems.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="milestones" className="gap-2">
-              <Milestone className="h-4 w-4" />
-              תשלום
-              {milestones && milestones.length > 0 && (
-                <Badge variant="secondary" className="mr-1">{milestones.length}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Fee Items Tab */}
-          <TabsContent value="fee-items">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">שורות שכר טרחה</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setCreateFeeItemDialogOpen(true)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  הוסף שורה
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {feeItemsLoading ? (
-                  <Skeleton className="h-32" />
-                ) : feeItems && feeItems.length > 0 ? (
-                  <SortableDataTable
-                    data={feeItems}
-                    columns={feeItemColumns}
-                    onReorder={(orderedIds) => reorderFeeItemsMutation.mutate(orderedIds)}
-                    isReordering={reorderFeeItemsMutation.isPending}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>אין שורות שכר טרחה. הוסף שורה ראשונה כדי להתחיל.</p>
+        {/* Template Type Cards */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-40" />
+            ))}
+          </div>
+        ) : categories && categories.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((category) => (
+              <Card
+                key={category.id}
+                className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/30 relative"
+                onClick={() => handleCategoryClick(category)}
+              >
+                {category.is_default && (
+                  <div className="absolute top-2 left-2">
+                    <Badge variant="default" className="gap-1">
+                      <Star className="h-3 w-3" />
+                      ברירת מחדל
+                    </Badge>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Services Tab */}
-          <TabsContent value="services">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">שירותים</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setCreateServiceDialogOpen(true)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  הוסף שירות
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {servicesLoading ? (
-                  <Skeleton className="h-32" />
-                ) : services && services.length > 0 ? (
-                  <SortableDataTable
-                    data={services}
-                    columns={serviceColumns}
-                    onReorder={(orderedIds) => reorderServicesMutation.mutate(orderedIds)}
-                    isReordering={reorderServicesMutation.isPending}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>אין שירותים. הוסף שירות ראשון כדי להתחיל.</p>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">{category.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      מדד: {getIndexLabel(category.default_index_type)}
+                    </span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Milestones Tab */}
-          <TabsContent value="milestones">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">אבני דרך</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setCreateMilestoneDialogOpen(true)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  הוסף אבן דרך
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {milestonesLoading ? (
-                  <Skeleton className="h-32" />
-                ) : milestones && milestones.length > 0 ? (
-                  <SortableDataTable
-                    data={milestones}
-                    columns={milestoneColumns}
-                    onReorder={(orderedIds) => reorderMilestonesMutation.mutate(orderedIds)}
-                    isReordering={reorderMilestonesMutation.isPending}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>אין אבני דרך. הוסף אבן דרך ראשונה כדי להתחיל.</p>
+                  <div className="flex items-center gap-2 pt-2">
+                    {!category.is_default && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSetDefault(category);
+                        }}
+                      >
+                        <Star className="h-3 w-3 ml-1" />
+                        קבע כברירת מחדל
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingCategory(category);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteCategoryId(category.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                אין סוגי תבניות. הוסף סוג תבנית ראשון כדי להתחיל.
+              </p>
+              <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                הוסף סוג תבנית
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Fee Item Dialogs */}
-      <CreateFeeItemTemplateDialog
-        open={createFeeItemDialogOpen}
-        onOpenChange={setCreateFeeItemDialogOpen}
-        defaultAdvisorSpecialty={decodedAdvisorType}
-        defaultProjectType={decodedProjectType}
-      />
-      <EditFeeItemTemplateDialog
-        open={!!editingFeeItem}
-        onOpenChange={(open) => !open && setEditingFeeItem(null)}
-        template={editingFeeItem}
-      />
-
-      {/* Service Dialogs */}
-      <CreateServiceScopeTemplateDialog
-        open={createServiceDialogOpen}
-        onOpenChange={setCreateServiceDialogOpen}
-        defaultAdvisorSpecialty={decodedAdvisorType}
-        defaultProjectType={decodedProjectType}
-      />
-      <EditServiceScopeTemplateDialog
-        open={!!editingService}
-        onOpenChange={(open) => !open && setEditingService(null)}
-        template={editingService}
+      {/* Create Category Dialog */}
+      <CreateFeeCategoryDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        advisorSpecialty={decodedAdvisorType}
+        projectType={decodedProjectType}
+        onSubmit={(data) => {
+          createMutation.mutate(data, {
+            onSuccess: () => setCreateDialogOpen(false),
+          });
+        }}
+        isLoading={createMutation.isPending}
       />
 
-      {/* Milestone Dialogs */}
-      <CreateMilestoneTemplateDialog
-        open={createMilestoneDialogOpen}
-        onOpenChange={setCreateMilestoneDialogOpen}
-        defaultAdvisorSpecialty={decodedAdvisorType}
-        defaultProjectType={decodedProjectType}
-      />
-      <EditMilestoneTemplateDialog
-        open={!!editingMilestone}
-        onOpenChange={(open) => !open && setEditingMilestone(null)}
-        template={editingMilestone}
+      {/* Edit Category Dialog */}
+      <EditFeeCategoryDialog
+        open={!!editingCategory}
+        onOpenChange={(open) => !open && setEditingCategory(null)}
+        category={editingCategory}
+        onSubmit={(data) => {
+          updateMutation.mutate(data, {
+            onSuccess: () => setEditingCategory(null),
+          });
+        }}
+        isLoading={updateMutation.isPending}
       />
 
-      {/* Delete Fee Item Confirmation */}
-      <AlertDialog open={!!deleteFeeItemId} onOpenChange={() => setDeleteFeeItemId(null)}>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteCategoryId} onOpenChange={() => setDeleteCategoryId(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת שורה</AlertDialogTitle>
+            <AlertDialogTitle>מחיקת סוג תבנית</AlertDialogTitle>
             <AlertDialogDescription>
-              האם אתה בטוח שברצונך למחוק את השורה?
+              האם אתה בטוח שברצונך למחוק את סוג התבנית? כל השירותים, שורות שכ"ט ואבני הדרך המשויכים יושפעו.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>ביטול</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteFeeItem}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Service Confirmation */}
-      <AlertDialog open={!!deleteServiceId} onOpenChange={() => setDeleteServiceId(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת שירות</AlertDialogTitle>
-            <AlertDialogDescription>
-              האם אתה בטוח שברצונך למחוק את השירות?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteService}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Milestone Confirmation */}
-      <AlertDialog open={!!deleteMilestoneId} onOpenChange={() => setDeleteMilestoneId(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת אבן דרך</AlertDialogTitle>
-            <AlertDialogDescription>
-              האם אתה בטוח שברצונך למחוק את אבן הדרך?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteMilestone}
+              onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               מחק

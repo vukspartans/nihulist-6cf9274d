@@ -66,6 +66,30 @@ export function useMilestoneTemplatesByAdvisorProject(
   });
 }
 
+// Fetch milestone templates by category_id
+export function useMilestoneTemplatesByCategory(categoryId: string) {
+  return useQuery({
+    queryKey: ['milestone-templates', 'by-category', categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('milestone_templates')
+        .select(`
+          *,
+          municipalities (id, name)
+        `)
+        .eq('category_id', categoryId)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data as MilestoneTemplate[];
+    },
+    enabled: !!categoryId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 // Fetch single milestone template with linked tasks
 export function useMilestoneTemplate(id: string) {
   return useQuery({
