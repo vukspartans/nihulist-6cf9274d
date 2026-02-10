@@ -1199,6 +1199,8 @@ export const RequestEditorDialog = ({
                   onItemsChange={(items) => setFormData(prev => ({ ...prev, feeItems: items }))}
                   onOptionalItemsChange={(items) => setFormData(prev => ({ ...prev, optionalFeeItems: items }))}
                   advisorType={advisorType}
+                  categoryId={formData.selectedCategoryId}
+                  submissionMethodId={formData.selectedMethodId}
                 />
               </TabsContent>
 

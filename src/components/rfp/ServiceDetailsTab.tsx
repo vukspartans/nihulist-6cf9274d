@@ -396,49 +396,102 @@ export const ServiceDetailsTab = ({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="space-y-2">
-                {scopeItems.map((item, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
-                  >
-                    <Checkbox
-                      checked={item.is_included}
-                      onCheckedChange={() => toggleScopeItem(index)}
-                    />
-                    <span className={`flex-1 ${!item.is_included ? 'text-muted-foreground line-through' : ''}`}>
-                      {item.task_name}
-                    </span>
-                    {item.is_optional && (
-                      <Badge variant="outline" className="text-xs">אופציונלי</Badge>
-                    )}
-                    <Select
-                      dir="rtl"
-                      value={item.fee_category}
-                      onValueChange={(value) => updateScopeItemCategory(index, value)}
+              <div className="space-y-4">
+                {(() => {
+                  // Group items by fee_category for two-level display
+                  const grouped: Record<string, { items: typeof scopeItems; indices: number[] }> = {};
+                  const ungrouped: { item: typeof scopeItems[0]; index: number }[] = [];
+
+                  scopeItems.forEach((item, index) => {
+                    const cat = item.fee_category || '';
+                    if (cat && cat !== 'כללי') {
+                      if (!grouped[cat]) grouped[cat] = { items: [], indices: [] };
+                      grouped[cat].items.push(item);
+                      grouped[cat].indices.push(index);
+                    } else {
+                      ungrouped.push({ item, index });
+                    }
+                  });
+
+                  const groupKeys = Object.keys(grouped);
+                  const hasGroups = groupKeys.length > 0;
+
+                  const renderItem = (item: typeof scopeItems[0], index: number) => (
+                    <div 
+                      key={index}
+                      className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border hover:bg-muted transition-colors"
                     >
-                      <SelectTrigger dir="rtl" className="w-40 text-right">
-                        <SelectValue placeholder="סעיף שכ&quot;ט" />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        {feeCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat} className="text-right">
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeScopeItem(index)}
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <Checkbox
+                        checked={item.is_included}
+                        onCheckedChange={() => toggleScopeItem(index)}
+                      />
+                      <span className={`flex-1 ${!item.is_included ? 'text-muted-foreground line-through' : ''}`}>
+                        {item.task_name}
+                      </span>
+                      {item.is_optional && (
+                        <Badge variant="outline" className="text-xs">אופציונלי</Badge>
+                      )}
+                      <Select
+                        dir="rtl"
+                        value={item.fee_category}
+                        onValueChange={(value) => updateScopeItemCategory(index, value)}
+                      >
+                        <SelectTrigger dir="rtl" className="w-40 text-right">
+                          <SelectValue placeholder="סעיף שכ&quot;ט" />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          {feeCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat} className="text-right">
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeScopeItem(index)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+
+                  if (!hasGroups) {
+                    return scopeItems.map((item, index) => renderItem(item, index));
+                  }
+
+                  return (
+                    <>
+                      {groupKeys.map((groupName) => (
+                        <div key={groupName} className="space-y-2">
+                          <div className="flex items-center gap-2 px-2 pt-1">
+                            <div className="h-px flex-1 bg-border" />
+                            <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{groupName}</span>
+                            <div className="h-px flex-1 bg-border" />
+                          </div>
+                          {grouped[groupName].items.map((item, i) =>
+                            renderItem(item, grouped[groupName].indices[i])
+                          )}
+                        </div>
+                      ))}
+                      {ungrouped.length > 0 && (
+                        <div className="space-y-2">
+                          {groupKeys.length > 0 && (
+                            <div className="flex items-center gap-2 px-2 pt-1">
+                              <div className="h-px flex-1 bg-border" />
+                              <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">כללי</span>
+                              <div className="h-px flex-1 bg-border" />
+                            </div>
+                          )}
+                          {ungrouped.map(({ item, index }) => renderItem(item, index))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 
                 {scopeItems.length === 0 && (
                   <div className="text-center py-4 text-sm text-muted-foreground">

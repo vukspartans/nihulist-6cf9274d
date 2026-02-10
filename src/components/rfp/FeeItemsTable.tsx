@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,8 @@ interface FeeItemsTableProps {
   onOptionalItemsChange: (items: RFPFeeItem[]) => void;
   advisorType?: string;
   feeCategoriesFromItems?: string[];
+  categoryId?: string;
+  submissionMethodId?: string;
 }
 
 export const FeeItemsTable = ({
@@ -33,9 +35,22 @@ export const FeeItemsTable = ({
   onItemsChange,
   onOptionalItemsChange,
   advisorType,
-  feeCategoriesFromItems = []
+  feeCategoriesFromItems = [],
+  categoryId,
+  submissionMethodId
 }: FeeItemsTableProps) => {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const lastAutoLoadRef = useRef<string | null>(null);
+
+  // Auto-load fee items when categoryId + submissionMethodId change
+  useEffect(() => {
+    if (!advisorType || !categoryId || !submissionMethodId) return;
+    const key = `${categoryId}:${submissionMethodId}`;
+    if (lastAutoLoadRef.current === key) return;
+    lastAutoLoadRef.current = key;
+    loadTemplates();
+  }, [advisorType, categoryId, submissionMethodId]);
+
   
   const addItem = (isOptional: boolean) => {
     const targetItems = isOptional ? optionalItems : items;
@@ -112,11 +127,19 @@ export const FeeItemsTable = ({
 
     setLoadingTemplates(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('default_fee_item_templates')
         .select('*')
-        .eq('advisor_specialty', advisorType)
-        .order('display_order', { ascending: true });
+        .eq('advisor_specialty', advisorType);
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+      if (submissionMethodId) {
+        query = query.eq('submission_method_id', submissionMethodId);
+      }
+
+      const { data, error } = await query.order('display_order', { ascending: true });
 
       if (error) throw error;
 
