@@ -1,87 +1,87 @@
 
 
-# Index Calculation Logic in Payment Module
+# Full Review: Fee Templates Pipeline -- Gaps and Fixes
 
-## Overview
+## Summary
 
-When an advisor submits a payment request (invoice), the system should automatically calculate the index adjustment by comparing the contract's base index value with the current month's index value. This ensures fair price linkage as agreed in the contract.
+The admin template management (5-level hierarchy) is well built. However, the **entrepreneur-side pipeline** has critical gaps where the selected category and submission method from the Services tab are **not propagated** to the Fee Items and Payment tabs. This means the admin's carefully organized templates are not being loaded correctly for the entrepreneur.
 
-## Current State
+## Gap Analysis
 
-- **Contract data**: The RFP invite's `payment_terms` JSON already stores `index_type` (e.g., "cpi"), `index_base_value`, and `index_base_month`
-- **Payment requests table**: Has no index-related columns -- only stores flat `amount`, `vat_amount`, `total_amount`
-- **No calculation logic exists** -- the UI text in `PaymentTermsTab` mentions the system will calculate the difference but it's not implemented
+### Gap 1: FeeItemsTable ignores category and submission method (CRITICAL)
 
-## What Will Be Built
+**Problem**: `FeeItemsTable.tsx` line 115-119 loads templates using only `advisor_specialty`:
+```
+.eq('advisor_specialty', advisorType)
+```
+It completely ignores the `categoryId` and `submissionMethodId` that the entrepreneur selected in the Services tab. This means ALL fee item templates for that advisor type are loaded in a flat list, rather than the specific items for the chosen category + method.
 
-### 1. Database: Add index columns to `payment_requests`
+**Fix**: Pass `categoryId` and `submissionMethodId` from `RequestEditorDialog` to `FeeItemsTable`, and update the `loadTemplates` query to filter by these values.
 
-Add 5 new columns to store the index calculation per payment request:
+### Gap 2: Fee items not auto-loaded when category/method changes
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `index_type` | text | The index type from the contract (e.g., "cpi") |
-| `index_base_value` | numeric | The base index value set in the contract |
-| `index_current_value` | numeric | The index value at time of invoice submission |
-| `index_adjustment_factor` | numeric | Ratio: current / base (e.g., 1.023 for 2.3% increase) |
-| `index_adjusted_amount` | numeric | The final amount after index adjustment (before VAT) |
+**Problem**: When the entrepreneur selects a category and submission method in the Services tab, the service scope items are loaded automatically (`loadTemplatesForCategory`). However, the fee items in the Fees tab are NOT auto-loaded -- they remain empty until the entrepreneur manually clicks "Load Template".
 
-### 2. Frontend: Index calculation in `CreatePaymentRequestDialog`
+**Fix**: Add an `onFeeItemsLoaded` callback or auto-load fee items when `categoryId` + `submissionMethodId` change, similar to how services are auto-loaded.
 
-When creating a payment request:
-- Fetch the contract's index terms from the linked `rfp_invite.payment_terms` (via `project_advisor_id` -> `proposal_id` -> `rfp_invite`)
-- If an index is defined (`index_type != 'none'`), show an "Index Adjustment" section:
-  - Display the contract's base index value and type (read-only)
-  - Input field for "Current index value" (ערך מדד נוכחי) -- the advisor enters the current month's published index
-  - Auto-calculate: adjustment factor = current / base
-  - Auto-calculate: adjusted amount = original amount x adjustment factor
-  - Show the breakdown: original amount, adjustment %, adjusted amount
-- VAT is then calculated on the adjusted amount (not the original)
+### Gap 3: Milestones tab uses categoryId correctly (OK)
 
-### 3. Frontend: Display index details in `PaymentRequestDetailDialog`
+The `PaymentTermsTab` already receives and uses `categoryId` to filter milestone templates (line 91). This is working correctly.
 
-When viewing a payment request that has index data:
-- Show an "Index Adjustment" section with:
-  - Index type label (e.g., "מדד המחירים לצרכן")
-  - Base value and current value
-  - Adjustment factor as percentage (e.g., "+2.3%")
-  - Original amount vs adjusted amount
+### Gap 4: Services tab checklist does not show two-level headers
 
-### 4. Update `PaymentRequest` type and hook
+**Problem**: The admin-side Services tab now supports a two-level hierarchy (headers + items grouped by `default_fee_category`). However, on the entrepreneur side in `ServiceDetailsTab.tsx`, the loaded services are displayed as a flat checklist without any grouping by header.
 
-- Add the 5 new index fields to the `PaymentRequest` TypeScript type
-- Update `useProjectPayments.createPaymentRequest` to pass the index data when inserting
+**Fix**: Group the `scopeItems` by `fee_category` (which maps to `default_fee_category`) and render them under collapsible header sections, mirroring the admin's structure.
 
-## Technical Details
+## Implementation Plan
 
-### Files to Create/Modify
+### 1. Pass category/method to FeeItemsTable
+
+**File**: `src/components/RequestEditorDialog.tsx` (lines 1196-1202)
+
+Add `categoryId` and `submissionMethodId` props:
+```tsx
+<FeeItemsTable
+  items={formData.feeItems || []}
+  optionalItems={formData.optionalFeeItems || []}
+  onItemsChange={...}
+  onOptionalItemsChange={...}
+  advisorType={advisorType}
+  categoryId={formData.selectedCategoryId}       // NEW
+  submissionMethodId={formData.selectedMethodId}  // NEW
+/>
+```
+
+### 2. Update FeeItemsTable to use category/method filters
+
+**File**: `src/components/rfp/FeeItemsTable.tsx`
+
+- Add `categoryId?: string` and `submissionMethodId?: string` props
+- Update `loadTemplates` query (line 115-119) to filter by these:
+  - If `categoryId` and `submissionMethodId` are set: `.eq('category_id', categoryId).eq('submission_method_id', submissionMethodId)`
+  - Fallback to current behavior (just `advisor_specialty`) if not set
+- Add a `useEffect` to auto-load fee items when `categoryId` + `submissionMethodId` change (similar to how services auto-load)
+
+### 3. Group services by header on entrepreneur side
+
+**File**: `src/components/rfp/ServiceDetailsTab.tsx` (lines 399-441)
+
+Replace the flat list rendering with grouped sections:
+- Group `scopeItems` by `fee_category`
+- Render each group under a header label (non-collapsible, just a visual separator)
+- Keep the checkbox functionality per item
+- This makes the entrepreneur see the same logical grouping the admin defined
+
+### 4. No database or migration changes needed
+
+All the data is already correctly structured. The issue is purely in the frontend query filters and display logic.
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| **Migration** | `ALTER TABLE payment_requests ADD COLUMN index_type text, ADD COLUMN index_base_value numeric, ADD COLUMN index_current_value numeric, ADD COLUMN index_adjustment_factor numeric, ADD COLUMN index_adjusted_amount numeric` |
-| `src/types/payment.ts` | Add 5 index fields to `PaymentRequest` interface |
-| `src/components/payments/CreatePaymentRequestDialog.tsx` | Add index lookup from contract, current value input, auto-calculation display |
-| `src/components/payments/PaymentRequestDetailDialog.tsx` | Display index adjustment breakdown when present |
-| `src/hooks/useProjectPayments.ts` | Pass index fields in `createPaymentRequest` insert |
+| `src/components/rfp/FeeItemsTable.tsx` | Add `categoryId` + `submissionMethodId` props, update `loadTemplates` query, add auto-load effect |
+| `src/components/RequestEditorDialog.tsx` | Pass `categoryId` and `submissionMethodId` to FeeItemsTable |
+| `src/components/rfp/ServiceDetailsTab.tsx` | Group checklist items by `fee_category` header |
 
-### Calculation Formula
-
-```text
-adjustment_factor = index_current_value / index_base_value
-index_adjusted_amount = amount * adjustment_factor
-vat_amount = index_adjusted_amount * (vat_percent / 100)
-total_amount = index_adjusted_amount + vat_amount
-```
-
-### Data Flow
-
-1. Advisor creates payment request -> dialog fetches contract's index terms from `rfp_invites.payment_terms`
-2. If index exists, advisor enters current month's published index value
-3. System calculates adjustment factor and adjusted amount in real-time
-4. On submit, all index fields are saved to `payment_requests`
-5. Detail view shows the full breakdown
-
-### Edge Cases
-- If `index_type = 'none'` or no index set: skip adjustment, amount stays as-is
-- If `index_base_value` is null/zero: show warning, disable adjustment
-- If contract has no linked RFP invite: no index adjustment available
