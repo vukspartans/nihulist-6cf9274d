@@ -342,6 +342,13 @@ export const ServiceDetailsTab = ({
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t">
           <div className="p-3 space-y-2">
+            {/* Empty state when no categories configured */}
+            {!loadingCategories && categories && categories.length === 0 && (
+              <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-2 text-right">
+                לא הוגדרו תבניות עבור סוג יועץ זה. ניתן להוסיף שירותים ידנית.
+              </div>
+            )}
+
             {/* Template Selection Dropdowns */}
             {categories && categories.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">

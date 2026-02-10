@@ -803,18 +803,22 @@ export const RequestEditorDialog = ({
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 flex-row-reverse h-auto">
             <TabsTrigger value="services" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <List className="h-4 w-4" />
+              <span className="sm:hidden">שירותים</span>
               <span className="hidden sm:inline">פירוט שירותים</span>
             </TabsTrigger>
             <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <Coins className="h-4 w-4" />
+              <span className="sm:hidden">שכ״ט</span>
               <span className="hidden sm:inline">שכר טרחה</span>
             </TabsTrigger>
             <TabsTrigger value="payment" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <CreditCard className="h-4 w-4" />
+              <span className="sm:hidden">תשלום</span>
               <span className="hidden sm:inline">תשלום</span>
             </TabsTrigger>
             <TabsTrigger value="main" className="flex items-center gap-1 sm:gap-2 flex-row-reverse text-xs sm:text-sm py-2">
               <FolderOpen className="h-4 w-4" />
+              <span className="sm:hidden">קבצים</span>
               <span className="hidden sm:inline">מידע וקבצים</span>
             </TabsTrigger>
           </TabsList>
