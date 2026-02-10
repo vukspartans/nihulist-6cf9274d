@@ -1,56 +1,47 @@
 
 
-# RLS Fix for fee_submission_methods + Production Readiness Check
+# UX and Architecture Validation -- Final Review
 
-## Critical Finding
+## Status: 1 Critical Bug, 2 UX Issues Found
 
-The `fee_submission_methods` table has the **exact same RLS bug** that was just fixed for `fee_template_categories`. The admin policy checks `profiles.role = 'admin'` instead of using the `user_roles` table (or the `has_role()` function).
+---
 
-This means the admin client **cannot create submission methods** -- which is the next step after creating a category. The entire template pipeline is blocked at step 2.
+## Bug 1: `projectType` Not Passed to RequestEditorDialog (CRITICAL)
 
-### Current state of the database:
-- 1 category exists ("רישוי" for אדריכל / תמ"א 38/2)
-- 0 submission methods (blocked by RLS)
-- 0 fee items under it
-- 0 service scope items under it
+**Impact**: The category dropdown in the Services tab loads ALL categories for the advisor type, ignoring the project's type. This defeats the purpose of the admin's 5-level hierarchy (Advisor Type -> **Project Type** -> Category -> Method -> Items).
 
-## Fix Required
+**Root Cause**: `AdvisorRecommendationsCard` renders `RequestEditorDialog` at line 183 but does NOT pass the `projectType` prop, even though:
+- `AdvisorRecommendationsCard` receives `projectType` as a prop (line 15)
+- `RequestEditorDialog` accepts `projectType` as a prop (line 39)
+- `ServiceDetailsTab` uses it to filter categories via `useFeeTemplateCategories(advisorType, projectType)` (line 72-75)
 
-**Single SQL migration** to update the RLS policy on `fee_submission_methods`:
+**Fix**: Add `projectType={projectType}` to the `RequestEditorDialog` usage in `AdvisorRecommendationsCard.tsx` line 183-191.
 
-```sql
-DROP POLICY IF EXISTS "Admins can manage submission methods" ON public.fee_submission_methods;
+---
 
-CREATE POLICY "Admins can manage submission methods"
-ON public.fee_submission_methods
-FOR ALL
-USING (
-  has_role(auth.uid(), 'admin')
-);
-```
+## UX Issue 2: No Empty State Guidance When No Categories Exist
 
-This aligns it with the pattern used by `default_fee_item_templates` and `default_service_scope_templates`, which already use `has_role()` and work correctly.
+**Impact**: If an admin has not yet created any categories for a given advisor type + project type, the entrepreneur sees NO dropdown and NO explanation. The Services tab just shows an empty checklist with no context.
 
-## No Other Blockers
+**Fix**: Add a subtle info message when `categories` is empty (after loading completes), telling the entrepreneur that templates are not yet configured for this type. Something like: "לא הוגדרו תבניות עבור סוג יועץ זה. ניתן להוסיף שירותים ידנית."
 
-All other tables in the pipeline have correct RLS:
+---
 
-| Table | Admin Policy | Status |
-|-------|-------------|--------|
-| `fee_template_categories` | `EXISTS (user_roles...)` | Fixed (previous migration) |
-| `fee_submission_methods` | `profiles.role = 'admin'` | **BROKEN -- needs fix** |
-| `default_fee_item_templates` | `has_role(auth.uid(), 'admin')` | OK |
-| `default_service_scope_templates` | `has_role(auth.uid(), 'admin')` | OK |
+## UX Issue 3: Tab Labels Not Visible on Mobile
 
-## Code Pipeline Verification (All OK)
+**Impact**: On small screens, all 4 tab labels (פירוט שירותים, שכר טרחה, תשלום, מידע וקבצים) are hidden via `hidden sm:inline` (lines 804-819 of RequestEditorDialog). Only icons are shown, which are not self-explanatory for Hebrew-speaking entrepreneurs unfamiliar with icon conventions.
 
-The frontend code wiring is confirmed correct:
-1. **ServiceDetailsTab** -- auto-selects category, loads services by `category_id`, resets method on category change (with init guard)
-2. **FeeItemsTable** -- receives `categoryId` + `submissionMethodId`, auto-loads with `useCallback` + `useEffect`, filters query correctly
-3. **RequestEditorDialog** -- passes `formData.selectedCategoryId` and `formData.selectedMethodId` to both FeeItemsTable and PaymentTermsTab
-4. **PaymentTermsTab** -- receives `categoryId` for milestone filtering
+**Fix**: Show abbreviated labels on mobile instead of hiding them entirely. For example: "שירותים", "שכ״ט", "תשלום", "קבצים".
 
-## Implementation
+---
 
-Single file: one SQL migration to fix the RLS policy on `fee_submission_methods`.
+## Implementation Plan
+
+| # | Severity | File | Change |
+|---|----------|------|--------|
+| 1 | Critical | `AdvisorRecommendationsCard.tsx` | Add `projectType={projectType}` prop to `RequestEditorDialog` (line 186) |
+| 2 | Low | `ServiceDetailsTab.tsx` | Add empty state message when no categories found after loading |
+| 3 | Low | `RequestEditorDialog.tsx` | Replace `hidden sm:inline` with abbreviated mobile labels |
+
+All three are small, isolated changes with no risk of regression.
 
