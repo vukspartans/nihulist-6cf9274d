@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,14 +42,87 @@ export const FeeItemsTable = ({
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const lastAutoLoadRef = useRef<string | null>(null);
 
+  // Stable loadTemplates wrapped in useCallback
+  const loadTemplatesCb = useCallback(async () => {
+    if (!advisorType) {
+      toast.error('לא נבחר סוג יועץ');
+      return;
+    }
+
+    setLoadingTemplates(true);
+    try {
+      let query = supabase
+        .from('default_fee_item_templates')
+        .select('*')
+        .eq('advisor_specialty', advisorType);
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+      if (submissionMethodId) {
+        query = query.eq('submission_method_id', submissionMethodId);
+      }
+
+      const { data, error } = await query.order('display_order', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.info('לא נמצאו תבניות עבור סוג יועץ זה');
+        return;
+      }
+
+      const requiredItems: RFPFeeItem[] = [];
+      const optionalTemplateItems: RFPFeeItem[] = [];
+
+      data.forEach((template, index) => {
+        const feeItem: RFPFeeItem = {
+          item_number: index + 1,
+          description: template.description,
+          unit: template.unit as FeeUnit,
+          quantity: Number(template.default_quantity) || 1,
+          unit_price: undefined,
+          charge_type: template.charge_type as ChargeType,
+          is_optional: template.is_optional || false,
+          display_order: template.display_order
+        };
+
+        if (template.is_optional) {
+          optionalTemplateItems.push(feeItem);
+        } else {
+          requiredItems.push(feeItem);
+        }
+      });
+
+      requiredItems.forEach((item, idx) => {
+        item.item_number = idx + 1;
+        item.display_order = idx;
+      });
+      optionalTemplateItems.forEach((item, idx) => {
+        item.item_number = idx + 1;
+        item.display_order = idx;
+      });
+
+      onItemsChange(requiredItems);
+      onOptionalItemsChange(optionalTemplateItems);
+      
+      toast.success(`נטענו ${data.length} פריטי תבנית`);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast.error('שגיאה בטעינת תבניות');
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }, [advisorType, categoryId, submissionMethodId, onItemsChange, onOptionalItemsChange]);
+
   // Auto-load fee items when categoryId + submissionMethodId change
   useEffect(() => {
     if (!advisorType || !categoryId || !submissionMethodId) return;
     const key = `${categoryId}:${submissionMethodId}`;
     if (lastAutoLoadRef.current === key) return;
     lastAutoLoadRef.current = key;
-    loadTemplates();
-  }, [advisorType, categoryId, submissionMethodId]);
+    loadTemplatesCb();
+  }, [advisorType, categoryId, submissionMethodId, loadTemplatesCb]);
 
   
   const addItem = (isOptional: boolean) => {
@@ -119,79 +192,8 @@ export const FeeItemsTable = ({
     setItems(newItems);
   };
 
-  const loadTemplates = async () => {
-    if (!advisorType) {
-      toast.error('לא נבחר סוג יועץ');
-      return;
-    }
-
-    setLoadingTemplates(true);
-    try {
-      let query = supabase
-        .from('default_fee_item_templates')
-        .select('*')
-        .eq('advisor_specialty', advisorType);
-
-      if (categoryId) {
-        query = query.eq('category_id', categoryId);
-      }
-      if (submissionMethodId) {
-        query = query.eq('submission_method_id', submissionMethodId);
-      }
-
-      const { data, error } = await query.order('display_order', { ascending: true });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        toast.info('לא נמצאו תבניות עבור סוג יועץ זה');
-        return;
-      }
-
-      // Separate into required and optional items
-      const requiredItems: RFPFeeItem[] = [];
-      const optionalTemplateItems: RFPFeeItem[] = [];
-
-      data.forEach((template, index) => {
-        const feeItem: RFPFeeItem = {
-          item_number: index + 1,
-          description: template.description,
-          unit: template.unit as FeeUnit,
-          quantity: Number(template.default_quantity) || 1,
-          unit_price: undefined, // Entrepreneur doesn't set prices
-          charge_type: template.charge_type as ChargeType,
-          is_optional: template.is_optional || false,
-          display_order: template.display_order
-        };
-
-        if (template.is_optional) {
-          optionalTemplateItems.push(feeItem);
-        } else {
-          requiredItems.push(feeItem);
-        }
-      });
-
-      // Renumber items
-      requiredItems.forEach((item, idx) => {
-        item.item_number = idx + 1;
-        item.display_order = idx;
-      });
-      optionalTemplateItems.forEach((item, idx) => {
-        item.item_number = idx + 1;
-        item.display_order = idx;
-      });
-
-      onItemsChange(requiredItems);
-      onOptionalItemsChange(optionalTemplateItems);
-      
-      toast.success(`נטענו ${data.length} פריטי תבנית`);
-    } catch (error) {
-      console.error('Error loading templates:', error);
-      toast.error('שגיאה בטעינת תבניות');
-    } finally {
-      setLoadingTemplates(false);
-    }
-  };
+  // loadTemplates is now loadTemplatesCb (useCallback above)
+  const loadTemplates = loadTemplatesCb;
 
   const renderTable = (tableItems: RFPFeeItem[], isOptional: boolean, title: string) => (
     <div className="space-y-3" dir="rtl">

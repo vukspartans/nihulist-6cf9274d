@@ -153,10 +153,23 @@ export function PaymentRequestDetailDialog({
 
           {/* Financial Details */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">סכום לפני מע״מ:</span>
-              <span>{formatCurrency(request.amount)}</span>
-            </div>
+            {request.index_adjusted_amount ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">סכום מקורי לפני מע״מ:</span>
+                  <span className="text-muted-foreground">{formatCurrency(request.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">סכום מתואם לפני מע״מ:</span>
+                  <span className="font-medium">{formatCurrency(request.index_adjusted_amount)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">סכום לפני מע״מ:</span>
+                <span>{formatCurrency(request.amount)}</span>
+              </div>
+            )}
             {request.vat_amount && request.vat_amount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">מע״מ ({request.vat_percent}%):</span>

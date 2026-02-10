@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,6 +66,7 @@ export const ServiceDetailsTab = ({
   // Template hierarchy selection - use props if provided
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(propCategoryId || null);
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(propMethodId || null);
+  const categoryInitializedRef = useRef(false);
 
   // Fetch categories for this advisor type and project type
   const { data: categories, isLoading: loadingCategories } = useFeeTemplateCategories(
@@ -116,8 +117,12 @@ export const ServiceDetailsTab = ({
     }
   }, [submissionMethods, selectedMethodId]);
 
-  // Reset submission method when category changes
+  // Reset submission method when category changes (skip initial auto-select)
   useEffect(() => {
+    if (!categoryInitializedRef.current) {
+      categoryInitializedRef.current = true;
+      return;
+    }
     setSelectedMethodId(null);
     onMethodChange?.(null, null);
   }, [selectedCategoryId]);
