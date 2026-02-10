@@ -180,8 +180,11 @@ export function useProjectPayments(projectId: string) {
     try {
       const vatPercent = request.vat_percent ?? 17;
       const amount = request.amount || 0;
-      const vatAmount = amount * (vatPercent / 100);
-      const totalAmount = amount + vatAmount;
+      
+      // Use index-adjusted amount for VAT calculation if present
+      const baseForVat = request.index_adjusted_amount ?? amount;
+      const vatAmount = baseForVat * (vatPercent / 100);
+      const totalAmount = baseForVat + vatAmount;
 
       const { data, error } = await supabase
         .from('payment_requests')
@@ -200,6 +203,11 @@ export function useProjectPayments(projectId: string) {
           notes: request.notes,
           external_party_name: request.external_party_name,
           invoice_file_url: request.invoice_file_url,
+          index_type: request.index_type || null,
+          index_base_value: request.index_base_value || null,
+          index_current_value: request.index_current_value || null,
+          index_adjustment_factor: request.index_adjustment_factor || null,
+          index_adjusted_amount: request.index_adjusted_amount || null,
         })
         .select()
         .single();

@@ -6,9 +6,10 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Calendar, User, Building, CreditCard } from 'lucide-react';
+import { FileText, Calendar, User, Building, CreditCard, TrendingUp } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
+import { getIndexLabel } from '@/constants/indexTypes';
 
 interface PaymentRequestDetailDialogProps {
   open: boolean;
@@ -96,6 +97,56 @@ export function PaymentRequestDetailDialog({
               <p className="text-sm text-muted-foreground">אבן דרך</p>
               <p>{request.payment_milestone.name}</p>
             </div>
+          )}
+
+          {/* Index Adjustment Section */}
+          {request.index_type && request.index_type !== 'none' && request.index_base_value && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="font-medium flex items-center gap-1">
+                  <TrendingUp className="w-4 h-4" />
+                  הצמדת מדד
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">סוג מדד</p>
+                    <p className="font-medium">{getIndexLabel(request.index_type)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">ערך בסיס</p>
+                    <p className="font-medium">{request.index_base_value}</p>
+                  </div>
+                  {request.index_current_value && (
+                    <div>
+                      <p className="text-muted-foreground">ערך נוכחי</p>
+                      <p className="font-medium">{request.index_current_value}</p>
+                    </div>
+                  )}
+                  {request.index_adjustment_factor && (
+                    <div>
+                      <p className="text-muted-foreground">שינוי</p>
+                      <p className={`font-medium ${(request.index_adjustment_factor - 1) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                        {((request.index_adjustment_factor - 1) * 100) >= 0 ? '+' : ''}
+                        {((request.index_adjustment_factor - 1) * 100).toFixed(2)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {request.index_adjusted_amount && (
+                  <div className="bg-accent/30 rounded p-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">סכום מקורי:</span>
+                      <span>{formatCurrency(request.amount)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>סכום מתואם:</span>
+                      <span>{formatCurrency(request.index_adjusted_amount)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <Separator />
