@@ -57,6 +57,12 @@ export interface PaymentRequest {
   rejected_by: string | null;
   paid_at: string | null;
   payment_reference: string | null;
+  // Index adjustment fields
+  index_type: string | null;
+  index_base_value: number | null;
+  index_current_value: number | null;
+  index_adjustment_factor: number | null;
+  index_adjusted_amount: number | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

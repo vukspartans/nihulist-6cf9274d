@@ -13,6 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
+import { getIndexLabel, INDEX_TYPES } from '@/constants/indexTypes';
+import { TrendingUp, AlertTriangle } from 'lucide-react';
 
 interface ProjectAdvisor {
   id: string;
@@ -22,6 +24,12 @@ interface ProjectAdvisor {
     id: string;
     company_name: string | null;
   };
+}
+
+interface IndexTerms {
+  index_type: string;
+  index_base_value: number | null;
+  index_base_month: string | null;
 }
 
 interface CreatePaymentRequestDialogProps {
@@ -43,6 +51,8 @@ export function CreatePaymentRequestDialog({
 }: CreatePaymentRequestDialogProps) {
   const [loading, setLoading] = useState(false);
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisor[]>([]);
+  const [indexTerms, setIndexTerms] = useState<IndexTerms | null>(null);
+  const [indexCurrentValue, setIndexCurrentValue] = useState('');
   const [formData, setFormData] = useState({
     amount: '',
     vat_percent: '17',
@@ -53,10 +63,65 @@ export function CreatePaymentRequestDialog({
     external_party_name: '',
   });
 
-  const vatPercent = parseFloat(formData.vat_percent) || 0;
   const amount = parseFloat(formData.amount) || 0;
-  const vatAmount = amount * (vatPercent / 100);
-  const totalAmount = amount + vatAmount;
+  const vatPercent = parseFloat(formData.vat_percent) || 0;
+  
+  // Index calculation
+  const currentIndexVal = parseFloat(indexCurrentValue) || 0;
+  const hasIndex = indexTerms && indexTerms.index_type !== 'none' && indexTerms.index_base_value && indexTerms.index_base_value > 0;
+  const adjustmentFactor = hasIndex && currentIndexVal > 0 ? currentIndexVal / indexTerms.index_base_value! : null;
+  const adjustedAmount = adjustmentFactor ? amount * adjustmentFactor : amount;
+  
+  const vatAmount = adjustedAmount * (vatPercent / 100);
+  const totalAmount = adjustedAmount + vatAmount;
+
+  // Fetch index terms when advisor changes
+  useEffect(() => {
+    const fetchIndexTerms = async () => {
+      if (!formData.project_advisor_id) {
+        setIndexTerms(null);
+        return;
+      }
+
+      // Get proposal -> rfp_invite -> payment_terms for this advisor
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: proposal } = await (supabase as any)
+        .from('proposals')
+        .select('rfp_invite_id')
+        .eq('project_advisor_id', formData.project_advisor_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!proposal?.rfp_invite_id) {
+        setIndexTerms(null);
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: invite } = await (supabase as any)
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', proposal.rfp_invite_id)
+        .maybeSingle();
+
+      if (invite?.payment_terms) {
+        const terms = invite.payment_terms as any;
+        if (terms.index_type && terms.index_type !== 'none') {
+          setIndexTerms({
+            index_type: terms.index_type,
+            index_base_value: terms.index_base_value || null,
+            index_base_month: terms.index_base_month || null,
+          });
+        } else {
+          setIndexTerms(null);
+        }
+      } else {
+        setIndexTerms(null);
+      }
+    };
+
+    if (open) fetchIndexTerms();
+  }, [formData.project_advisor_id, open]);
 
   useEffect(() => {
     const fetchProjectAdvisors = async () => {
@@ -80,7 +145,6 @@ export function CreatePaymentRequestDialog({
     if (open) {
       fetchProjectAdvisors();
       
-      // Pre-fill from milestone if provided
       if (preselectedMilestone) {
         setFormData(prev => ({
           ...prev,
@@ -111,7 +175,7 @@ export function CreatePaymentRequestDialog({
     setLoading(true);
     
     try {
-      await onSubmit({
+      const submitData: Partial<PaymentRequest> = {
         amount: parseFloat(formData.amount),
         vat_percent: parseFloat(formData.vat_percent),
         project_advisor_id: formData.project_advisor_id || null,
@@ -119,7 +183,18 @@ export function CreatePaymentRequestDialog({
         category: formData.category as 'consultant' | 'external' | 'other',
         notes: formData.notes || null,
         external_party_name: formData.category === 'external' ? formData.external_party_name : null,
-      });
+      };
+
+      // Add index data if applicable
+      if (hasIndex && adjustmentFactor) {
+        submitData.index_type = indexTerms!.index_type;
+        submitData.index_base_value = indexTerms!.index_base_value;
+        submitData.index_current_value = currentIndexVal;
+        submitData.index_adjustment_factor = adjustmentFactor;
+        submitData.index_adjusted_amount = adjustedAmount;
+      }
+
+      await onSubmit(submitData);
       
       setFormData({
         amount: '',
@@ -130,6 +205,8 @@ export function CreatePaymentRequestDialog({
         notes: '',
         external_party_name: '',
       });
+      setIndexCurrentValue('');
+      setIndexTerms(null);
       onOpenChange(false);
     } finally {
       setLoading(false);
@@ -143,6 +220,8 @@ export function CreatePaymentRequestDialog({
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  const adjustmentPercent = adjustmentFactor ? ((adjustmentFactor - 1) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,11 +331,70 @@ export function CreatePaymentRequestDialog({
             </div>
           </div>
 
+          {/* Index Adjustment Section */}
+          {hasIndex && amount > 0 && (
+            <div className="border rounded-lg p-3 space-y-3 bg-accent/30">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <TrendingUp className="w-4 h-4" />
+                <span>הצמדת מדד</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <Label className="text-xs text-muted-foreground">סוג מדד</Label>
+                  <p className="font-medium">{getIndexLabel(indexTerms!.index_type)}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">ערך מדד בסיס</Label>
+                  <p className="font-medium">{indexTerms!.index_base_value}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="index_current" className="text-sm">ערך מדד נוכחי *</Label>
+                <Input
+                  id="index_current"
+                  type="number"
+                  step="0.01"
+                  value={indexCurrentValue}
+                  onChange={(e) => setIndexCurrentValue(e.target.value)}
+                  placeholder="הזן ערך מדד נוכחי"
+                />
+              </div>
+
+              {adjustmentFactor && (
+                <div className="bg-background rounded p-2 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">מקדם הצמדה:</span>
+                    <span className={adjustmentPercent >= 0 ? 'text-green-600' : 'text-destructive'}>
+                      {adjustmentPercent >= 0 ? '+' : ''}{adjustmentPercent.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">סכום מקורי:</span>
+                    <span>{formatCurrency(amount)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>סכום מתואם:</span>
+                    <span>{formatCurrency(adjustedAmount)}</span>
+                  </div>
+                </div>
+              )}
+
+              {!indexTerms!.index_base_value && (
+                <div className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>ערך מדד בסיס לא הוגדר בחוזה</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {amount > 0 && (
             <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
               <div className="flex justify-between">
-                <span>סכום לפני מע״מ:</span>
-                <span>{formatCurrency(amount)}</span>
+                <span>{hasIndex && adjustmentFactor ? 'סכום מתואם לפני מע״מ:' : 'סכום לפני מע״מ:'}</span>
+                <span>{formatCurrency(adjustedAmount)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>מע״מ ({vatPercent}%):</span>

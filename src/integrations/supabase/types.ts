@@ -1437,6 +1437,11 @@ export type Database = {
           external_party_id: string | null
           external_party_name: string | null
           id: string
+          index_adjusted_amount: number | null
+          index_adjustment_factor: number | null
+          index_base_value: number | null
+          index_current_value: number | null
+          index_type: string | null
           invoice_file_url: string | null
           notes: string | null
           paid_at: string | null
@@ -1470,6 +1475,11 @@ export type Database = {
           external_party_id?: string | null
           external_party_name?: string | null
           id?: string
+          index_adjusted_amount?: number | null
+          index_adjustment_factor?: number | null
+          index_base_value?: number | null
+          index_current_value?: number | null
+          index_type?: string | null
           invoice_file_url?: string | null
           notes?: string | null
           paid_at?: string | null
@@ -1503,6 +1513,11 @@ export type Database = {
           external_party_id?: string | null
           external_party_name?: string | null
           id?: string
+          index_adjusted_amount?: number | null
+          index_adjustment_factor?: number | null
+          index_base_value?: number | null
+          index_current_value?: number | null
+          index_type?: string | null
           invoice_file_url?: string | null
           notes?: string | null
           paid_at?: string | null
