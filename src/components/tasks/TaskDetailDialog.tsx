@@ -114,18 +114,18 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
           </DialogHeader>
 
           <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="w-full grid grid-cols-3 mx-5 mt-1" style={{ width: 'calc(100% - 40px)' }}>
+            <TabsList className="w-full grid grid-cols-3 mx-5 mt-1" dir="rtl" style={{ width: 'calc(100% - 40px)' }}>
               <TabsTrigger value="details" className="gap-1.5 text-xs">
                 <Settings className="h-3.5 w-3.5" />
                 פרטים
               </TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5 text-xs">
-                <FileText className="h-3.5 w-3.5" />
-                קבצים
-              </TabsTrigger>
               <TabsTrigger value="comments" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" />
                 תגובות
+              </TabsTrigger>
+              <TabsTrigger value="files" className="gap-1.5 text-xs">
+                <FileText className="h-3.5 w-3.5" />
+                קבצים
               </TabsTrigger>
             </TabsList>
 
@@ -337,14 +337,14 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
               </ScrollArea>
             </TabsContent>
 
-            {/* Files Tab */}
-            <TabsContent value="files" className="flex-1 min-h-0 px-5 py-3">
-              <TaskFilesSection taskId={task.id} />
-            </TabsContent>
-
             {/* Comments Tab */}
             <TabsContent value="comments" className="flex-1 min-h-0 px-5 py-3">
               <TaskCommentsSection taskId={task.id} />
+            </TabsContent>
+
+            {/* Files Tab */}
+            <TabsContent value="files" className="flex-1 min-h-0 px-5 py-3">
+              <TaskFilesSection taskId={task.id} />
             </TabsContent>
           </Tabs>
         </DialogContent>

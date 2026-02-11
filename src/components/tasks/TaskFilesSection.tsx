@@ -65,7 +65,7 @@ export function TaskFilesSection({ taskId }: TaskFilesSectionProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       {/* Dropzone */}
       <div
         {...getRootProps()}
@@ -103,7 +103,7 @@ export function TaskFilesSection({ taskId }: TaskFilesSectionProps) {
               className="flex items-center gap-3 p-3 rounded-lg border bg-card"
             >
               <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-right">
                 <p className="text-sm font-medium truncate">{file.original_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.file_size)}
