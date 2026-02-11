@@ -1,30 +1,144 @@
 
+# שלב 1: ציר זמן רישוי + טבלת משימות מרכזית
 
-# Remove Standalone Milestone Templates Page
+## סקירה כללית
 
-## Context
+נוסיף לשונית חדשה "ניהול משימות" בדשבורד של היזם שתהיה תצוגת ברירת המחדל. הלשונית תכלול:
+1. **ציר זמן חזותי** של שלבי הרישוי (PROJECT_PHASES) -- תמיד בראש העמוד
+2. **סינון** בין "כלל הפרויקטים" ל"פרויקט מסוים"
+3. **טבלת משימות מרכזית** עם עמודות מלאות וסינון
+4. **תצוגת פר-פרויקט** עם שתי אפשרויות: כרטיסיות (לפי שלב) וטבלה
 
-Milestone templates are already managed inside each fee template category via the `CategoryMilestonesTab` component (within the template hierarchy). The standalone "תבניות אבני דרך" page at `/heyadmin/milestone-templates` is redundant and should be removed.
+## מה קיים כבר במערכת
 
-## Changes
+- טבלת `project_tasks` עם כל השדות הנדרשים (שם, תיאור, סטטוס, תאריכים, שיוך ליועץ, אבן דרך לתשלום, WBS, היררכיה)
+- טבלת `task_dependencies` לתלויות
+- טבלת `project_licensing_stages` לשלבי רישוי
+- `PROJECT_PHASES` -- רשימת 13 שלבי רישוי מוגדרת
+- קומפוננטות משימות קיימות (TaskCard, TaskBoard, CreateTaskDialog, TaskDetailDialog)
+- מודל הנתונים כבר תומך ב-`payment_milestone_id`, `is_payment_critical`, `parent_task_id`
 
-### 1. Remove the route from App.tsx
-- Delete the import of `MilestoneTemplatesManagement`
-- Delete the route `/heyadmin/milestone-templates`
+## שינויים מתוכננים
 
-### 2. Remove the sidebar nav item from AdminLayout.tsx
-- Remove the entry for `milestone-templates` from the payment nav items array
-- Remove the `milestone-templates` check from the `isPaymentRoute` condition
+### 1. הוספת לשונית "ניהול משימות" ל-Dashboard.tsx
 
-### 3. Remove navigation links from RFPTemplatesManagement.tsx
-- Remove the two `Link` buttons that navigate to `/heyadmin/milestone-templates` ("ניהול אבני דרך" and "צור אבני דרך")
+הדשבורד הקיים מציג טבלת פרויקטים בלבד. נוסיף מבנה Tabs חדש ברמת העמוד:
+- **"הפרויקטים שלי"** -- התוכן הקיים (טבלת פרויקטים)
+- **"ניהול משימות"** (ברירת מחדל) -- הקומפוננטה החדשה
 
-### 4. Delete the page file
-- Delete `src/pages/admin/MilestoneTemplatesManagement.tsx`
+### 2. קומפוננטה חדשה: `LicensingTimeline`
 
-### What stays
-- `useMilestoneTemplates.ts` hook -- still used by `CategoryMilestonesTab` and other components
-- `CategoryMilestonesTab.tsx` -- the in-template milestone management UI
-- `CreateMilestoneTemplateDialog.tsx` and `EditMilestoneTemplateDialog.tsx` -- used by `CategoryMilestonesTab`
-- `MilestonePercentageSummary.tsx` and `MilestoneTaskLinker.tsx` -- used within the template hierarchy
+ציר זמן חזותי אופקי שמציג את 13 שלבי הרישוי:
 
+- **במצב "כלל הפרויקטים"**: כל פרויקט מופיע כנקודה/סמן על הציר לפי השלב הנוכחי שלו, עם tooltip שמציג שם ומיקום
+- **במצב "פר פרויקט"**: הציר מדגיש את השלב הנוכחי, שלבים שהושלמו מסומנים בירוק, שלבים עתידיים באפור
+
+עיצוב: שורת צעדים אופקית עם חיצים/קווים מחברים, RTL, צבעי סטטוס (ירוק/כתום/כחול/אפור).
+
+### 3. קומפוננטה חדשה: `TaskManagementDashboard`
+
+קומפוננטה מרכזית שמנהלת את כל התצוגה:
+
+```text
++-----------------------------------------------+
+|  [סינון: כלל הפרויקטים v] [פרויקט מסוים v]   |
++-----------------------------------------------+
+|  [ ===== ציר זמן רישוי (LicensingTimeline) =====]  |
++-----------------------------------------------+
+|  [טבלה | כרטיסיות]  (רק במצב פר-פרויקט)      |
+|                                                 |
+|  טבלת משימות / כרטיסיות לפי שלב               |
++-----------------------------------------------+
+```
+
+### 4. קומפוננטה חדשה: `AllProjectsTaskTable`
+
+טבלה רוחבית של כל המשימות מכל הפרויקטים, עם:
+- **עמודות**: שם משימה, פרויקט, שלב, תחום (סוג יועץ), יועץ אחראי, סטטוס, תאריך יעד, התקדמות
+- **סינון**: פרויקט, תחום, יועץ, סטטוס
+- **מיון**: לפי כל עמודה
+
+### 5. קומפוננטה חדשה: `ProjectTaskView`
+
+תצוגת פר-פרויקט עם שתי אפשרויות:
+- **כרטיסיות**: Tab לכל שלב רישוי, מציג רק משימות של אותו שלב
+- **טבלה**: טבלה אחת עם כל המשימות של הפרויקט
+
+### 6. Hook חדש: `useAllProjectsTasks`
+
+Hook שטוען משימות מכל הפרויקטים של היזם:
+- שאילתת Supabase שמצרפת נתוני פרויקט ויועץ
+- תמיכה בסינון צד-לקוח
+- ספירת משימות פתוחות לנוטיפיקציות
+
+---
+
+## פירוט טכני
+
+### קבצים חדשים
+
+| קובץ | תיאור |
+|-------|--------|
+| `src/components/tasks/LicensingTimeline.tsx` | ציר זמן חזותי של שלבי רישוי |
+| `src/components/tasks/TaskManagementDashboard.tsx` | קומפוננטה מרכזית -- סינון + ציר + טבלה |
+| `src/components/tasks/AllProjectsTaskTable.tsx` | טבלת משימות מכל הפרויקטים |
+| `src/components/tasks/ProjectTaskView.tsx` | תצוגת פר-פרויקט (כרטיסיות + טבלה) |
+| `src/components/tasks/TaskFilters.tsx` | רכיב סינון (פרויקט, תחום, יועץ, סטטוס) |
+| `src/hooks/useAllProjectsTasks.ts` | Hook לטעינת משימות מכל הפרויקטים |
+
+### קבצים שישתנו
+
+| קובץ | שינוי |
+|-------|-------|
+| `src/pages/Dashboard.tsx` | עטיפה ב-Tabs: "ניהול משימות" (ברירת מחדל) + "הפרויקטים שלי" |
+| `src/components/tasks/index.ts` | ייצוא הקומפוננטות החדשות |
+
+### מבנה הנתונים -- אין שינויי DB
+
+כל הטבלאות הנדרשות כבר קיימות:
+- `project_tasks` -- כולל `phase`, `assigned_advisor_id`, `payment_milestone_id`, `is_payment_critical`
+- `task_dependencies` -- תלויות בין משימות
+- `project_licensing_stages` -- שלבי רישוי לפרויקט
+
+### שאילתת הנתונים ב-useAllProjectsTasks
+
+```sql
+SELECT pt.*, 
+  p.name as project_name, p.phase as project_phase, p.type as project_type,
+  a.company_name as advisor_name
+FROM project_tasks pt
+JOIN projects p ON pt.project_id = p.id
+LEFT JOIN advisors a ON pt.assigned_advisor_id = a.id
+WHERE p.owner_id = :current_user_id
+  AND p.status != 'deleted'
+ORDER BY pt.planned_end_date ASC NULLS LAST
+```
+
+### ציר הזמן -- עיצוב
+
+- שורה אופקית של 13 שלבים
+- כל שלב = עיגול + תווית מתחתיו
+- קו מחבר בין השלבים
+- צבעים: ירוק (הושלם), כחול (נוכחי), אפור (עתידי)
+- במצב "כלל הפרויקטים": מספר פרויקטים בכל שלב מוצג בתוך העיגול
+- Scroll אופקי במובייל עם גלילה חלקה
+
+### סינון בטבלה
+
+- **פרויקט**: Select מרשימת הפרויקטים
+- **תחום**: Select מסוגי יועצים (אדריכל, מהנדס קונסטרוקציה וכו')
+- **יועץ**: Select משמות היועצים בפרויקטים
+- **סטטוס**: Multi-select (ממתין, בביצוע, חסום, באיחור, הושלם)
+
+## מה לא נכלל בשלב זה (שלבים הבאים)
+
+- מנגנון תלויות (חסימת סימון "בוצע")
+- שיוך אוטומטי ליועצים לפי תחום
+- מנגנון CC/כתוב
+- הרשאות בתוך משרד יועץ (מנהל/עובד)
+- שיחות/עדכונים פנימיים במשימה
+- שיוך אוטומטי למיילים
+- תזרים תשלומים גרפי
+- הגשת חשבונות
+- התראות ונוטיפיקציות ליד פרויקטים
+- תצוגת יועץ
