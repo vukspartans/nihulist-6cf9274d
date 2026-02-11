@@ -723,6 +723,7 @@ export default function FeeTemplatesByCategory() {
         defaultProjectType={decodedProjectType}
         defaultCategoryId={categoryId}
         defaultHeader={createServiceHeader}
+        availableHeaders={headerNames}
       />
       <EditServiceScopeTemplateDialog
         open={!!editingService}

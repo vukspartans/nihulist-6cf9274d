@@ -79,13 +79,6 @@ export const ServiceDetailsTab = ({
     selectedCategoryId || undefined
   );
 
-  // Get fee categories from fee items for linking
-  const feeCategories = [
-    'כללי',
-    ...feeItems
-      .filter(item => item.description)
-      .map(item => item.description)
-  ];
 
   // Handle category change and notify parent (includes default index type)
   const handleCategoryChange = (categoryId: string) => {
@@ -149,7 +142,7 @@ export const ServiceDetailsTab = ({
       if (categoryTemplates && categoryTemplates.length > 0) {
         const items: ServiceScopeItem[] = categoryTemplates.map((template, index) => ({
           task_name: template.task_name,
-          is_included: true,
+          is_included: !template.is_optional,
           fee_category: template.default_fee_category || 'כללי',
           is_optional: template.is_optional,
           display_order: index
@@ -181,7 +174,7 @@ export const ServiceDetailsTab = ({
       if (data && data.length > 0) {
         const items: ServiceScopeItem[] = data.map((template, index) => ({
           task_name: template.task_name,
-          is_included: true,
+          is_included: !template.is_optional,
           fee_category: template.default_fee_category || 'כללי',
           is_optional: template.is_optional,
           display_order: index
@@ -443,22 +436,6 @@ export const ServiceDetailsTab = ({
                       {item.is_optional && (
                         <Badge variant="outline" className="text-xs">אופציונלי</Badge>
                       )}
-                      <Select
-                        dir="rtl"
-                        value={item.fee_category}
-                        onValueChange={(value) => updateScopeItemCategory(index, value)}
-                      >
-                        <SelectTrigger dir="rtl" className="w-40 text-right">
-                          <SelectValue placeholder="סעיף שכ&quot;ט" />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                          {feeCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat} className="text-right">
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                       <Button
                         type="button"
                         variant="ghost"

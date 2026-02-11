@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_FEE_CATEGORIES } from "@/constants/rfpUnits";
 import { useUpdateServiceScopeTemplate, ServiceScopeTemplate } from "@/hooks/useRFPTemplatesAdmin";
 
 interface EditServiceScopeTemplateDialogProps {
@@ -35,6 +34,8 @@ export function EditServiceScopeTemplateDialog({
 }: EditServiceScopeTemplateDialogProps) {
   const [taskName, setTaskName] = useState("");
   const [feeCategory, setFeeCategory] = useState("כללי");
+  const [customCategory, setCustomCategory] = useState("");
+  const [useCustom, setUseCustom] = useState(false);
   const [isOptional, setIsOptional] = useState(false);
 
   const updateMutation = useUpdateServiceScopeTemplate();
@@ -42,27 +43,38 @@ export function EditServiceScopeTemplateDialog({
   useEffect(() => {
     if (template) {
       setTaskName(template.task_name);
-      setFeeCategory(template.default_fee_category || "כללי");
+      const cat = template.default_fee_category || "כללי";
+      const headers = availableHeaders || [];
+      if (headers.includes(cat)) {
+        setFeeCategory(cat);
+        setUseCustom(false);
+      } else {
+        setCustomCategory(cat);
+        setUseCustom(true);
+      }
       setIsOptional(template.is_optional);
     }
-  }, [template]);
+  }, [template, availableHeaders]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!template || !taskName.trim()) {
+    const finalCategory = useCustom ? customCategory.trim() : feeCategory;
+    if (!template || !taskName.trim() || !finalCategory) {
       return;
     }
 
     await updateMutation.mutateAsync({
       id: template.id,
       task_name: taskName.trim(),
-      default_fee_category: feeCategory,
+      default_fee_category: finalCategory,
       is_optional: isOptional,
     });
 
     onOpenChange(false);
   };
+
+  const headers = availableHeaders && availableHeaders.length > 0 ? availableHeaders : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,22 +98,51 @@ export function EditServiceScopeTemplateDialog({
 
           <div className="space-y-2">
             <Label htmlFor="fee_category">כותרת (קטגוריה)</Label>
-            <Select dir="rtl" value={feeCategory} onValueChange={setFeeCategory}>
-              <SelectTrigger dir="rtl" className="text-right">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent dir="rtl">
-                {/* Show available headers from the grouped view, plus defaults */}
-                {[...new Set([
-                  ...(availableHeaders || []),
-                  ...DEFAULT_FEE_CATEGORIES,
-                ])].map((category) => (
-                  <SelectItem key={category} value={category} className="text-right">
-                    {category}
+            {!useCustom && headers.length > 0 ? (
+              <Select dir="rtl" value={feeCategory} onValueChange={(val) => {
+                if (val === '__custom__') {
+                  setUseCustom(true);
+                } else {
+                  setFeeCategory(val);
+                }
+              }}>
+                <SelectTrigger dir="rtl" className="text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  {headers.map((category) => (
+                    <SelectItem key={category} value={category} className="text-right">
+                      {category}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__custom__" className="text-right text-primary">
+                    אחר...
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="הזן שם כותרת חדשה"
+                  className="text-right flex-1"
+                />
+                {headers.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setUseCustom(false);
+                      setCustomCategory("");
+                    }}
+                  >
+                    חזרה
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -123,7 +164,7 @@ export function EditServiceScopeTemplateDialog({
             </Button>
             <Button
               type="submit"
-              disabled={updateMutation.isPending || !taskName.trim()}
+              disabled={updateMutation.isPending || !taskName.trim() || (useCustom && !customCategory.trim())}
             >
               {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
