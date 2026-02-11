@@ -218,11 +218,10 @@ serve(async (req) => {
                 <div style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin: 20px 0;">
                   <h3 style="color: #333; margin-top: 0;">פרטי התחברות:</h3>
                   <p style="color: #666; margin: 10px 0;"><strong>אימייל:</strong> ${email}</p>
-                  <p style="color: #666; margin: 10px 0;"><strong>סיסמה:</strong> ${password}</p>
                 </div>
                 
                 <p style="color: #d9534f; font-size: 14px; background-color: #f2dede; padding: 10px; border-radius: 5px;">
-                  <strong>חשוב:</strong> אנא שמור את הסיסמה במקום בטוח ושנה אותה לאחר הכניסה הראשונה.
+                  <strong>חשוב:</strong> הסיסמה שלך נשלחה אליך בנפרד על ידי מנהל המערכת. אנא שנה אותה לאחר הכניסה הראשונה.
                 </p>
                 
                 ${isAdmin 

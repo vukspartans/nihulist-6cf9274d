@@ -18,15 +18,6 @@ export const CHARGE_TYPES = [
   { value: 'per_unit', label: 'ליח"ד' },
 ] as const;
 
-export const DEFAULT_FEE_CATEGORIES = [
-  'כללי',
-  'חוו"ד ראשונית',
-  'הכנת נספח תנועה',
-  'פגישות במשרדי היזם',
-  'ליווי מול רשויות',
-  'תכנון ראשוני',
-  'תכנון מפורט',
-] as const;
 
 export const PAYMENT_MILESTONES_TEMPLATES = [
   { trigger: 'מקדמה בחתימה', default_percent: 20 },

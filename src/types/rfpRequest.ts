@@ -114,16 +114,6 @@ export interface AdvisorTypeRequestData {
   emailBody?: string;
 }
 
-// Default fee categories for service scope linking
-export const DEFAULT_FEE_CATEGORIES = [
-  'כללי',
-  'חוו"ד ראשונית',
-  'הכנת נספח תנועה',
-  'פגישות במשרדי היזם',
-  'ליווי מול רשויות',
-  'תכנון ראשוני',
-  'תכנון מפורט',
-];
 
 // Default service scope template interface
 export interface DefaultServiceScopeTemplate {
