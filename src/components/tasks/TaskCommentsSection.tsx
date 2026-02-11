@@ -90,7 +90,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
       </div>
 
       {/* New comment input */}
-      <div className="flex gap-2 items-end border-t pt-3">
+      <div className="flex flex-row-reverse gap-2 items-end border-t pt-3">
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}

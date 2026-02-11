@@ -16,6 +16,7 @@ import { TaskDependencySelector } from './TaskDependencySelector';
 import { TaskCommentsSection } from './TaskCommentsSection';
 import { TaskFilesSection } from './TaskFilesSection';
 import { useTaskDependencies } from '@/hooks/useTaskDependencies';
+import { useTaskComments } from '@/hooks/useTaskComments';
 import { PROJECT_PHASES } from '@/constants/project';
 import { FileText, MessageSquare, Settings } from 'lucide-react';
 import type { ProjectTask, TaskStatus, ProjectAdvisorOption } from '@/types/task';
@@ -50,6 +51,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
     hasUnfinishedDependencies,
     unfinishedDependencies,
   } = useTaskDependencies(task?.id || null);
+
+  const { comments } = useTaskComments(task?.id || null);
+  const commentCount = comments.length;
 
   useEffect(() => {
     if (task) {
@@ -122,6 +126,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
               <TabsTrigger value="comments" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" />
                 תגובות
+                {commentCount > 0 && (
+                  <span className="bg-primary text-primary-foreground rounded-full text-[10px] min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                    {commentCount}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger value="files" className="gap-1.5 text-xs">
                 <FileText className="h-3.5 w-3.5" />
@@ -213,59 +222,63 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                     )}
                   </div>
 
-                  {/* All 4 dates in one row */}
-                  <div className="space-y-1 rounded-md bg-muted/30 p-2.5">
-                    <Label className="text-xs text-right block">תאריכים</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground text-right block">תחילה מתוכננת</Label>
+                  {/* Dates - 2x2 grid */}
+                  <div className="space-y-1.5 rounded-md bg-muted/30 p-2.5">
+                    <Label className="text-xs text-right block font-medium">תאריכים</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground text-right block">תחילה מתוכננת</Label>
                         <Input
                           type="date"
                           value={formData.planned_start_date || ''}
                           onChange={(e) => setFormData({ ...formData, planned_start_date: e.target.value })}
-                          className="text-xs h-8 text-right"
+                          className="text-xs h-9"
                           dir="ltr"
                         />
                       </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground text-right block">סיום מתוכנן</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground text-right block">סיום מתוכנן</Label>
                         <Input
                           type="date"
                           value={formData.planned_end_date || ''}
                           onChange={(e) => setFormData({ ...formData, planned_end_date: e.target.value })}
-                          className="text-xs h-8 text-right"
+                          className="text-xs h-9"
                           dir="ltr"
                         />
                       </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground text-right block">תחילה בפועל</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground text-right block">תחילה בפועל</Label>
                         <Input
                           type="date"
                           value={formData.actual_start_date || ''}
                           onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
-                          className="text-xs h-8 text-right"
+                          className="text-xs h-9"
                           dir="ltr"
                         />
                       </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground text-right block">סיום בפועל</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground text-right block">סיום בפועל</Label>
                         <Input
                           type="date"
                           value={formData.actual_end_date || ''}
                           onChange={(e) => setFormData({ ...formData, actual_end_date: e.target.value })}
-                          className="text-xs h-8 text-right"
+                          className="text-xs h-9"
                           dir="ltr"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Progress + Milestone in one row */}
-                  <div className="flex items-end gap-4">
-                    <div className="flex-1 space-y-1">
+                  {/* Progress + Milestone */}
+                  <div className="space-y-2 rounded-md bg-muted/30 p-2.5">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs text-right">התקדמות</Label>
-                        <span className="text-xs text-muted-foreground" dir="ltr">{formData.progress_percent || 0}%</span>
+                        <Label className="text-xs text-right font-medium">התקדמות</Label>
+                        <span className={`text-xs font-semibold ${
+                          (formData.progress_percent || 0) >= 70 ? 'text-green-600' :
+                          (formData.progress_percent || 0) >= 30 ? 'text-orange-500' :
+                          'text-red-500'
+                        }`} dir="ltr">{formData.progress_percent || 0}%</span>
                       </div>
                       <div dir="ltr">
                         <Slider
@@ -276,15 +289,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 pb-1">
-                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
-                        אבן דרך
-                      </Label>
+                    <div className="flex items-center gap-2 pt-1 border-t border-border/50">
                       <Checkbox
                         id="edit_is_milestone"
                         checked={formData.is_milestone || false}
                         onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
                       />
+                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
+                        אבן דרך
+                      </Label>
                     </div>
                   </div>
 
@@ -332,7 +345,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                   </div>
 
                   {/* Footer inside the form */}
-                  <DialogFooter className="flex gap-2 pt-2 justify-start">
+                  <DialogFooter className="flex gap-2 pt-3 mt-1 border-t justify-start">
                     <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
                       {isSubmitting ? 'שומר...' : 'שמור שינויים'}
                     </Button>
