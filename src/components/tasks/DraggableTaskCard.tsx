@@ -8,13 +8,17 @@ interface DraggableTaskCardProps {
   onStatusChange: (taskId: string, status: TaskStatus) => Promise<boolean>;
   onEdit: (task: ProjectTask) => void;
   onDelete: (taskId: string) => Promise<void>;
+  dependencyCount?: number;
+  hasBlockingDeps?: boolean;
 }
 
 export function DraggableTaskCard({ 
   task, 
   onStatusChange, 
   onEdit, 
-  onDelete 
+  onDelete,
+  dependencyCount,
+  hasBlockingDeps,
 }: DraggableTaskCardProps) {
   const {
     attributes,
@@ -45,6 +49,8 @@ export function DraggableTaskCard({
         onStatusChange={onStatusChange}
         onEdit={onEdit}
         onDelete={onDelete}
+        dependencyCount={dependencyCount}
+        hasBlockingDeps={hasBlockingDeps}
       />
     </div>
   );

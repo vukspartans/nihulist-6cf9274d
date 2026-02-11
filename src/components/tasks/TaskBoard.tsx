@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle, Table as TableIcon, Columns } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { TaskCard } from './TaskCard';
 import { DraggableTaskCard } from './DraggableTaskCard';
@@ -37,14 +38,15 @@ interface Column {
   title: string;
   icon: React.ElementType;
   color: string;
+  accentColor: string;
 }
 
 const COLUMNS: Column[] = [
-  { id: 'pending', title: 'ממתין', icon: Clock, color: 'text-muted-foreground' },
-  { id: 'in_progress', title: 'בביצוע', icon: PlayCircle, color: 'text-primary' },
-  { id: 'delayed', title: 'באיחור', icon: AlertTriangle, color: 'text-orange-500' },
-  { id: 'blocked', title: 'חסום', icon: AlertTriangle, color: 'text-destructive' },
-  { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600' },
+  { id: 'pending', title: 'ממתין', icon: Clock, color: 'text-muted-foreground', accentColor: 'bg-muted-foreground/50' },
+  { id: 'in_progress', title: 'בביצוע', icon: PlayCircle, color: 'text-primary', accentColor: 'bg-primary' },
+  { id: 'delayed', title: 'באיחור', icon: AlertTriangle, color: 'text-orange-500', accentColor: 'bg-orange-500' },
+  { id: 'blocked', title: 'חסום', icon: AlertTriangle, color: 'text-destructive', accentColor: 'bg-destructive' },
+  { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600', accentColor: 'bg-green-500' },
 ];
 
 export function TaskBoard({ projectId }: TaskBoardProps) {
@@ -64,6 +66,32 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
+  const [depCounts, setDepCounts] = useState<Record<string, { total: number; blocking: number }>>({});
+
+  // Fetch dependency counts for all tasks
+  const fetchDepCounts = useCallback(async () => {
+    if (!projectId || tasks.length === 0) return;
+    const taskIds = tasks.map(t => t.id);
+    const { data } = await supabase
+      .from('task_dependencies')
+      .select('task_id, depends_on_task_id, project_tasks!task_dependencies_depends_on_task_id_fkey(status)')
+      .in('task_id', taskIds);
+
+    const counts: Record<string, { total: number; blocking: number }> = {};
+    (data || []).forEach((d: any) => {
+      if (!counts[d.task_id]) counts[d.task_id] = { total: 0, blocking: 0 };
+      counts[d.task_id].total++;
+      const depStatus = d.project_tasks?.status;
+      if (depStatus && depStatus !== 'completed' && depStatus !== 'cancelled') {
+        counts[d.task_id].blocking++;
+      }
+    });
+    setDepCounts(counts);
+  }, [projectId, tasks.length]);
+
+  useEffect(() => {
+    fetchDepCounts();
+  }, [fetchDepCounts]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -184,7 +212,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
           </Button>
         </div>
       ) : viewMode === 'table' ? (
-        <AllProjectsTaskTable tasks={tasksForTable} onTaskClick={handleTaskClickById} />
+        <AllProjectsTaskTable tasks={tasksForTable} onTaskClick={handleTaskClickById} dependencyCounts={depCounts} />
       ) : (
         <DndContext
           sensors={sensors}
@@ -192,7 +220,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
             {COLUMNS.map((column) => {
               const columnTasks = getTasksByStatus(column.id);
               return (
@@ -202,10 +230,11 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
                   title={column.title}
                   icon={column.icon}
                   color={column.color}
+                  accentColor={column.accentColor}
                   taskCount={columnTasks.length}
                 >
                   {columnTasks.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">
+                    <div className="text-center py-6 text-[10px] text-muted-foreground/60">
                       גרור משימות לכאן
                     </div>
                   ) : (
@@ -216,6 +245,8 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
                         onStatusChange={updateTaskStatus}
                         onEdit={handleEditTask}
                         onDelete={handleDeleteTask}
+                        dependencyCount={depCounts[task.id]?.total || 0}
+                        hasBlockingDeps={(depCounts[task.id]?.blocking || 0) > 0}
                       />
                     ))
                   )}

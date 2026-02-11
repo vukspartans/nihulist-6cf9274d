@@ -4,13 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { Progress } from '@/components/ui/progress';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
-import { ArrowUpDown, AlertTriangle } from 'lucide-react';
+import { ArrowUpDown, AlertTriangle, Flag, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AllProjectsTaskTableProps {
   tasks: ProjectTaskWithDetails[];
   onProjectClick?: (projectId: string) => void;
   onTaskClick?: (taskId: string) => void;
+  dependencyCounts?: Record<string, { total: number; blocking: number }>;
 }
 
 type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent';
@@ -22,7 +23,7 @@ const isDelayed = (task: ProjectTaskWithDetails): boolean => {
   return new Date(task.planned_end_date) < new Date(new Date().toDateString());
 };
 
-export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: AllProjectsTaskTableProps) {
+export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, dependencyCounts = {} }: AllProjectsTaskTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('planned_end_date');
   const [sortAsc, setSortAsc] = useState(true);
   const showProjectColumn = !!onProjectClick;
@@ -87,6 +88,7 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
             <TableHead><SortHeader label="שלב" sortKeyName="phase" /></TableHead>
             <TableHead>יועץ</TableHead>
             <TableHead><SortHeader label="סטטוס" sortKeyName="status" /></TableHead>
+            <TableHead>תלויות</TableHead>
             <TableHead><SortHeader label="יעד" sortKeyName="planned_end_date" /></TableHead>
             <TableHead className="w-[100px]"><SortHeader label="%" sortKeyName="progress_percent" /></TableHead>
           </TableRow>
@@ -101,7 +103,10 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
                     className="text-primary hover:underline text-start truncate block"
                     onClick={() => onTaskClick?.(task.id)}
                   >
-                    {task.name}
+                    <span className="flex items-center gap-1">
+                      {task.is_milestone && <Flag className="h-3 w-3 text-primary shrink-0" />}
+                      {task.name}
+                    </span>
                   </button>
                   <div className="flex items-center gap-1 mt-0.5">
                     {task.is_payment_critical && (
@@ -133,6 +138,18 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
                 </TableCell>
                 <TableCell className="py-2">
                   <TaskStatusBadge status={task.status} />
+                </TableCell>
+                <TableCell className="py-2">
+                  {(() => {
+                    const dep = dependencyCounts[task.id];
+                    if (!dep || dep.total === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                    return (
+                      <span className={cn('flex items-center gap-0.5 text-xs', dep.blocking > 0 ? 'text-destructive font-medium' : 'text-muted-foreground')}>
+                        <Link2 className="h-3 w-3" />
+                        {dep.total}
+                      </span>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className={cn('text-xs whitespace-nowrap py-2', delayed && 'text-destructive font-medium')}>
                   {formatDate(task.planned_end_date)}
