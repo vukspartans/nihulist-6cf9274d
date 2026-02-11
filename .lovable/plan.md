@@ -1,58 +1,93 @@
 
 
-## שיפור קנבן + ויזואליזציה של תלויות ואיחורים
+## ניתוח פערים -- מה בוצע ומה עדיין חסר
 
-### מצב נוכחי:
+### סיכום מהיר
 
-**קנבן:**
-- 5 עמודות (ממתין, בביצוע, באיחור, חסום, הושלם) ב-`grid-cols-4` -- כלומר עמודה אחת נדחקת לשורה שניה
-- עמודות ללא רקע -- אין הפרדה ויזואלית ברורה בין עמודות
-- TaskCard מציג: שם, תיאור, סטטוס badge, תאריך, יועץ, progress -- אבל **לא מציג תלויות**
-- אין אינדיקציה ויזואלית לתלויות (למשל אייקון שרשרת או מספר תלויות)
-- הכרטיסים לא RTL-optimized (flex direction)
+| סעיף | דרישה | סטטוס |
+|-------|--------|--------|
+| 3.1 | הגדרת משימה (שדות בסיסיים) | Done (רוב השדות) |
+| 3.1 | שיוך אוטומטי למיילים | Not done |
+| 3.2 | תבניות משימות + auto-load | Done |
+| 3.2 | התאמה אישית (זכירת שינויים של יזם) | Not done |
+| 3.2 | קישור אוטומטי ליועצים לפי תבנית | Partial |
+| 3.3 | בקרת עריכה -- יזם: שליטה מלאה | Done |
+| 3.3 | בקרת עריכה -- יועץ: אישור יזם לפני שמירה | Not done |
+| 3.3 | התראה למחיקת משימה קריטית | Not done |
+| 4.1 | סינון כלל הפרויקטים / פרויקט מסוים | Done |
+| 4.2 | תצוגת כלל הפרויקטים -- ציר זמן + טבלה | Done |
+| 4.3 | תצוגת פר-פרויקט -- טבלה + כרטיסיות | Done |
+| 4.4 | ציר הזמן -- מיקום קבוע, חזותי | Done |
+| 4.5 | תצוגת יועץ -- משימות | **Not done** |
+| 5.1 | הרשאות בתוך משרד יועץ (מנהל/עובד) | Not done |
+| 5.2 | שמירת אנשי קשר + CC | Not done |
+| 5.2 | שיוך אוטומטי לפי תחום אחריות | Not done |
+| 6.1 | שיוך אבן דרך אוטומטי + חישוב תזרים | Partial (payment milestones exist, auto-calc not done) |
+| 6.1 | השפעת שינוי תאריך על צפי תשלומים | Not done |
+| 6.2 | הגשת חשבונות -- התראה ליועץ | Not done |
+| 6.2 | גמישות חשבון -- מספר אבני דרך | Partial (UI exists) |
+| 6.3 | נוטיפיקיישן ליד פרויקט (מס' משימות) | Not done |
+| 3.4 | תלות בין משימות | Done |
 
-**טבלה:**
-- מציגה באיחור עם רקע אדום + badge "באיחור" -- עובד טוב
-- **לא מציגה תלויות כלל** -- אין עמודה או אינדיקציה
-- אין אייקון אבן דרך
+---
 
-### שינויים מתוכננים:
+### הצעד הבא המומלץ: תצוגת משימות ליועץ (סעיף 4.5)
 
-#### 1. קנבן -- עיצוב sleeker (`TaskBoard.tsx`, `DroppableColumn.tsx`)
-- שינוי grid ל-`lg:grid-cols-5` (5 עמודות בשורה אחת)
-- הוספת רקע עדין לכל עמודה: `bg-muted/20 rounded-xl p-3` למראה מודרני
-- הוספת צבע header לכל עמודה (פס צבעוני עליון) לפי סוג: אפור/כחול/כתום/אדום/ירוק
-- צמצום gap ל-`gap-2` ו-padding פנימי ל-`p-2`
+זו הדרישה הגדולה ביותר שעדיין לא מומשה ויש לה ערך גבוה כי היועצים כרגע **לא רואים משימות כלל** בדשבורד שלהם.
 
-#### 2. TaskCard -- sleeker + תלויות + RTL (`TaskCard.tsx`)
-- הוספת `dir="rtl"` לכרטיס
-- הוספת אינדיקציית תלויות: אם למשימה יש תלויות לא גמורות, מציג אייקון Link + "X תלויות"
-- לשם כך: הוספת prop `dependencyCount?: number` ו-`hasBlockingDeps?: boolean`
-- עיצוב sleeker: הקטנת padding ל-`p-2.5`, הוספת left-border צבעוני לפי סטטוס, הסרת TaskStatusBadge מהכרטיס (כי העמודה כבר מציינת את הסטטוס)
-- הוספת אייקון Milestone (Flag) אם `is_milestone`
-- שיפור overdue: רקע `bg-red-50` + border שמאלי אדום
+#### מה צריך לבנות:
 
-#### 3. טבלה -- תלויות + אבן דרך (`AllProjectsTaskTable.tsx`)
-- הוספת עמודה "תלויות" עם אייקון Link + מספר (או "—" אם אין)
-- הוספת אייקון Flag ליד שם המשימה אם `is_milestone`
-- לשם כך: הרחבת `ProjectTaskWithDetails` עם `dependency_count` ו-`has_blocking_deps`
+1. **לשונית "משימות" בדשבורד היועץ** (`AdvisorDashboard.tsx`)
+   - הוספת tab חדש "משימות" ליד ה-tabs הקיימים (rfp-invites, my-proposals, negotiations)
+   - הצגת badge עם מספר משימות פתוחות
 
-#### 4. נתוני תלויות (`TaskBoard.tsx` / `useProjectTasks.ts`)
-- הוספת שאילתה מרוכזת לספור תלויות לכל המשימות בפרויקט (שאילתת count על `task_dependencies`)
-- העברת המידע ל-TaskCard ול-AllProjectsTaskTable
+2. **Hook חדש: `useAdvisorTasks.ts`**
+   - שאילתה ל-`project_tasks` עם `assigned_advisor_id` = advisor.id
+   - join ל-projects לקבלת שם פרויקט
+   - תמיכה בסינון: כלל הפרויקטים / פרויקט מסוים / סטטוס
 
-#### 5. DroppableColumn -- שיפור ויזואלי (`DroppableColumn.tsx`)
-- הוספת prop `accentColor` לפס צבעוני עליון
-- שיפור ה-empty state עם אייקון קטן
+3. **תצוגת "כלל הפרויקטים" ליועץ**
+   - טבלה רוחבית של כל המשימות מכל הפרויקטים (שימוש חוזר ב-`AllProjectsTaskTable`)
+   - סינון: אחריות, שם פרויקט, יזם, דדליין
+   - ציר זמן עליון עם שלבי רישוי
 
-### סיכום קבצים
+4. **תצוגת "פר פרויקט" ליועץ**
+   - ציר הזמן המלא של שלבי הרישוי
+   - רק המשימות של היועץ בפרויקט הנבחר
+   - ללא אפשרות עריכה/מחיקה (רק צפייה + עדכון סטטוס בכפוף לאישור יזם -- שלב עתידי)
 
-| קובץ | שינוי |
-|------|-------|
-| `TaskBoard.tsx` | grid-cols-5, fetch dependency counts, pass to cards/table |
-| `DroppableColumn.tsx` | רקע עדין, פס צבעוני, עיצוב מודרני |
-| `TaskCard.tsx` | dir="rtl", dependency indicator, colored left border, sleeker padding, milestone icon |
-| `AllProjectsTaskTable.tsx` | עמודת תלויות, אייקון milestone, dependency data |
-| `useProjectTasks.ts` | הוספת fetch dependency counts per task |
-| `DraggableTaskCard.tsx` | העברת props חדשים (dependencyCount, hasBlockingDeps) |
+#### קבצים חדשים:
+- `src/hooks/useAdvisorTasks.ts` -- hook לשליפת משימות יועץ
+- `src/components/tasks/AdvisorTasksView.tsx` -- קומפוננטה ראשית לתצוגת משימות יועץ
+
+#### קבצים לעדכון:
+- `src/pages/AdvisorDashboard.tsx` -- הוספת tab "משימות"
+- `src/components/tasks/AllProjectsTaskTable.tsx` -- שימוש חוזר (ללא שינוי)
+- `src/components/tasks/LicensingTimeline.tsx` -- שימוש חוזר (ללא שינוי)
+
+#### פרטים טכניים:
+
+**`useAdvisorTasks.ts`:**
+```text
+- Query: project_tasks WHERE assigned_advisor_id = advisorId
+- Joins: projects(name, phase, type), profiles(name) for entrepreneur name
+- Filters: projectId, status[], search text
+- Returns: tasks, projects list, loading, filters, openCount
+```
+
+**`AdvisorTasksView.tsx`:**
+```text
+- Project selector (all / specific)
+- LicensingTimeline at top
+- TaskFilters for status/project filtering
+- AllProjectsTaskTable for display
+- TaskDetailDialog for viewing task details (read-only mode initially)
+```
+
+**`AdvisorDashboard.tsx` changes:**
+```text
+- Add "משימות" tab with open task count badge
+- Render AdvisorTasksView inside the new tab
+- Pass advisorId to the component
+```
 
