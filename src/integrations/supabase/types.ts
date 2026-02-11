@@ -2959,6 +2959,44 @@ export type Database = {
         }
         Relationships: []
       }
+      task_comments: {
+        Row: {
+          author_id: string
+          author_name: string
+          author_role: string
+          content: string
+          created_at: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          author_id: string
+          author_name?: string
+          author_role?: string
+          content: string
+          created_at?: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          author_id?: string
+          author_name?: string
+          author_role?: string
+          content?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_dependencies: {
         Row: {
           created_at: string
@@ -2994,6 +3032,47 @@ export type Database = {
           },
           {
             foreignKeyName: "task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_files: {
+        Row: {
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          original_name: string
+          storage_path: string
+          task_id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_name: string
+          storage_path: string
+          task_id: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_name?: string
+          storage_path?: string
+          task_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_files_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "project_tasks"
@@ -3497,6 +3576,10 @@ export type Database = {
         Returns: Json
       }
       use_magic_link: { Args: { p_token: string }; Returns: Json }
+      user_has_task_access: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: boolean
+      }
       validate_magic_link: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
