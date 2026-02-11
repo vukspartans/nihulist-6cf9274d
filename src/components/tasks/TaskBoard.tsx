@@ -233,6 +233,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         onOpenChange={setDetailDialogOpen}
         onSubmit={updateTask}
         projectAdvisors={projectAdvisors}
+        allProjectTasks={tasks.map(t => ({ id: t.id, name: t.name, status: t.status }))}
       />
     </Card>
   );
