@@ -1,103 +1,66 @@
 
 
-## מסמכים מצורפים ותגובות פנימיות למשימות (דרישה 3.1)
+## שלושה שיפורים לניהול משימות ביזם
 
-### סקירה
+### 1. לחיצה על שם משימה פותחת את הדיאלוג
 
-נוסיף שתי יכולות חדשות לדיאלוג פרטי המשימה (`TaskDetailDialog`):
-1. **צירוף קבצים** -- העלאה, צפייה והורדה של מסמכים
-2. **תגובות/עדכונים פנימיים** -- היסטוריית שיחה בין יזם ויועצים
+כרגע שם המשימה בטבלה (`AllProjectsTaskTable`) וכרטיסיות (`ProjectTaskView`) הוא טקסט סטטי. נהפוך אותו ללחיץ כדי לפתוח את `TaskDetailDialog`.
 
-### שינויי מסד נתונים
+**שינויים:**
 
-#### טבלה חדשה: `task_comments`
+- **`AllProjectsTaskTable.tsx`** -- נוסיף prop `onTaskClick(taskId)` ונעטוף את שם המשימה ב-`<button>` עם סגנון link (כמו שם הפרויקט כבר עובד).
+- **`ProjectTaskView.tsx`** -- אותו דבר בתצוגת כרטיסיות -- לחיצה על הכרטיסייה או על שם המשימה תפתח את הדיאלוג.
+- **`TaskManagementDashboard.tsx`** -- נוסיף state של `selectedTask` ו-`TaskDetailDialog`, נעביר את ה-callback ל-`AllProjectsTaskTable` ול-`ProjectTaskView`. נצטרך גם לטעון את ה-`projectAdvisors` עבור הפרויקט של המשימה הנבחרת.
+- **`useAllProjectsTasks.ts`** -- נוסיף מידע נוסף לכל משימה (`description`, `notes`, `is_blocked`, `block_reason`, `stage_id`, `template_id`, `duration_days`) כדי שה-dialog יקבל אובייקט `ProjectTask` מלא.
 
-| עמודה | סוג | תיאור |
-|-------|-----|--------|
-| id | uuid PK | מזהה |
-| task_id | uuid FK -> project_tasks | משימה |
-| author_id | uuid | מזהה המשתמש |
-| author_name | text | שם המחבר (שמור לתצוגה) |
-| author_role | text | תפקיד: 'entrepreneur' / 'advisor' |
-| content | text NOT NULL | תוכן התגובה |
-| created_at | timestamptz | זמן יצירה |
+### 2. הקפצת משימות באיחור (Bump delayed tasks)
 
-RLS: authenticated users שהם בעלי הפרויקט או יועצים משויכים יכולים לקרוא ולכתוב.
+משימות בסטטוס `delayed` או שעברו את `planned_end_date` יקבלו עדיפות גבוהה בתצוגה.
 
-#### טבלה חדשה: `task_files`
+**שינויים:**
 
-| עמודה | סוג | תיאור |
-|-------|-----|--------|
-| id | uuid PK | מזהה |
-| task_id | uuid FK -> project_tasks | משימה |
-| storage_path | text NOT NULL | נתיב ב-storage |
-| original_name | text NOT NULL | שם מקורי |
-| file_size | integer | גודל בבייטים |
-| mime_type | text | סוג הקובץ |
-| uploaded_by | uuid | מי העלה |
-| uploaded_at | timestamptz | זמן העלאה |
+- **`AllProjectsTaskTable.tsx`** -- שינוי ברירת מחדל של המיון: קודם כל `delayed` ומשימות שעבר תאריך היעד שלהן (חישוב דינמי), אח"כ לפי `planned_end_date`. שורות של משימות באיחור יקבלו רקע אדום בהיר (`bg-red-50`) ו-badge "באיחור" אם `planned_end_date < today` גם בלי סטטוס `delayed`.
+- **`ProjectTaskView.tsx`** -- בתצוגת כרטיסיות, משימות באיחור יופיעו ראשונות בתוך כל שלב עם גבול אדום (`border-red-400`).
 
-RLS: זהה ל-task_comments.
+### 3. טעינת משימות אוטומטית מתבנית לפי פרויקט
 
-#### Storage bucket חדש: `task-files`
+כשנכנסים לפרויקט שאין לו משימות, המערכת תציע לטעון תבנית מותאמת לפי השילוב של: `project.type` + `project.phase` + `project.municipality_id`.
 
-Bucket ציבורי עם RLS policies לגישה מאומתת בלבד.
+**שינויים:**
 
-### קבצים חדשים
+- **Hook חדש: `src/hooks/useAutoTaskLoader.ts`** -- Hook שמקבל `projectId` ובודק:
+  1. האם לפרויקט יש כבר משימות (אם כן, לא עושה כלום)
+  2. שולף את `type`, `phase`, `municipality_id` של הפרויקט
+  3. שולף תבניות מ-`task_templates` עם סינון: `project_type = type` AND (אם `municipality_id` קיים -- `municipality_id = X`, אחרת fallback ל-`municipality_id IS NULL`) AND `is_active = true`
+  4. מסנן תבניות לפי `licensing_phase_id` -- רק משלבים שהם מהשלב הנוכחי (`phase`) ואילך (לפי סדר ב-`PROJECT_PHASES`)
+  5. מחזיר `{ templates, shouldSuggest, loadTasks() }`
 
-| קובץ | תיאור |
-|-------|--------|
-| `src/hooks/useTaskComments.ts` | Hook לטעינה, הוספה ומחיקת תגובות |
-| `src/hooks/useTaskFiles.ts` | Hook להעלאה, טעינה ומחיקת קבצים |
-| `src/components/tasks/TaskCommentsSection.tsx` | רכיב תגובות: רשימת תגובות + textarea להוספה |
-| `src/components/tasks/TaskFilesSection.tsx` | רכיב קבצים: אזור העלאה (dropzone) + רשימת קבצים עם הורדה/מחיקה |
+- **קומפוננטה חדשה: `src/components/tasks/AutoTaskSuggestionBanner.tsx`** -- באנר שמוצג כש-`shouldSuggest = true`:
+  - הודעה: "מצאנו X משימות מומלצות לפרויקט מסוג [type] בשלב [phase]"
+  - כפתור "טען משימות" שמפעיל `loadTasks()` (משתמש ב-`useBulkTaskCreation` הקיים)
+  - כפתור "לא עכשיו" שמסתיר את הבאנר
 
-### קבצים שישתנו
+- **`TaskManagementDashboard.tsx`** -- כשנבחר פרויקט ספציפי, נציג את ה-`AutoTaskSuggestionBanner` מעל ה-`ProjectTaskView` (רק אם אין משימות עדיין).
 
-| קובץ | שינוי |
-|-------|-------|
-| `src/components/tasks/TaskDetailDialog.tsx` | הוספת Tabs עם 3 לשוניות: "פרטים", "קבצים", "תגובות" |
-| `src/components/tasks/index.ts` | ייצוא הקומפוננטות החדשות |
+- **`ProjectTaskView.tsx`** -- ה-banner יוצג גם ב-empty state (כשאין משימות) במקום ההודעה הגנרית.
+
+**חשוב:** כרגע אין תבניות בטבלת `task_templates` (היא ריקה). המנגנון ייבנה מוכן אבל יעבוד רק אחרי שהאדמין ימלא תבניות. ה-banner לא יוצג אם אין תבניות מתאימות.
+
+---
 
 ### פירוט טכני
 
-#### `useTaskComments.ts`
-- `fetchComments()` -- שליפה מ-`task_comments` לפי `task_id`, מסודר לפי `created_at`
-- `addComment(content)` -- הוספה עם `author_id` מה-session, `author_name` מה-profile, `author_role` לפי ה-role
-- `deleteComment(id)` -- מחיקה (רק המחבר יכול למחוק)
+#### קבצים חדשים
+| קובץ | תיאור |
+|-------|--------|
+| `src/hooks/useAutoTaskLoader.ts` | טעינת תבניות מותאמות לפרויקט, סינון לפי שלב, הצעה ליצירה |
+| `src/components/tasks/AutoTaskSuggestionBanner.tsx` | באנר עם הודעה וכפתורי "טען" / "לא עכשיו" |
 
-#### `useTaskFiles.ts`
-- `fetchFiles()` -- שליפה מ-`task_files` לפי `task_id`
-- `uploadFile(file)` -- העלאה ל-bucket `task-files` בנתיב `{task_id}/{uuid}-{filename}`, שמירה בטבלה
-- `deleteFile(id)` -- מחיקה מ-storage ומהטבלה
-- `getSignedUrl(path)` -- קבלת URL חתום להורדה/צפייה
+#### קבצים שישתנו
+| קובץ | שינוי |
+|-------|-------|
+| `AllProjectsTaskTable.tsx` | prop `onTaskClick`, מיון delayed-first, הדגשת שורות באיחור |
+| `ProjectTaskView.tsx` | prop `onTaskClick`, משימות באיחור ראשונות עם גבול אדום, banner |
+| `TaskManagementDashboard.tsx` | state ל-TaskDetailDialog, AutoTaskSuggestionBanner, callback-ים |
+| `useAllProjectsTasks.ts` | שדות נוספים ב-ProjectTaskWithDetails |
 
-#### `TaskDetailDialog.tsx` -- שינוי מבנה
-הדיאלוג יעבור ממבנה טופס אחד למבנה Tabs:
-- **"פרטים"**: כל השדות הקיימים (שם, תיאור, סטטוס, תאריכים, תלויות וכו')
-- **"קבצים"**: `TaskFilesSection` עם dropzone והרשימה
-- **"תגובות"**: `TaskCommentsSection` עם היסטוריית שיחה ו-textarea
-
-כפתור "שמור שינויים" יישאר בלשונית "פרטים" בלבד. קבצים ותגובות נשמרים מיידית.
-
-#### `TaskCommentsSection.tsx` -- עיצוב
-- רשימת תגובות מסודרת כרונולוגית (ישנות למעלה)
-- כל תגובה: אווטאר/אייקון + שם + תפקיד (badge) + זמן + תוכן
-- textarea בתחתית עם כפתור "שלח"
-- תגובות של המשתמש הנוכחי מיושרות שמאלה, אחרים ימינה (סגנון צ'אט)
-
-#### `TaskFilesSection.tsx` -- עיצוב
-- אזור dropzone (דומה ל-FileUpload הקיים) עם הגבלה של 5 קבצים ו-20MB לקובץ
-- רשימת קבצים עם: שם, גודל, תאריך העלאה, כפתורי הורדה ומחיקה
-- פורמטים נתמכים: PDF, Word, Excel, תמונות, DWG, ZIP
-
-### RLS Policies
-
-```text
-task_comments / task_files:
-- SELECT: user is project owner OR user is assigned advisor on the project
-- INSERT: same as SELECT (authenticated)
-- DELETE: user is the uploader/author only
-```
-
-המימוש ישתמש ב-subquery על `projects.owner_id` ו-`project_advisors.advisor_id` -> `advisors.user_id` כדי לאמת הרשאות.
