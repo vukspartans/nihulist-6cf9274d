@@ -26,7 +26,6 @@ import {
   Wallet,
   Tags,
   GitPullRequest,
-  Milestone,
   ClipboardList,
 } from "lucide-react";
 import { adminTranslations } from "@/constants/adminTranslations";
@@ -79,7 +78,6 @@ const licensingNavigationItems = [
 const paymentNavigationItems = [
   { title: adminTranslations.payments.categories.title, url: "/heyadmin/payment-categories", icon: Tags },
   { title: adminTranslations.payments.statuses.title, url: "/heyadmin/payment-statuses", icon: GitPullRequest },
-  { title: adminTranslations.payments.milestones.title, url: "/heyadmin/milestone-templates", icon: Milestone },
 ];
 
 function AdminSidebar() {
@@ -98,8 +96,7 @@ function AdminSidebar() {
                            location.pathname === '/heyadmin/licensing';
   
   // Check if current route is a payment route
-  const isPaymentRoute = location.pathname.includes('/heyadmin/payment-') || 
-                         location.pathname.includes('/heyadmin/milestone-templates');
+  const isPaymentRoute = location.pathname.includes('/heyadmin/payment-');
   
   const [managementOpen, setManagementOpen] = useState(isManagementRoute);
   const [licensingOpen, setLicensingOpen] = useState(isLicensingRoute);

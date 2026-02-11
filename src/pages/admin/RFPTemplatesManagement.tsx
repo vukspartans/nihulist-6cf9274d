@@ -333,14 +333,8 @@ export default function RFPTemplatesManagement() {
                 צור שירות
               </Button>
             )}
-            {activeTab === "milestones" && (
-              <Button asChild variant="outline">
-                <Link to="/heyadmin/milestone-templates">
-                  <Settings className="h-4 w-4 ml-2" />
-                  ניהול אבני דרך
-                </Link>
-              </Button>
-            )}
+
+
           </div>
         </div>
 
@@ -504,12 +498,8 @@ export default function RFPTemplatesManagement() {
                     {selectedAdvisorType !== "all" && (
                       <p className="text-sm mt-1">לסוג יועץ "{selectedAdvisorType}"</p>
                     )}
-                    <Button asChild variant="outline" className="mt-4">
-                      <Link to="/heyadmin/milestone-templates">
-                        <Settings className="h-4 w-4 ml-2" />
-                        צור אבני דרך
-                      </Link>
-                    </Button>
+
+
                   </div>
                 ) : (
                   <SortableDataTable
