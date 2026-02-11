@@ -43,7 +43,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
       {/* Comments list */}
       <div className="flex-1 space-y-3 max-h-[40vh] overflow-y-auto">
         {comments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-right">
             <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
             <p className="text-sm">אין תגובות עדיין</p>
           </div>

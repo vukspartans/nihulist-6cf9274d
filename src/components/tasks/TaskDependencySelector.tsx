@@ -43,7 +43,7 @@ export function TaskDependencySelector({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" dir="rtl">
       {/* Warning for unfinished dependencies */}
       {hasUnfinishedDependencies && (
         <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20" role="status" dir="rtl">

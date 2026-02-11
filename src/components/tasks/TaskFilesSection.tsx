@@ -137,7 +137,7 @@ export function TaskFilesSection({ taskId }: TaskFilesSectionProps) {
       )}
 
       {files.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-2">אין קבצים מצורפים</p>
+        <p className="text-sm text-muted-foreground text-right py-2">אין קבצים מצורפים</p>
       )}
     </div>
   );
