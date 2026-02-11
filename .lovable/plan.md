@@ -1,52 +1,41 @@
 
 
-## תיקון RTL מלא + אופטימיזציית UX לדיאלוג פרטי משימה
-
-### בעיות שזוהו בקוד:
-
-1. **Labels לא מיושרים לימין** -- כל ה-Label components חסרים `text-right` (הם יורשים מהפרנט `dir="rtl"` אבל בפועל יש להם default text-align שלא תמיד מגיב נכון)
-2. **TaskAssignment** -- חסר `dir="rtl"` ו-`text-right` על SelectTrigger ו-SelectContent
-3. **TaskDependencySelector** -- ה-container הראשי חסר `dir="rtl"`, רשימת התלויות מסודרת LTR
-4. **Date inputs** -- `type="date"` inputs לא מיושרים לימין
-5. **Checkbox + Label** -- הסדר של checkbox ו-label הפוך ב-RTL (checkbox צריך להיות אחרי הטקסט)
-6. **Footer buttons** -- `flex-row-reverse` כבר קיים אבל הסדר של הכפתורים בקוד צריך בדיקה
-7. **Progress percentage** -- `justify-between` עובד אבל ה-`%` צריך להיות משמאל למספר
-8. **Empty states** -- טקסט ריק בתגובות ובקבצים ממורכז במקום מיושר לימין
+## שיפור דיאלוג פרטי משימה -- RTL, תגובות counter, ועיצוב
 
 ### שינויים מתוכננים:
 
-#### 1. `TaskDetailDialog.tsx`
-- הוספת `text-right` לכל ה-Labels (כולל labels של תאריכים)
-- תיקון date inputs: הוספת `text-right` ו-`dir="ltr"` (כדי שהתאריך עצמו יוצג נכון אבל ה-field מיושר לימין)
-- תיקון סדר Checkbox + Label: ב-RTL, ה-checkbox צריך להגיע **אחרי** הטקסט (מימין לשמאל: טקסט ← checkbox)
-- הוספת `dir="rtl"` ל-Textarea של block_reason ו-notes
-- שיפור ה-footer: שימוש ב-`flex gap-2 justify-start` (שב-RTL = ימין) עם כפתור ראשי ראשון
-- אופטימיזציה: צמצום spacing מ-`space-y-3` ל-`space-y-2.5` בתוך הטופס
-- הוספת separator ויזואלי בין קבוצות שדות (קו דק או background שונה לקבוצת התאריכים)
+### 1. תגובות Tab -- counter בעיגול + RTL (`TaskDetailDialog.tsx`)
+- הוספת `commentCount` state שיתעדכן מ-`TaskCommentsSection` (דרך callback prop)
+- הצגת מספר תגובות בעיגול ליד לשונית "תגובות": `<span className="bg-primary text-primary-foreground rounded-full text-[10px] w-4 h-4 flex items-center justify-center">{count}</span>`
+- חילוף: שימוש ב-hook `useTaskComments` ישירות ב-dialog כדי לקבל את ה-count
 
-#### 2. `TaskAssignment.tsx`
-- הוספת `dir="rtl"` ל-Select
-- הוספת `text-right` ל-SelectTrigger
-- הוספת `dir="rtl"` ל-SelectContent
+### 2. תגובות -- יישור ימין מלא (`TaskCommentsSection.tsx`)
+- הוספת `flex-row-reverse` על ה-input container (textarea + send button) כדי שכפתור השליחה יהיה בשמאל
+- הוספת `text-right` על comment header (שם + badge + time)
 
-#### 3. `TaskDependencySelector.tsx`
-- הוספת `dir="rtl"` ל-container הראשי
-- תיקון הסדר של dependency items: שם משימה + badge מימין, כפתור X משמאל
+### 3. סטטוס + שלב -- יישור ימין (`TaskDetailDialog.tsx`)
+- הוספת `[&>span]:text-right` על SelectTrigger או שימוש ב-`justify-end` כדי שהטקסט הנבחר יהיה מיושר לימין
+- בדיקת SelectValue alignment
 
-#### 4. `TaskCommentsSection.tsx`
-- הוספת `text-right` לטקסט "אין תגובות עדיין"
+### 4. תאריכים -- תיקון חיתוך (`TaskDetailDialog.tsx`)
+- שינוי מ-`grid-cols-4` ל-`grid-cols-2` (2 שורות של 2 תאריכים) -- 4 שדות בשורה אחת צר מדי ב-`max-w-2xl`
+- הגדלת ה-input height מ-`h-8` ל-`h-9`
+- הגדלת label מ-`text-[10px]` ל-`text-xs`
+- הסרת `text-right` מ-date inputs (לא רלוונטי ל-type="date") ושמירת `dir="ltr"` בלבד
 
-#### 5. `TaskFilesSection.tsx`
-- הוספת `text-right` לטקסט "אין קבצים מצורפים"
-- תיקון סדר items ברשימת קבצים: icon ← שם ← metadata מימין, כפתורים משמאל
+### 5. התקדמות + אבן דרך -- עיצוב משופר (`TaskDetailDialog.tsx`)
+- עטיפה ב-`bg-muted/30 rounded-md p-2.5` (כמו קבוצת התאריכים) ליצירת קבוצה ויזואלית
+- שינוי layout: progress bar ברוחב מלא, אבן דרך checkbox מתחתיו בשורה נפרדת
+- הוספת צבע לאחוז: ירוק מעל 70%, כתום 30-70%, אדום מתחת ל-30%
+
+### 6. שיפורים כלליים (`TaskDetailDialog.tsx`)
+- הוספת separator ויזואלי (border-t או spacing) בין קבוצות שדות
+- שיפור ה-footer: הוספת `border-t` מעל כפתורי השמירה
 
 ### סיכום קבצים
 
 | קובץ | שינוי |
 |------|-------|
-| `TaskDetailDialog.tsx` | RTL על labels, date inputs, checkbox order, textarea dir, footer, spacing |
-| `TaskAssignment.tsx` | הוספת dir="rtl" ו-text-right |
-| `TaskDependencySelector.tsx` | הוספת dir="rtl" לcontainer |
-| `TaskCommentsSection.tsx` | text-right על empty state |
-| `TaskFilesSection.tsx` | text-right על empty state |
+| `TaskDetailDialog.tsx` | comment count בלשונית, dates grid-cols-2, progress/milestone visual group, footer border, SelectValue alignment |
+| `TaskCommentsSection.tsx` | export count + flex-row-reverse on input, text-right fixes |
 
