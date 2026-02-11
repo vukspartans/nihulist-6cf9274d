@@ -11,3 +11,5 @@ export { TaskManagementDashboard } from './TaskManagementDashboard';
 export { AllProjectsTaskTable } from './AllProjectsTaskTable';
 export { ProjectTaskView } from './ProjectTaskView';
 export { TaskFilters } from './TaskFilters';
+export { TaskCommentsSection } from './TaskCommentsSection';
+export { TaskFilesSection } from './TaskFilesSection';
