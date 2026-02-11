@@ -46,6 +46,8 @@ import {
   useDeleteSubmissionMethod,
 } from "@/hooks/useFeeTemplateHierarchy";
 import { SortableDataTable, Column } from "@/components/admin/SortableDataTable";
+import { MilestonePercentageSummary } from "@/components/admin/MilestonePercentageSummary";
+import { getFeeUnitLabel, getChargeTypeLabel } from "@/constants/rfpUnits";
 import { CreateFeeItemTemplateDialog } from "@/components/admin/CreateFeeItemTemplateDialog";
 import { EditFeeItemTemplateDialog } from "@/components/admin/EditFeeItemTemplateDialog";
 import { CreateServiceScopeTemplateDialog } from "@/components/admin/CreateServiceScopeTemplateDialog";
@@ -225,9 +227,9 @@ export default function FeeTemplatesByCategory() {
       ),
     },
     { header: "תיאור", accessorKey: "description" },
-    { header: "יחידה", accessorKey: "unit" },
+    { header: "יחידה", cell: (item) => getFeeUnitLabel(item.unit) },
     { header: "כמות ברירת מחדל", cell: (item) => item.default_quantity || "-" },
-    { header: "סוג חיוב", cell: (item) => item.charge_type || "-" },
+    { header: "סוג חיוב", cell: (item) => getChargeTypeLabel(item.charge_type || 'one_time') },
     {
       header: "סטטוס",
       cell: (item) => item.is_optional ? <Badge variant="secondary">אופציונלי</Badge> : <Badge variant="default">חובה</Badge>,
@@ -662,12 +664,15 @@ export default function FeeTemplatesByCategory() {
                 {milestonesLoading ? (
                   <Skeleton className="h-32" />
                 ) : milestones && milestones.length > 0 ? (
+                  <>
+                  <MilestonePercentageSummary milestones={milestones} />
                   <SortableDataTable
                     data={milestones}
                     columns={milestoneColumns}
                     onReorder={(orderedIds) => reorderMilestonesMutation.mutate(orderedIds)}
                     isReordering={reorderMilestonesMutation.isPending}
-                  />
+                   />
+                  </>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>אין אבני דרך. הוסף אבן דרך ראשונה כדי להתחיל.</p>
