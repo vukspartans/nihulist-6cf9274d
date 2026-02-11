@@ -1,52 +1,52 @@
 
 
-## אופטימיזציית RTL ופריסה של דיאלוג פרטי משימה
+## תיקון RTL מלא + אופטימיזציית UX לדיאלוג פרטי משימה
 
-### בעיות נוכחיות:
+### בעיות שזוהו בקוד:
 
-1. **סדר הלשוניות (Tabs)**: כרגע הסדר הוא פרטים → קבצים → תגובות
-   - בעברית צריך להיות: פרטים (מימין) → תגובות (באמצע) → קבצים (משמאל)
-   - ה-TabsList לא מוגדר כ-RTL, ולכן הוא מתהפך באופן לא צפוי
+1. **Labels לא מיושרים לימין** -- כל ה-Label components חסרים `text-right` (הם יורשים מהפרנט `dir="rtl"` אבל בפועל יש להם default text-align שלא תמיד מגיב נכון)
+2. **TaskAssignment** -- חסר `dir="rtl"` ו-`text-right` על SelectTrigger ו-SelectContent
+3. **TaskDependencySelector** -- ה-container הראשי חסר `dir="rtl"`, רשימת התלויות מסודרת LTR
+4. **Date inputs** -- `type="date"` inputs לא מיושרים לימין
+5. **Checkbox + Label** -- הסדר של checkbox ו-label הפוך ב-RTL (checkbox צריך להיות אחרי הטקסט)
+6. **Footer buttons** -- `flex-row-reverse` כבר קיים אבל הסדר של הכפתורים בקוד צריך בדיקה
+7. **Progress percentage** -- `justify-between` עובד אבל ה-`%` צריך להיות משמאל למספר
+8. **Empty states** -- טקסט ריק בתגובות ובקבצים ממורכז במקום מיושר לימין
 
-2. **TaskCommentsSection**:
-   - ה-flex layout עם `justify-start` / `justify-end` הוא הפוך ל-RTL
-   - בעברית: תגובות של המשתמש צריך להיות על הימין, אחרים על השמאל
-   - ה-`mr-auto` על הזמן צריך להשתנות ל-`ml-auto` ב-RTL
-   - input textarea אין `dir="rtl"` + `text-right`
-   - הסדר של האלמנטים בראש הכרטיסייה (שם, badge, זמן, כפתור) צריך להיות רכוש RTL
+### שינויים מתוכננים:
 
-3. **TaskFilesSection**:
-   - ה-dropzone רגיל (לא RTL-specific, אבל יש מקום לשיפור)
-   - רשימת קבצים: ה-flex layout צריך להיות `flex-row-reverse` או RTL-aware
-   - הסדר של icon, filename, size/date, buttons צריך להיות מימין לשמאל
-   - אין `dir="rtl"` + `text-right` על labels
+#### 1. `TaskDetailDialog.tsx`
+- הוספת `text-right` לכל ה-Labels (כולל labels של תאריכים)
+- תיקון date inputs: הוספת `text-right` ו-`dir="ltr"` (כדי שהתאריך עצמו יוצג נכון אבל ה-field מיושר לימין)
+- תיקון סדר Checkbox + Label: ב-RTL, ה-checkbox צריך להגיע **אחרי** הטקסט (מימין לשמאל: טקסט ← checkbox)
+- הוספת `dir="rtl"` ל-Textarea של block_reason ו-notes
+- שיפור ה-footer: שימוש ב-`flex gap-2 justify-start` (שב-RTL = ימין) עם כפתור ראשי ראשון
+- אופטימיזציה: צמצום spacing מ-`space-y-3` ל-`space-y-2.5` בתוך הטופס
+- הוספת separator ויזואלי בין קבוצות שדות (קו דק או background שונה לקבוצת התאריכים)
 
-### תוכנית התיקון:
+#### 2. `TaskAssignment.tsx`
+- הוספת `dir="rtl"` ל-Select
+- הוספת `text-right` ל-SelectTrigger
+- הוספת `dir="rtl"` ל-SelectContent
 
-#### 1. TaskDetailDialog.tsx:
-- שינוי סדר TabsTriggers: פרטים → תגובות → קבצים (בהנחה שהם יתהפכו באופן טבעי ב-RTL)
-- או: שימוש ב-`dir="rtl"` על TabsList עם `grid-cols-3` שיתהפך לסדר הנכון
-- וודא `dir="rtl"` על DialogContent (כבר קיים)
+#### 3. `TaskDependencySelector.tsx`
+- הוספת `dir="rtl"` ל-container הראשי
+- תיקון הסדר של dependency items: שם משימה + badge מימין, כפתור X משמאל
 
-#### 2. TaskCommentsSection.tsx:
-- הוספת `dir="rtl"` לcontainer הראשי
-- שינוי ה-logic: `isOwn ? 'justify-end' : 'justify-start'` (הפוך)
-- שינוי `mr-auto` ל-`ml-auto` על הזמן
-- Textarea: הוסף `dir="rtl"` + `text-right`
-- סדר האלמנטים בראש: לשם, badge, זמן, כפתור - עשה FlexRow Reverse או סדר RTL-native
-- קונטיינר התגובה עם padding/flex לעיצוב RTL
+#### 4. `TaskCommentsSection.tsx`
+- הוספת `text-right` לטקסט "אין תגובות עדיין"
 
-#### 3. TaskFilesSection.tsx:
-- Dropzone: הוסף `dir="rtl"` + `text-right` לטקסטים
-- רשימת קבצים: שינוי ה-flex layout ל-`flex-row-reverse` (כדי שה-icon יהיה משמאל, שם + מידע באמצע, buttons מימין)
-- או: `flex` עם `justify-between` ו-align proper
-- הוסף `text-right` על ה-filename ו-metadata
+#### 5. `TaskFilesSection.tsx`
+- הוספת `text-right` לטקסט "אין קבצים מצורפים"
+- תיקון סדר items ברשימת קבצים: icon ← שם ← metadata מימין, כפתורים משמאל
 
-### שינויים מפורשים:
+### סיכום קבצים
 
 | קובץ | שינוי |
 |------|-------|
-| `TaskDetailDialog.tsx` | הוסף `dir="rtl"` ל-TabsList; בדוק סדר tabs (עשוי להתהפך אוטומטית עם RTL) |
-| `TaskCommentsSection.tsx` | הוסף `dir="rtl"` לroot div; הפוך ה-justify logic; שנה `mr-auto` ל-`ml-auto`; הוסף RTL styles לtextarea ושם/badge/time |
-| `TaskFilesSection.tsx` | הוסף RTL support בdropzone (text-right); שנה flex layout ברשימה לRTL-friendly (flex-row-reverse או flex עם direction); הוסף text-right |
+| `TaskDetailDialog.tsx` | RTL על labels, date inputs, checkbox order, textarea dir, footer, spacing |
+| `TaskAssignment.tsx` | הוספת dir="rtl" ו-text-right |
+| `TaskDependencySelector.tsx` | הוספת dir="rtl" לcontainer |
+| `TaskCommentsSection.tsx` | text-right על empty state |
+| `TaskFilesSection.tsx` | text-right על empty state |
 
