@@ -1,66 +1,83 @@
 
 
-## שלושה שיפורים לניהול משימות ביזם
+## אופטימיזציית UX/UI ניהול משימות -- 4 שיפורים
 
-### 1. לחיצה על שם משימה פותחת את הדיאלוג
+### 1. TaskDetailDialog -- RTL מלא + צמצום גלילה
 
-כרגע שם המשימה בטבלה (`AllProjectsTaskTable`) וכרטיסיות (`ProjectTaskView`) הוא טקסט סטטי. נהפוך אותו ללחיץ כדי לפתוח את `TaskDetailDialog`.
+**בעיות נוכחיות:**
+- הדיאלוג משתמש ב-`max-w-lg` (צר) עם `space-y-4` שגורם לגלילה מיותרת
+- שדות תאריכים מתוכננים ובפועל תופסים 2 שורות נפרדות במקום אחת
+- הערות + תיאור כל אחד בנפרד עם `rows={3}` -- מבזבז מקום
+- אין `dir="rtl"` על Select של סטטוס ושלב
+- אין `text-right` על SelectTrigger-ים
+- Slider ב-RTL צריך `dir="ltr"` (כמו switch) כדי לעבוד נכון
+- DialogFooter לא מיושר ל-RTL
 
-**שינויים:**
+**שינויים ב-`TaskDetailDialog.tsx`:**
+- הרחבת הדיאלוג ל-`max-w-2xl` ושימוש ב-`!h-[85vh]` עם flex layout + ScrollArea (כמו ProposalApprovalDialog)
+- קיפול 4 שדות תאריך לשורה אחת (grid-cols-4) עם labels מקוצרים
+- מיזוג תיאור והערות לאזור אחד קומפקטי (`rows={2}`)
+- הוספת `dir="rtl"` ו-`text-right` לכל Select/SelectTrigger
+- עטיפת Slider ב-`dir="ltr"` 
+- DialogFooter עם `flex-row-reverse` ל-RTL
+- הזזת progress + milestone + assignment לשורה אופקית אחת
+- TabsList עם עיצוב קומפקטי יותר
 
-- **`AllProjectsTaskTable.tsx`** -- נוסיף prop `onTaskClick(taskId)` ונעטוף את שם המשימה ב-`<button>` עם סגנון link (כמו שם הפרויקט כבר עובד).
-- **`ProjectTaskView.tsx`** -- אותו דבר בתצוגת כרטיסיות -- לחיצה על הכרטיסייה או על שם המשימה תפתח את הדיאלוג.
-- **`TaskManagementDashboard.tsx`** -- נוסיף state של `selectedTask` ו-`TaskDetailDialog`, נעביר את ה-callback ל-`AllProjectsTaskTable` ול-`ProjectTaskView`. נצטרך גם לטעון את ה-`projectAdvisors` עבור הפרויקט של המשימה הנבחרת.
-- **`useAllProjectsTasks.ts`** -- נוסיף מידע נוסף לכל משימה (`description`, `notes`, `is_blocked`, `block_reason`, `stage_id`, `template_id`, `duration_days`) כדי שה-dialog יקבל אובייקט `ProjectTask` מלא.
+### 2. TaskManagementDashboard -- אופטימיזציית שטח
 
-### 2. הקפצת משימות באיחור (Bump delayed tasks)
+**בעיות נוכחיות:**
+- `space-y-6` מרווח מדי בין אלמנטים
+- LicensingTimeline תופס הרבה מקום אנכי
+- TaskFilters בשורה נפרדת מה-project selector
+- הכל עטוף ב-padding מיותר
 
-משימות בסטטוס `delayed` או שעברו את `planned_end_date` יקבלו עדיפות גבוהה בתצוגה.
+**שינויים ב-`TaskManagementDashboard.tsx`:**
+- צמצום ל-`space-y-3` 
+- שילוב project selector + badge + filters בשורה אחת (flex-wrap)
+- LicensingTimeline עם `p-3` במקום `p-4`
+- הוספת summary row: מספר משימות לפי סטטוס (כרטיסי סטטוס קטנים)
 
-**שינויים:**
+### 3. ProjectTaskView -- ברירת מחדל טבלה + toggle לקנבן
 
-- **`AllProjectsTaskTable.tsx`** -- שינוי ברירת מחדל של המיון: קודם כל `delayed` ומשימות שעבר תאריך היעד שלהן (חישוב דינמי), אח"כ לפי `planned_end_date`. שורות של משימות באיחור יקבלו רקע אדום בהיר (`bg-red-50`) ו-badge "באיחור" אם `planned_end_date < today` גם בלי סטטוס `delayed`.
-- **`ProjectTaskView.tsx`** -- בתצוגת כרטיסיות, משימות באיחור יופיעו ראשונות בתוך כל שלב עם גבול אדום (`border-red-400`).
+**בעיות נוכחיות:**
+- ברירת מחדל היא "כרטיסיות" (cards) -- צריך להתהפך לטבלה
+- כפתורי toggle לא ברורים מספיק
 
-### 3. טעינת משימות אוטומטית מתבנית לפי פרויקט
+**שינויים ב-`ProjectTaskView.tsx`:**
+- `useState<'table' | 'cards'>('table')` -- ברירת מחדל טבלה
+- Toggle buttons עם ToggleGroup (מהספרייה הקיימת) במקום שני כפתורים נפרדים
+- שיפור תצוגת כרטיסיות: רווחים קטנים יותר (`gap-2`), padding מצומצם (`p-3`)
 
-כשנכנסים לפרויקט שאין לו משימות, המערכת תציע לטעון תבנית מותאמת לפי השילוב של: `project.type` + `project.phase` + `project.municipality_id`.
+### 4. ProjectDetail > TaskBoard -- מעבר לטבלה + קנבן
 
-**שינויים:**
+**בעיות נוכחיות:**
+- ProjectDetail (route `/projects/:id`) משתמש ב-`TaskBoard` שמציג רק קנבן
+- ה-TaskBoard מביא את הנתונים שלו דרך `useProjectTasks` -- מנותק מהמבנה של `TaskManagementDashboard`
+- אין אפשרות לראות טבלה בתוך הפרויקט
 
-- **Hook חדש: `src/hooks/useAutoTaskLoader.ts`** -- Hook שמקבל `projectId` ובודק:
-  1. האם לפרויקט יש כבר משימות (אם כן, לא עושה כלום)
-  2. שולף את `type`, `phase`, `municipality_id` של הפרויקט
-  3. שולף תבניות מ-`task_templates` עם סינון: `project_type = type` AND (אם `municipality_id` קיים -- `municipality_id = X`, אחרת fallback ל-`municipality_id IS NULL`) AND `is_active = true`
-  4. מסנן תבניות לפי `licensing_phase_id` -- רק משלבים שהם מהשלב הנוכחי (`phase`) ואילך (לפי סדר ב-`PROJECT_PHASES`)
-  5. מחזיר `{ templates, shouldSuggest, loadTasks() }`
+**שינויים ב-`TaskBoard.tsx`:**
+- הוספת toggle בין תצוגת טבלה (ברירת מחדל) לקנבן
+- תצוגת טבלה: שימוש ב-table component דומה ל-AllProjectsTaskTable (ללא עמודת "פרויקט")
+- תצוגת קנבן: הקוד הקיים (DndContext + columns)
+- הסרת הכרטיס העוטף (Card) -- ישירות תוכן כי כבר בתוך TabsContent
+- עיצוב קומפקטי יותר: header עם title + badge + toggle + "הוסף משימה"
 
-- **קומפוננטה חדשה: `src/components/tasks/AutoTaskSuggestionBanner.tsx`** -- באנר שמוצג כש-`shouldSuggest = true`:
-  - הודעה: "מצאנו X משימות מומלצות לפרויקט מסוג [type] בשלב [phase]"
-  - כפתור "טען משימות" שמפעיל `loadTasks()` (משתמש ב-`useBulkTaskCreation` הקיים)
-  - כפתור "לא עכשיו" שמסתיר את הבאנר
+### 5. AllProjectsTaskTable -- שיפורים
 
-- **`TaskManagementDashboard.tsx`** -- כשנבחר פרויקט ספציפי, נציג את ה-`AutoTaskSuggestionBanner` מעל ה-`ProjectTaskView` (רק אם אין משימות עדיין).
-
-- **`ProjectTaskView.tsx`** -- ה-banner יוצג גם ב-empty state (כשאין משימות) במקום ההודעה הגנרית.
-
-**חשוב:** כרגע אין תבניות בטבלת `task_templates` (היא ריקה). המנגנון ייבנה מוכן אבל יעבוד רק אחרי שהאדמין ימלא תבניות. ה-banner לא יוצג אם אין תבניות מתאימות.
+**שינויים ב-`AllProjectsTaskTable.tsx`:**
+- עמודת "פרויקט" תהיה מוסתרת כש-`onProjectClick` לא מועבר (כשמשתמשים בה בתוך פרויקט ספציפי)
+- Progress bar יותר קומפקטי
 
 ---
 
-### פירוט טכני
+### סיכום קבצים שישתנו
 
-#### קבצים חדשים
-| קובץ | תיאור |
-|-------|--------|
-| `src/hooks/useAutoTaskLoader.ts` | טעינת תבניות מותאמות לפרויקט, סינון לפי שלב, הצעה ליצירה |
-| `src/components/tasks/AutoTaskSuggestionBanner.tsx` | באנר עם הודעה וכפתורי "טען" / "לא עכשיו" |
-
-#### קבצים שישתנו
-| קובץ | שינוי |
-|-------|-------|
-| `AllProjectsTaskTable.tsx` | prop `onTaskClick`, מיון delayed-first, הדגשת שורות באיחור |
-| `ProjectTaskView.tsx` | prop `onTaskClick`, משימות באיחור ראשונות עם גבול אדום, banner |
-| `TaskManagementDashboard.tsx` | state ל-TaskDetailDialog, AutoTaskSuggestionBanner, callback-ים |
-| `useAllProjectsTasks.ts` | שדות נוספים ב-ProjectTaskWithDetails |
+| קובץ | שינוי עיקרי |
+|-------|-------------|
+| `TaskDetailDialog.tsx` | RTL fixes, wider dialog, flex layout with ScrollArea, compact fields, 4 dates in one row |
+| `TaskManagementDashboard.tsx` | Tighter spacing, inline filters, status summary |
+| `ProjectTaskView.tsx` | Default to table, ToggleGroup, tighter spacing |
+| `TaskBoard.tsx` | Add table/kanban toggle, default table, remove Card wrapper |
+| `AllProjectsTaskTable.tsx` | Conditional project column, compact progress |
+| `LicensingTimeline.tsx` | Tighter padding (p-3) |
 
