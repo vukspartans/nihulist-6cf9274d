@@ -39,7 +39,7 @@ export function LicensingTimeline({ mode, projects, selectedProjectId }: Licensi
   }, [mode, projects]);
 
   return (
-    <div className="w-full bg-card border rounded-lg p-4">
+    <div className="w-full bg-card border rounded-lg p-3">
       <div ref={scrollRef} className="overflow-x-auto pb-2">
         <div className="flex items-start gap-0 min-w-max" dir="rtl">
           <TooltipProvider delayDuration={200}>

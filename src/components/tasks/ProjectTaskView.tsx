@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LayoutList, Table as TableIcon, AlertTriangle } from 'lucide-react';
 import { AllProjectsTaskTable } from './AllProjectsTaskTable';
 import { TaskStatusBadge } from './TaskStatusBadge';
@@ -25,7 +25,7 @@ const isDelayed = (task: ProjectTaskWithDetails): boolean => {
 };
 
 export function ProjectTaskView({ tasks, projectId, onTaskClick }: ProjectTaskViewProps) {
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const projectTasks = useMemo(
     () => tasks.filter(t => t.project_id === projectId),
@@ -40,7 +40,6 @@ export function ProjectTaskView({ tasks, projectId, onTaskClick }: ProjectTaskVi
       if (!grouped[phase]) grouped[phase] = [];
       grouped[phase].push(t);
     });
-    // Sort each phase: delayed first
     Object.keys(grouped).forEach(phase => {
       grouped[phase].sort((a, b) => {
         const aD = isDelayed(a);
@@ -75,25 +74,24 @@ export function ProjectTaskView({ tasks, projectId, onTaskClick }: ProjectTaskVi
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-3" dir="rtl">
       {/* View toggle */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={viewMode === 'cards' ? 'default' : 'outline'}
+      <div className="flex items-center">
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(v) => v && setViewMode(v as 'table' | 'cards')}
           size="sm"
-          onClick={() => setViewMode('cards')}
         >
-          <LayoutList className="w-4 h-4 ml-1" />
-          כרטיסיות
-        </Button>
-        <Button
-          variant={viewMode === 'table' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setViewMode('table')}
-        >
-          <TableIcon className="w-4 h-4 ml-1" />
-          טבלה
-        </Button>
+          <ToggleGroupItem value="table" className="gap-1 text-xs px-3">
+            <TableIcon className="w-3.5 h-3.5" />
+            טבלה
+          </ToggleGroupItem>
+          <ToggleGroupItem value="cards" className="gap-1 text-xs px-3">
+            <LayoutList className="w-3.5 h-3.5" />
+            כרטיסיות
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {viewMode === 'table' ? (
@@ -113,7 +111,7 @@ export function ProjectTaskView({ tasks, projectId, onTaskClick }: ProjectTaskVi
 
           {phasesWithTasks.map(phase => (
             <TabsContent key={phase} value={phase}>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
                 {(tasksByPhase[phase] || []).map(task => {
                   const delayed = isDelayed(task);
                   return (
@@ -125,7 +123,7 @@ export function ProjectTaskView({ tasks, projectId, onTaskClick }: ProjectTaskVi
                       )}
                       onClick={() => onTaskClick?.(task.id)}
                     >
-                      <CardContent className="p-4 space-y-2">
+                      <CardContent className="p-3 space-y-1.5">
                         <div className="flex justify-between items-start gap-2">
                           <h4 className="font-medium text-sm leading-tight flex-1">{task.name}</h4>
                           <TaskStatusBadge status={task.status} />
