@@ -4,17 +4,25 @@ import { Badge } from '@/components/ui/badge';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { Progress } from '@/components/ui/progress';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AllProjectsTaskTableProps {
   tasks: ProjectTaskWithDetails[];
   onProjectClick?: (projectId: string) => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
 type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent';
 
-export function AllProjectsTaskTable({ tasks, onProjectClick }: AllProjectsTaskTableProps) {
+const isDelayed = (task: ProjectTaskWithDetails): boolean => {
+  if (task.status === 'delayed') return true;
+  if (task.status === 'completed' || task.status === 'cancelled') return false;
+  if (!task.planned_end_date) return false;
+  return new Date(task.planned_end_date) < new Date(new Date().toDateString());
+};
+
+export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: AllProjectsTaskTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('planned_end_date');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -28,6 +36,12 @@ export function AllProjectsTaskTable({ tasks, onProjectClick }: AllProjectsTaskT
   };
 
   const sorted = [...tasks].sort((a, b) => {
+    // Delayed tasks always first
+    const aDelayed = isDelayed(a);
+    const bDelayed = isDelayed(b);
+    if (aDelayed && !bDelayed) return -1;
+    if (!aDelayed && bDelayed) return 1;
+
     const av = a[sortKey];
     const bv = b[sortKey];
     if (av == null && bv == null) return 0;
@@ -76,40 +90,58 @@ export function AllProjectsTaskTable({ tasks, onProjectClick }: AllProjectsTaskT
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sorted.map(task => (
-            <TableRow key={task.id} className="hover:bg-muted/50">
-              <TableCell className="font-medium max-w-[200px]">
-                <span className="truncate block">{task.name}</span>
-                {task.is_payment_critical && (
-                  <Badge variant="outline" className="text-[10px] mt-0.5 border-orange-400 text-orange-600">קריטי לתשלום</Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <button
-                  className="text-primary hover:underline text-start"
-                  onClick={() => onProjectClick?.(task.project_id)}
-                >
-                  {task.project_name}
-                </button>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm text-muted-foreground">{task.phase || '—'}</span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm">{task.advisor_name || '—'}</span>
-              </TableCell>
-              <TableCell>
-                <TaskStatusBadge status={task.status} />
-              </TableCell>
-              <TableCell className="text-sm whitespace-nowrap">{formatDate(task.planned_end_date)}</TableCell>
-              <TableCell className="w-[120px]">
-                <div className="flex items-center gap-2">
-                  <Progress value={task.progress_percent || 0} className="h-2 flex-1" />
-                  <span className="text-xs text-muted-foreground w-8 text-left">{task.progress_percent || 0}%</span>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {sorted.map(task => {
+            const delayed = isDelayed(task);
+            return (
+              <TableRow key={task.id} className={cn('hover:bg-muted/50', delayed && 'bg-red-50 dark:bg-red-950/20')}>
+                <TableCell className="font-medium max-w-[200px]">
+                  <button
+                    className="text-primary hover:underline text-start truncate block"
+                    onClick={() => onTaskClick?.(task.id)}
+                  >
+                    {task.name}
+                  </button>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {task.is_payment_critical && (
+                      <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-600">קריטי לתשלום</Badge>
+                    )}
+                    {delayed && task.status !== 'delayed' && (
+                      <Badge variant="destructive" className="text-[10px] gap-0.5">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        באיחור
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <button
+                    className="text-primary hover:underline text-start"
+                    onClick={() => onProjectClick?.(task.project_id)}
+                  >
+                    {task.project_name}
+                  </button>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">{task.phase || '—'}</span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm">{task.advisor_name || '—'}</span>
+                </TableCell>
+                <TableCell>
+                  <TaskStatusBadge status={task.status} />
+                </TableCell>
+                <TableCell className={cn('text-sm whitespace-nowrap', delayed && 'text-destructive font-medium')}>
+                  {formatDate(task.planned_end_date)}
+                </TableCell>
+                <TableCell className="w-[120px]">
+                  <div className="flex items-center gap-2">
+                    <Progress value={task.progress_percent || 0} className="h-2 flex-1" />
+                    <span className="text-xs text-muted-foreground w-8 text-left">{task.progress_percent || 0}%</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
