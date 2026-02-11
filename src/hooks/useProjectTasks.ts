@@ -165,9 +165,35 @@ export function useProjectTasks(projectId: string) {
   };
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
+    // Check dependencies before allowing "completed"
+    if (status === 'completed') {
+      const { data: deps } = await supabase
+        .from('task_dependencies')
+        .select(`
+          id,
+          blocking_task:project_tasks!task_dependencies_depends_on_task_id_fkey (
+            id, name, status
+          )
+        `)
+        .eq('task_id', taskId);
+
+      const unfinished = (deps || []).filter(
+        (d: any) => d.blocking_task && d.blocking_task.status !== 'completed' && d.blocking_task.status !== 'cancelled'
+      );
+
+      if (unfinished.length > 0) {
+        const names = unfinished.map((d: any) => d.blocking_task?.name).join(', ');
+        toast({
+          title: "לא ניתן לסמן כ'הושלם'",
+          description: `משימות תלויות שטרם הושלמו: ${names}`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
     const updates: Partial<ProjectTask> = { status };
     
-    // Set actual dates based on status change
     if (status === 'in_progress') {
       const task = tasks.find(t => t.id === taskId);
       if (!task?.actual_start_date) {
