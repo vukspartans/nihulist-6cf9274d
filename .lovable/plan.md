@@ -1,41 +1,58 @@
 
 
-## שיפור דיאלוג פרטי משימה -- RTL, תגובות counter, ועיצוב
+## שיפור קנבן + ויזואליזציה של תלויות ואיחורים
+
+### מצב נוכחי:
+
+**קנבן:**
+- 5 עמודות (ממתין, בביצוע, באיחור, חסום, הושלם) ב-`grid-cols-4` -- כלומר עמודה אחת נדחקת לשורה שניה
+- עמודות ללא רקע -- אין הפרדה ויזואלית ברורה בין עמודות
+- TaskCard מציג: שם, תיאור, סטטוס badge, תאריך, יועץ, progress -- אבל **לא מציג תלויות**
+- אין אינדיקציה ויזואלית לתלויות (למשל אייקון שרשרת או מספר תלויות)
+- הכרטיסים לא RTL-optimized (flex direction)
+
+**טבלה:**
+- מציגה באיחור עם רקע אדום + badge "באיחור" -- עובד טוב
+- **לא מציגה תלויות כלל** -- אין עמודה או אינדיקציה
+- אין אייקון אבן דרך
 
 ### שינויים מתוכננים:
 
-### 1. תגובות Tab -- counter בעיגול + RTL (`TaskDetailDialog.tsx`)
-- הוספת `commentCount` state שיתעדכן מ-`TaskCommentsSection` (דרך callback prop)
-- הצגת מספר תגובות בעיגול ליד לשונית "תגובות": `<span className="bg-primary text-primary-foreground rounded-full text-[10px] w-4 h-4 flex items-center justify-center">{count}</span>`
-- חילוף: שימוש ב-hook `useTaskComments` ישירות ב-dialog כדי לקבל את ה-count
+#### 1. קנבן -- עיצוב sleeker (`TaskBoard.tsx`, `DroppableColumn.tsx`)
+- שינוי grid ל-`lg:grid-cols-5` (5 עמודות בשורה אחת)
+- הוספת רקע עדין לכל עמודה: `bg-muted/20 rounded-xl p-3` למראה מודרני
+- הוספת צבע header לכל עמודה (פס צבעוני עליון) לפי סוג: אפור/כחול/כתום/אדום/ירוק
+- צמצום gap ל-`gap-2` ו-padding פנימי ל-`p-2`
 
-### 2. תגובות -- יישור ימין מלא (`TaskCommentsSection.tsx`)
-- הוספת `flex-row-reverse` על ה-input container (textarea + send button) כדי שכפתור השליחה יהיה בשמאל
-- הוספת `text-right` על comment header (שם + badge + time)
+#### 2. TaskCard -- sleeker + תלויות + RTL (`TaskCard.tsx`)
+- הוספת `dir="rtl"` לכרטיס
+- הוספת אינדיקציית תלויות: אם למשימה יש תלויות לא גמורות, מציג אייקון Link + "X תלויות"
+- לשם כך: הוספת prop `dependencyCount?: number` ו-`hasBlockingDeps?: boolean`
+- עיצוב sleeker: הקטנת padding ל-`p-2.5`, הוספת left-border צבעוני לפי סטטוס, הסרת TaskStatusBadge מהכרטיס (כי העמודה כבר מציינת את הסטטוס)
+- הוספת אייקון Milestone (Flag) אם `is_milestone`
+- שיפור overdue: רקע `bg-red-50` + border שמאלי אדום
 
-### 3. סטטוס + שלב -- יישור ימין (`TaskDetailDialog.tsx`)
-- הוספת `[&>span]:text-right` על SelectTrigger או שימוש ב-`justify-end` כדי שהטקסט הנבחר יהיה מיושר לימין
-- בדיקת SelectValue alignment
+#### 3. טבלה -- תלויות + אבן דרך (`AllProjectsTaskTable.tsx`)
+- הוספת עמודה "תלויות" עם אייקון Link + מספר (או "—" אם אין)
+- הוספת אייקון Flag ליד שם המשימה אם `is_milestone`
+- לשם כך: הרחבת `ProjectTaskWithDetails` עם `dependency_count` ו-`has_blocking_deps`
 
-### 4. תאריכים -- תיקון חיתוך (`TaskDetailDialog.tsx`)
-- שינוי מ-`grid-cols-4` ל-`grid-cols-2` (2 שורות של 2 תאריכים) -- 4 שדות בשורה אחת צר מדי ב-`max-w-2xl`
-- הגדלת ה-input height מ-`h-8` ל-`h-9`
-- הגדלת label מ-`text-[10px]` ל-`text-xs`
-- הסרת `text-right` מ-date inputs (לא רלוונטי ל-type="date") ושמירת `dir="ltr"` בלבד
+#### 4. נתוני תלויות (`TaskBoard.tsx` / `useProjectTasks.ts`)
+- הוספת שאילתה מרוכזת לספור תלויות לכל המשימות בפרויקט (שאילתת count על `task_dependencies`)
+- העברת המידע ל-TaskCard ול-AllProjectsTaskTable
 
-### 5. התקדמות + אבן דרך -- עיצוב משופר (`TaskDetailDialog.tsx`)
-- עטיפה ב-`bg-muted/30 rounded-md p-2.5` (כמו קבוצת התאריכים) ליצירת קבוצה ויזואלית
-- שינוי layout: progress bar ברוחב מלא, אבן דרך checkbox מתחתיו בשורה נפרדת
-- הוספת צבע לאחוז: ירוק מעל 70%, כתום 30-70%, אדום מתחת ל-30%
-
-### 6. שיפורים כלליים (`TaskDetailDialog.tsx`)
-- הוספת separator ויזואלי (border-t או spacing) בין קבוצות שדות
-- שיפור ה-footer: הוספת `border-t` מעל כפתורי השמירה
+#### 5. DroppableColumn -- שיפור ויזואלי (`DroppableColumn.tsx`)
+- הוספת prop `accentColor` לפס צבעוני עליון
+- שיפור ה-empty state עם אייקון קטן
 
 ### סיכום קבצים
 
 | קובץ | שינוי |
 |------|-------|
-| `TaskDetailDialog.tsx` | comment count בלשונית, dates grid-cols-2, progress/milestone visual group, footer border, SelectValue alignment |
-| `TaskCommentsSection.tsx` | export count + flex-row-reverse on input, text-right fixes |
+| `TaskBoard.tsx` | grid-cols-5, fetch dependency counts, pass to cards/table |
+| `DroppableColumn.tsx` | רקע עדין, פס צבעוני, עיצוב מודרני |
+| `TaskCard.tsx` | dir="rtl", dependency indicator, colored left border, sleeker padding, milestone icon |
+| `AllProjectsTaskTable.tsx` | עמודת תלויות, אייקון milestone, dependency data |
+| `useProjectTasks.ts` | הוספת fetch dependency counts per task |
+| `DraggableTaskCard.tsx` | העברת props חדשים (dependencyCount, hasBlockingDeps) |
 
