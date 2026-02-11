@@ -132,10 +132,10 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
             {/* Details Tab */}
             <TabsContent value="details" className="flex-1 min-h-0 mt-0">
               <ScrollArea className="h-full">
-                <form onSubmit={handleSubmit} className="space-y-3 px-5 py-3">
+                <form onSubmit={handleSubmit} className="space-y-2.5 px-5 py-3">
                   {/* Name */}
                   <div className="space-y-1">
-                    <Label htmlFor="edit_name" className="text-xs">שם המשימה *</Label>
+                    <Label htmlFor="edit_name" className="text-xs text-right block">שם המשימה *</Label>
                     <Input
                       id="edit_name"
                       value={formData.name || ''}
@@ -147,20 +147,21 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
 
                   {/* Description */}
                   <div className="space-y-1">
-                    <Label htmlFor="edit_description" className="text-xs">תיאור</Label>
+                    <Label htmlFor="edit_description" className="text-xs text-right block">תיאור</Label>
                     <Textarea
                       id="edit_description"
                       value={formData.description || ''}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={2}
                       className="text-right"
+                      dir="rtl"
                     />
                   </div>
 
                   {/* Status + Phase + Assignment in one row */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">סטטוס</Label>
+                      <Label className="text-xs text-right block">סטטוס</Label>
                       <Select
                         value={formData.status}
                         onValueChange={(val) => handleStatusChange(val as TaskStatus)}
@@ -180,7 +181,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-xs">שלב</Label>
+                      <Label className="text-xs text-right block">שלב</Label>
                       <Select
                         value={formData.phase || 'none'}
                         onValueChange={(val) => setFormData({ ...formData, phase: val === 'none' ? null : val })}
@@ -202,7 +203,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
 
                     {projectAdvisors.length > 0 && (
                       <div className="space-y-1">
-                        <Label className="text-xs">שיוך ליועץ</Label>
+                        <Label className="text-xs text-right block">שיוך ליועץ</Label>
                         <TaskAssignment
                           value={formData.assigned_advisor_id}
                           onChange={(id) => setFormData({ ...formData, assigned_advisor_id: id })}
@@ -213,43 +214,47 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                   </div>
 
                   {/* All 4 dates in one row */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">תאריכים</Label>
+                  <div className="space-y-1 rounded-md bg-muted/30 p-2.5">
+                    <Label className="text-xs text-right block">תאריכים</Label>
                     <div className="grid grid-cols-4 gap-2">
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">תחילה מתוכננת</Label>
+                        <Label className="text-[10px] text-muted-foreground text-right block">תחילה מתוכננת</Label>
                         <Input
                           type="date"
                           value={formData.planned_start_date || ''}
                           onChange={(e) => setFormData({ ...formData, planned_start_date: e.target.value })}
-                          className="text-xs h-8"
+                          className="text-xs h-8 text-right"
+                          dir="ltr"
                         />
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">סיום מתוכנן</Label>
+                        <Label className="text-[10px] text-muted-foreground text-right block">סיום מתוכנן</Label>
                         <Input
                           type="date"
                           value={formData.planned_end_date || ''}
                           onChange={(e) => setFormData({ ...formData, planned_end_date: e.target.value })}
-                          className="text-xs h-8"
+                          className="text-xs h-8 text-right"
+                          dir="ltr"
                         />
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">תחילה בפועל</Label>
+                        <Label className="text-[10px] text-muted-foreground text-right block">תחילה בפועל</Label>
                         <Input
                           type="date"
                           value={formData.actual_start_date || ''}
                           onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
-                          className="text-xs h-8"
+                          className="text-xs h-8 text-right"
+                          dir="ltr"
                         />
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">סיום בפועל</Label>
+                        <Label className="text-[10px] text-muted-foreground text-right block">סיום בפועל</Label>
                         <Input
                           type="date"
                           value={formData.actual_end_date || ''}
                           onChange={(e) => setFormData({ ...formData, actual_end_date: e.target.value })}
-                          className="text-xs h-8"
+                          className="text-xs h-8 text-right"
+                          dir="ltr"
                         />
                       </div>
                     </div>
@@ -259,8 +264,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                   <div className="flex items-end gap-4">
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs">התקדמות</Label>
-                        <span className="text-xs text-muted-foreground">{formData.progress_percent || 0}%</span>
+                        <Label className="text-xs text-right">התקדמות</Label>
+                        <span className="text-xs text-muted-foreground" dir="ltr">{formData.progress_percent || 0}%</span>
                       </div>
                       <div dir="ltr">
                         <Slider
@@ -272,20 +277,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pb-1">
+                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
+                        אבן דרך
+                      </Label>
                       <Checkbox
                         id="edit_is_milestone"
                         checked={formData.is_milestone || false}
                         onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
                       />
-                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
-                        אבן דרך
-                      </Label>
                     </div>
                   </div>
 
                   {/* Dependencies */}
                   <div className="space-y-1">
-                    <Label className="text-xs">תלויות</Label>
+                    <Label className="text-xs text-right block">תלויות</Label>
                     <TaskDependencySelector
                       dependencies={dependencies}
                       availableTasks={allProjectTasks}
@@ -300,7 +305,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                   {/* Block reason (conditional) */}
                   {formData.status === 'blocked' && (
                     <div className="space-y-1">
-                      <Label htmlFor="block_reason" className="text-xs">סיבת החסימה</Label>
+                      <Label htmlFor="block_reason" className="text-xs text-right block">סיבת החסימה</Label>
                       <Textarea
                         id="block_reason"
                         value={formData.block_reason || ''}
@@ -308,24 +313,26 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                         placeholder="מה חוסם את המשימה?"
                         rows={2}
                         className="text-right"
+                        dir="rtl"
                       />
                     </div>
                   )}
 
                   {/* Notes */}
                   <div className="space-y-1">
-                    <Label htmlFor="notes" className="text-xs">הערות</Label>
+                    <Label htmlFor="notes" className="text-xs text-right block">הערות</Label>
                     <Textarea
                       id="notes"
                       value={formData.notes || ''}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={2}
                       className="text-right"
+                      dir="rtl"
                     />
                   </div>
 
                   {/* Footer inside the form */}
-                  <DialogFooter className="flex-row-reverse gap-2 pt-2">
+                  <DialogFooter className="flex gap-2 pt-2 justify-start">
                     <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
                       {isSubmitting ? 'שומר...' : 'שמור שינויים'}
                     </Button>

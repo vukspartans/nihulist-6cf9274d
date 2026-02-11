@@ -13,11 +13,12 @@ export function TaskAssignment({ value, onChange, projectAdvisors, placeholder =
     <Select 
       value={value || 'unassigned'} 
       onValueChange={(val) => onChange(val === 'unassigned' ? null : val)}
+      dir="rtl"
     >
-      <SelectTrigger>
+      <SelectTrigger className="text-right">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent dir="rtl">
         <SelectItem value="unassigned">לא משויך</SelectItem>
         {projectAdvisors.map((advisor) => (
           <SelectItem key={advisor.advisor_id} value={advisor.advisor_id}>
