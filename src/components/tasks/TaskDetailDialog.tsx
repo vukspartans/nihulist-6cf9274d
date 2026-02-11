@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { TaskAssignment } from './TaskAssignment';
 import { TaskStatusBadge } from './TaskStatusBadge';
@@ -104,228 +105,245 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl !h-[85vh] flex flex-col p-0" dir="rtl">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
             <div className="flex items-center gap-2">
               <DialogTitle>פרטי משימה</DialogTitle>
               <TaskStatusBadge status={task.status} />
             </div>
           </DialogHeader>
 
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="details" className="gap-1.5">
+          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full grid grid-cols-3 mx-5 mt-1" style={{ width: 'calc(100% - 40px)' }}>
+              <TabsTrigger value="details" className="gap-1.5 text-xs">
                 <Settings className="h-3.5 w-3.5" />
                 פרטים
               </TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5">
+              <TabsTrigger value="files" className="gap-1.5 text-xs">
                 <FileText className="h-3.5 w-3.5" />
                 קבצים
               </TabsTrigger>
-              <TabsTrigger value="comments" className="gap-1.5">
+              <TabsTrigger value="comments" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" />
                 תגובות
               </TabsTrigger>
             </TabsList>
 
             {/* Details Tab */}
-            <TabsContent value="details">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_name">שם המשימה *</Label>
-                  <Input
-                    id="edit_name"
-                    value={formData.name || ''}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit_description">תיאור</Label>
-                  <Textarea
-                    id="edit_description"
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>סטטוס</Label>
-                    <Select 
-                      value={formData.status} 
-                      onValueChange={(val) => handleStatusChange(val as TaskStatus)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>שלב בפרויקט</Label>
-                    <Select 
-                      value={formData.phase || 'none'} 
-                      onValueChange={(val) => setFormData({ ...formData, phase: val === 'none' ? null : val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר שלב" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">ללא שלב</SelectItem>
-                        {PROJECT_PHASES.map((phase) => (
-                          <SelectItem key={phase} value={phase}>
-                            {phase}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>תאריכים מתוכננים</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">התחלה</Label>
-                      <Input
-                        type="date"
-                        value={formData.planned_start_date || ''}
-                        onChange={(e) => setFormData({ ...formData, planned_start_date: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">סיום</Label>
-                      <Input
-                        type="date"
-                        value={formData.planned_end_date || ''}
-                        onChange={(e) => setFormData({ ...formData, planned_end_date: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>תאריכים בפועל</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">התחלה</Label>
-                      <Input
-                        type="date"
-                        value={formData.actual_start_date || ''}
-                        onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">סיום</Label>
-                      <Input
-                        type="date"
-                        value={formData.actual_end_date || ''}
-                        onChange={(e) => setFormData({ ...formData, actual_end_date: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {projectAdvisors.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>שיוך ליועץ</Label>
-                    <TaskAssignment
-                      value={formData.assigned_advisor_id}
-                      onChange={(id) => setFormData({ ...formData, assigned_advisor_id: id })}
-                      projectAdvisors={projectAdvisors}
+            <TabsContent value="details" className="flex-1 min-h-0 mt-0">
+              <ScrollArea className="h-full">
+                <form onSubmit={handleSubmit} className="space-y-3 px-5 py-3">
+                  {/* Name */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_name" className="text-xs">שם המשימה *</Label>
+                    <Input
+                      id="edit_name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="text-right"
                     />
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>התקדמות</Label>
-                    <span className="text-sm text-muted-foreground">{formData.progress_percent || 0}%</span>
-                  </div>
-                  <Slider
-                    value={[formData.progress_percent || 0]}
-                    onValueChange={([val]) => setFormData({ ...formData, progress_percent: val })}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="edit_is_milestone"
-                    checked={formData.is_milestone || false}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
-                  />
-                  <Label htmlFor="edit_is_milestone" className="cursor-pointer">
-                    אבן דרך
-                  </Label>
-                </div>
-
-                {/* Task Dependencies */}
-                <div className="space-y-2">
-                  <Label>תלויות (משימות שחייבות להסתיים לפני)</Label>
-                  <TaskDependencySelector
-                    dependencies={dependencies}
-                    availableTasks={allProjectTasks}
-                    currentTaskId={task.id}
-                    onAdd={addDependency}
-                    onRemove={removeDependency}
-                    loading={depsLoading}
-                    hasUnfinishedDependencies={hasUnfinishedDependencies}
-                  />
-                </div>
-
-                {formData.status === 'blocked' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="block_reason">סיבת החסימה</Label>
+                  {/* Description */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_description" className="text-xs">תיאור</Label>
                     <Textarea
-                      id="block_reason"
-                      value={formData.block_reason || ''}
-                      onChange={(e) => setFormData({ ...formData, block_reason: e.target.value })}
-                      placeholder="מה חוסם את המשימה?"
+                      id="edit_description"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={2}
+                      className="text-right"
                     />
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">הערות</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                  />
-                </div>
+                  {/* Status + Phase + Assignment in one row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">סטטוס</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(val) => handleStatusChange(val as TaskStatus)}
+                        dir="rtl"
+                      >
+                        <SelectTrigger className="text-right">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          {STATUS_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    ביטול
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
-                    {isSubmitting ? 'שומר...' : 'שמור שינויים'}
-                  </Button>
-                </DialogFooter>
-              </form>
+                    <div className="space-y-1">
+                      <Label className="text-xs">שלב</Label>
+                      <Select
+                        value={formData.phase || 'none'}
+                        onValueChange={(val) => setFormData({ ...formData, phase: val === 'none' ? null : val })}
+                        dir="rtl"
+                      >
+                        <SelectTrigger className="text-right">
+                          <SelectValue placeholder="בחר שלב" />
+                        </SelectTrigger>
+                        <SelectContent dir="rtl">
+                          <SelectItem value="none">ללא שלב</SelectItem>
+                          {PROJECT_PHASES.map((phase) => (
+                            <SelectItem key={phase} value={phase}>
+                              {phase}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {projectAdvisors.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">שיוך ליועץ</Label>
+                        <TaskAssignment
+                          value={formData.assigned_advisor_id}
+                          onChange={(id) => setFormData({ ...formData, assigned_advisor_id: id })}
+                          projectAdvisors={projectAdvisors}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* All 4 dates in one row */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">תאריכים</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">תחילה מתוכננת</Label>
+                        <Input
+                          type="date"
+                          value={formData.planned_start_date || ''}
+                          onChange={(e) => setFormData({ ...formData, planned_start_date: e.target.value })}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">סיום מתוכנן</Label>
+                        <Input
+                          type="date"
+                          value={formData.planned_end_date || ''}
+                          onChange={(e) => setFormData({ ...formData, planned_end_date: e.target.value })}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">תחילה בפועל</Label>
+                        <Input
+                          type="date"
+                          value={formData.actual_start_date || ''}
+                          onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">סיום בפועל</Label>
+                        <Input
+                          type="date"
+                          value={formData.actual_end_date || ''}
+                          onChange={(e) => setFormData({ ...formData, actual_end_date: e.target.value })}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress + Milestone in one row */}
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">התקדמות</Label>
+                        <span className="text-xs text-muted-foreground">{formData.progress_percent || 0}%</span>
+                      </div>
+                      <div dir="ltr">
+                        <Slider
+                          value={[formData.progress_percent || 0]}
+                          onValueChange={([val]) => setFormData({ ...formData, progress_percent: val })}
+                          max={100}
+                          step={5}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pb-1">
+                      <Checkbox
+                        id="edit_is_milestone"
+                        checked={formData.is_milestone || false}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
+                      />
+                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
+                        אבן דרך
+                      </Label>
+                    </div>
+                  </div>
+
+                  {/* Dependencies */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">תלויות</Label>
+                    <TaskDependencySelector
+                      dependencies={dependencies}
+                      availableTasks={allProjectTasks}
+                      currentTaskId={task.id}
+                      onAdd={addDependency}
+                      onRemove={removeDependency}
+                      loading={depsLoading}
+                      hasUnfinishedDependencies={hasUnfinishedDependencies}
+                    />
+                  </div>
+
+                  {/* Block reason (conditional) */}
+                  {formData.status === 'blocked' && (
+                    <div className="space-y-1">
+                      <Label htmlFor="block_reason" className="text-xs">סיבת החסימה</Label>
+                      <Textarea
+                        id="block_reason"
+                        value={formData.block_reason || ''}
+                        onChange={(e) => setFormData({ ...formData, block_reason: e.target.value })}
+                        placeholder="מה חוסם את המשימה?"
+                        rows={2}
+                        className="text-right"
+                      />
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="space-y-1">
+                    <Label htmlFor="notes" className="text-xs">הערות</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes || ''}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={2}
+                      className="text-right"
+                    />
+                  </div>
+
+                  {/* Footer inside the form */}
+                  <DialogFooter className="flex-row-reverse gap-2 pt-2">
+                    <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
+                      {isSubmitting ? 'שומר...' : 'שמור שינויים'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                      ביטול
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </ScrollArea>
             </TabsContent>
 
             {/* Files Tab */}
-            <TabsContent value="files">
+            <TabsContent value="files" className="flex-1 min-h-0 px-5 py-3">
               <TaskFilesSection taskId={task.id} />
             </TabsContent>
 
             {/* Comments Tab */}
-            <TabsContent value="comments">
+            <TabsContent value="comments" className="flex-1 min-h-0 px-5 py-3">
               <TaskCommentsSection taskId={task.id} />
             </TabsContent>
           </Tabs>

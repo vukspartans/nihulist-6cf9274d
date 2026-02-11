@@ -25,6 +25,7 @@ const isDelayed = (task: ProjectTaskWithDetails): boolean => {
 export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: AllProjectsTaskTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('planned_end_date');
   const [sortAsc, setSortAsc] = useState(true);
+  const showProjectColumn = !!onProjectClick;
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -36,7 +37,6 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
   };
 
   const sorted = [...tasks].sort((a, b) => {
-    // Delayed tasks always first
     const aDelayed = isDelayed(a);
     const bDelayed = isDelayed(b);
     if (aDelayed && !bDelayed) return -1;
@@ -81,12 +81,14 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
         <TableHeader>
           <TableRow>
             <TableHead><SortHeader label="משימה" sortKeyName="name" /></TableHead>
-            <TableHead><SortHeader label="פרויקט" sortKeyName="project_name" /></TableHead>
+            {showProjectColumn && (
+              <TableHead><SortHeader label="פרויקט" sortKeyName="project_name" /></TableHead>
+            )}
             <TableHead><SortHeader label="שלב" sortKeyName="phase" /></TableHead>
-            <TableHead>יועץ אחראי</TableHead>
+            <TableHead>יועץ</TableHead>
             <TableHead><SortHeader label="סטטוס" sortKeyName="status" /></TableHead>
-            <TableHead><SortHeader label="תאריך יעד" sortKeyName="planned_end_date" /></TableHead>
-            <TableHead><SortHeader label="התקדמות" sortKeyName="progress_percent" /></TableHead>
+            <TableHead><SortHeader label="יעד" sortKeyName="planned_end_date" /></TableHead>
+            <TableHead className="w-[100px]"><SortHeader label="%" sortKeyName="progress_percent" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -94,7 +96,7 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
             const delayed = isDelayed(task);
             return (
               <TableRow key={task.id} className={cn('hover:bg-muted/50', delayed && 'bg-red-50 dark:bg-red-950/20')}>
-                <TableCell className="font-medium max-w-[200px]">
+                <TableCell className="font-medium max-w-[200px] py-2">
                   <button
                     className="text-primary hover:underline text-start truncate block"
                     onClick={() => onTaskClick?.(task.id)}
@@ -103,7 +105,7 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
                   </button>
                   <div className="flex items-center gap-1 mt-0.5">
                     {task.is_payment_critical && (
-                      <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-600">קריטי לתשלום</Badge>
+                      <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-600">קריטי</Badge>
                     )}
                     {delayed && task.status !== 'delayed' && (
                       <Badge variant="destructive" className="text-[10px] gap-0.5">
@@ -113,30 +115,32 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick }: All
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <button
-                    className="text-primary hover:underline text-start"
-                    onClick={() => onProjectClick?.(task.project_id)}
-                  >
-                    {task.project_name}
-                  </button>
+                {showProjectColumn && (
+                  <TableCell className="py-2">
+                    <button
+                      className="text-primary hover:underline text-start"
+                      onClick={() => onProjectClick?.(task.project_id)}
+                    >
+                      {task.project_name}
+                    </button>
+                  </TableCell>
+                )}
+                <TableCell className="py-2">
+                  <span className="text-xs text-muted-foreground">{task.phase || '—'}</span>
                 </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{task.phase || '—'}</span>
+                <TableCell className="py-2">
+                  <span className="text-xs">{task.advisor_name || '—'}</span>
                 </TableCell>
-                <TableCell>
-                  <span className="text-sm">{task.advisor_name || '—'}</span>
-                </TableCell>
-                <TableCell>
+                <TableCell className="py-2">
                   <TaskStatusBadge status={task.status} />
                 </TableCell>
-                <TableCell className={cn('text-sm whitespace-nowrap', delayed && 'text-destructive font-medium')}>
+                <TableCell className={cn('text-xs whitespace-nowrap py-2', delayed && 'text-destructive font-medium')}>
                   {formatDate(task.planned_end_date)}
                 </TableCell>
-                <TableCell className="w-[120px]">
-                  <div className="flex items-center gap-2">
-                    <Progress value={task.progress_percent || 0} className="h-2 flex-1" />
-                    <span className="text-xs text-muted-foreground w-8 text-left">{task.progress_percent || 0}%</span>
+                <TableCell className="w-[100px] py-2">
+                  <div className="flex items-center gap-1.5">
+                    <Progress value={task.progress_percent || 0} className="h-1.5 flex-1" />
+                    <span className="text-[10px] text-muted-foreground w-7 text-left">{task.progress_percent || 0}%</span>
                   </div>
                 </TableCell>
               </TableRow>

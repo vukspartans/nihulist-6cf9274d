@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,7 @@ import { AutoTaskSuggestionBanner } from './AutoTaskSuggestionBanner';
 import { useAllProjectsTasks } from '@/hooks/useAllProjectsTasks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Clock, PlayCircle, AlertTriangle, CheckCircle, Ban } from 'lucide-react';
 import type { ProjectTask, ProjectAdvisorOption } from '@/types/task';
 
 export function TaskManagementDashboard() {
@@ -33,12 +34,10 @@ export function TaskManagementDashboard() {
 
   const mode = selectedProjectId ? 'single' : 'all';
 
-  // Find the full task object for the dialog
   const selectedTask: ProjectTask | null = selectedTaskId
     ? (allTasks.find(t => t.id === selectedTaskId) as unknown as ProjectTask) || null
     : null;
 
-  // Load project advisors when a task is selected
   useEffect(() => {
     if (!selectedTask) return;
     const loadAdvisors = async () => {
@@ -85,7 +84,6 @@ export function TaskManagementDashboard() {
     setFilters(f => ({ ...f, projectId: pid }));
   };
 
-  // Check if current project has tasks (for auto-load banner)
   const currentProjectHasTasks = selectedProjectId
     ? allTasks.some(t => t.project_id === selectedProjectId)
     : true;
@@ -94,33 +92,52 @@ export function TaskManagementDashboard() {
     ? projects.find(p => p.id === selectedProjectId)
     : null;
 
+  // Status summary counts
+  const statusCounts = useMemo(() => {
+    const source = selectedProjectId ? tasks : allTasks;
+    return {
+      pending: source.filter(t => t.status === 'pending').length,
+      in_progress: source.filter(t => t.status === 'in_progress').length,
+      delayed: source.filter(t => t.status === 'delayed').length,
+      blocked: source.filter(t => t.status === 'blocked').length,
+      completed: source.filter(t => t.status === 'completed').length,
+    };
+  }, [tasks, allTasks, selectedProjectId]);
+
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-20 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  // All project task ids for dependency selector
   const allProjectTasksForDialog = selectedTask
     ? allTasks
         .filter(t => t.project_id === selectedTask.project_id && t.id !== selectedTask.id)
         .map(t => ({ id: t.id, name: t.name, status: t.status }))
     : [];
 
+  const statusItems = [
+    { key: 'pending', label: 'ממתין', count: statusCounts.pending, icon: Clock, color: 'text-muted-foreground' },
+    { key: 'in_progress', label: 'בביצוע', count: statusCounts.in_progress, icon: PlayCircle, color: 'text-primary' },
+    { key: 'delayed', label: 'באיחור', count: statusCounts.delayed, icon: AlertTriangle, color: 'text-orange-500' },
+    { key: 'blocked', label: 'חסום', count: statusCounts.blocked, icon: Ban, color: 'text-destructive' },
+    { key: 'completed', label: 'הושלם', count: statusCounts.completed, icon: CheckCircle, color: 'text-green-600' },
+  ];
+
   return (
-    <div className="space-y-6" dir="rtl">
-      {/* Project selector + open tasks count */}
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-3" dir="rtl">
+      {/* Project selector + filters inline */}
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           value={selectedProjectId || 'all'}
           onValueChange={handleProjectSelect}
           dir="rtl"
         >
-          <SelectTrigger className="w-[240px] text-right">
+          <SelectTrigger className="w-[220px] text-right h-9">
             <SelectValue placeholder="כלל הפרויקטים" />
           </SelectTrigger>
           <SelectContent dir="rtl">
@@ -131,9 +148,31 @@ export function TaskManagementDashboard() {
           </SelectContent>
         </Select>
 
-        <Badge variant="secondary" className="text-sm">
+        <Badge variant="secondary" className="text-xs h-7">
           {openTasksCount} משימות פתוחות
         </Badge>
+
+        <div className="flex-1" />
+
+        <TaskFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          advisorOptions={advisorOptions}
+        />
+      </div>
+
+      {/* Status summary row */}
+      <div className="flex flex-wrap gap-2">
+        {statusItems.map(item => (
+          <div
+            key={item.key}
+            className="flex items-center gap-1.5 bg-card border rounded-md px-2.5 py-1.5 text-xs"
+          >
+            <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
+            <span className="text-muted-foreground">{item.label}</span>
+            <span className="font-semibold">{item.count}</span>
+          </div>
+        ))}
       </div>
 
       {/* Timeline */}
@@ -152,13 +191,6 @@ export function TaskManagementDashboard() {
           onTasksCreated={refetch}
         />
       )}
-
-      {/* Filters */}
-      <TaskFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        advisorOptions={advisorOptions}
-      />
 
       {/* Content */}
       {mode === 'all' ? (
