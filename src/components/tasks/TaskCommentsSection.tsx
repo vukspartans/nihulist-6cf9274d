@@ -39,7 +39,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-4" dir="rtl">
       {/* Comments list */}
       <div className="flex-1 space-y-3 max-h-[40vh] overflow-y-auto">
         {comments.length === 0 ? (
@@ -53,7 +53,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
             return (
               <div
                 key={comment.id}
-                className={`flex ${isOwn ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
               >
                 <div
                   className={`max-w-[80%] rounded-lg p-3 ${
@@ -67,7 +67,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {comment.author_role === 'advisor' ? 'יועץ' : 'יזם'}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground mr-auto">
+                    <span className="text-[10px] text-muted-foreground ml-auto">
                       {format(new Date(comment.created_at), 'dd/MM HH:mm', { locale: he })}
                     </span>
                     {isOwn && (
@@ -81,7 +81,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
                       </Button>
                     )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                  <p className="text-sm whitespace-pre-wrap text-right">{comment.content}</p>
                 </div>
               </div>
             );
@@ -97,7 +97,8 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
           onKeyDown={handleKeyDown}
           placeholder="כתוב תגובה..."
           rows={2}
-          className="min-h-[60px] resize-none"
+          className="min-h-[60px] resize-none text-right"
+          dir="rtl"
         />
         <Button
           size="icon"
