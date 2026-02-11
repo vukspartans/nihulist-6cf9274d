@@ -20,6 +20,9 @@ import { useOrganization } from "@/hooks/useOrganization";
 import BackToTop from '@/components/BackToTop';
 import { useIsMobile } from "@/hooks/use-mobile";
 import LegalFooter from "@/components/LegalFooter";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TaskManagementDashboard } from "@/components/tasks/TaskManagementDashboard";
+import { ClipboardList, FolderOpen } from "lucide-react";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -359,7 +362,7 @@ const Dashboard = () => {
 
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">לוח הבקרה</h1>
             <p className="text-lg text-muted-foreground">ניהול פרויקטים ובחירת ספקים</p>
@@ -369,258 +372,110 @@ const Dashboard = () => {
         {/* Dashboard Stats */}
         <DashboardStats />
 
-        {/* Filters */}
-        <div className="mb-6">
-          <ProjectFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={phaseFilter}
-            onStatusFilterChange={setPhaseFilter}
-            sortBy={sortBy}
-            onSortByChange={setSortBy}
-            sortOrder={sortOrder}
-            onSortOrderChange={setSortOrder}
-            activeFiltersCount={activeFiltersCount}
-            onClearFilters={handleClearFilters}
-          />
-        </div>
+        {/* Main Tabs */}
+        <Tabs defaultValue="tasks" dir="rtl" className="mt-6">
+          <TabsList className="mb-4">
+            <TabsTrigger value="tasks" className="gap-1.5">
+              <ClipboardList className="w-4 h-4" />
+              ניהול משימות
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="gap-1.5">
+              <FolderOpen className="w-4 h-4" />
+              הפרויקטים שלי
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Projects Display */}
-        {filteredProjects.length === 0 ? (
-          <Card className="text-center py-8 md:py-12">
-            <CardContent>
-              <div className="w-16 h-16 md:w-24 md:h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 md:w-12 md:h-12 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg md:text-xl font-semibold mb-2">אין פרויקטים</h3>
-              <p className="text-sm md:text-base text-muted-foreground mb-6">
-                {searchTerm ? "לא נמצאו פרויקטים התואמים לחיפוש" : "התחל ביצירת הפרויקט הראשון שלך"}
-              </p>
-              {!searchTerm && (
-                <Button
-                  onClick={() => navigate("/projects/new")}
-                  variant="tech"
-                  size={isMobile ? "sm" : "default"}
-                >
-                  <Plus className="w-4 h-4 ml-2" />
-                  צור פרויקט חדש
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* Mobile Card Layout */}
-            {isMobile ? (
-              <div className="space-y-3">
-                <div className="text-sm text-muted-foreground mb-2">
-                  {filteredProjects.length} פרויקטים
-                </div>
-                {filteredProjects.map((project) => (
-                  <Card 
-                    key={project.id} 
-                    onClick={() => handleProjectClick(project.id)}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  >
-                    <CardContent className="p-4">
-                      {/* Header: Name + Actions */}
-                      <div className="flex justify-between items-start gap-2 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-base truncate">{project.name}</h3>
-                          <Badge 
-                            variant="outline" 
-                            className={`${getPhaseStatusColor(project.phase)} text-white border-0 mt-1 text-xs`}
-                          >
-                            {project.phase || "לא צוין"}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* New proposals badge */}
-                          {(unseenProposalCounts[project.id] || 0) > 0 && (
-                            <div 
-                              className="relative animate-pulse"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/projects/${project.id}?tab=received`);
-                              }}
-                            >
-                              <FileText className="w-5 h-5 text-primary" />
-                              <Badge 
-                                variant="destructive"
-                                className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1.5 text-[11px] flex items-center justify-center animate-bounce"
-                              >
-                                {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
-                              </Badge>
-                            </div>
-                          )}
-                          {/* Actions dropdown */}
-                          <DropdownMenu dir="rtl">
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="text-right">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditProject(project.id);
-                              }}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                עריכה
-                              </DropdownMenuItem>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    onSelect={(e) => e.preventDefault()}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    מחק
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent dir="rtl">
-                                  <AlertDialogHeader className="text-right">
-                                    <AlertDialogTitle className="text-right">האם אתה בטוח?</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-right">
-                                      פעולה זו תמחק את הפרויקט "{project.name}" ולא ניתן לבטל אותה.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter className="gap-2 sm:gap-2">
-                                    <AlertDialogAction
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteProject(project.id);
-                                      }}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      מחק
-                                    </AlertDialogAction>
-                                    <AlertDialogCancel>ביטול</AlertDialogCancel>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                      
-                      {/* Info Grid */}
-                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{project.location || "לא צוין"}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{formatBudget(project.budget)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 shrink-0" />
-                          <span>{formatDate(project.created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          <span className="truncate">{project.type || "לא צוין"}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              /* Desktop Table Layout */
-              <Card>
-                <CardHeader>
-                  <CardTitle>הפרויקטים שלי</CardTitle>
-                  <CardDescription>
-                    {filteredProjects.length} פרויקטים
-                  </CardDescription>
-                </CardHeader>
+          <TabsContent value="tasks">
+            <TaskManagementDashboard />
+          </TabsContent>
+
+          <TabsContent value="projects">
+            {/* Filters */}
+            <div className="mb-6">
+              <ProjectFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                statusFilter={phaseFilter}
+                onStatusFilterChange={setPhaseFilter}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortOrder={sortOrder}
+                onSortOrderChange={setSortOrder}
+                activeFiltersCount={activeFiltersCount}
+                onClearFilters={handleClearFilters}
+              />
+            </div>
+
+            {/* Projects Display */}
+            {filteredProjects.length === 0 ? (
+              <Card className="text-center py-8 md:py-12">
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>שם הפרויקט</TableHead>
-                          <TableHead>שלב</TableHead>
-                          <TableHead>סוג</TableHead>
-                          <TableHead>מיקום</TableHead>
-                          <TableHead>תקציב פרויקט</TableHead>
-                          <TableHead>תקציב יועצים</TableHead>
-                          <TableHead>תאריך יצירה</TableHead>
-                          <TableHead>הצעות חדשות</TableHead>
-                          <TableHead>פעולות</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProjects.map((project) => (
-                          <TableRow 
-                            key={project.id}
-                            onClick={() => handleProjectClick(project.id)}
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          >
-                            <TableCell className="font-medium">
-                              <button
-                                onClick={() => handleProjectClick(project.id)}
-                                className="text-right hover:text-primary transition-colors cursor-pointer text-start"
-                              >
-                                {project.name}
-                              </button>
-                            </TableCell>
-                            <TableCell>
+                  <div className="w-16 h-16 md:w-24 md:h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Plus className="w-8 h-8 md:w-12 md:h-12 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-semibold mb-2">אין פרויקטים</h3>
+                  <p className="text-sm md:text-base text-muted-foreground mb-6">
+                    {searchTerm ? "לא נמצאו פרויקטים התואמים לחיפוש" : "התחל ביצירת הפרויקט הראשון שלך"}
+                  </p>
+                  {!searchTerm && (
+                    <Button
+                      onClick={() => navigate("/projects/new")}
+                      variant="tech"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <Plus className="w-4 h-4 ml-2" />
+                      צור פרויקט חדש
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Mobile Card Layout */}
+                {isMobile ? (
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      {filteredProjects.length} פרויקטים
+                    </div>
+                    {filteredProjects.map((project) => (
+                      <Card 
+                        key={project.id} 
+                        onClick={() => handleProjectClick(project.id)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <CardContent className="p-4">
+                          {/* Header: Name + Actions */}
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base truncate">{project.name}</h3>
                               <Badge 
                                 variant="outline" 
-                                className={`${getPhaseStatusColor(project.phase)} text-white border-0`}
+                                className={`${getPhaseStatusColor(project.phase)} text-white border-0 mt-1 text-xs`}
                               >
                                 {project.phase || "לא צוין"}
                               </Badge>
-                            </TableCell>
-                            <TableCell>{project.type || "לא צוין"}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <MapPin className="w-4 h-4 ml-1 text-muted-foreground" />
-                                {project.location || "לא צוין"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
-                                {formatBudget(project.budget)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
-                                {formatBudget(project.advisors_budget)}
-                              </div>
-                            </TableCell>
-                            <TableCell>{formatDate(project.created_at)}</TableCell>
-                            <TableCell 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const count = unseenProposalCounts[project.id] || 0;
-                                if (count > 0) {
-                                  navigate(`/projects/${project.id}?tab=received`);
-                                }
-                              }}
-                            >
+                            </div>
+                            <div className="flex items-center gap-2">
                               {(unseenProposalCounts[project.id] || 0) > 0 && (
-                                <div className="flex items-center justify-center cursor-pointer">
-                                  <div className="relative">
-                                    <FileText className="w-5 h-5 text-primary" />
-                                    <Badge 
-                                      variant="destructive"
-                                      className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1 text-xs flex items-center justify-center"
-                                    >
-                                      {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
-                                    </Badge>
-                                  </div>
+                                <div 
+                                  className="relative animate-pulse"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/projects/${project.id}?tab=received`);
+                                  }}
+                                >
+                                  <FileText className="w-5 h-5 text-primary" />
+                                  <Badge 
+                                    variant="destructive"
+                                    className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1.5 text-[11px] flex items-center justify-center animate-bounce"
+                                  >
+                                    {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
+                                  </Badge>
                                 </div>
                               )}
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <DropdownMenu dir="rtl">
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                     <MoreVertical className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -665,17 +520,183 @@ const Dashboard = () => {
                                   </AlertDialog>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </div>
+                          </div>
+                          
+                          {/* Info Grid */}
+                          <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">{project.location || "לא צוין"}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Coins className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">{formatBudget(project.budget)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 shrink-0" />
+                              <span>{formatDate(project.created_at)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs">
+                              <span className="truncate">{project.type || "לא צוין"}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  /* Desktop Table Layout */
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>הפרויקטים שלי</CardTitle>
+                      <CardDescription>
+                        {filteredProjects.length} פרויקטים
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>שם הפרויקט</TableHead>
+                              <TableHead>שלב</TableHead>
+                              <TableHead>סוג</TableHead>
+                              <TableHead>מיקום</TableHead>
+                              <TableHead>תקציב פרויקט</TableHead>
+                              <TableHead>תקציב יועצים</TableHead>
+                              <TableHead>תאריך יצירה</TableHead>
+                              <TableHead>הצעות חדשות</TableHead>
+                              <TableHead>פעולות</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredProjects.map((project) => (
+                              <TableRow 
+                                key={project.id}
+                                onClick={() => handleProjectClick(project.id)}
+                                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                              >
+                                <TableCell className="font-medium">
+                                  <button
+                                    onClick={() => handleProjectClick(project.id)}
+                                    className="text-right hover:text-primary transition-colors cursor-pointer text-start"
+                                  >
+                                    {project.name}
+                                  </button>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`${getPhaseStatusColor(project.phase)} text-white border-0`}
+                                  >
+                                    {project.phase || "לא צוין"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{project.type || "לא צוין"}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <MapPin className="w-4 h-4 ml-1 text-muted-foreground" />
+                                    {project.location || "לא צוין"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
+                                    {formatBudget(project.budget)}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <Coins className="w-4 h-4 ml-1 text-muted-foreground" />
+                                    {formatBudget(project.advisors_budget)}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{formatDate(project.created_at)}</TableCell>
+                                <TableCell 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const count = unseenProposalCounts[project.id] || 0;
+                                    if (count > 0) {
+                                      navigate(`/projects/${project.id}?tab=received`);
+                                    }
+                                  }}
+                                >
+                                  {(unseenProposalCounts[project.id] || 0) > 0 && (
+                                    <div className="flex items-center justify-center cursor-pointer">
+                                      <div className="relative">
+                                        <FileText className="w-5 h-5 text-primary" />
+                                        <Badge 
+                                          variant="destructive"
+                                          className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1 text-xs flex items-center justify-center"
+                                        >
+                                          {unseenProposalCounts[project.id] > 99 ? '99+' : unseenProposalCounts[project.id]}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenu dir="rtl">
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="text-right">
+                                      <DropdownMenuItem onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditProject(project.id);
+                                      }}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        עריכה
+                                      </DropdownMenuItem>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            className="text-destructive focus:text-destructive"
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            מחק
+                                          </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent dir="rtl">
+                                          <AlertDialogHeader className="text-right">
+                                            <AlertDialogTitle className="text-right">האם אתה בטוח?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-right">
+                                              פעולה זו תמחק את הפרויקט "{project.name}" ולא ניתן לבטל אותה.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter className="gap-2 sm:gap-2">
+                                            <AlertDialogAction
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteProject(project.id);
+                                              }}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              מחק
+                                            </AlertDialogAction>
+                                            <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
       <LegalFooter />
       <BackToTop />

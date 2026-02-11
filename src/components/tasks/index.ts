@@ -6,3 +6,8 @@ export { CreateTaskDialog } from './CreateTaskDialog';
 export { TaskDetailDialog } from './TaskDetailDialog';
 export { DraggableTaskCard } from './DraggableTaskCard';
 export { DroppableColumn } from './DroppableColumn';
+export { LicensingTimeline } from './LicensingTimeline';
+export { TaskManagementDashboard } from './TaskManagementDashboard';
+export { AllProjectsTaskTable } from './AllProjectsTaskTable';
+export { ProjectTaskView } from './ProjectTaskView';
+export { TaskFilters } from './TaskFilters';
