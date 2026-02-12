@@ -1,93 +1,160 @@
 
+## 🚨 PRODUCTION DEPLOYMENT SANITY CHECK REPORT
 
-## ניתוח פערים -- מה בוצע ומה עדיין חסר
+### ⚠️ CRITICAL ISSUES (Must Fix Before Deploy)
 
-### סיכום מהיר
+#### 1. **"Failed to Fetch" Network Errors** (SEVERITY: HIGH)
+**Issue:** Console logs show repeated `TypeError: Failed to fetch` errors during previous sessions. This indicates:
+- CORS issues with edge functions or external APIs
+- Network connectivity problems in preview environment
+- Possible fetch timeouts or unhandled promise rejections
 
-| סעיף | דרישה | סטטוס |
-|-------|--------|--------|
-| 3.1 | הגדרת משימה (שדות בסיסיים) | Done (רוב השדות) |
-| 3.1 | שיוך אוטומטי למיילים | Not done |
-| 3.2 | תבניות משימות + auto-load | Done |
-| 3.2 | התאמה אישית (זכירת שינויים של יזם) | Not done |
-| 3.2 | קישור אוטומטי ליועצים לפי תבנית | Partial |
-| 3.3 | בקרת עריכה -- יזם: שליטה מלאה | Done |
-| 3.3 | בקרת עריכה -- יועץ: אישור יזם לפני שמירה | Not done |
-| 3.3 | התראה למחיקת משימה קריטית | Not done |
-| 4.1 | סינון כלל הפרויקטים / פרויקט מסוים | Done |
-| 4.2 | תצוגת כלל הפרויקטים -- ציר זמן + טבלה | Done |
-| 4.3 | תצוגת פר-פרויקט -- טבלה + כרטיסיות | Done |
-| 4.4 | ציר הזמן -- מיקום קבוע, חזותי | Done |
-| 4.5 | תצוגת יועץ -- משימות | **Not done** |
-| 5.1 | הרשאות בתוך משרד יועץ (מנהל/עובד) | Not done |
-| 5.2 | שמירת אנשי קשר + CC | Not done |
-| 5.2 | שיוך אוטומטי לפי תחום אחריות | Not done |
-| 6.1 | שיוך אבן דרך אוטומטי + חישוב תזרים | Partial (payment milestones exist, auto-calc not done) |
-| 6.1 | השפעת שינוי תאריך על צפי תשלומים | Not done |
-| 6.2 | הגשת חשבונות -- התראה ליועץ | Not done |
-| 6.2 | גמישות חשבון -- מספר אבני דרך | Partial (UI exists) |
-| 6.3 | נוטיפיקיישן ליד פרויקט (מס' משימות) | Not done |
-| 3.4 | תלות בין משימות | Done |
+**Action Required:**
+- Test all API calls in production environment
+- Check edge function deployments and CORS headers
+- Verify all external service connectivity (Resend, Supabase, AI models)
+- Monitor network tab during full user workflow (RFP creation → Proposal submission → Approval)
 
 ---
 
-### הצעד הבא המומלץ: תצוגת משימות ליועץ (סעיף 4.5)
+#### 2. **RLS Policy Security Issues** (SEVERITY: HIGH)
+**Issue:** Database linter found overly permissive RLS policies with `USING (true)` or `WITH CHECK (true)` on UPDATE/DELETE operations
+- Multiple tables have policies allowing unrestricted modifications
+- This bypasses row-level security completely
 
-זו הדרישה הגדולה ביותר שעדיין לא מומשה ויש לה ערך גבוה כי היועצים כרגע **לא רואים משימות כלל** בדשבורד שלהם.
+**Action Required:**
+- Review and fix all RLS policies with `USING (true)` on INSERT/UPDATE/DELETE
+- Ensure all UPDATE/DELETE operations validate ownership (e.g., `user_id = auth.uid()`)
+- Use `has_role()` function for admin-only operations instead of `true` checks
 
-#### מה צריך לבנות:
+---
 
-1. **לשונית "משימות" בדשבורד היועץ** (`AdvisorDashboard.tsx`)
-   - הוספת tab חדש "משימות" ליד ה-tabs הקיימים (rfp-invites, my-proposals, negotiations)
-   - הצגת badge עם מספר משימות פתוחות
+#### 3. **Exposed User Contact Information** (SEVERITY: HIGH)
+**Issue:** The `auth.users` and `profiles` tables contain emails, phone numbers, and personal data but appear to have public read access
+- Violates privacy regulations (GDPR, privacy laws)
+- Could expose PII to unauthorized users
 
-2. **Hook חדש: `useAdvisorTasks.ts`**
-   - שאילתה ל-`project_tasks` עם `assigned_advisor_id` = advisor.id
-   - join ל-projects לקבלת שם פרויקט
-   - תמיכה בסינון: כלל הפרויקטים / פרויקט מסוים / סטטוס
+**Action Required:**
+- Verify RLS policies on `profiles` table restrict SELECT to authenticated users only viewing their own records
+- Add policies: `auth.uid() = id` for personal data access
+- Create a `public_profiles` view without email/phone for public-facing features
+- Review other tables with sensitive data (advisors, companies, etc.)
 
-3. **תצוגת "כלל הפרויקטים" ליועץ**
-   - טבלה רוחבית של כל המשימות מכל הפרויקטים (שימוש חוזר ב-`AllProjectsTaskTable`)
-   - סינון: אחריות, שם פרויקט, יזם, דדליין
-   - ציר זמן עליון עם שלבי רישוי
+---
 
-4. **תצוגת "פר פרויקט" ליועץ**
-   - ציר הזמן המלא של שלבי הרישוי
-   - רק המשימות של היועץ בפרויקט הנבחר
-   - ללא אפשרות עריכה/מחיקה (רק צפייה + עדכון סטטוס בכפוף לאישור יזם -- שלב עתידי)
+### ⚠️ CRITICAL WARNINGS (Address Before Deploy)
 
-#### קבצים חדשים:
-- `src/hooks/useAdvisorTasks.ts` -- hook לשליפת משימות יועץ
-- `src/components/tasks/AdvisorTasksView.tsx` -- קומפוננטה ראשית לתצוגת משימות יועץ
+#### 4. **Function Search Path Not Set** (SEVERITY: MEDIUM)
+**Issue:** Multiple database functions lack `search_path` configuration, creating injection vulnerability risks
+- Affects ~4 functions based on linter warnings
+- Could allow SQL injection through function parameter manipulation
 
-#### קבצים לעדכון:
-- `src/pages/AdvisorDashboard.tsx` -- הוספת tab "משימות"
-- `src/components/tasks/AllProjectsTaskTable.tsx` -- שימוש חוזר (ללא שינוי)
-- `src/components/tasks/LicensingTimeline.tsx` -- שימוש חוזר (ללא שינוי)
+**Action Required:**
+- Verify all functions already have `set search_path = public` (they appear to based on agent_security findings)
+- If not, add `set search_path = public` to function definitions
+- Document all SECURITY DEFINER functions
 
-#### פרטים טכניים:
+---
 
-**`useAdvisorTasks.ts`:**
-```text
-- Query: project_tasks WHERE assigned_advisor_id = advisorId
-- Joins: projects(name, phase, type), profiles(name) for entrepreneur name
-- Filters: projectId, status[], search text
-- Returns: tasks, projects list, loading, filters, openCount
-```
+#### 5. **Materialized View Accessible via API** (SEVERITY: MEDIUM)
+**Issue:** Materialized views exposed through Supabase Data API may not have RLS policies applied
+- Could expose aggregated/sensitive data without access control
 
-**`AdvisorTasksView.tsx`:**
-```text
-- Project selector (all / specific)
-- LicensingTimeline at top
-- TaskFilters for status/project filtering
-- AllProjectsTaskTable for display
-- TaskDetailDialog for viewing task details (read-only mode initially)
-```
+**Action Required:**
+- Identify which materialized view is accessible
+- Either: add RLS policies or restrict API access via function wrapper
 
-**`AdvisorDashboard.tsx` changes:**
-```text
-- Add "משימות" tab with open task count badge
-- Render AdvisorTasksView inside the new tab
-- Pass advisorId to the component
-```
+---
+
+#### 6. **Auth Configuration Issues** (SEVERITY: MEDIUM)
+**Issues Found:**
+- OTP expiry exceeds recommended threshold (default 24h, should be ≤15 min)
+- Leaked password protection is disabled
+- PostgreSQL has available security patches
+
+**Action Required:**
+- Reduce OTP expiry in Supabase Auth settings (Project Settings → Authentication)
+- Enable leaked password protection in Auth settings
+- Schedule PostgreSQL version upgrade
+
+---
+
+### ✅ VERIFIED & SECURE
+
+- ✅ SECURITY DEFINER functions reviewed - all have proper authorization checks
+- ✅ Proposal submission token validation (though client-side validation noted)
+- ✅ Admin role system uses `has_role()` function correctly
+- ✅ Project ownership validation implemented in key functions
+- ✅ Chart component CSS injection is safe (static content only)
+
+---
+
+### 📋 FUNCTIONAL CHECKLIST
+
+**Critical Features to Test:**
+- [ ] RFP Creation → Send Invitations → Proposal Submission flow (end-to-end)
+- [ ] Proposal Approval workflow with signature requirement
+- [ ] Task creation, assignment, and dependency blocking
+- [ ] Advisor task view and filtering
+- [ ] Payment milestone calculations and tracking
+- [ ] Negotiation workflow (request → response → amendment)
+- [ ] File uploads and retrieval
+- [ ] Email notifications (RFP invites, proposal submissions, approvals)
+- [ ] Role-based access (entrepreneur can't see other entrepreneur's data)
+- [ ] Admin dashboard functionality
+
+**Recent Changes to Verify:**
+- [ ] Kanban board 5-column layout displays correctly
+- [ ] Dependency indicators showing on task cards
+- [ ] Comment counters on task detail dialog
+- [ ] RTL alignment in all task views
+- [ ] Advisor tasks tab visible in advisor dashboard
+- [ ] Task progress/milestone color coding
+
+---
+
+### 🔐 SECURITY HARDENING RECOMMENDATIONS
+
+**Before Production:**
+1. Enable HTTPS enforcement (should be automatic on Lovable Cloud)
+2. Set secure HTTP headers (CSP, X-Frame-Options, etc.)
+3. Enable rate limiting on auth endpoints
+4. Test CSRF protection
+5. Verify all sensitive operations require re-authentication
+
+**Post-Deployment Monitoring:**
+1. Monitor database error logs for RLS policy violations
+2. Track failed authentication attempts
+3. Watch for unusual data access patterns
+4. Set up email alerts for critical errors
+5. Regular security audit of RLS policies
+
+---
+
+### 🔧 DEPLOYMENT BLOCKERS
+
+| Issue | Status | Action |
+|-------|--------|--------|
+| Network fetch errors | INVESTIGATE | Test in production environment |
+| RLS policies (`USING (true)` on UPDATE/DELETE) | FIX REQUIRED | Add proper ownership checks |
+| PII exposure (emails, phone in profiles) | FIX REQUIRED | Add RLS policies restricting access |
+| Function search_path | VERIFY | Confirm `set search_path = public` is set |
+| Materialized view exposure | INVESTIGATE | Identify and secure |
+| OTP expiry/password protection | CONFIGURE | Update auth settings |
+| PostgreSQL patches | UPGRADE | Schedule upgrade |
+
+---
+
+### ✨ RECOMMENDATION
+
+**Do NOT deploy to production until:**
+1. RLS policies are fixed (especially UPDATE/DELETE with `true` checks)
+2. User data exposure is mitigated (add `auth.uid()` checks on personal data)
+3. Network fetch errors are diagnosed and resolved in staging
+4. Auth settings are hardened (OTP expiry, password protection)
+
+**Timeline Estimate:**
+- Security fixes: 2-4 hours
+- Testing: 1-2 hours
+- Deployment: 30 minutes
 
