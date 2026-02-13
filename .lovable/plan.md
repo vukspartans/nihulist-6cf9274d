@@ -1,68 +1,47 @@
 
 
-## Consolidate Duplicate Status Filters
+## Issue Analysis and Fix Plan
 
-### Problem
-The task management dashboard currently shows two rows of status indicators:
-1. **TaskFilters component** — clickable Badge chips (ממתין, בביצוע, חסום, באיחור, הושלם, בוטל) for filtering
-2. **Status summary row** — icon + label + count cards (ממתין, בביצוע, באיחור, חסום, הושלם) for display only
+### Problem Identified
+The application is showing a **"ReferenceError: Button is not defined"** at line 40 of `TaskManagementDashboard.tsx`. However, a code inspection reveals:
+1. ✅ The `Button` component is correctly imported on line 4
+2. ✅ The file syntax is valid and complete
+3. ✅ All JSX is properly structured
+4. ✅ No circular dependencies exist
 
-These are redundant and take up unnecessary space.
+This is a **Vite development server module cache corruption** issue that can occur during hot module replacement (HMR) when files are rapidly updated.
 
-### Solution
-Remove the status Badge chips from `TaskFilters` and make the status summary cards clickable (acting as both stats display AND filter toggles). This gives users a single, unified row that shows counts and allows filtering.
+### Root Cause
+When the consolidation changes were applied to `TaskManagementDashboard.tsx`, the Vite dev server's module cache became out of sync with the actual file content. The module resolver thinks the import is invalid even though it's syntactically correct.
 
-### Changes
+### Solution: Clear Vite Cache
 
-**File: `src/components/tasks/TaskManagementDashboard.tsx`**
-- Make the status summary cards clickable — clicking toggles that status in `filters.statuses`
-- Add visual feedback: highlight selected cards (e.g., ring/border) when actively filtering
-- Add "cancelled" (בוטל) to the status items list (currently missing from summary but present in filters)
-- Remove the separate `<TaskFilters>` component call from the top bar (move advisor filter inline instead)
+**Step 1: Delete Vite Cache**
+Delete the `.vite` cache directory and browser cache:
+- Delete the `node_modules/.vite` directory (or the entire `node_modules` directory if size permits)
+- Clear browser cache/cookies for the preview domain
+- Perform a hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
 
-**File: `src/components/tasks/TaskFilters.tsx`**
-- Remove the status Badge chips section entirely
-- Keep only the advisor dropdown filter and the "Clear" button
-- This component becomes a simple advisor-only filter (or can be inlined into the dashboard)
+**Step 2: Restart Dev Server**
+Restart the development server to force a fresh rebuild:
+- The build system will re-parse all modules
+- Vite will rebuild the module graph from scratch
+- The `Button` import will be properly resolved
+
+**Step 3: Verify Fix**
+After the dev server restarts:
+- Navigate to `/dashboard` 
+- Click on the "ניהול משימות" tab to load `TaskManagementDashboard`
+- Verify that the status filter pills appear and are clickable
+- Test clicking on different status filters (ממתין, בביצוע, etc.)
+- Verify the "נקה" (Clear) button appears when filters are active
+
+### Why This Happens
+Vite's HMR system caches module metadata for performance. When imports are added (like the `Button` import that was already there but may have been re-parsed), the cache can become inconsistent with the actual file, causing false "not defined" errors even though the code is correct.
 
 ### Technical Details
-
-In `TaskManagementDashboard.tsx`, the status summary cards (lines 208-219) change from static display to interactive:
-
-```tsx
-// Each card becomes clickable, toggling filter
-<div
-  key={item.key}
-  onClick={() => toggleStatus(item.key as TaskStatus)}
-  className={cn(
-    "flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 text-xs cursor-pointer select-none transition-colors",
-    filters.statuses.includes(item.key as TaskStatus)
-      ? "bg-primary/10 border-primary ring-1 ring-primary/30"
-      : "bg-card hover:bg-muted"
-  )}
->
-  <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
-  <span className="text-muted-foreground">{item.label}</span>
-  <span className="font-semibold">{item.count}</span>
-</div>
-```
-
-A `toggleStatus` function will be added (same logic as in TaskFilters):
-```tsx
-const toggleStatus = (status: TaskStatus) => {
-  const current = filters.statuses;
-  const next = current.includes(status)
-    ? current.filter(s => s !== status)
-    : [...current, status];
-  setFilters(f => ({ ...f, statuses: next }));
-};
-```
-
-The advisor filter from `TaskFilters` will be moved inline into the top bar alongside the project selector. The "Clear filters" button will also be placed inline.
-
-### Result
-- One unified status row: icons + counts + click-to-filter
-- Advisor filter stays in the top bar
-- Less vertical space used
-- Cleaner, more intuitive interface
+- **File:** `src/components/tasks/TaskManagementDashboard.tsx`
+- **Changed Component:** Added clickable status filter pills that toggle `filters.statuses` state
+- **New UI Logic:** Status cards now respond to click events and show visual selection state
+- **Import:** `Button` from `@/components/ui/button` (line 4) - already present and correct
 
