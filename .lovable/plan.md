@@ -1,160 +1,219 @@
 
-## 🚨 PRODUCTION DEPLOYMENT SANITY CHECK REPORT
 
-### ⚠️ CRITICAL ISSUES (Must Fix Before Deploy)
+## Plan: Advanced Permissions, Automations, Payments & Notifications
 
-#### 1. **"Failed to Fetch" Network Errors** (SEVERITY: HIGH)
-**Issue:** Console logs show repeated `TypeError: Failed to fetch` errors during previous sessions. This indicates:
-- CORS issues with edge functions or external APIs
-- Network connectivity problems in preview environment
-- Possible fetch timeouts or unhandled promise rejections
-
-**Action Required:**
-- Test all API calls in production environment
-- Check edge function deployments and CORS headers
-- Verify all external service connectivity (Resend, Supabase, AI models)
-- Monitor network tab during full user workflow (RFP creation → Proposal submission → Approval)
+This plan covers the remaining gaps from the requirements document, organized into 4 work streams with clear priorities.
 
 ---
 
-#### 2. **RLS Policy Security Issues** (SEVERITY: HIGH)
-**Issue:** Database linter found overly permissive RLS policies with `USING (true)` or `WITH CHECK (true)` on UPDATE/DELETE operations
-- Multiple tables have policies allowing unrestricted modifications
-- This bypasses row-level security completely
+### Stream 1: UI Notifications & Badges (Section 6.3) -- Quick Win
 
-**Action Required:**
-- Review and fix all RLS policies with `USING (true)` on INSERT/UPDATE/DELETE
-- Ensure all UPDATE/DELETE operations validate ownership (e.g., `user_id = auth.uid()`)
-- Use `has_role()` function for admin-only operations instead of `true` checks
+**Goal:** Show open task count badges next to each project name throughout the UI.
 
----
+**Changes:**
 
-#### 3. **Exposed User Contact Information** (SEVERITY: HIGH)
-**Issue:** The `auth.users` and `profiles` tables contain emails, phone numbers, and personal data but appear to have public read access
-- Violates privacy regulations (GDPR, privacy laws)
-- Could expose PII to unauthorized users
+1. **`src/pages/Dashboard.tsx`** -- Add task count badges to project list
+   - After fetching projects, query `project_tasks` grouped by `project_id` to get open task counts (status not in completed/cancelled)
+   - Display a small numeric badge next to each project name in both mobile card and desktop table views
+   - Add badge next to "All Projects" filter showing total open tasks
 
-**Action Required:**
-- Verify RLS policies on `profiles` table restrict SELECT to authenticated users only viewing their own records
-- Add policies: `auth.uid() = id` for personal data access
-- Create a `public_profiles` view without email/phone for public-facing features
-- Review other tables with sensitive data (advisors, companies, etc.)
+2. **`src/components/tasks/TaskManagementDashboard.tsx`** -- Badge in project selector
+   - Show open task count next to each project name in the project dropdown selector
 
 ---
 
-### ⚠️ CRITICAL WARNINGS (Address Before Deploy)
+### Stream 2: Critical Task Deletion Warning (Section 3.3) -- Quick Win
 
-#### 4. **Function Search Path Not Set** (SEVERITY: MEDIUM)
-**Issue:** Multiple database functions lack `search_path` configuration, creating injection vulnerability risks
-- Affects ~4 functions based on linter warnings
-- Could allow SQL injection through function parameter manipulation
+**Goal:** When deleting a task marked as `is_payment_critical`, show a mandatory confirmation warning.
 
-**Action Required:**
-- Verify all functions already have `set search_path = public` (they appear to based on agent_security findings)
-- If not, add `set search_path = public` to function definitions
-- Document all SECURITY DEFINER functions
+**Changes:**
 
----
+1. **`src/components/tasks/TaskDetailDialog.tsx`** -- Add delete button with critical task warning
+   - Add a "Delete Task" button in the dialog footer
+   - If `task.is_payment_critical === true`, show an AlertDialog: "This task is linked to a payment milestone. Are you sure you want to delete it?"
+   - Regular tasks show a standard confirmation
 
-#### 5. **Materialized View Accessible via API** (SEVERITY: MEDIUM)
-**Issue:** Materialized views exposed through Supabase Data API may not have RLS policies applied
-- Could expose aggregated/sensitive data without access control
+2. **`src/components/tasks/ProjectTaskView.tsx`** -- Add delete action in card view
+   - Add delete option with same critical task warning logic
 
-**Action Required:**
-- Identify which materialized view is accessible
-- Either: add RLS policies or restrict API access via function wrapper
+3. **`src/hooks/useProjectTasks.ts`** -- No changes needed (deleteTask already exists)
 
 ---
 
-#### 6. **Auth Configuration Issues** (SEVERITY: MEDIUM)
-**Issues Found:**
-- OTP expiry exceeds recommended threshold (default 24h, should be ≤15 min)
-- Leaked password protection is disabled
-- PostgreSQL has available security patches
+### Stream 3: Advisor Edit Approval Flow (Section 3.3) -- Medium Effort
 
-**Action Required:**
-- Reduce OTP expiry in Supabase Auth settings (Project Settings → Authentication)
-- Enable leaked password protection in Auth settings
-- Schedule PostgreSQL version upgrade
+**Goal:** When an advisor modifies a task assigned to them, the change requires entrepreneur approval before saving.
 
----
+**Database Changes (new migration):**
 
-### ✅ VERIFIED & SECURE
+1. **New table: `task_change_requests`**
+   - `id` (uuid, PK)
+   - `task_id` (uuid, FK to project_tasks)
+   - `requested_by` (uuid, FK to auth.users)
+   - `requested_changes` (jsonb -- stores the diff of proposed changes)
+   - `status` ('pending' | 'approved' | 'rejected')
+   - `reviewed_by` (uuid, nullable)
+   - `reviewed_at` (timestamptz, nullable)
+   - `review_note` (text, nullable)
+   - `created_at` (timestamptz)
+   - RLS: Advisors can INSERT for their own tasks, entrepreneurs can UPDATE (approve/reject) for their own projects
 
-- ✅ SECURITY DEFINER functions reviewed - all have proper authorization checks
-- ✅ Proposal submission token validation (though client-side validation noted)
-- ✅ Admin role system uses `has_role()` function correctly
-- ✅ Project ownership validation implemented in key functions
-- ✅ Chart component CSS injection is safe (static content only)
+**New Files:**
 
----
+2. **`src/hooks/useTaskChangeRequests.ts`**
+   - Fetch pending change requests for a project
+   - Submit a change request (advisor flow)
+   - Approve/reject a change request (entrepreneur flow)
 
-### 📋 FUNCTIONAL CHECKLIST
+3. **`src/components/tasks/PendingChangesNotification.tsx`**
+   - Small banner/badge in TaskManagementDashboard showing "X pending change requests"
+   - Clicking opens a review dialog
 
-**Critical Features to Test:**
-- [ ] RFP Creation → Send Invitations → Proposal Submission flow (end-to-end)
-- [ ] Proposal Approval workflow with signature requirement
-- [ ] Task creation, assignment, and dependency blocking
-- [ ] Advisor task view and filtering
-- [ ] Payment milestone calculations and tracking
-- [ ] Negotiation workflow (request → response → amendment)
-- [ ] File uploads and retrieval
-- [ ] Email notifications (RFP invites, proposal submissions, approvals)
-- [ ] Role-based access (entrepreneur can't see other entrepreneur's data)
-- [ ] Admin dashboard functionality
+4. **`src/components/tasks/ChangeRequestReviewDialog.tsx`**
+   - Shows proposed changes vs current values side-by-side
+   - Approve/Reject buttons for entrepreneur
 
-**Recent Changes to Verify:**
-- [ ] Kanban board 5-column layout displays correctly
-- [ ] Dependency indicators showing on task cards
-- [ ] Comment counters on task detail dialog
-- [ ] RTL alignment in all task views
-- [ ] Advisor tasks tab visible in advisor dashboard
-- [ ] Task progress/milestone color coding
+**Modified Files:**
+
+5. **`src/components/tasks/TaskDetailDialog.tsx`**
+   - Detect if current user is an advisor (via `useAuth`)
+   - If advisor: instead of saving directly, create a `task_change_request`
+   - Show toast: "Your changes have been submitted for approval"
+
+6. **`src/components/tasks/AdvisorTasksView.tsx`**
+   - Show pending change request status on tasks that have pending requests
 
 ---
 
-### 🔐 SECURITY HARDENING RECOMMENDATIONS
+### Stream 4: Payments & Cash Flow (Sections 6.1, 6.2) -- Larger Effort
 
-**Before Production:**
-1. Enable HTTPS enforcement (should be automatic on Lovable Cloud)
-2. Set secure HTTP headers (CSP, X-Frame-Options, etc.)
-3. Enable rate limiting on auth endpoints
-4. Test CSRF protection
-5. Verify all sensitive operations require re-authentication
+**Goal:** Auto-calculate payment forecasts from task dates, show graphical cash flow timeline, and alert advisors when they can submit invoices.
 
-**Post-Deployment Monitoring:**
-1. Monitor database error logs for RLS policy violations
-2. Track failed authentication attempts
-3. Watch for unusual data access patterns
-4. Set up email alerts for critical errors
-5. Regular security audit of RLS policies
+**Sub-features:**
+
+#### 4A. Auto-recalculate payment forecasts when task dates change
+
+1. **`src/hooks/useProjectPayments.ts`** -- Add `recalculateForecasts` function
+   - When a task with `payment_milestone_id` has its `planned_end_date` changed, update the linked milestone's `due_date`
+   - Recalculate payment summary totals
+
+2. **`src/hooks/useProjectTasks.ts`** -- Trigger forecast recalculation
+   - After `updateTask` with date changes on a payment-critical task, call the recalculation
+
+#### 4B. Cash Flow Forecast Graph
+
+3. **`src/components/payments/CashFlowChart.tsx`** (new)
+   - Use `recharts` (already installed) to render a bar/area chart
+   - X-axis: months, Y-axis: cumulative payment amounts
+   - Data source: payment milestones with due_dates and amounts
+   - Updates automatically when milestone dates change
+
+4. **`src/components/payments/PaymentDashboard.tsx`** -- Integrate chart
+   - Add CashFlowChart above or below the milestone list
+
+#### 4C. Invoice submission alerts (Section 6.2)
+
+5. **`src/components/tasks/TaskDetailDialog.tsx`** -- Show invoice alert
+   - When a task is completed AND `is_payment_critical === true`, show a green banner: "This milestone is complete. The advisor can submit an invoice."
+
+6. **`src/components/payments/PaymentDashboard.tsx`** -- Show invoice-ready milestones
+   - Highlight milestones where all linked tasks are completed
+   - Show alert banner for advisor: "You may submit an invoice for these milestones"
 
 ---
 
-### 🔧 DEPLOYMENT BLOCKERS
+### Stream 5: Advisor Office Roles (Section 5.1) -- Deferred
 
-| Issue | Status | Action |
-|-------|--------|--------|
-| Network fetch errors | INVESTIGATE | Test in production environment |
-| RLS policies (`USING (true)` on UPDATE/DELETE) | FIX REQUIRED | Add proper ownership checks |
-| PII exposure (emails, phone in profiles) | FIX REQUIRED | Add RLS policies restricting access |
-| Function search_path | VERIFY | Confirm `set search_path = public` is set |
-| Materialized view exposure | INVESTIGATE | Identify and secure |
-| OTP expiry/password protection | CONFIGURE | Update auth settings |
-| PostgreSQL patches | UPGRADE | Schedule upgrade |
+**Goal:** Manager/Employee hierarchy within advisor firms.
+
+This requires significant schema changes (office membership table, role within office, visibility rules) and is recommended as a separate phase. Current implementation treats all advisors as independent.
+
+**Recommendation:** Defer to next sprint.
 
 ---
 
-### ✨ RECOMMENDATION
+### Stream 6: Email/CC Automations (Sections 3.1, 5.2) -- Deferred
 
-**Do NOT deploy to production until:**
-1. RLS policies are fixed (especially UPDATE/DELETE with `true` checks)
-2. User data exposure is mitigated (add `auth.uid()` checks on personal data)
-3. Network fetch errors are diagnosed and resolved in staging
-4. Auth settings are hardened (OTP expiry, password protection)
+**Goal:** Auto-link emails to tasks, auto-assign advisors by expertise, CC functionality.
 
-**Timeline Estimate:**
-- Security fixes: 2-4 hours
-- Testing: 1-2 hours
-- Deployment: 30 minutes
+This requires email integration infrastructure (webhook/IMAP parsing) that is not yet in place. The CC feature requires a new `task_observers` table.
+
+**Recommendation:** Defer to next sprint. Can implement the CC/observer table now if desired.
+
+---
+
+### Implementation Priority Order
+
+| Priority | Feature | Effort | Files |
+|----------|---------|--------|-------|
+| 1 | Task count badges (6.3) | Small | 2 files modified |
+| 2 | Critical task delete warning (3.3) | Small | 2 files modified |
+| 3 | Cash flow chart (6.1) | Medium | 1 new + 2 modified |
+| 4 | Invoice alerts (6.2) | Small | 2 files modified |
+| 5 | Advisor edit approval (3.3) | Large | 1 migration + 4 new + 2 modified |
+| 6 | Office roles (5.1) | Large | Deferred |
+| 7 | Email/CC automations (3.1, 5.2) | Large | Deferred |
+
+---
+
+### Technical Details
+
+**Migration for task_change_requests:**
+```text
+CREATE TABLE task_change_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id uuid REFERENCES project_tasks(id) ON DELETE CASCADE NOT NULL,
+  requested_by uuid REFERENCES auth.users(id) NOT NULL,
+  requested_changes jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  reviewed_by uuid REFERENCES auth.users(id),
+  reviewed_at timestamptz,
+  review_note text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE task_change_requests ENABLE ROW LEVEL SECURITY;
+
+-- Advisors can create requests for tasks assigned to them
+CREATE POLICY "advisor_insert_own" ON task_change_requests
+  FOR INSERT TO authenticated
+  WITH CHECK (requested_by = auth.uid());
+
+-- Entrepreneurs can view/update requests for their projects
+CREATE POLICY "entrepreneur_manage" ON task_change_requests
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM project_tasks pt
+      JOIN projects p ON p.id = pt.project_id
+      WHERE pt.id = task_change_requests.task_id
+      AND p.owner_id = auth.uid()
+    )
+  );
+
+-- Advisors can view their own requests
+CREATE POLICY "advisor_view_own" ON task_change_requests
+  FOR SELECT TO authenticated
+  USING (requested_by = auth.uid());
+```
+
+**Cash Flow Chart data structure:**
+```text
+interface CashFlowDataPoint {
+  month: string;        // "2026-03"
+  projected: number;    // sum of milestone amounts due that month
+  actual: number;       // sum of paid amounts that month
+  cumProjected: number; // running total
+  cumActual: number;    // running total
+}
+```
+
+**Badge query for open task counts:**
+```text
+SELECT project_id, COUNT(*) as open_count
+FROM project_tasks
+WHERE project_id IN (...projectIds)
+AND status NOT IN ('completed', 'cancelled')
+GROUP BY project_id
+```
 
