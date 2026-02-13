@@ -37,6 +37,13 @@ export function useBulkTaskCreation() {
     }
 
     try {
+      // Fetch project advisors with expertise for auto-assignment
+      const { data: projectAdvisorsData } = await supabase
+        .from('project_advisors')
+        .select('advisor_id, advisors(expertise)')
+        .eq('project_id', projectId)
+        .eq('status', 'active');
+
       // Calculate dates based on template duration and order
       let currentDate = startDate;
       
@@ -47,6 +54,15 @@ export function useBulkTaskCreation() {
         
         // Move current date forward for next task (sequential by default)
         currentDate = addDays(currentDate, durationDays);
+
+        // Auto-assign advisor by matching expertise
+        let assignedAdvisorId: string | null = null;
+        if (template.advisor_specialty && projectAdvisorsData) {
+          const match = projectAdvisorsData.find((pa: any) =>
+            pa.advisors?.expertise?.includes(template.advisor_specialty)
+          );
+          if (match) assignedAdvisorId = match.advisor_id;
+        }
 
         return {
           project_id: projectId,
@@ -61,7 +77,8 @@ export function useBulkTaskCreation() {
           planned_end_date: plannedEnd,
           duration_days: durationDays,
           is_milestone: template.is_milestone || false,
-          notes: template.advisor_specialty 
+          assigned_advisor_id: assignedAdvisorId,
+          notes: template.advisor_specialty && !assignedAdvisorId
             ? `יועץ נדרש: ${template.advisor_specialty}` 
             : null,
         };

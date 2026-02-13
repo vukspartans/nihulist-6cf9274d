@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PROJECT_PHASES } from '@/constants/project';
 import { useBulkTaskCreation } from '@/hooks/useBulkTaskCreation';
+import { useTaskPersonalization } from '@/hooks/useTaskPersonalization';
 import type { TaskTemplate } from '@/hooks/useTaskTemplatesAdmin';
 
 interface UseAutoTaskLoaderOptions {
@@ -21,6 +22,7 @@ export function useAutoTaskLoader({
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const { createTasksFromTemplates } = useBulkTaskCreation();
+  const { getPersonalizations, applyPersonalizations } = useTaskPersonalization();
 
   useEffect(() => {
     if (hasExistingTasks || !projectType || dismissed) {
@@ -51,7 +53,9 @@ export function useAutoTaskLoader({
           // Try municipality-specific first, then fallback
           const { data: specificData } = await query.eq('municipality_id', municipalityId);
           if (specificData && specificData.length > 0) {
-            setTemplates(filterByPhase(specificData as TaskTemplate[], projectPhase));
+            const filtered = filterByPhase(specificData as TaskTemplate[], projectPhase);
+            const personalizations = await getPersonalizations(projectType);
+            setTemplates(applyPersonalizations(filtered, personalizations));
             setLoading(false);
             return;
           }
@@ -67,7 +71,9 @@ export function useAutoTaskLoader({
         }
 
         const { data } = await query;
-        setTemplates(filterByPhase((data || []) as TaskTemplate[], projectPhase));
+        const filtered = filterByPhase((data || []) as TaskTemplate[], projectPhase);
+        const personalizations = await getPersonalizations(projectType);
+        setTemplates(applyPersonalizations(filtered, personalizations));
       } catch (err) {
         console.error('Error fetching task templates:', err);
       } finally {

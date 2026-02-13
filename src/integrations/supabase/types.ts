@@ -3124,6 +3124,45 @@ export type Database = {
           },
         ]
       }
+      task_observers: {
+        Row: {
+          added_by: string
+          advisor_id: string
+          created_at: string | null
+          id: string
+          task_id: string
+        }
+        Insert: {
+          added_by: string
+          advisor_id: string
+          created_at?: string | null
+          id?: string
+          task_id: string
+        }
+        Update: {
+          added_by?: string
+          advisor_id?: string
+          created_at?: string | null
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_observers_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_observers_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_templates: {
         Row: {
           advisor_specialty: string | null
@@ -3335,6 +3374,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_task_preferences: {
+        Row: {
+          created_at: string | null
+          custom_advisor_specialty: string | null
+          custom_description: string | null
+          custom_duration_days: number | null
+          custom_name: string | null
+          custom_notes: string | null
+          id: string
+          project_type: string
+          task_name: string
+          template_id: string | null
+          updated_at: string | null
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          custom_advisor_specialty?: string | null
+          custom_description?: string | null
+          custom_duration_days?: number | null
+          custom_name?: string | null
+          custom_notes?: string | null
+          id?: string
+          project_type: string
+          task_name: string
+          template_id?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          custom_advisor_specialty?: string | null
+          custom_description?: string | null
+          custom_duration_days?: number | null
+          custom_name?: string | null
+          custom_notes?: string | null
+          id?: string
+          project_type?: string
+          task_name?: string
+          template_id?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_task_preferences_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
