@@ -1,215 +1,227 @@
 
 
-## Plan: Task-Milestone Sync, Template Personalization, Task CC/Observers, Auto-Assignment
+# Prioritization: Task Template Personalization vs. CC Functionality vs. Auto-Assignment
 
-This plan implements Priorities 1 and 2 from the gap analysis. Priorities marked "Deferred" (Email Integration, Office Hierarchy) are excluded.
+## Current Implementation Status
 
----
+### ✅ Implemented
+1. **Auto-Assignment by Field**: Core logic is already built into `useBulkTaskCreation.ts`:
+   - Fetches project advisors with expertise arrays
+   - Matches template `advisor_specialty` to advisor `expertise`
+   - Sets `assigned_advisor_id` during bulk task creation
+   - **Status**: FULLY FUNCTIONAL for bulk template loading
 
-### Feature 1: Sync Task Dates to Payment Milestones (Small)
+2. **Task Observer/CC (Partial)**:
+   - Database table created: `task_observers` with RLS policies
+   - Hook created: `useTaskObservers.ts` with full CRUD operations
+   - UI Component created: `TaskObserversSection.tsx` with clean "מכותבים" tab
+   - Integrated into `TaskDetailDialog.tsx` as a tab (hidden for advisors)
+   - **Status**: FULLY FUNCTIONAL but needs user workflow testing
 
-When a task with `payment_milestone_id` has its `planned_end_date` changed, automatically update the linked `payment_milestones.due_date`.
-
-**Changes:**
-
-1. **`src/hooks/useProjectTasks.ts`** -- In `updateTask()`, after the main update succeeds, check if the task has a `payment_milestone_id` and if `planned_end_date` changed. If so, update `payment_milestones.due_date` to match.
-
-2. **`src/components/tasks/TaskManagementDashboard.tsx`** -- Same logic in `handleTaskSubmit()`, since this component updates tasks directly via supabase rather than through `useProjectTasks`.
-
----
-
-### Feature 2: Task Template Personalization (Medium)
-
-Save user customizations to tasks and suggest them as defaults for future projects.
-
-**Database (new migration):**
-
-- **New table: `user_task_preferences`**
-  - `id` (uuid PK)
-  - `user_id` (uuid FK auth.users)
-  - `template_id` (uuid FK task_templates, nullable)
-  - `task_name` (text) -- original template task name for matching
-  - `custom_name` (text, nullable)
-  - `custom_description` (text, nullable)
-  - `custom_duration_days` (int, nullable)
-  - `custom_advisor_specialty` (text, nullable)
-  - `custom_notes` (text, nullable)
-  - `project_type` (text) -- so preferences are per project type
-  - `usage_count` (int default 1) -- how many times this customization was used
-  - `created_at`, `updated_at`
-  - RLS: users can only read/write their own rows
-
-**New files:**
-
-- **`src/hooks/useTaskPersonalization.ts`**
-  - `saveCustomization(taskName, templateId, projectType, customFields)` -- upserts into `user_task_preferences`
-  - `getPersonalizations(projectType)` -- fetches stored preferences for current user and project type
-  - `applyPersonalizations(templates, personalizations)` -- merges stored preferences onto template defaults
-
-**Modified files:**
-
-- **`src/hooks/useBulkTaskCreation.ts`** -- After creating tasks from templates, call `saveCustomization` if user has made changes. When loading templates, apply stored personalizations as defaults.
-
-- **`src/hooks/useAutoTaskLoader.ts`** -- Before presenting templates, fetch user personalizations and merge them so the suggestion shows the user's previously customized values.
-
-- **`src/components/tasks/TaskDetailDialog.tsx`** -- When saving a task that was created from a template (`template_id` is set), save the diff as a personalization for future use.
+3. **Template Personalization (Partial)**:
+   - Database table created: `user_task_preferences`
+   - Hook created: `useTaskPersonalization.ts` with save/fetch/apply logic
+   - Integrated into `useAutoTaskLoader.ts` for template suggestion
+   - **Status**: INFRASTRUCTURE READY but NOT CONNECTED to task editing flow
+   - **Gap**: `TaskDetailDialog.tsx` does NOT call `saveCustomization()` when tasks are saved
 
 ---
 
-### Feature 3: Task Observer/CC Table (Medium)
+## Gap Analysis: What's Missing
 
-Allow entrepreneurs to CC additional advisors on tasks they are not directly assigned to.
+### Template Personalization - Missing Integration
+The infrastructure exists but the flow is incomplete:
+- ✅ Templates load with user preferences applied (`useAutoTaskLoader.ts`)
+- ✅ Preferences table and save function exist
+- ❌ **Saving customizations is not implemented** - When a user edits a task and saves, the changes are NOT captured in `user_task_preferences`
+- ❌ No comparison/diff logic to detect what changed vs. original template
+- ❌ No UI feedback showing "saved for future projects"
 
-**Database (new migration -- same migration file as Feature 2):**
+**Impact**: Users won't benefit from personalization because their edits aren't being remembered across projects.
 
-- **New table: `task_observers`**
-  - `id` (uuid PK)
-  - `task_id` (uuid FK project_tasks ON DELETE CASCADE)
-  - `advisor_id` (uuid FK advisors)
-  - `added_by` (uuid FK auth.users)
-  - `created_at`
-  - UNIQUE(task_id, advisor_id)
-  - RLS: project owner can manage; observers can SELECT their own
+### Auto-Assignment - No UI Feedback
+The feature works but users don't see it:
+- ✅ Auto-assigns advisors by expertise during bulk template creation
+- ✅ Works for initial project task setup
+- ❌ **Missing**: No way to manually trigger auto-assignment if needed
+- ❌ **Missing**: No UI in `CreateTaskDialog.tsx` to auto-suggest advisors when field is selected
+- ❌ **Missing**: No feedback showing "advisor was auto-matched based on expertise"
 
-**New files:**
+**Impact**: Users may not know assignments were made automatically; can't re-trigger if needed.
 
-- **`src/hooks/useTaskObservers.ts`**
-  - `fetchObservers(taskId)` -- returns list of CC'd advisors with company_name
-  - `addObserver(taskId, advisorId)` -- inserts into task_observers
-  - `removeObserver(taskId, advisorId)` -- deletes from task_observers
-
-- **`src/components/tasks/TaskObserversSection.tsx`**
-  - Renders inside TaskDetailDialog as a new section/tab
-  - Shows list of CC'd advisors with remove button
-  - Dropdown to add new observer from project advisors list
-  - Only visible to entrepreneurs (not advisors)
-
-**Modified files:**
-
-- **`src/components/tasks/TaskDetailDialog.tsx`** -- Add a "מכותבים" (CC) tab or section showing TaskObserversSection
-
-- **`src/components/tasks/AdvisorTasksView.tsx`** -- When fetching advisor tasks, also fetch tasks where the advisor is an observer (via `task_observers` table) and show them in a separate "CC'd Tasks" section
+### CC/Observers - Fully Functional
+- ✅ All features implemented and integrated
+- ✅ Ready for production use
+- ✅ Clean, intuitive Hebrew UI
 
 ---
 
-### Feature 4: Field-to-Advisor Auto-Assignment (Medium)
+## Effort & ROI Analysis
 
-When a task template has `advisor_specialty` set, automatically link the matching project advisor.
-
-**Modified files:**
-
-- **`src/hooks/useBulkTaskCreation.ts`** -- When creating tasks from templates:
-  1. Fetch project advisors with their expertise fields
-  2. For each template with `advisor_specialty`, find the matching project advisor whose `expertise` array contains that specialty
-  3. Set `assigned_advisor_id` on the created task automatically
-  - Currently the hook just stores "יועץ נדרש: {specialty}" in notes; change this to actual assignment
-
-- **`src/components/tasks/CreateTaskDialog.tsx`** -- When user selects a "field of responsibility" (phase/specialty), auto-populate the advisor assignment dropdown with matching advisors from the project
+| Feature | Effort | ROI | Dependencies | User Impact |
+|---------|--------|-----|--------------|-------------|
+| **Template Personalization** | Medium (3-4 hours) | High | None | Major - Remember preferences across projects |
+| **Auto-Assignment Enhancement** | Small (1-2 hours) | Medium | `CreateTaskDialog.tsx` | Minor - Better UX, visibility |
+| **CC/Observers Polish** | Minimal (30 min) | Medium | None | Testing only - feature ready |
 
 ---
 
-### Implementation Order
+## Recommended Priority Order
 
-| Step | Feature | Files Changed |
-|------|---------|---------------|
-| 1 | Task-Milestone date sync | 2 modified |
-| 2 | Task Observer/CC | 1 migration + 2 new + 2 modified |
-| 3 | Auto-assignment by field | 2 modified |
-| 4 | Template personalization | same migration + 1 new + 3 modified |
+### **Priority 1: CC/Observers Polish & Testing (30 minutes)**
+**Why First**: Feature is fully implemented but untested in production. Quick validation that everything works.
+
+**Tasks**:
+- Verify `TaskObserversSection.tsx` displays and adds/removes advisors
+- Test that advisors see their CC'd tasks in `AdvisorTasksView.tsx`
+- Verify entrepreneurs can add/remove observers
+- Verify advisors cannot see CC tab (permission test)
+
+**Deliverable**: Fully tested and production-ready CC feature
 
 ---
 
-### Technical Details
+### **Priority 2: Template Personalization Save Flow (3-4 hours)**
+**Why Second**: High ROI - directly benefits user workflow by remembering preferences.
 
-**Migration SQL (single migration for Features 2-3):**
+**Implementation Steps**:
 
-```text
--- Task Observers / CC
-CREATE TABLE task_observers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid REFERENCES project_tasks(id) ON DELETE CASCADE NOT NULL,
-  advisor_id uuid REFERENCES advisors(id) ON DELETE CASCADE NOT NULL,
-  added_by uuid REFERENCES auth.users(id) NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(task_id, advisor_id)
-);
+1. **Enhance `TaskDetailDialog.tsx`**:
+   - Import `useTaskPersonalization`
+   - When user clicks "Save" on a task with `template_id`, compute diff between current values and original template
+   - Call `saveCustomization()` with the changes
+   - Show toast: "✓ Your preferences saved for future projects"
 
-ALTER TABLE task_observers ENABLE ROW LEVEL SECURITY;
+2. **Diff Detection Logic**:
+   - Compare `formData.name` vs `task.name`
+   - Compare `formData.description` vs `task.description`
+   - Compare `formData.planned_end_date` vs original duration
+   - Track which fields changed, save only those
 
-CREATE POLICY "project_owner_manage_observers" ON task_observers
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM project_tasks pt
-      JOIN projects p ON p.id = pt.project_id
-      WHERE pt.id = task_observers.task_id
-      AND p.owner_id = auth.uid()
-    )
-  );
+3. **Test Scenarios**:
+   - Create project A, load template, customize name → Save
+   - Create project B, load same template → Check name is customized
+   - Test per-project-type isolation (Residential vs. Commercial)
 
-CREATE POLICY "observer_view_own" ON task_observers
-  FOR SELECT TO authenticated
-  USING (
-    advisor_id IN (
-      SELECT id FROM advisors WHERE user_id = auth.uid()
-    )
-  );
+**User Value**: "The system remembers that you always change 'הגשת תכנית' to 'הגשה ודיקומנטציה תכנית' and suggests it automatically next time"
 
--- User Task Preferences (personalization)
-CREATE TABLE user_task_preferences (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  template_id uuid REFERENCES task_templates(id) ON DELETE SET NULL,
-  task_name text NOT NULL,
-  custom_name text,
-  custom_description text,
-  custom_duration_days integer,
-  custom_advisor_specialty text,
-  custom_notes text,
-  project_type text NOT NULL,
-  usage_count integer DEFAULT 1,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+---
 
-ALTER TABLE user_task_preferences ENABLE ROW LEVEL SECURITY;
+### **Priority 3: Auto-Assignment UI Enhancement (1-2 hours)**
+**Why Third**: Feature works but lacks visibility. Medium ROI, small effort.
 
-CREATE POLICY "users_manage_own_preferences" ON user_task_preferences
-  FOR ALL TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+**Implementation Steps**:
+
+1. **Enhance `CreateTaskDialog.tsx`**:
+   - Add phase/field selector that triggers matching advisors
+   - When user selects a phase/field, auto-populate advisor dropdown with matches
+   - Show visual indicator: "⚡ Matched based on expertise"
+
+2. **Enhance `TaskDetailDialog.tsx`**:
+   - Show advisor assignment source: "Auto-assigned: {reason}" vs "Manually assigned"
+   - Allow user to change if needed
+
+3. **Bulk Creation Feedback**:
+   - When loading templates and auto-assigning, show toast: "✓ Assigned advisors based on expertise for 5 tasks"
+
+**User Value**: "The system automatically suggests the right advisors for each task type, saving you from manual assignment"
+
+---
+
+## Implementation Dependencies
+
+```
+CC/Observers (Priority 1)
+  ↓ (no dependencies)
+  Standalone - can ship immediately
+
+Template Personalization (Priority 2)
+  ↓ (depends on)
+  TaskDetailDialog.tsx + useTaskPersonalization.ts (both exist)
+  Standalone - can ship independently
+
+Auto-Assignment Enhancement (Priority 3)
+  ↓ (depends on)
+  CreateTaskDialog.tsx + useBulkTaskCreation.ts (both exist)
+  Can be combined with Personalization for one release
 ```
 
-**Date sync logic (pseudo-code for useProjectTasks.updateTask):**
+---
 
-```text
-// After successful task update:
-if (updates.planned_end_date) {
-  const task = tasks.find(t => t.id === taskId);
-  if (task?.payment_milestone_id) {
-    await supabase
-      .from('payment_milestones')
-      .update({ due_date: updates.planned_end_date })
-      .eq('id', task.payment_milestone_id);
-  }
-}
+## Phased Rollout Recommendation
+
+**Sprint 1 (This Week)**:
+- Test & ship CC/Observers (Priority 1)
+- Implement Template Personalization save flow (Priority 2)
+- Quick test cycle: 1 entrepreneur + 2 advisors
+
+**Sprint 2 (Next Week)**:
+- Auto-Assignment UI enhancements (Priority 3)
+- Performance tuning if needed
+- Full team testing
+
+**Why This Order**:
+1. Validates CC/Observers before building on it
+2. Captures template preferences immediately (high-value feature)
+3. Improves auto-assignment visibility once personalization is proven
+
+---
+
+## Technical Considerations
+
+### Template Personalization Diff Logic
+```
+Current approach (proposed):
+- Store custom values in user_task_preferences
+- On save, compare task vs. original template
+- Only save fields that differ
+
+Challenge: Need access to original template data in TaskDetailDialog
+Solution: Fetch original template from task.template_id and compare
 ```
 
-**Auto-assignment logic (in useBulkTaskCreation):**
-
-```text
-// Fetch project advisors with expertise
-const { data: projectAdvisors } = await supabase
-  .from('project_advisors')
-  .select('advisor_id, advisors(expertise)')
-  .eq('project_id', projectId)
-  .eq('status', 'active');
-
-// For each template with advisor_specialty:
-const matchingAdvisor = projectAdvisors?.find(pa =>
-  pa.advisors?.expertise?.includes(template.advisor_specialty)
-);
-if (matchingAdvisor) {
-  taskRow.assigned_advisor_id = matchingAdvisor.advisor_id;
-}
+### CC/Observers RLS
 ```
+Already secure:
+- Entrepreneurs: Can manage all observers for their projects (USING clause checks project ownership)
+- Advisors: Can only SELECT their own observations (WHERE advisor_id = auth.uid())
+- No privilege escalation risk
+```
+
+### Auto-Assignment Matching
+```
+Already implemented correctly:
+- Matches template.advisor_specialty against advisors.expertise array
+- Falls back to "יועץ נדרש: {specialty}" note if no match
+- No duplicates (advisor can't be assigned twice)
+```
+
+---
+
+## Risk Assessment
+
+| Feature | Risk | Mitigation |
+|---------|------|-----------|
+| CC/Observers | Permissions not enforced | Test advisor privacy (can't see others' observations) |
+| Personalization | Data drift (preferences become stale) | Add "Clear preferences" admin action if needed |
+| Auto-Assignment | Wrong advisor matched | Require manual verification on first project type |
+
+---
+
+## Success Criteria
+
+**Priority 1 (CC/Observers)**: 
+- ✓ Can add/remove observers from TaskDetailDialog
+- ✓ Advisors see CC'd tasks in their dashboard
+- ✓ Entrepreneurs can't see observer management tab (only entrepreneurs can)
+
+**Priority 2 (Personalization)**:
+- ✓ User edits task name, saves → Next project auto-suggests same name
+- ✓ Per-project-type isolation works
+- ✓ Users see toast confirming preferences saved
+
+**Priority 3 (Auto-Assignment)**:
+- ✓ Bulk templates auto-assign relevant advisors by expertise
+- ✓ Manual creation shows matched advisors as default
+- ✓ Users understand assignments were made automatically
+
