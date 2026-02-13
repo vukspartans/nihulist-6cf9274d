@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LicensingTimeline } from './LicensingTimeline';
 import { AllProjectsTaskTable } from './AllProjectsTaskTable';
 import { ProjectTaskView } from './ProjectTaskView';
-import { TaskFilters } from './TaskFilters';
 import { TaskDetailDialog } from './TaskDetailDialog';
 import { AutoTaskSuggestionBanner } from './AutoTaskSuggestionBanner';
 import { useAllProjectsTasks } from '@/hooks/useAllProjectsTasks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Clock, PlayCircle, AlertTriangle, CheckCircle, Ban } from 'lucide-react';
-import type { ProjectTask, ProjectAdvisorOption } from '@/types/task';
+import { Clock, PlayCircle, AlertTriangle, CheckCircle, Ban, XCircle, X } from 'lucide-react';
+import type { ProjectTask, ProjectAdvisorOption, TaskStatus } from '@/types/task';
 import { PendingChangesNotification } from './PendingChangesNotification';
 import { useOpenTaskCounts } from '@/hooks/useOpenTaskCounts';
+import { cn } from '@/lib/utils';
 
 export function TaskManagementDashboard() {
   const {
@@ -36,6 +37,17 @@ export function TaskManagementDashboard() {
 
   const { counts: openTaskCounts } = useOpenTaskCounts();
   const mode = selectedProjectId ? 'single' : 'all';
+
+  const toggleStatus = useCallback((status: TaskStatus) => {
+    setFilters(f => ({
+      ...f,
+      statuses: f.statuses.includes(status)
+        ? f.statuses.filter(s => s !== status)
+        : [...f.statuses, status],
+    }));
+  }, [setFilters]);
+
+  const hasActiveFilters = filters.advisorId || filters.statuses.length > 0;
 
   const selectedTask: ProjectTask | null = selectedTaskId
     ? (allTasks.find(t => t.id === selectedTaskId) as unknown as ProjectTask) || null
@@ -133,6 +145,7 @@ export function TaskManagementDashboard() {
       delayed: source.filter(t => t.status === 'delayed').length,
       blocked: source.filter(t => t.status === 'blocked').length,
       completed: source.filter(t => t.status === 'completed').length,
+      cancelled: source.filter(t => t.status === 'cancelled').length,
     };
   }, [tasks, allTasks, selectedProjectId]);
 
@@ -158,6 +171,7 @@ export function TaskManagementDashboard() {
     { key: 'delayed', label: 'באיחור', count: statusCounts.delayed, icon: AlertTriangle, color: 'text-orange-500' },
     { key: 'blocked', label: 'חסום', count: statusCounts.blocked, icon: Ban, color: 'text-destructive' },
     { key: 'completed', label: 'הושלם', count: statusCounts.completed, icon: CheckCircle, color: 'text-green-600' },
+    { key: 'cancelled', label: 'בוטל', count: statusCounts.cancelled, icon: XCircle, color: 'text-muted-foreground' },
   ];
 
   return (
@@ -198,19 +212,50 @@ export function TaskManagementDashboard() {
           onRequestProcessed={refetch}
         />
 
-        <TaskFilters
-          filters={filters}
-          onFiltersChange={setFilters}
-          advisorOptions={advisorOptions}
-        />
+        {/* Advisor filter inline */}
+        {advisorOptions.length > 0 && (
+          <Select
+            value={filters.advisorId || 'all'}
+            onValueChange={(v) => setFilters(f => ({ ...f, advisorId: v === 'all' ? null : v }))}
+            dir="rtl"
+          >
+            <SelectTrigger className="w-[180px] text-right h-9">
+              <SelectValue placeholder="יועץ" />
+            </SelectTrigger>
+            <SelectContent dir="rtl">
+              <SelectItem value="all">כל היועצים</SelectItem>
+              {advisorOptions.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters(f => ({ ...f, advisorId: null, statuses: [] }))}
+            className="h-7 px-2 text-xs"
+          >
+            <X className="w-3 h-3 ml-1" />
+            נקה
+          </Button>
+        )}
       </div>
 
-      {/* Status summary row */}
+      {/* Status summary row — clickable filters */}
       <div className="flex flex-wrap gap-2">
         {statusItems.map(item => (
           <div
             key={item.key}
-            className="flex items-center gap-1.5 bg-card border rounded-md px-2.5 py-1.5 text-xs"
+            onClick={() => toggleStatus(item.key as TaskStatus)}
+            className={cn(
+              "flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 text-xs cursor-pointer select-none transition-colors",
+              filters.statuses.includes(item.key as TaskStatus)
+                ? "bg-primary/10 border-primary ring-1 ring-primary/30"
+                : "bg-card hover:bg-muted"
+            )}
           >
             <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
             <span className="text-muted-foreground">{item.label}</span>
