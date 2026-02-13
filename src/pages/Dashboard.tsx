@@ -23,6 +23,7 @@ import LegalFooter from "@/components/LegalFooter";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskManagementDashboard } from "@/components/tasks/TaskManagementDashboard";
 import { ClipboardList, FolderOpen } from "lucide-react";
+import { useOpenTaskCounts } from "@/hooks/useOpenTaskCounts";
 
 
 const getPhaseStatusColor = (phase: string | null) => {
@@ -70,6 +71,7 @@ const Dashboard = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const { needsOnboarding, loading: orgLoading } = useOrganization();
   const isMobile = useIsMobile();
+  const { counts: openTaskCounts, totalOpen: totalOpenTasks } = useOpenTaskCounts();
 
   // Redirect to onboarding if entrepreneur hasn't completed it
   useEffect(() => {
@@ -378,6 +380,11 @@ const Dashboard = () => {
             <TabsTrigger value="tasks" className="gap-1.5">
               <ClipboardList className="w-4 h-4" />
               ניהול משימות
+              {totalOpenTasks > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-[20px] px-1 text-[10px]">
+                  {totalOpenTasks > 99 ? '99+' : totalOpenTasks}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="projects" className="gap-1.5">
               <FolderOpen className="w-4 h-4" />
@@ -448,6 +455,11 @@ const Dashboard = () => {
                           <div className="flex justify-between items-start gap-2 mb-3">
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-base truncate">{project.name}</h3>
+                              {(openTaskCounts[project.id] || 0) > 0 && (
+                                <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                                  {openTaskCounts[project.id]} משימות
+                                </Badge>
+                              )}
                               <Badge 
                                 variant="outline" 
                                 className={`${getPhaseStatusColor(project.phase)} text-white border-0 mt-1 text-xs`}
@@ -578,12 +590,19 @@ const Dashboard = () => {
                                 className="cursor-pointer hover:bg-muted/50 transition-colors"
                               >
                                 <TableCell className="font-medium">
-                                  <button
-                                    onClick={() => handleProjectClick(project.id)}
-                                    className="text-right hover:text-primary transition-colors cursor-pointer text-start"
-                                  >
-                                    {project.name}
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleProjectClick(project.id)}
+                                      className="text-right hover:text-primary transition-colors cursor-pointer text-start"
+                                    >
+                                      {project.name}
+                                    </button>
+                                    {(openTaskCounts[project.id] || 0) > 0 && (
+                                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
+                                        {openTaskCounts[project.id]}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <Badge 

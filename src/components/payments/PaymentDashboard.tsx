@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Wallet, Loader2, Receipt } from 'lucide-react';
 import { useProjectPayments } from '@/hooks/useProjectPayments';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { PaymentSummaryCards } from './PaymentSummaryCards';
@@ -11,6 +12,7 @@ import { CreatePaymentRequestDialog } from './CreatePaymentRequestDialog';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
 import { PaymentRequestDetailDialog } from './PaymentRequestDetailDialog';
+import { CashFlowChart } from './CashFlowChart';
 import { useAuth } from '@/hooks/useAuth';
 
 interface PaymentDashboardProps {
@@ -123,6 +125,19 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
           <PaymentSummaryCards summary={summary} />
         </CardContent>
       </Card>
+
+      {/* Cash Flow Chart */}
+      <CashFlowChart milestones={milestones} paymentRequests={paymentRequests} />
+
+      {/* Invoice-ready milestones alert */}
+      {milestones.some(m => m.status === 'due') && (
+        <Alert className="border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800">
+          <Receipt className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-700 dark:text-green-400 text-sm">
+            ישנן אבני דרך שהושלמו – ניתן להגיש חשבון עבורן.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Milestones */}
       <PaymentMilestoneList

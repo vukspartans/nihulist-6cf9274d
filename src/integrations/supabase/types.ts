@@ -2959,6 +2959,50 @@ export type Database = {
         }
         Relationships: []
       }
+      task_change_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          requested_by: string
+          requested_changes: Json
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          requested_by: string
+          requested_changes: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          requested_by?: string
+          requested_changes?: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_change_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_comments: {
         Row: {
           author_id: string

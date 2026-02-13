@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Clock, PlayCircle, AlertTriangle, CheckCircle, Ban } from 'lucide-react';
 import type { ProjectTask, ProjectAdvisorOption } from '@/types/task';
+import { PendingChangesNotification } from './PendingChangesNotification';
+import { useOpenTaskCounts } from '@/hooks/useOpenTaskCounts';
 
 export function TaskManagementDashboard() {
   const {
@@ -32,6 +34,7 @@ export function TaskManagementDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisorOption[]>([]);
 
+  const { counts: openTaskCounts } = useOpenTaskCounts();
   const mode = selectedProjectId ? 'single' : 'all';
 
   const selectedTask: ProjectTask | null = selectedTaskId
@@ -74,6 +77,23 @@ export function TaskManagementDashboard() {
     } catch (err) {
       console.error('Error updating task:', err);
       toast.error('שגיאה בעדכון המשימה');
+      return false;
+    }
+  }, [refetch]);
+
+  const handleTaskDelete = useCallback(async (taskId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('project_tasks')
+        .delete()
+        .eq('id', taskId);
+      if (error) throw error;
+      toast.success('המשימה נמחקה בהצלחה');
+      refetch();
+      return true;
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      toast.error('שגיאה במחיקת המשימה');
       return false;
     }
   }, [refetch]);
@@ -143,7 +163,14 @@ export function TaskManagementDashboard() {
           <SelectContent dir="rtl">
             <SelectItem value="all">כלל הפרויקטים</SelectItem>
             {projects.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+                {(openTaskCounts[p.id] || 0) > 0 && (
+                  <span className="mr-1 inline-flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-[10px] min-w-[18px] h-[18px] px-1">
+                    {openTaskCounts[p.id]}
+                  </span>
+                )}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -153,6 +180,11 @@ export function TaskManagementDashboard() {
         </Badge>
 
         <div className="flex-1" />
+
+        <PendingChangesNotification
+          projectId={selectedProjectId}
+          onRequestProcessed={refetch}
+        />
 
         <TaskFilters
           filters={filters}
@@ -216,6 +248,7 @@ export function TaskManagementDashboard() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSubmit={handleTaskSubmit}
+        onDelete={handleTaskDelete}
         projectAdvisors={projectAdvisors}
         allProjectTasks={allProjectTasksForDialog}
       />
