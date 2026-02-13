@@ -2524,6 +2524,57 @@ export type Database = {
           },
         ]
       }
+      reschedule_proposals: {
+        Row: {
+          created_at: string
+          delay_days: number
+          id: string
+          project_id: string
+          proposed_changes: Json
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          trigger_task_id: string
+        }
+        Insert: {
+          created_at?: string
+          delay_days?: number
+          id?: string
+          project_id: string
+          proposed_changes?: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          trigger_task_id: string
+        }
+        Update: {
+          created_at?: string
+          delay_days?: number
+          id?: string
+          project_id?: string
+          proposed_changes?: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          trigger_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reschedule_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reschedule_proposals_trigger_task_id_fkey"
+            columns: ["trigger_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_invites: {
         Row: {
           advisor_id: string | null
