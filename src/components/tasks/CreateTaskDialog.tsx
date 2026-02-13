@@ -19,6 +19,7 @@ interface CreateTaskDialogProps {
 
 export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors }: CreateTaskDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoMatched, setAutoMatched] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -97,18 +98,26 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
             <Select 
               value={formData.phase} 
               onValueChange={(val) => {
-                setFormData({ ...formData, phase: val });
+                let matchedAdvisorId: string | null = null;
                 // Auto-select matching advisor by expertise
                 if (val && projectAdvisors.length > 0) {
-                  // Find advisor whose expertise matches the selected phase
-                  // This relies on project advisors having been loaded with expertise data
                   const match = projectAdvisors.find((pa: any) => 
                     pa.expertise?.includes(val)
                   );
                   if (match) {
-                    setFormData(prev => ({ ...prev, phase: val, assigned_advisor_id: match.advisor_id }));
+                    matchedAdvisorId = match.advisor_id;
+                    setAutoMatched(true);
+                  } else {
+                    setAutoMatched(false);
                   }
+                } else {
+                  setAutoMatched(false);
                 }
+                setFormData(prev => ({ 
+                  ...prev, 
+                  phase: val, 
+                  ...(matchedAdvisorId ? { assigned_advisor_id: matchedAdvisorId } : {})
+                }));
               }}
             >
               <SelectTrigger>
@@ -147,10 +156,17 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
 
           {projectAdvisors.length > 0 && (
             <div className="space-y-2">
-              <Label>שיוך ליועץ</Label>
+              <div className="flex items-center gap-2">
+                <Label>שיוך ליועץ</Label>
+                {autoMatched && formData.assigned_advisor_id && (
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                    ⚡ שויך אוטומטית לפי התמחות
+                  </span>
+                )}
+              </div>
               <TaskAssignment
                 value={formData.assigned_advisor_id}
-                onChange={(id) => setFormData({ ...formData, assigned_advisor_id: id })}
+                onChange={(id) => { setFormData({ ...formData, assigned_advisor_id: id }); setAutoMatched(false); }}
                 projectAdvisors={projectAdvisors}
               />
             </div>

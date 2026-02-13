@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,9 @@ import { TaskObserversSection } from './TaskObserversSection';
 import { useTaskDependencies } from '@/hooks/useTaskDependencies';
 import { useTaskComments } from '@/hooks/useTaskComments';
 import { useTaskChangeRequests } from '@/hooks/useTaskChangeRequests';
+import { useTaskPersonalization } from '@/hooks/useTaskPersonalization';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { PROJECT_PHASES } from '@/constants/project';
 import { FileText, MessageSquare, Settings, Trash2, AlertTriangle, CheckCircle2, Users } from 'lucide-react';
 import type { ProjectTask, TaskStatus, ProjectAdvisorOption } from '@/types/task';
@@ -33,6 +35,7 @@ interface TaskDetailDialogProps {
   onDelete?: (taskId: string) => Promise<boolean>;
   projectAdvisors: ProjectAdvisorOption[];
   allProjectTasks?: { id: string; name: string; status: string }[];
+  projectType?: string | null;
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -43,14 +46,19 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'cancelled', label: 'בוטל' },
 ];
 
-export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete, projectAdvisors, allProjectTasks = [] }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete, projectAdvisors, allProjectTasks = [], projectType }: TaskDetailDialogProps) {
   const { user, hasRole } = useAuth();
+  const { toast } = useToast();
   const isAdvisor = hasRole('advisor') && !hasRole('entrepreneur') && !hasRole('admin');
+  const { saveCustomization } = useTaskPersonalization();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<ProjectTask>>({});
   const [showDepBlockAlert, setShowDepBlockAlert] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Store original task values for diff detection
+  const originalTaskRef = useRef<Partial<ProjectTask> | null>(null);
 
   const { submitChangeRequest } = useTaskChangeRequests(task?.project_id || null);
 
@@ -68,7 +76,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete,
 
   useEffect(() => {
     if (task) {
-      setFormData({
+      const initial = {
         name: task.name,
         description: task.description || '',
         phase: task.phase || '',
@@ -83,7 +91,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete,
         is_blocked: task.is_blocked || false,
         block_reason: task.block_reason || '',
         notes: task.notes || '',
-      });
+      };
+      setFormData(initial);
+      originalTaskRef.current = { ...initial };
     }
   }, [task]);
 
@@ -115,6 +125,32 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete,
       } else {
         const success = await onSubmit(task.id, formData);
         if (success) {
+          // Save personalization if task has a template_id and fields changed
+          if ((task as any).template_id && projectType && originalTaskRef.current) {
+            const orig = originalTaskRef.current;
+            const hasChanges = 
+              formData.name !== orig.name ||
+              formData.description !== orig.description ||
+              formData.notes !== orig.notes;
+            
+            if (hasChanges) {
+              const customFields: Record<string, string | null> = {};
+              if (formData.name !== orig.name) customFields.custom_name = formData.name || null;
+              if (formData.description !== orig.description) customFields.custom_description = formData.description || null;
+              if (formData.notes !== orig.notes) customFields.custom_notes = formData.notes || null;
+              
+              saveCustomization(
+                task.name, // original template task name
+                (task as any).template_id,
+                projectType,
+                customFields
+              );
+              toast({
+                title: '✓ העדפות נשמרו',
+                description: 'השינויים יוצעו אוטומטית בפרויקטים עתידיים',
+              });
+            }
+          }
           onOpenChange(false);
         }
       }
