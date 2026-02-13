@@ -91,9 +91,12 @@ export function useBulkTaskCreation() {
 
       if (error) throw error;
 
+      const autoAssignedCount = tasksToInsert.filter(t => t.assigned_advisor_id).length;
       toast({
         title: "משימות נוצרו בהצלחה",
-        description: `נוצרו ${data?.length || 0} משימות מתבנית`,
+        description: autoAssignedCount > 0
+          ? `נוצרו ${data?.length || 0} משימות מתבנית • ${autoAssignedCount} שויכו אוטומטית ליועצים`
+          : `נוצרו ${data?.length || 0} משימות מתבנית`,
       });
 
       return (data || []) as CreatedTask[];
