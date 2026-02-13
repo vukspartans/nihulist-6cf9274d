@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TaskAssignment } from './TaskAssignment';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskDependencySelector } from './TaskDependencySelector';
@@ -17,8 +18,10 @@ import { TaskCommentsSection } from './TaskCommentsSection';
 import { TaskFilesSection } from './TaskFilesSection';
 import { useTaskDependencies } from '@/hooks/useTaskDependencies';
 import { useTaskComments } from '@/hooks/useTaskComments';
+import { useTaskChangeRequests } from '@/hooks/useTaskChangeRequests';
+import { useAuth } from '@/hooks/useAuth';
 import { PROJECT_PHASES } from '@/constants/project';
-import { FileText, MessageSquare, Settings } from 'lucide-react';
+import { FileText, MessageSquare, Settings, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ProjectTask, TaskStatus, ProjectAdvisorOption } from '@/types/task';
 
 interface TaskDetailDialogProps {
@@ -26,6 +29,7 @@ interface TaskDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (taskId: string, updates: Partial<ProjectTask>) => Promise<boolean>;
+  onDelete?: (taskId: string) => Promise<boolean>;
   projectAdvisors: ProjectAdvisorOption[];
   allProjectTasks?: { id: string; name: string; status: string }[];
 }
@@ -38,10 +42,16 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'cancelled', label: 'בוטל' },
 ];
 
-export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAdvisors, allProjectTasks = [] }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete, projectAdvisors, allProjectTasks = [] }: TaskDetailDialogProps) {
+  const { user, hasRole } = useAuth();
+  const isAdvisor = hasRole('advisor') && !hasRole('entrepreneur') && !hasRole('admin');
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<ProjectTask>>({});
   const [showDepBlockAlert, setShowDepBlockAlert] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const { submitChangeRequest } = useTaskChangeRequests(task?.project_id || null);
 
   const {
     dependencies,
@@ -95,8 +105,30 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
 
     setIsSubmitting(true);
     try {
-      const success = await onSubmit(task.id, formData);
+      // Advisor flow: submit as change request instead of direct save
+      if (isAdvisor && user) {
+        const success = await submitChangeRequest(task.id, formData, user.id);
+        if (success) {
+          onOpenChange(false);
+        }
+      } else {
+        const success = await onSubmit(task.id, formData);
+        if (success) {
+          onOpenChange(false);
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!task || !onDelete) return;
+    setIsSubmitting(true);
+    try {
+      const success = await onDelete(task.id);
       if (success) {
+        setShowDeleteConfirm(false);
         onOpenChange(false);
       }
     } finally {
@@ -106,6 +138,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
 
   if (!task) return null;
 
+  const isCompleteAndCritical = task.status === 'completed' && task.is_payment_critical;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,6 +148,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
             <div className="flex items-center gap-2">
               <DialogTitle>פרטי משימה</DialogTitle>
               <TaskStatusBadge status={task.status} />
+              {task.is_payment_critical && (
+                <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                  קריטי לתשלום
+                </span>
+              )}
             </div>
           </DialogHeader>
 
@@ -142,6 +181,25 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
             <TabsContent value="details" className="flex-1 min-h-0 mt-0">
               <ScrollArea className="h-full">
                 <form onSubmit={handleSubmit} className="space-y-2.5 px-5 py-3">
+                  {/* Invoice ready alert */}
+                  {isCompleteAndCritical && (
+                    <Alert className="border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-700 dark:text-green-400 text-xs">
+                        אבן הדרך הושלמה – ניתן להגיש חשבון עבור יועץ זה.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Advisor notice */}
+                  {isAdvisor && (
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+                      <AlertDescription className="text-blue-700 dark:text-blue-400 text-xs">
+                        שינויים שתבצע יישלחו לאישור היזם לפני שמירתם.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Name */}
                   <div className="space-y-1">
                     <Label htmlFor="edit_name" className="text-xs text-right block">שם המשימה *</Label>
@@ -345,13 +403,27 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
                   </div>
 
                   {/* Footer inside the form */}
-                  <DialogFooter className="flex gap-2 pt-3 mt-1 border-t justify-start">
-                    <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
-                      {isSubmitting ? 'שומר...' : 'שמור שינויים'}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                      ביטול
-                    </Button>
+                  <DialogFooter className="flex gap-2 pt-3 mt-1 border-t justify-between">
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={isSubmitting || !formData.name?.trim()}>
+                        {isSubmitting ? 'שומר...' : isAdvisor ? 'שלח לאישור' : 'שמור שינויים'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        ביטול
+                      </Button>
+                    </div>
+                    {onDelete && !isAdvisor && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        מחק
+                      </Button>
+                    )}
                   </DialogFooter>
                 </form>
               </ScrollArea>
@@ -388,6 +460,33 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, projectAd
             <AlertDialogAction onClick={() => setShowDepBlockAlert(false)}>
               הבנתי
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete confirmation alert */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {task?.is_payment_critical && <AlertTriangle className="w-5 h-5 text-destructive" />}
+              {task?.is_payment_critical ? 'מחיקת משימה קריטית לתשלום' : 'מחיקת משימה'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {task?.is_payment_critical
+                ? `משימה זו מקושרת לאבן דרך תשלום. מחיקתה תשפיע על חישוב הצפי התזרימי. האם אתה בטוח שברצונך למחוק את "${task?.name}"?`
+                : `האם אתה בטוח שברצונך למחוק את המשימה "${task?.name}"?`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? 'מוחק...' : 'מחק'}
+            </AlertDialogAction>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
