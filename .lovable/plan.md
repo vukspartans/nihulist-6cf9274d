@@ -1,177 +1,127 @@
 
-## Implement Task Delay Notifications to Entrepreneurs
 
-### Problem
-When a task is automatically marked as "delayed" by the `check_task_delay()` trigger, there is no mechanism to notify the project owner (entrepreneur) about the delay, the affected task, deadline, or assigned advisor. This creates a gap between backend task status tracking and user awareness.
+## Automatic Rescheduling Suggestion for Delayed Tasks
 
-### Solution Architecture
+### Overview
+When a task is marked as "delayed", the system will calculate the cascade effect on all dependent tasks and present the entrepreneur with a proposal showing updated dates. The entrepreneur can accept (apply all changes), modify individual dates, or dismiss the proposal.
 
-The implementation will create an **event-driven notification system** using:
-1. **Database Trigger** — Enhanced `check_task_delay()` to insert into `notification_queue`
-2. **Email Template** — New React component for task delay notification
-3. **Edge Function** — Existing `process-notification-queue` handles delivery
-4. **Activity Logging** — Track delay events in `activity_log` for auditing
+### Architecture
 
-### Data Relationships
+The feature has three parts:
+1. **Database table** to store reschedule proposals
+2. **Cascade calculation logic** (client-side, in a new hook)
+3. **UI banner + review dialog** for the entrepreneur to accept/modify/dismiss
 
+### Step 1: Database Table — `reschedule_proposals`
+
+Create a new table to persist proposals so they survive page reloads:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK) | |
+| project_id | uuid (FK projects) | The affected project |
+| trigger_task_id | uuid (FK project_tasks) | The task that was delayed |
+| proposed_changes | jsonb | Array of `{ task_id, task_name, old_start, new_start, old_end, new_end }` |
+| status | text | 'pending', 'accepted', 'modified', 'dismissed' |
+| delay_days | integer | Number of days the trigger task was delayed |
+| created_at | timestamptz | |
+| reviewed_at | timestamptz | When entrepreneur acted |
+| reviewed_by | uuid | |
+
+RLS: Owner of the project can SELECT, UPDATE. INSERT via trigger (SECURITY DEFINER).
+
+### Step 2: Database Trigger Enhancement
+
+Extend the `check_task_delay()` function to also:
+1. When a task transitions to 'delayed', calculate `delay_days = CURRENT_DATE - planned_end_date`
+2. Query `task_dependencies` to find all downstream tasks (tasks that depend on this delayed task, recursively)
+3. For each downstream task, compute new dates by shifting `planned_start_date` and `planned_end_date` forward by `delay_days + lag_days`
+4. Insert a single row into `reschedule_proposals` with the full proposed_changes array
+5. Only create a proposal if there are downstream dependent tasks affected
+
+### Step 3: Client-Side Hook — `useRescheduleProposals`
+
+A new hook that:
+- Fetches pending proposals for the current project(s)
+- Provides `acceptProposal(id)` — applies all proposed date changes via batch update
+- Provides `acceptWithModifications(id, changes)` — applies user-modified dates
+- Provides `dismissProposal(id)` — marks as dismissed
+- Auto-refetches task list after applying changes
+
+### Step 4: UI Components
+
+**A. `RescheduleBanner` component**
+Displayed at the top of `TaskManagementDashboard` (similar to `AutoTaskSuggestionBanner`):
+- Shows when there are pending reschedule proposals
+- Orange/warning styling with calendar icon
+- Text: "זוהה עיכוב במשימה '{task_name}' — {N} משימות תלויות מושפעות. סקור את ההצעה לעדכון לוח זמנים."
+- Buttons: "סקור הצעה" (opens dialog) | "התעלם" (dismisses)
+
+**B. `RescheduleReviewDialog` component**
+A dialog showing:
+- Header: which task caused the delay and by how many days
+- Table with columns: Task Name | Original Start | Proposed Start | Original End | Proposed End
+- Each date field is editable (date input) so the entrepreneur can modify
+- Footer buttons: "אשר עדכון" (accept) | "בטל" (cancel)
+- On accept: batch-update all affected tasks' planned dates and sync payment milestones
+
+### Step 5: Integration into Dashboard
+
+In `TaskManagementDashboard.tsx`:
+- Import and render `RescheduleBanner` between the status summary row and the timeline
+- Pass `refetch` callback so task list refreshes after accepting a proposal
+
+### Technical Details
+
+**Cascade Calculation (in SQL trigger):**
+```sql
+-- Recursive CTE to find all downstream tasks
+WITH RECURSIVE downstream AS (
+  SELECT td.task_id, td.lag_days
+  FROM task_dependencies td
+  WHERE td.depends_on_task_id = NEW.id
+  UNION ALL
+  SELECT td2.task_id, td2.lag_days
+  FROM task_dependencies td2
+  JOIN downstream d ON td2.depends_on_task_id = d.task_id
+)
+SELECT DISTINCT pt.id, pt.name, pt.planned_start_date, pt.planned_end_date
+FROM downstream d
+JOIN project_tasks pt ON pt.id = d.task_id
+WHERE pt.status NOT IN ('completed', 'cancelled');
 ```
-project_tasks
-├── project_id → projects.id
-├── assigned_advisor_id → advisors.id
-└── projects.owner_id → profiles.user_id (entrepreneur email)
 
-notification_queue
-├── recipient_id (project owner's user_id)
-├── recipient_email (entrepreneur email)
-├── entity_type = "task_delay"
-├── entity_id = task_id
-└── template_data {taskId, taskName, plannedEndDate, advisorCompanyName}
-```
+Each downstream task's dates shift by `delay_days` (calculated as `CURRENT_DATE - trigger_task.planned_end_date`).
 
-### Implementation Steps
-
-#### Step 1: Create Task Delay Email Template
-**File:** `supabase/functions/_shared/email-templates/task-delay-notification.tsx`
-- Display task name prominently
-- Show original deadline (planned_end_date)
-- Display assigned advisor's company name
-- Include link to task detail in the dashboard (/dashboard?taskId=xxx)
-- Use existing `EmailLayout` component with Billding branding
-- Hebrew copy: "עיכוב במשימה", "תאריך יעד מקורי", "יועץ מטופל"
-
-#### Step 2: Enhance Task Delay Detection Trigger
-**File:** `supabase/migrations/[timestamp]_task_delay_notifications.sql`
-
-Modify the `check_task_delay()` function to:
-1. Detect when status transitions from non-delayed → delayed
-2. Query the project owner's email via: `projects.owner_id → profiles.user_id → auth.users.email`
-3. Query the assigned advisor's company_name via: `assigned_advisor_id → advisors.company_name`
-4. Insert row into `notification_queue` with:
-   - `notification_type` = 'task_delay'
-   - `recipient_id` = project owner's user_id
-   - `recipient_email` = entrepreneur's email
-   - `subject` = "עיכוב במשימה: {task_name}"
-   - `body_html` = rendered email template
-   - `template_data` = JSON with taskId, taskName, plannedEndDate, advisorName, projectName
-   - `entity_type` = 'task'
-   - `entity_id` = task_id
-   - `priority` = 2 (high priority)
-   - `scheduled_for` = NOW() (send immediately)
-
-5. Log activity event:
-   - `entity_type` = 'task'
-   - `entity_id` = task_id
-   - `event_type` = 'task_delayed'
-   - `description` = "משימה סומנה כעיכובה"
-
-**Technical Details:**
-- Use `SECURITY DEFINER` for email query permissions
-- Handle NULL values gracefully (if advisor not assigned, use "יועץ בלתי מוגדר")
-- Use EXISTS check to avoid duplicate notifications on retry updates
-
-#### Step 3: Create Database Migration
-**Purpose:** Define the new trigger logic with proper transaction handling
-
-The migration will:
-- Replace the existing `check_task_delay()` function with enhanced version
-- Keep the trigger definition unchanged (`check_project_task_delay`)
-- Ensure idempotency (no duplicate notifications if trigger fires multiple times)
-- Add audit logging to activity_log table
-
-#### Step 4: Leverage Existing Infrastructure
-- **Notification Queue Processing:** The existing `process-notification-queue` edge function already handles:
-  - Batch processing with retry logic
-  - Exponential backoff for failed deliveries
-  - Status tracking (pending → processing → sent/failed)
-  - Maximum retry attempts (default 3)
-- **No new edge function needed** — reuse existing processor
-
-### Key Design Decisions
-
-1. **Trigger-Based Detection** — Automatic detection when task.status is updated, no manual intervention needed
-2. **Queue-Based Delivery** — Decouples notification creation from email sending (async processing)
-3. **Entrepreneur-Only Notifications** — Only project owners receive notifications (not advisors, who can view tasks in their own dashboard)
-4. **High Priority** — Set to priority 2 to ensure delays are notified quickly
-5. **Activity Logging** — Creates audit trail of when delays were detected and notified
-6. **Hebrew Content** — All email copy and templates use Hebrew for Israeli users
-
-### Data Flow Diagram
-
-```
-project_tasks UPDATE
-    ↓
-check_task_delay() trigger fires
-    ↓
-Detects: status → 'delayed'
-    ↓
-Query: projects.owner_id → email, assigned_advisor_id → company_name
-    ↓
-INSERT INTO notification_queue {
-  notification_type: 'task_delay',
-  recipient_email: entrepreneur@example.com,
-  body_html: rendered TaskDelayEmail component,
-  template_data: {taskId, taskName, plannedEndDate, advisorName},
-  priority: 2,
-  scheduled_for: NOW()
+**Batch update on accept:**
+```typescript
+// For each proposed change, update the task
+for (const change of proposal.proposed_changes) {
+  await supabase.from('project_tasks').update({
+    planned_start_date: change.new_start,
+    planned_end_date: change.new_end,
+  }).eq('id', change.task_id);
+  
+  // Also sync payment milestone if linked
 }
-    ↓
-INSERT INTO activity_log {
-  event_type: 'task_delayed',
-  entity_type: 'task'
-}
-    ↓
-[process-notification-queue edge function runs periodically]
-    ↓
-Batch fetch pending notifications (priority ordered)
-    ↓
-Send via Resend email service
-    ↓
-Update notification_queue status → 'sent'
 ```
-
-### Testing Checklist
-
-1. **Unit Testing:**
-   - Verify trigger only fires once per status transition
-   - Confirm notification_queue rows are inserted with correct data
-   - Verify NULL handling for missing advisors
-   - Check activity_log insertion
-
-2. **Integration Testing:**
-   - Create task with planned_end_date = today - 1 day
-   - Update task status (e.g., from 'pending' → 'in_progress')
-   - Verify task.status is auto-set to 'delayed' by trigger
-   - Check notification_queue has pending row
-   - Verify entrepreneur receives email with correct task name, deadline, advisor
-   - Test on mobile email clients (Hebrew RTL support)
-
-3. **Edge Cases:**
-   - Task without assigned advisor → use placeholder text
-   - Task updated multiple times in quick succession → only one notification
-   - Notification retry → verify exponential backoff
-   - Email delivery failure → verify marked as 'failed', can be retried
 
 ### Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `supabase/functions/_shared/email-templates/task-delay-notification.tsx` | Create | Email template for task delays |
-| `supabase/migrations/[timestamp]_task_delay_notifications.sql` | Create | Enhanced trigger + activity logging |
-| No frontend changes needed | — | Existing notification_queue processor handles delivery |
+| `supabase/migrations/[ts]_reschedule_proposals.sql` | Create | New table + RLS + trigger enhancement |
+| `src/hooks/useRescheduleProposals.ts` | Create | Fetch/accept/dismiss proposals |
+| `src/components/tasks/RescheduleBanner.tsx` | Create | Warning banner for pending proposals |
+| `src/components/tasks/RescheduleReviewDialog.tsx` | Create | Date review/edit dialog |
+| `src/components/tasks/TaskManagementDashboard.tsx` | Edit | Add RescheduleBanner |
 
-### Dependencies
+### User Flow
 
-- ✅ `notification_queue` table exists
-- ✅ `activity_log` table exists  
-- ✅ `process-notification-queue` edge function exists and is deployed
-- ✅ `@react-email` library available for email template
-- Requires: Profile email addresses must be available via `profiles.user_id`
-
-### Success Metrics
-
-- Task delays trigger notifications within seconds of status change
-- 95%+ email delivery rate (via Resend)
-- Entrepreneurs can click through to task detail in dashboard
-- Activity log shows clear audit trail of delay detection
-- No duplicate notifications per status change
-
+1. Task "הגשת תכניות" has `planned_end_date = Feb 10` but it's Feb 13 -- trigger marks it as delayed
+2. Trigger finds 3 downstream tasks via dependencies and calculates 3-day shift for each
+3. `reschedule_proposals` row is created with proposed new dates
+4. Entrepreneur opens dashboard, sees orange banner: "זוהה עיכוב של 3 ימים במשימה 'הגשת תכניות' — 3 משימות מושפעות"
+5. Clicks "סקור הצעה", sees table with old vs. new dates
+6. Can adjust any date, then clicks "אשר עדכון"
+7. All downstream task dates are updated, payment milestones synced, proposal marked as 'accepted'
