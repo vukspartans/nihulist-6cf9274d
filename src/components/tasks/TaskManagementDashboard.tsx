@@ -71,6 +71,18 @@ export function TaskManagementDashboard() {
         .update(updates)
         .eq('id', taskId);
       if (error) throw error;
+
+      // Sync planned_end_date to linked payment milestone
+      if (updates.planned_end_date) {
+        const task = allTasks.find(t => t.id === taskId);
+        if ((task as any)?.payment_milestone_id) {
+          await supabase
+            .from('payment_milestones')
+            .update({ due_date: updates.planned_end_date })
+            .eq('id', (task as any).payment_milestone_id);
+        }
+      }
+
       toast.success('המשימה עודכנה בהצלחה');
       refetch();
       return true;

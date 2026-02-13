@@ -65,7 +65,31 @@ export function useAdvisorTasks(advisorId: string | null) {
 
       if (taskErr) throw taskErr;
 
-      if (!tasksData || tasksData.length === 0) {
+      // Also fetch tasks where advisor is an observer (CC'd)
+      const { data: observedData } = await supabase
+        .from('task_observers')
+        .select('task_id')
+        .eq('advisor_id', advisorId);
+
+      const observedTaskIds = (observedData || []).map(o => o.task_id);
+      let observedTasks: any[] = [];
+      if (observedTaskIds.length > 0) {
+        const { data } = await supabase
+          .from('project_tasks')
+          .select('*')
+          .in('id', observedTaskIds);
+        observedTasks = data || [];
+      }
+
+      // Merge, dedup
+      const allTasksMap = new Map<string, any>();
+      (tasksData || []).forEach(t => allTasksMap.set(t.id, { ...t, is_observed: false }));
+      observedTasks.forEach(t => {
+        if (!allTasksMap.has(t.id)) allTasksMap.set(t.id, { ...t, is_observed: true });
+      });
+      const mergedTasks = Array.from(allTasksMap.values());
+
+      if (mergedTasks.length === 0) {
         setTasks([]);
         setProjects([]);
         setLoading(false);
@@ -73,7 +97,7 @@ export function useAdvisorTasks(advisorId: string | null) {
       }
 
       // Get unique project IDs
-      const projectIds = [...new Set(tasksData.map(t => t.project_id))];
+      const projectIds = [...new Set(mergedTasks.map(t => t.project_id))];
 
       // Fetch projects
       const { data: projectsData, error: projErr } = await supabase
@@ -133,7 +157,7 @@ export function useAdvisorTasks(advisorId: string | null) {
         }))
       );
 
-      const mapped: AdvisorTaskWithDetails[] = tasksData.map((t: any) => {
+      const mapped: AdvisorTaskWithDetails[] = mergedTasks.map((t: any) => {
         const proj = projectMap.get(t.project_id);
         return {
           id: t.id,
@@ -159,6 +183,7 @@ export function useAdvisorTasks(advisorId: string | null) {
           project_type: proj?.type || null,
           advisor_name: advisorName,
           entrepreneur_name: proj ? (entrepreneurNames[proj.owner_id] || null) : null,
+          is_observed: t.is_observed || false,
         };
       });
 

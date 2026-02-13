@@ -93,10 +93,23 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
           </div>
 
           <div className="space-y-2">
-            <Label>שלב בפרויקט</Label>
+            <Label>שלב בפרויקט / תחום</Label>
             <Select 
               value={formData.phase} 
-              onValueChange={(val) => setFormData({ ...formData, phase: val })}
+              onValueChange={(val) => {
+                setFormData({ ...formData, phase: val });
+                // Auto-select matching advisor by expertise
+                if (val && projectAdvisors.length > 0) {
+                  // Find advisor whose expertise matches the selected phase
+                  // This relies on project advisors having been loaded with expertise data
+                  const match = projectAdvisors.find((pa: any) => 
+                    pa.expertise?.includes(val)
+                  );
+                  if (match) {
+                    setFormData(prev => ({ ...prev, phase: val, assigned_advisor_id: match.advisor_id }));
+                  }
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="בחר שלב" />
