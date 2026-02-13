@@ -1,108 +1,68 @@
 
-## Plan: Verify Template Personalization Save Flow Implementation
 
-### Current Status: ALREADY IMPLEMENTED ✅
+## Consolidate Duplicate Status Filters
 
-The Template Personalization save flow has been fully integrated into `TaskDetailDialog.tsx` with the following components:
+### Problem
+The task management dashboard currently shows two rows of status indicators:
+1. **TaskFilters component** — clickable Badge chips (ממתין, בביצוע, חסום, באיחור, הושלם, בוטל) for filtering
+2. **Status summary row** — icon + label + count cards (ממתין, בביצוע, באיחור, חסום, הושלם) for display only
 
-#### 1. **Original Task Capture** (Lines 60-61, 96)
-- `originalTaskRef` stores the initial task values on component mount
-- Captures: name, description, notes (and other fields for comparison)
-- Data is preserved throughout the dialog lifecycle
+These are redundant and take up unnecessary space.
 
-#### 2. **Diff Detection Logic** (Lines 129-134)
-- Compares current `formData` against `originalTaskRef.current`
-- Checks three key fields: `name`, `description`, `notes`
-- Only triggers save if at least one field has changed
+### Solution
+Remove the status Badge chips from `TaskFilters` and make the status summary cards clickable (acting as both stats display AND filter toggles). This gives users a single, unified row that shows counts and allows filtering.
 
-#### 3. **Personalization Save Integration** (Lines 142-147)
-- Calls `saveCustomization()` from `useTaskPersonalization` hook
-- Passes:
-  - `task.name` - original template task name for matching
-  - `task.template_id` - links preference to the template
-  - `projectType` - ensures preferences are per-project-type
-  - `customFields` - only changed fields are sent to the backend
+### Changes
 
-#### 4. **User Feedback** (Lines 148-151)
-- Toast notification: "✓ העדפות נשמרו" (Preferences saved)
-- Description: "השינויים יוצעו אוטומטית בפרויקטים עתידיים" (Changes will be suggested automatically in future projects)
-- Only displays when actual changes are detected
+**File: `src/components/tasks/TaskManagementDashboard.tsx`**
+- Make the status summary cards clickable — clicking toggles that status in `filters.statuses`
+- Add visual feedback: highlight selected cards (e.g., ring/border) when actively filtering
+- Add "cancelled" (בוטל) to the status items list (currently missing from summary but present in filters)
+- Remove the separate `<TaskFilters>` component call from the top bar (move advisor filter inline instead)
 
-#### 5. **Role-Based Logic** (Lines 120-124)
-- **Advisors**: Changes are submitted as change requests (not direct saves)
-- **Entrepreneurs**: Changes are saved directly and personalization is captured
-- Personalization save only occurs in entrepreneur flow (non-advisor)
+**File: `src/components/tasks/TaskFilters.tsx`**
+- Remove the status Badge chips section entirely
+- Keep only the advisor dropdown filter and the "Clear" button
+- This component becomes a simple advisor-only filter (or can be inlined into the dashboard)
 
-### How It Works End-to-End
+### Technical Details
 
-**Scenario: Entrepreneur loads default task and customizes it**
+In `TaskManagementDashboard.tsx`, the status summary cards (lines 208-219) change from static display to interactive:
 
-1. Admin creates task template with name "הגשת תכנית" (Submit plan)
-2. Entrepreneur creates project with project_type="Residential", municipality="Tel Aviv"
-3. System suggests template-based tasks
-4. Entrepreneur opens task detail dialog
-5. Changes name to "הגשה ודוקומנטציה תכנית" (Submit with documentation)
-6. Saves the task
-7. System detects change: `name` differs from original
-8. Calls `saveCustomization()` with:
-   - `task_name: "הגשת תכנית"` (original)
-   - `template_id: "uuid-123"`
-   - `projectType: "Residential"`
-   - `customFields: { custom_name: "הגשה ודוקומנטציה תכנית" }`
-9. Backend upserts into `user_task_preferences` table
-10. Toast shows confirmation
+```tsx
+// Each card becomes clickable, toggling filter
+<div
+  key={item.key}
+  onClick={() => toggleStatus(item.key as TaskStatus)}
+  className={cn(
+    "flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 text-xs cursor-pointer select-none transition-colors",
+    filters.statuses.includes(item.key as TaskStatus)
+      ? "bg-primary/10 border-primary ring-1 ring-primary/30"
+      : "bg-card hover:bg-muted"
+  )}
+>
+  <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
+  <span className="text-muted-foreground">{item.label}</span>
+  <span className="font-semibold">{item.count}</span>
+</div>
+```
 
-**Next Time:**
+A `toggleStatus` function will be added (same logic as in TaskFilters):
+```tsx
+const toggleStatus = (status: TaskStatus) => {
+  const current = filters.statuses;
+  const next = current.includes(status)
+    ? current.filter(s => s !== status)
+    : [...current, status];
+  setFilters(f => ({ ...f, statuses: next }));
+};
+```
 
-1. Entrepreneur creates another Residential project
-2. System loads templates + applies personalizations via `useAutoTaskLoader.ts`
-3. Same template now shows with user's custom name automatically
+The advisor filter from `TaskFilters` will be moved inline into the top bar alongside the project selector. The "Clear filters" button will also be placed inline.
 
-### Database Table Structure
-
-The `user_task_preferences` table supports:
-- `user_id` - who made the customization
-- `template_id` - which template was customized (nullable for name-based matching)
-- `task_name` - original template task name for matching
-- `custom_name` - customized task name
-- `custom_description` - customized description
-- `custom_duration_days` - customized duration
-- `custom_advisor_specialty` - customized specialty
-- `custom_notes` - customized notes
-- `project_type` - which project type this applies to
-- `usage_count` - tracks how many times this preference was used
-- Timestamps for audit trail
-
-### What's Ready for Testing
-
-The implementation is production-ready. The flow:
-1. ✅ Captures original task values
-2. ✅ Detects changes in real-time
-3. ✅ Computes and saves only changed fields
-4. ✅ Filters by project type
-5. ✅ Respects role-based permissions (entrepreneurs only)
-6. ✅ Provides user feedback
-7. ✅ Integrates with template suggestion system
-
-### Recommended Testing Checklist
-
-**Unit Testing:**
-- ✓ Verify diff detection works correctly (name change, description change, notes change)
-- ✓ Verify no save occurs if no fields changed
-- ✓ Verify advisor changes don't trigger personalization save
-- ✓ Verify personalization is only saved for entrepreneur role
-
-**Integration Testing:**
-- ✓ Create project with default tasks
-- ✓ Edit task name and save → Verify toast appears
-- ✓ Create new project with same type → Verify custom name is suggested
-- ✓ Change description and notes → Verify all changes are captured
-- ✓ Try editing as advisor → Verify no personalization save occurs
-
-**Edge Cases:**
-- ✓ Task without template_id → Verify no personalization attempt
-- ✓ Task with null projectType → Verify no personalization attempt
-- ✓ Rapid successive saves → Verify usage_count increments correctly
-- ✓ Empty string customization → Verify null values are saved correctly
-- ✓ Cross-project-type isolation → Verify Residential prefs don't apply to Commercial
+### Result
+- One unified status row: icons + counts + click-to-filter
+- Advisor filter stays in the top bar
+- Less vertical space used
+- Cleaner, more intuitive interface
 
