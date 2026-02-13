@@ -15,6 +15,9 @@ import { Clock, PlayCircle, AlertTriangle, CheckCircle, Ban, XCircle, X } from '
 import type { ProjectTask, ProjectAdvisorOption, TaskStatus } from '@/types/task';
 import { PendingChangesNotification } from './PendingChangesNotification';
 import { useOpenTaskCounts } from '@/hooks/useOpenTaskCounts';
+import { useRescheduleProposals, type RescheduleProposal, type ProposedChange } from '@/hooks/useRescheduleProposals';
+import { RescheduleBanner } from './RescheduleBanner';
+import { RescheduleReviewDialog } from './RescheduleReviewDialog';
 import { cn } from '@/lib/utils';
 
 export function TaskManagementDashboard() {
@@ -36,6 +39,10 @@ export function TaskManagementDashboard() {
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisorOption[]>([]);
 
   const { counts: openTaskCounts } = useOpenTaskCounts();
+  const projectIdsForProposals = useMemo(() => projects.map(p => p.id), [projects]);
+  const { proposals, acceptProposal, dismissProposal } = useRescheduleProposals(projectIdsForProposals);
+  const [reviewProposal, setReviewProposal] = useState<RescheduleProposal | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const mode = selectedProjectId ? 'single' : 'all';
 
   const toggleStatus = useCallback((status: TaskStatus) => {
@@ -264,6 +271,13 @@ export function TaskManagementDashboard() {
         ))}
       </div>
 
+      {/* Reschedule proposals banner */}
+      <RescheduleBanner
+        proposals={proposals}
+        onReview={(p) => { setReviewProposal(p); setReviewDialogOpen(true); }}
+        onDismiss={dismissProposal}
+      />
+
       {/* Timeline */}
       <LicensingTimeline
         mode={mode}
@@ -308,6 +322,17 @@ export function TaskManagementDashboard() {
         onDelete={handleTaskDelete}
         projectAdvisors={projectAdvisors}
         allProjectTasks={allProjectTasksForDialog}
+      />
+
+      {/* Reschedule Review Dialog */}
+      <RescheduleReviewDialog
+        proposal={reviewProposal}
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        onAccept={(id, changes) => {
+          acceptProposal(id, changes, refetch);
+          setReviewDialogOpen(false);
+        }}
       />
     </div>
   );
