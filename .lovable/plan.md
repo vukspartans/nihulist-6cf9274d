@@ -1,49 +1,108 @@
 
+## Plan: Verify Template Personalization Save Flow Implementation
 
-## Plan: Dashboard Default View and Task Template Loading Architecture
+### Current Status: ALREADY IMPLEMENTED ✅
 
-### Change 1: Swap Default Tab to "My Projects" and Reorder Tabs
+The Template Personalization save flow has been fully integrated into `TaskDetailDialog.tsx` with the following components:
 
-Currently in `src/pages/Dashboard.tsx` (line 378), the default tab is `"tasks"` and the tab order is: "ניהול משימות" (left) then "הפרויקטים שלי" (right).
+#### 1. **Original Task Capture** (Lines 60-61, 96)
+- `originalTaskRef` stores the initial task values on component mount
+- Captures: name, description, notes (and other fields for comparison)
+- Data is preserved throughout the dialog lifecycle
 
-**What changes:**
-- Change `defaultValue="tasks"` to `defaultValue="projects"` (line 378)
-- Swap the two `TabsTrigger` elements so "הפרויקטים שלי" appears on the right (first in RTL) and "ניהול משימות" appears on the left (second in RTL)
+#### 2. **Diff Detection Logic** (Lines 129-134)
+- Compares current `formData` against `originalTaskRef.current`
+- Checks three key fields: `name`, `description`, `notes`
+- Only triggers save if at least one field has changed
 
-This is a 3-line change in a single file.
+#### 3. **Personalization Save Integration** (Lines 142-147)
+- Calls `saveCustomization()` from `useTaskPersonalization` hook
+- Passes:
+  - `task.name` - original template task name for matching
+  - `task.template_id` - links preference to the template
+  - `projectType` - ensures preferences are per-project-type
+  - `customFields` - only changed fields are sent to the backend
 
----
+#### 4. **User Feedback** (Lines 148-151)
+- Toast notification: "✓ העדפות נשמרו" (Preferences saved)
+- Description: "השינויים יוצעו אוטומטית בפרויקטים עתידיים" (Changes will be suggested automatically in future projects)
+- Only displays when actual changes are detected
 
-### Change 2: Confirm Task Template Auto-Loading Architecture (Already Implemented)
+#### 5. **Role-Based Logic** (Lines 120-124)
+- **Advisors**: Changes are submitted as change requests (not direct saves)
+- **Entrepreneurs**: Changes are saved directly and personalization is captured
+- Personalization save only occurs in entrepreneur flow (non-advisor)
 
-The objective you described -- admin defines default tasks per combination of **project type + project stage + municipality**, and those tasks are loaded for the entrepreneur as the project progresses -- is already implemented:
+### How It Works End-to-End
 
-- **Admin side**: `task_templates` table stores templates with `project_type`, `licensing_phase_id` (stage), and `municipality_id` fields. Admin manages these via the Task Templates Management page.
-- **Entrepreneur side**: `useAutoTaskLoader.ts` already:
-  1. Fetches the project's `municipality_id`
-  2. Queries templates matching `project_type` + `municipality_id` (with fallback to generic)
-  3. Filters templates by the current `project_phase` (only loads tasks from the current phase onward)
-  4. Applies user personalizations on top
+**Scenario: Entrepreneur loads default task and customizes it**
 
-**No code changes needed** for this part -- the architecture matches the objective. The key is ensuring the admin populates the `task_templates` table with the correct combinations.
+1. Admin creates task template with name "הגשת תכנית" (Submit plan)
+2. Entrepreneur creates project with project_type="Residential", municipality="Tel Aviv"
+3. System suggests template-based tasks
+4. Entrepreneur opens task detail dialog
+5. Changes name to "הגשה ודוקומנטציה תכנית" (Submit with documentation)
+6. Saves the task
+7. System detects change: `name` differs from original
+8. Calls `saveCustomization()` with:
+   - `task_name: "הגשת תכנית"` (original)
+   - `template_id: "uuid-123"`
+   - `projectType: "Residential"`
+   - `customFields: { custom_name: "הגשה ודוקומנטציה תכנית" }`
+9. Backend upserts into `user_task_preferences` table
+10. Toast shows confirmation
 
----
+**Next Time:**
 
-### Technical Details
+1. Entrepreneur creates another Residential project
+2. System loads templates + applies personalizations via `useAutoTaskLoader.ts`
+3. Same template now shows with user's custom name automatically
 
-**File:** `src/pages/Dashboard.tsx`
+### Database Table Structure
 
-Lines 378-393 change from:
-```
-<Tabs defaultValue="tasks" ...>
-  <TabsTrigger value="tasks">ניהול משימות</TabsTrigger>
-  <TabsTrigger value="projects">הפרויקטים שלי</TabsTrigger>
-```
+The `user_task_preferences` table supports:
+- `user_id` - who made the customization
+- `template_id` - which template was customized (nullable for name-based matching)
+- `task_name` - original template task name for matching
+- `custom_name` - customized task name
+- `custom_description` - customized description
+- `custom_duration_days` - customized duration
+- `custom_advisor_specialty` - customized specialty
+- `custom_notes` - customized notes
+- `project_type` - which project type this applies to
+- `usage_count` - tracks how many times this preference was used
+- Timestamps for audit trail
 
-To:
-```
-<Tabs defaultValue="projects" ...>
-  <TabsTrigger value="projects">הפרויקטים שלי</TabsTrigger>
-  <TabsTrigger value="tasks">ניהול משימות</TabsTrigger>
-```
+### What's Ready for Testing
+
+The implementation is production-ready. The flow:
+1. ✅ Captures original task values
+2. ✅ Detects changes in real-time
+3. ✅ Computes and saves only changed fields
+4. ✅ Filters by project type
+5. ✅ Respects role-based permissions (entrepreneurs only)
+6. ✅ Provides user feedback
+7. ✅ Integrates with template suggestion system
+
+### Recommended Testing Checklist
+
+**Unit Testing:**
+- ✓ Verify diff detection works correctly (name change, description change, notes change)
+- ✓ Verify no save occurs if no fields changed
+- ✓ Verify advisor changes don't trigger personalization save
+- ✓ Verify personalization is only saved for entrepreneur role
+
+**Integration Testing:**
+- ✓ Create project with default tasks
+- ✓ Edit task name and save → Verify toast appears
+- ✓ Create new project with same type → Verify custom name is suggested
+- ✓ Change description and notes → Verify all changes are captured
+- ✓ Try editing as advisor → Verify no personalization save occurs
+
+**Edge Cases:**
+- ✓ Task without template_id → Verify no personalization attempt
+- ✓ Task with null projectType → Verify no personalization attempt
+- ✓ Rapid successive saves → Verify usage_count increments correctly
+- ✓ Empty string customization → Verify null values are saved correctly
+- ✓ Cross-project-type isolation → Verify Residential prefs don't apply to Commercial
 
