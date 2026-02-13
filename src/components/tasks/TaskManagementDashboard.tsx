@@ -85,6 +85,11 @@ export function TaskManagementDashboard() {
 
   const handleTaskSubmit = useCallback(async (taskId: string, updates: Partial<ProjectTask>): Promise<boolean> => {
     try {
+      // Capture phase before update for change detection
+      const task = allTasks.find(t => t.id === taskId);
+      const projectBefore = task ? projects.find(p => p.id === task.project_id) : null;
+      const phaseBefore = projectBefore?.phase;
+
       const { error } = await supabase
         .from('project_tasks')
         .update(updates)
@@ -93,7 +98,6 @@ export function TaskManagementDashboard() {
 
       // Sync planned_end_date to linked payment milestone
       if (updates.planned_end_date) {
-        const task = allTasks.find(t => t.id === taskId);
         if ((task as any)?.payment_milestone_id) {
           await supabase
             .from('payment_milestones')
@@ -103,7 +107,20 @@ export function TaskManagementDashboard() {
       }
 
       toast.success('המשימה עודכנה בהצלחה');
-      refetch();
+      await refetch();
+
+      // Check if project phase advanced
+      if (phaseBefore && task) {
+        const { data: updatedProject } = await supabase
+          .from('projects')
+          .select('phase')
+          .eq('id', task.project_id)
+          .single();
+        if (updatedProject?.phase && updatedProject.phase !== phaseBefore) {
+          toast.success(`🎉 שלב הפרויקט התקדם ל-${updatedProject.phase}`);
+        }
+      }
+
       return true;
     } catch (err) {
       console.error('Error updating task:', err);
