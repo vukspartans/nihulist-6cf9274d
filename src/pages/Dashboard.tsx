@@ -375,8 +375,12 @@ const Dashboard = () => {
         <DashboardStats />
 
         {/* Main Tabs */}
-        <Tabs defaultValue="tasks" dir="rtl" className="mt-6">
+        <Tabs defaultValue="projects" dir="rtl" className="mt-6">
           <TabsList className="mb-4">
+            <TabsTrigger value="projects" className="gap-1.5">
+              <FolderOpen className="w-4 h-4" />
+              הפרויקטים שלי
+            </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-1.5">
               <ClipboardList className="w-4 h-4" />
               ניהול משימות
@@ -385,10 +389,6 @@ const Dashboard = () => {
                   {totalOpenTasks > 99 ? '99+' : totalOpenTasks}
                 </Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="gap-1.5">
-              <FolderOpen className="w-4 h-4" />
-              הפרויקטים שלי
             </TabsTrigger>
           </TabsList>
 
