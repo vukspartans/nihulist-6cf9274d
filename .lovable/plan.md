@@ -1,125 +1,129 @@
 
 
-# Chunk 3: Consultant Invoice Portal -- Implementation Plan
+# Chunk 4: Accountant Dashboard (Financial Control Center) -- Implementation Plan
 
 ## Overview
 
-Add a "Payments" tab to the Advisor Dashboard, allowing consultants to view their payment requests, submit new invoices for eligible milestones, and respond to "Tax Invoice Required" prompts after payment.
+Create a centralized financial control center at `/accountant` accessible to entrepreneurs, providing a cross-project view of all liabilities, vendor concentration, and cash flow forecasting.
 
 ---
 
-## New File: `src/components/payments/AdvisorPaymentsView.tsx`
+## Database Migration: Add `expected_payment_date`
 
-A self-contained component that:
+A single column addition to `payment_requests`:
 
-1. **Fetches data** for the current advisor:
-   - Queries `advisors` to get the advisor record for `auth.uid()`
-   - Queries `project_advisors` to get all `project_advisor` IDs for this advisor
-   - Queries `payment_requests` filtered by those `project_advisor_id` values, joining `payment_milestone` (name) and project (name via `project_id`)
-   - Queries `payment_milestones` with `status = 'due'` for the same project_advisor IDs (for the submission dropdown)
+```sql
+ALTER TABLE public.payment_requests
+  ADD COLUMN IF NOT EXISTS expected_payment_date date;
+```
 
-2. **Renders a payment requests table** with columns:
-   - Project Name (from joined project data)
-   - Milestone Name
-   - Amount (total_amount)
-   - Status (using `PaymentStatusBadge`)
-   - Submission Date (submitted_at or created_at)
-
-3. **Filter toggle**: "Open" (non-terminal statuses) vs "Paid/Closed" (paid + rejected)
-
-4. **"Tax Invoice Required" alert**: For requests with `status === 'paid'`, show a prominent alert card with an action button. Clicking marks it as acknowledged (local state toggle per request ID, stored in a Set). This avoids a DB migration for now.
-
-5. **"New Payment Request" button** that opens `CreatePaymentRequestDialog` in **advisor-locked mode** (new props below).
+No RLS changes needed -- existing policies on `payment_requests` already cover entrepreneur read/write access.
 
 ---
 
-## Edit: `src/components/payments/CreatePaymentRequestDialog.tsx`
+## New File: `src/pages/AccountantDashboard.tsx`
 
-Add two new optional props to support advisor-locked mode:
+A top-level page with 3 tabs:
+
+### Tab 1: Liabilities List (התחייבויות)
+
+- Fetches ALL `payment_requests` for projects owned by the current user, joined with:
+  - `projects` (name)
+  - `project_advisors` -> `advisors` (company_name)
+  - `payment_milestones` (name)
+- Filters out `prepared` status (draft, not yet submitted)
+- Renders a `Table` with columns: Project, Consultant, Milestone, Status (PaymentStatusBadge), Amount, Submitted Date, Expected Payment Date
+- The "Expected Payment Date" column contains an inline date picker (`Input type="date"`) that updates `payment_requests.expected_payment_date` via a direct Supabase update
+- Action buttons per row: View (opens PaymentRequestDetailDialog), Approve (if applicable), Mark Paid (if `awaiting_payment`)
+- Uses `useApprovalChain` for dynamic status transitions
+
+### Tab 2: Consultant Concentration (ריכוז ספקים)
+
+- Groups all payment requests by `project_advisor_id` -> advisor
+- For each advisor, computes:
+  - Total Paid (YTD): sum of `total_amount` where `status === 'paid'` and `paid_at` is in current year
+  - Total Outstanding: sum of `total_amount` where status is non-terminal and not `prepared`
+- Renders a summary table with expandable rows (Collapsible) showing individual invoices per consultant
+- Sorted by Total Outstanding descending
+
+### Tab 3: Global Cash Flow (תזרים גלובלי)
+
+- Aggregates data across ALL projects
+- Reuses the `CashFlowChart` rendering logic but with global data
+- Uses `expected_payment_date` if set, otherwise falls back to milestone `due_date`
+- Additionally renders a simple `BarChart` showing projected monthly outflows for the next 6 months
+
+---
+
+## New File: `src/hooks/useAccountantData.ts`
+
+A dedicated hook that fetches all financial data across projects for the current entrepreneur:
 
 ```typescript
-interface CreatePaymentRequestDialogProps {
-  // ... existing props
-  lockedAdvisorId?: string;        // Lock the consultant dropdown to this project_advisor_id
-  advisorMode?: boolean;           // When true: hide category selector, lock to 'consultant', only show 'due' milestones
+export function useAccountantData() {
+  // 1. Fetch all projects owned by current user
+  // 2. Fetch all payment_requests for those projects with joins
+  // 3. Fetch all payment_milestones for those projects
+  // 4. Compute vendor summaries
+  // 5. Expose: allRequests, allMilestones, vendorSummaries, loading, updateExpectedDate()
 }
 ```
 
-**Changes when `advisorMode === true`:**
-- Category is forced to `'consultant'` (hide the category selector)
-- The "Consultant" dropdown is disabled and pre-filled with `lockedAdvisorId`
-- The milestone dropdown filters to only show milestones with `status === 'due'` (instead of all non-paid)
-- This enforces the Chunk 1 rule: only milestones unlocked by task completion are available
+Key queries:
+- `projects` WHERE `owner_id = auth.uid()` -> get project IDs
+- `payment_requests` WHERE `project_id IN (...)` with joins to `project_advisors.advisors`, `payment_milestones`, and `projects`
+- `payment_milestones` WHERE `project_id IN (...)`
+
+The `updateExpectedDate(requestId, date)` function performs a direct Supabase update on `payment_requests.expected_payment_date`.
 
 ---
 
-## Edit: `src/pages/AdvisorDashboard.tsx`
+## Routing: `src/App.tsx`
 
-Minimal changes:
+Add a new route for entrepreneurs:
 
-1. Add `'payments'` to the `activeTab` union type (line 144):
-   ```typescript
-   const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations' | 'tasks' | 'payments'>('rfp-invites');
-   ```
-
-2. Expand the TabsList from `grid-cols-4` to `grid-cols-5` (line 1013)
-
-3. Add a new `TabsTrigger` for payments with a Wallet icon:
-   ```tsx
-   <TabsTrigger value="payments" className="flex items-center gap-2">
-     <Wallet className="h-4 w-4" />
-     תשלומים
-   </TabsTrigger>
-   ```
-
-4. Add the `TabsContent`:
-   ```tsx
-   <TabsContent value="payments">
-     <AdvisorPaymentsView />
-   </TabsContent>
-   ```
-
-The `AdvisorPaymentsView` component is fully self-contained -- it fetches its own data using the current user's auth context, so no additional props are needed from the dashboard.
-
----
-
-## Data Flow
-
-```text
-AdvisorPaymentsView
-  |
-  |-- useAuth() -> user.id
-  |-- Query: advisors WHERE user_id = auth.uid() -> advisor.id
-  |-- Query: project_advisors WHERE advisor_id = advisor.id -> [project_advisor_ids]
-  |-- Query: payment_requests WHERE project_advisor_id IN [...] -> requests list
-  |-- Query: payment_milestones WHERE project_advisor_id IN [...] AND status = 'due' -> eligible milestones
-  |
-  |-- Renders: Table of requests with PaymentStatusBadge
-  |-- Renders: "Tax Invoice Required" alerts for paid requests
-  |-- Opens: CreatePaymentRequestDialog(advisorMode=true, lockedAdvisorId=pa.id)
+```tsx
+<Route
+  path="/accountant"
+  element={
+    <ProtectedRoute>
+      <RoleBasedRoute allowedRoles={['entrepreneur']}>
+        <AccountantDashboard />
+      </RoleBasedRoute>
+    </ProtectedRoute>
+  }
+/>
 ```
 
----
-
-## Milestone Eligibility Enforcement
-
-The milestone dropdown in advisor mode only shows `status === 'due'` milestones. Combined with the Chunk 1 DB trigger (`auto_unlock_payment_milestone`), this means:
-
-1. Consultant completes critical tasks
-2. DB trigger sets milestone to `due`
-3. Milestone appears in consultant's "Submit Invoice" dropdown
-4. Consultant submits payment request
-5. Request enters the multi-step approval chain (Chunk 2)
+No new role needed -- the entrepreneur (organization owner) accesses this dashboard.
 
 ---
 
-## Tax Invoice Prompt (Lightweight)
+## Navigation: Link from Entrepreneur Dashboard
 
-When a payment request reaches `status === 'paid'`:
-- A yellow alert card appears at the top of the advisor's payment list
-- Text: "נדרש: הנפקת חשבונית מס"
-- Description: "התשלום עבור [milestone name] אושר. נא להנפיק חשבונית מס ולהעלותה."
-- Action button: "סימון כהונפק" -- toggles local state (no DB change needed now; a `tax_invoice_issued` column can be added later)
+Add a link/button in the existing `Dashboard.tsx` (entrepreneur main page) to navigate to `/accountant`. A small card or button labeled "מרכז פיננסי" with a `Building2` or `Calculator` icon.
+
+---
+
+## Mark as Paid Workflow
+
+The liabilities table includes action buttons that reuse the same `useApprovalChain` + `updatePaymentRequestStatus` logic from Chunk 2. When a request is at `awaiting_payment`, the "Mark Paid" button is shown. Clicking it:
+
+1. Sets status to `paid` via `updatePaymentRequestStatus`
+2. Sets `paid_at` timestamp (already handled)
+3. The consultant's `AdvisorPaymentsView` (Chunk 3) automatically shows the "Tax Invoice Required" alert
+
+This closes the loop between Chunks 2, 3, and 4.
+
+---
+
+## Type Update: `src/types/payment.ts`
+
+Add `expected_payment_date` to the `PaymentRequest` interface:
+
+```typescript
+expected_payment_date: string | null;
+```
 
 ---
 
@@ -127,12 +131,19 @@ When a payment request reaches `status === 'paid'`:
 
 | File | Action | Description |
 |---|---|---|
-| `src/components/payments/AdvisorPaymentsView.tsx` | NEW | Full advisor payments view with table, filters, alerts |
-| `src/components/payments/CreatePaymentRequestDialog.tsx` | EDIT | Add `advisorMode` and `lockedAdvisorId` props |
-| `src/pages/AdvisorDashboard.tsx` | EDIT | Add 5th tab "Payments" pointing to AdvisorPaymentsView |
-| `src/components/payments/index.ts` | EDIT | Export AdvisorPaymentsView |
+| `supabase/migrations/[timestamp].sql` | NEW | Add `expected_payment_date` column |
+| `src/types/payment.ts` | EDIT | Add `expected_payment_date` field |
+| `src/hooks/useAccountantData.ts` | NEW | Cross-project financial data hook |
+| `src/pages/AccountantDashboard.tsx` | NEW | 3-tab financial control center |
+| `src/App.tsx` | EDIT | Add `/accountant` route |
+| `src/pages/Dashboard.tsx` | EDIT | Add navigation link to accountant dashboard |
+| `src/components/payments/index.ts` | EDIT | Export any new shared components |
 
-## No DB Migration Required
+## Technical Notes
 
-All queries use existing tables and RLS policies. Advisors already have SELECT + INSERT permissions on `payment_requests` and SELECT on `payment_milestones` for their `project_advisor_id`.
+- All queries use existing RLS policies (entrepreneur can see their own project data)
+- The `expected_payment_date` inline editor uses a debounced Supabase update
+- The global cash flow chart reuses recharts (already installed) with a BarChart for monthly projections
+- RTL layout with `dir="rtl"` on all containers per project standards
+- No emojis in financial UI per copy guidelines
 
