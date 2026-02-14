@@ -37,6 +37,8 @@ async function syncPaymentMilestone(
   }
 }
 
+const emptyToNull = (val: string | undefined | null): string | null => val || null;
+
 export function useProjectTasks(projectId: string) {
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,16 +126,16 @@ export function useProjectTasks(projectId: string) {
         .insert({
           project_id: projectId,
           name: task.name || 'משימה חדשה',
-          description: task.description,
-          phase: task.phase,
+          description: emptyToNull(task.description),
+          phase: emptyToNull(task.phase),
           status: task.status || 'pending',
           display_order: maxOrder + 1,
-          planned_start_date: task.planned_start_date,
-          planned_end_date: task.planned_end_date,
-          assigned_advisor_id: task.assigned_advisor_id,
+          planned_start_date: emptyToNull(task.planned_start_date),
+          planned_end_date: emptyToNull(task.planned_end_date),
+          assigned_advisor_id: emptyToNull(task.assigned_advisor_id),
           is_milestone: task.is_milestone,
           is_payment_critical: task.is_payment_critical,
-          notes: task.notes,
+          notes: emptyToNull(task.notes),
         })
         .select()
         .single();
@@ -159,20 +161,20 @@ export function useProjectTasks(projectId: string) {
         .from('project_tasks')
         .update({
           name: updates.name,
-          description: updates.description,
-          phase: updates.phase,
+          description: emptyToNull(updates.description),
+          phase: emptyToNull(updates.phase),
           status: updates.status,
-          planned_start_date: updates.planned_start_date,
-          planned_end_date: updates.planned_end_date,
-          actual_start_date: updates.actual_start_date,
-          actual_end_date: updates.actual_end_date,
-          assigned_advisor_id: updates.assigned_advisor_id,
+          planned_start_date: emptyToNull(updates.planned_start_date),
+          planned_end_date: emptyToNull(updates.planned_end_date),
+          actual_start_date: emptyToNull(updates.actual_start_date),
+          actual_end_date: emptyToNull(updates.actual_end_date),
+          assigned_advisor_id: emptyToNull(updates.assigned_advisor_id),
           progress_percent: updates.progress_percent,
           is_milestone: updates.is_milestone,
           is_payment_critical: updates.is_payment_critical,
           is_blocked: updates.is_blocked,
-          block_reason: updates.block_reason,
-          notes: updates.notes,
+          block_reason: emptyToNull(updates.block_reason),
+          notes: emptyToNull(updates.notes),
         })
         .eq('id', taskId);
 
