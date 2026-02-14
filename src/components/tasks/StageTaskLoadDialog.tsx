@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Clock, User, Layers } from 'lucide-react';
+import { Loader2, Clock, User, Layers, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBulkTaskCreation } from '@/hooks/useBulkTaskCreation';
 import type { TaskTemplate } from '@/hooks/useTaskTemplatesAdmin';
@@ -40,20 +40,20 @@ export function StageTaskLoadDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [existingTemplateIds, setExistingTemplateIds] = useState<Set<string>>(new Set());
   const { createTasksFromTemplates } = useBulkTaskCreation();
 
   const fetchTemplatesForPhase = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch existing template IDs for this project
       const { data: existingData } = await supabase
         .from('project_tasks')
         .select('template_id')
         .eq('project_id', projectId)
         .not('template_id', 'is', null);
       const fetchedIds = new Set((existingData || []).map((d: any) => d.template_id as string));
+      setExistingTemplateIds(fetchedIds);
 
-      // Find the licensing_phase matching phaseName
       const { data: phaseData } = await supabase
         .from('licensing_phases')
         .select('id')
@@ -83,16 +83,14 @@ export function StageTaskLoadDialog({
       const { data } = await query;
       const results = (data || []) as TaskTemplate[];
 
-      // Filter to only NEW templates not already loaded
-      const newTemplates = results.filter(t => !fetchedIds.has(t.id));
-
-      if (newTemplates.length === 0) {
+      if (results.length === 0) {
         onOpenChange(false);
         return;
       }
 
-      setTemplates(newTemplates);
-      setSelectedIds(new Set(newTemplates.map(t => t.id)));
+      setTemplates(results);
+      // Pre-select only NEW templates
+      setSelectedIds(new Set(results.filter(t => !fetchedIds.has(t.id)).map(t => t.id)));
     } catch (error) {
       console.error('Error fetching stage templates:', error);
     } finally {
@@ -107,6 +105,7 @@ export function StageTaskLoadDialog({
   }, [open, phaseName, fetchTemplatesForPhase]);
 
   const toggleTemplate = (id: string) => {
+    if (existingTemplateIds.has(id)) return;
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -149,7 +148,7 @@ export function StageTaskLoadDialog({
               ? 'טוען תבניות...'
               : templates.length === 0
               ? 'לא הוגדרו תבניות משימות לשלב זה. ניתן להוסיף משימות ידנית.'
-              : `נמצאו ${templates.length} משימות חדשות עבור שלב זה. בחר אילו לטעון.`}
+              : `נמצאו ${templates.length} משימות עבור שלב זה (${templates.filter(t => !existingTemplateIds.has(t.id)).length} חדשות).`}
           </DialogDescription>
         </DialogHeader>
 
@@ -160,39 +159,53 @@ export function StageTaskLoadDialog({
             </div>
           ) : (
             <div className="space-y-1">
-              {templates.map(t => (
-                <label
-                  key={t.id}
-                  className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedIds.has(t.id)}
-                    onCheckedChange={() => toggleTemplate(t.id)}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{t.name}</span>
-                      {t.is_milestone && (
-                        <Badge variant="secondary" className="text-[10px] shrink-0">אבן דרך</Badge>
-                      )}
+              {templates.map(t => {
+                const alreadyLoaded = existingTemplateIds.has(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className={`flex items-center gap-3 p-2 rounded-md transition-colors ${
+                      alreadyLoaded ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={alreadyLoaded || selectedIds.has(t.id)}
+                      disabled={alreadyLoaded}
+                      onCheckedChange={() => toggleTemplate(t.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{t.name}</span>
+                        {alreadyLoaded ? (
+                          <Badge variant="outline" className="text-[10px] gap-1 shrink-0">
+                            <CheckCircle2 className="h-3 w-3" />
+                            נטען
+                          </Badge>
+                        ) : (
+                          <Badge variant="success" className="text-[10px] shrink-0">חדש</Badge>
+                        )}
+                        {t.is_milestone && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0">אבן דרך</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+                        {t.default_duration_days && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {t.default_duration_days} ימים
+                          </span>
+                        )}
+                        {t.advisor_specialty && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {t.advisor_specialty}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
-                      {t.default_duration_days && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {t.default_duration_days} ימים
-                        </span>
-                      )}
-                      {t.advisor_specialty && (
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {t.advisor_specialty}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </div>
           )}
         </ScrollArea>
