@@ -125,9 +125,14 @@ export function StageTaskLoadDialog({
 
     setSubmitting(true);
     try {
+      // Override phase on templates to ensure correct tagging
+      const templatesWithPhase = selected.map(t => ({
+        ...t,
+        licensing_phases: t.licensing_phases || { id: null, name: phaseName },
+      }));
       await createTasksFromTemplates({
         projectId,
-        templates: selected,
+        templates: templatesWithPhase,
       });
       onTasksCreated();
       onOpenChange(false);

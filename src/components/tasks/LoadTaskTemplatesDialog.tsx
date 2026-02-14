@@ -188,9 +188,16 @@ export function LoadTaskTemplatesDialog({
 
     setSubmitting(true);
     try {
+      // Ensure phase is tagged from licensing_phases relation or currentPhase
+      const templatesWithPhase = currentPhase
+        ? selected.map(t => ({
+            ...t,
+            licensing_phases: t.licensing_phases || { id: null, name: currentPhase },
+          }))
+        : selected;
       await createTasksFromTemplates({
         projectId,
-        templates: selected,
+        templates: templatesWithPhase,
       });
       onTasksCreated();
       onOpenChange(false);
