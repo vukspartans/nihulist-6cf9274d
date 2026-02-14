@@ -310,14 +310,14 @@ function GlobalCashFlowTab({ requests }: { requests: AccountantRequest[] }) {
 export default function AccountantDashboard() {
   const navigate = useNavigate();
   const { allRequests, vendorSummaries, loading, updateExpectedDate, updateRequestStatus } = useAccountantData();
-  const { getNextStep } = useApprovalChain();
+  const { getNextStep, isLoading: approvalChainLoading } = useApprovalChain();
 
   const handleMarkPaid = (requestId: string, paidDate?: string) => {
     const additionalData = paidDate ? { paid_at: new Date(paidDate).toISOString() } : undefined;
     updateRequestStatus(requestId, 'paid', additionalData);
   };
 
-  if (loading) {
+  if (loading || approvalChainLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <div className="text-center">
