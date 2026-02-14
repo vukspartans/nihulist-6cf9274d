@@ -74,6 +74,15 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
   const [depCounts, setDepCounts] = useState<Record<string, { total: number; blocking: number }>>({});
+  const [autoTriggered, setAutoTriggered] = useState(false);
+
+  // Auto-open template dialog when project has zero tasks
+  useEffect(() => {
+    if (!loading && tasks.length === 0 && projectType && !autoTriggered) {
+      setAutoTriggered(true);
+      setTemplateDialogOpen(true);
+    }
+  }, [loading, tasks.length, projectType, autoTriggered]);
 
   // Fetch dependency counts for all tasks
   const fetchDepCounts = useCallback(async () => {

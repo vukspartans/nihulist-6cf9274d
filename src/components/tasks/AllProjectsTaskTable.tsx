@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
 import { ArrowUpDown, AlertTriangle, Flag, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { differenceInDays } from 'date-fns';
 
 interface AllProjectsTaskTableProps {
   tasks: ProjectTaskWithDetails[];
@@ -14,13 +15,24 @@ interface AllProjectsTaskTableProps {
   dependencyCounts?: Record<string, { total: number; blocking: number }>;
 }
 
-type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent';
+type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent' | 'variance';
 
 const isDelayed = (task: ProjectTaskWithDetails): boolean => {
   if (task.status === 'delayed') return true;
   if (task.status === 'completed' || task.status === 'cancelled') return false;
   if (!task.planned_end_date) return false;
   return new Date(task.planned_end_date) < new Date(new Date().toDateString());
+};
+
+/** Compute variance in days: negative = behind, positive = ahead, 0 = on track */
+const getVarianceDays = (task: ProjectTaskWithDetails): number | null => {
+  if (!task.planned_end_date) return null;
+  const planned = new Date(task.planned_end_date);
+  if (task.status === 'completed' || task.status === 'cancelled') {
+    if (!task.actual_end_date) return null;
+    return differenceInDays(planned, new Date(task.actual_end_date));
+  }
+  return differenceInDays(planned, new Date());
 };
 
 export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, dependencyCounts = {} }: AllProjectsTaskTableProps) {
@@ -43,8 +55,8 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
     if (aDelayed && !bDelayed) return -1;
     if (!aDelayed && bDelayed) return 1;
 
-    const av = a[sortKey];
-    const bv = b[sortKey];
+    const av = sortKey === 'variance' ? getVarianceDays(a) : a[sortKey];
+    const bv = sortKey === 'variance' ? getVarianceDays(b) : b[sortKey];
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
@@ -90,6 +102,7 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
             <TableHead><SortHeader label="סטטוס" sortKeyName="status" /></TableHead>
             <TableHead>תלויות</TableHead>
             <TableHead><SortHeader label="יעד" sortKeyName="planned_end_date" /></TableHead>
+            <TableHead><SortHeader label="סטייה" sortKeyName="variance" /></TableHead>
             <TableHead className="w-[100px]"><SortHeader label="%" sortKeyName="progress_percent" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -153,6 +166,15 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
                 </TableCell>
                 <TableCell className={cn('text-xs whitespace-nowrap py-2', delayed && 'text-destructive font-medium')}>
                   {formatDate(task.planned_end_date)}
+                </TableCell>
+                <TableCell className="py-2">
+                  {(() => {
+                    const v = getVarianceDays(task);
+                    if (v == null) return <span className="text-xs text-muted-foreground">—</span>;
+                    if (v === 0) return <span className="text-xs text-muted-foreground">בזמן</span>;
+                    if (v > 0) return <span className="text-xs text-green-600 font-medium">+{v} ימים</span>;
+                    return <span className="text-xs text-destructive font-medium">{v} ימים</span>;
+                  })()}
                 </TableCell>
                 <TableCell className="w-[100px] py-2">
                   <div className="flex items-center gap-1.5">
