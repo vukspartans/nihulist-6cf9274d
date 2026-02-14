@@ -1,27 +1,23 @@
 
 
-# Fix: UUID Type Mismatch in `check_task_delay()` Trigger
+# Fix: Second UUID Type Mismatch in `auto_advance_project_phase()` Trigger
 
 ## Problem
-When marking a task as "completed", the `check_task_delay()` trigger fires and tries to insert `NEW.id::text` into the `activity_log.entity_id` column (type `uuid`). PostgreSQL rejects this with error `42804`. The same `::text` cast is used in a `notification_queue` query comparison.
+The previous migration fixed `check_task_delay()`, but there is a **second trigger** on `project_tasks` with the same bug: `auto_advance_project_phase()`.
 
-## Root Cause
-Line 87 of `check_task_delay()`:
+On line:
 ```sql
-'task_delayed', 'system', 'task', NEW.id::text, NEW.project_id, ...
+INSERT INTO public.activity_log (action, actor_type, entity_type, entity_id, meta)
+VALUES (
+  'phase_advanced', 'system', 'project', NEW.project_id::text, ...
+);
 ```
-`entity_id` is `uuid`, but `NEW.id::text` produces a `text` value. Simply using `NEW.id` (already uuid) fixes it.
+
+`NEW.project_id::text` is cast to `text`, but `entity_id` is a `uuid` column -- causing the same `42804` error whenever a task completion triggers a project phase advancement.
 
 ## Fix (single migration)
-Replace the function body to remove the `::text` casts in two places:
+Run `CREATE OR REPLACE FUNCTION public.auto_advance_project_phase()` with one change:
+- Replace `NEW.project_id::text` with `NEW.project_id` (already uuid, no cast needed)
 
-1. **Activity log insert** (line 87): `NEW.id::text` -> `NEW.id`
-2. **Notification dedup query** (line 101): `entity_id = NEW.id::text` -> `entity_id = NEW.id`
-
-No code changes needed -- this is purely a database trigger fix.
-
-## Technical Detail
-- A `CREATE OR REPLACE FUNCTION` migration will update the existing `check_task_delay()` function
-- The trigger binding (`trg_check_task_delay`) stays unchanged
-- All other logic (reschedule proposals, email notifications) remains identical
+Everything else in the function remains identical. No code changes needed.
 
