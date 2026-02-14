@@ -63,6 +63,7 @@ export interface PaymentRequest {
   index_current_value: number | null;
   index_adjustment_factor: number | null;
   index_adjusted_amount: number | null;
+  expected_payment_date: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

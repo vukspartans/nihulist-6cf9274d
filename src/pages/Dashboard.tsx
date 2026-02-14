@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, MoreVertical, MapPin, Coins, Edit, Trash2, FileText, Calendar } from "lucide-react";
+import { Plus, MoreVertical, MapPin, Coins, Edit, Trash2, FileText, Calendar, Calculator } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -373,6 +373,14 @@ const Dashboard = () => {
 
         {/* Dashboard Stats */}
         <DashboardStats />
+
+        {/* Financial Center Link */}
+        <div className="mt-4">
+          <Button variant="outline" size="sm" onClick={() => navigate('/accountant')} className="gap-1.5">
+            <Calculator className="w-4 h-4" />
+            מרכז פיננסי
+          </Button>
+        </div>
 
         {/* Main Tabs */}
         <Tabs defaultValue="projects" dir="rtl" className="mt-6">
