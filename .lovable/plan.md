@@ -1,61 +1,50 @@
 
 
-# Seed Task Templates for All 13 Licensing Stages
+# Fix: Tasks Not Refreshing After Stage Change
 
-## Current State
+## Problem
 
-Only **4 out of 13** licensing phases exist in the database, so most stages show "no templates defined":
+When the user clicks "Next Stage" (e.g., moving to "פרסום"), the `StageTaskLoadDialog` opens and creates 2 new tasks successfully (toast confirms it). However, the task table still shows only the original 3 tasks from "בדיקה ראשונית" because:
 
-| Existing (4) | Missing (9) |
+1. **Empty callback**: In `ProjectDetail.tsx` (line 577), the `onTasksCreated` callback passed to `StageTaskLoadDialog` is empty -- it does nothing:
+   ```
+   onTasksCreated={() => {
+     // TaskBoard will refetch via its own hook
+   }}
+   ```
+   But the TaskBoard does NOT automatically refetch because there is no real-time subscription or shared state.
+
+2. **No shared refetch**: The `TaskBoard` component has its own `refetch` function from `useProjectTasks`, but `ProjectDetail.tsx` has no way to trigger it.
+
+## Solution
+
+Pass a ref or callback from `TaskBoard` up to `ProjectDetail` so that the `StageTaskLoadDialog` can trigger a task refetch. The simplest approach:
+
+### Option: Lift refetch via a callback ref
+
+1. **`TaskBoard.tsx`**: Accept an optional `onRefetchReady` prop that exposes the internal `refetch` function to the parent.
+
+2. **`ProjectDetail.tsx`**: 
+   - Store the refetch function in a `useRef`
+   - Pass it to `TaskBoard` via `onRefetchReady`
+   - Call it inside `StageTaskLoadDialog`'s `onTasksCreated`
+
+## Files to Change
+
+| File | Change |
 |---|---|
-| בדיקה ראשונית | הגשת הצעה |
-| תכנון ראשוני | בחתימות |
-| הגשת בקשה להיתר | עמידה בתנאי סף |
-| ביצוע | פרסום |
-| | בקרה מרחבית |
-| | דיון בוועדה |
-| | מכון בקרה |
-| | בקבלת היתר |
-| | באישור תחילת עבודות |
-| | הסתיים |
-
-Note: "הגשת בקשה להיתר" exists but doesn't match any PROJECT_PHASE exactly -- it may need a review, but we'll keep it as-is since it has templates.
-
-## Plan
-
-A single database migration that:
-
-### 1. Create the 9 missing licensing phases
-
-Insert rows into `licensing_phases` for each missing stage, with proper `display_order` matching the PROJECT_PHASES sequence (1-13).
-
-### 2. Update display_order on existing phases
-
-Align the 4 existing phases to the correct position in the 13-stage sequence.
-
-### 3. Seed 2-3 task templates per new phase
-
-Each template will be for `project_type = 'מגורים'` (Residential), linked to its licensing phase, with realistic Hebrew task names relevant to that stage of a construction licensing project.
-
-**Sample tasks per stage:**
-
-| Stage | Tasks |
-|---|---|
-| הגשת הצעה | הכנת מסמכי הצעה, הגשת הצעת מחיר ליזם |
-| בחתימות | איסוף חתימות דיירים, אימות חתימות נוטריוני |
-| עמידה בתנאי סף | בדיקת עמידה בתנאי סף, השלמת מסמכים חסרים |
-| פרסום | פרסום להתנגדויות, מעקב תקופת פרסום |
-| בקרה מרחבית | הגשת תוכניות לבקרה מרחבית, תיקונים לפי הערות בקרה |
-| דיון בוועדה | הכנת מצגת לוועדה, השתתפות בדיון ועדה, טיפול בתנאי ועדה |
-| מכון בקרה | הגשת תוכניות למכון בקרה, תיקונים לפי הערות מכון |
-| בקבלת היתר | קבלת היתר בנייה, רישום היתר ברשות |
-| באישור תחילת עבודות | הגשת בקשה לאישור תחילת עבודות, מינוי קבלן ראשי |
-| הסתיים | ביקורת סיום, הגשת מסמכי גמר |
+| `src/components/tasks/TaskBoard.tsx` | Add `onRefetchReady` prop; call it with `refetch` on mount |
+| `src/pages/ProjectDetail.tsx` | Store refetch ref; wire it to `StageTaskLoadDialog.onTasksCreated` |
 
 ## Technical Details
 
-- One SQL migration file with `INSERT INTO licensing_phases` and `INSERT INTO task_templates`
-- Each task template gets `is_active = true`, `is_default = true`, `project_type = 'מגורים'`
-- `default_duration_days` set to realistic values (7-30 days depending on task)
-- `display_order` sequential within each phase
-- No code changes needed -- the existing `StageTaskLoadDialog` and `LoadTaskTemplatesDialog` will automatically pick up the new templates
+**TaskBoard.tsx:**
+- Add prop: `onRefetchReady?: (refetch: () => void) => void`
+- In a `useEffect`, call `onRefetchReady?.(refetch)` so the parent gets the function
+
+**ProjectDetail.tsx:**
+- Add: `const taskRefetchRef = useRef<(() => void) | null>(null)`
+- Pass to TaskBoard: `onRefetchReady={(fn) => { taskRefetchRef.current = fn }}`
+- Update StageTaskLoadDialog's callback: `onTasksCreated={() => { taskRefetchRef.current?.() }}`
+
+This is a minimal 2-file change that directly solves the refresh issue.
