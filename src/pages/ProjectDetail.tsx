@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ export const ProjectDetail = () => {
   const { toast } = useToast();
   const { primaryRole } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
+  const taskRefetchRef = useRef<(() => void) | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -556,7 +557,7 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} onPhaseChange={handlePhaseChange} />
+          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} onPhaseChange={handlePhaseChange} onRefetchReady={(fn) => { taskRefetchRef.current = fn; }} />
         </TabsContent>
 
         <TabsContent value="payments">
@@ -575,7 +576,7 @@ export const ProjectDetail = () => {
           municipalityId={project.municipality_id}
            
           onTasksCreated={() => {
-            // TaskBoard will refetch via its own hook
+            taskRefetchRef.current?.();
           }}
         />
       )}
