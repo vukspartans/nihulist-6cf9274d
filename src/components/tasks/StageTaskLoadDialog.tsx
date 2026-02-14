@@ -144,13 +144,6 @@ export function StageTaskLoadDialog({
   const selectableCount = templates.filter(t => !existingTemplateIds.has(t.id)).length;
   const allNewSelected = selectableCount > 0 && selectedIds.size === selectableCount;
 
-  // No templates found for this phase — auto-close silently
-  if (!loading && templates.length === 0 && open) {
-    // Use timeout to avoid state update during render
-    setTimeout(() => onOpenChange(false), 0);
-    return null;
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg !h-auto max-h-[70vh] flex flex-col" dir="rtl">
@@ -160,7 +153,11 @@ export function StageTaskLoadDialog({
             משימות לשלב: {phaseName}
           </DialogTitle>
           <DialogDescription>
-            נמצאו {selectableCount} משימות חדשות עבור שלב זה. בחר אילו לטעון.
+            {loading
+              ? 'טוען תבניות...'
+              : templates.length === 0
+              ? 'לא הוגדרו תבניות משימות לשלב זה. ניתן להוסיף משימות ידנית.'
+              : `נמצאו ${selectableCount} משימות חדשות עבור שלב זה. בחר אילו לטעון.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -222,15 +219,17 @@ export function StageTaskLoadDialog({
 
         <DialogFooter className="flex items-center justify-between pt-3 border-t">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            דלג
+            {templates.length === 0 ? 'סגור' : 'דלג'}
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={selectedIds.size === 0 || submitting}
-          >
-            {submitting && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-            טען {selectedIds.size > 0 ? `(${selectedIds.size})` : ''} משימות
-          </Button>
+          {templates.length > 0 && (
+            <Button
+              onClick={handleSubmit}
+              disabled={selectedIds.size === 0 || submitting}
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+              טען {selectedIds.size > 0 ? `(${selectedIds.size})` : ''} משימות
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
