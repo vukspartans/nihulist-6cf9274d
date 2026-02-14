@@ -1434,6 +1434,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          expected_payment_date: string | null
           external_party_id: string | null
           external_party_name: string | null
           id: string
@@ -1472,6 +1473,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          expected_payment_date?: string | null
           external_party_id?: string | null
           external_party_name?: string | null
           id?: string
@@ -1510,6 +1512,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          expected_payment_date?: string | null
           external_party_id?: string | null
           external_party_name?: string | null
           id?: string

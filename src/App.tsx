@@ -47,6 +47,7 @@ import FeeTemplatesByProject from "./pages/admin/FeeTemplatesByProject";
 import FeeTemplatesByAdvisorProject from "./pages/admin/FeeTemplatesByAdvisorProject";
 import FeeTemplatesByCategory from "./pages/admin/FeeTemplatesByCategory";
 import NegotiationResponse from "./pages/NegotiationResponse";
+import AccountantDashboard from "./pages/AccountantDashboard";
 import OrganizationOnboarding from "./pages/OrganizationOnboarding";
 import LicensingManagement from "./pages/admin/LicensingManagement";
 import { supabase } from "@/integrations/supabase/client";
@@ -252,6 +253,17 @@ const AppContent = () => {
             <Route path="/heyadmin/payment-categories" element={<AdminRoute><PaymentCategoriesManagement /></AdminRoute>} />
             <Route path="/heyadmin/payment-statuses" element={<AdminRoute><PaymentStatusesManagement /></AdminRoute>} />
             
+            <Route 
+              path="/accountant" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                    <AccountantDashboard />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
