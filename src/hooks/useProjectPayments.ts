@@ -87,9 +87,9 @@ export function useProjectPayments(projectId: string) {
       const paidRequests = paymentRequests.filter(r => r.status === 'paid');
       const totalPaid = paidRequests.reduce((sum, r) => sum + (r.total_amount || r.amount), 0);
 
-      // Calculate pending (submitted + approved but not paid)
+      // Calculate pending (anything not paid, rejected, or prepared)
       const pendingRequests = paymentRequests.filter(r => 
-        r.status === 'submitted' || r.status === 'approved'
+        r.status !== 'paid' && r.status !== 'rejected' && r.status !== 'prepared'
       );
       const totalPending = pendingRequests.reduce((sum, r) => sum + (r.total_amount || r.amount), 0);
 
@@ -243,15 +243,16 @@ export function useProjectPayments(projectId: string) {
       // Set timestamp based on status
       if (status === 'submitted') {
         updateData.submitted_at = new Date().toISOString();
-      } else if (status === 'approved') {
-        updateData.approved_at = new Date().toISOString();
-        if (additionalData?.approver_signature_id) {
-          updateData.approver_signature_id = additionalData.approver_signature_id;
-        }
       } else if (status === 'paid') {
         updateData.paid_at = new Date().toISOString();
       } else if (status === 'rejected') {
         updateData.rejected_at = new Date().toISOString();
+      } else if (status !== 'prepared') {
+        // Any approval step: set approved_at timestamp
+        updateData.approved_at = new Date().toISOString();
+        if (additionalData?.approver_signature_id) {
+          updateData.approver_signature_id = additionalData.approver_signature_id;
+        }
       }
 
       const { error } = await supabase
@@ -261,9 +262,12 @@ export function useProjectPayments(projectId: string) {
 
       if (error) throw error;
 
+      // Notification stub - will be replaced with edge function
+      console.log(`[Approval Chain] Status changed to ${status}. Notification would be sent to next approver.`);
+
       toast({
-        title: "עודכן בהצלחה",
-        description: "סטטוס בקשת התשלום עודכן",
+        title: "הבקשה הועברה",
+        description: "סטטוס עודכן: הודעה תישלח לגורם המאשר הבא",
       });
 
       await fetchPaymentRequests();

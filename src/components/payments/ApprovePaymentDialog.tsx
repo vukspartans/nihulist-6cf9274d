@@ -9,9 +9,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Check, AlertCircle } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
+import { SignatureType } from '@/types/paymentStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,18 +23,25 @@ interface ApprovePaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   request: PaymentRequest | null;
   onApprove: (request: PaymentRequest, signatureId?: string) => Promise<void>;
+  nextStepName: string;
+  requiresSignature: boolean;
+  signatureType: SignatureType;
 }
 
 export function ApprovePaymentDialog({ 
   open, 
   onOpenChange, 
   request,
-  onApprove 
+  onApprove,
+  nextStepName,
+  requiresSignature,
+  signatureType,
 }: ApprovePaymentDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [signature, setSignature] = useState<SignatureData | null>(null);
+  const [checkboxConfirmed, setCheckboxConfirmed] = useState(false);
 
   if (!request) return null;
 
@@ -48,14 +57,17 @@ export function ApprovePaymentDialog({
     || request.external_party_name 
     || 'לא צוין';
 
+  const canSubmit = !requiresSignature 
+    || (signatureType === 'drawn' && signature) 
+    || (signatureType === 'checkbox' && checkboxConfirmed)
+    || signatureType === 'none';
+
   const handleApprove = async () => {
     setLoading(true);
     try {
       let signatureId: string | undefined;
       
-      // Save signature to signatures table if provided
-      if (signature && user?.id) {
-        // Generate a simple content hash based on request data
+      if (signature && user?.id && signatureType === 'drawn') {
         const contentHash = btoa(JSON.stringify({
           request_id: request.id,
           amount: request.amount,
@@ -67,7 +79,7 @@ export function ApprovePaymentDialog({
           .insert({
             entity_type: 'payment_request',
             entity_id: request.id,
-            sign_text: 'אישור בקשת תשלום',
+            sign_text: nextStepName,
             sign_png: signature.png,
             sign_vector_json: { paths: signature.vector },
             content_hash: contentHash,
@@ -92,6 +104,7 @@ export function ApprovePaymentDialog({
       
       await onApprove(request, signatureId);
       setSignature(null);
+      setCheckboxConfirmed(false);
       onOpenChange(false);
     } finally {
       setLoading(false);
@@ -104,12 +117,11 @@ export function ApprovePaymentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Check className="w-5 h-5 text-green-600" />
-            אישור בקשת תשלום
+            {nextStepName}
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Request Summary */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">מספר בקשה:</span>
@@ -151,18 +163,33 @@ export function ApprovePaymentDialog({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              לאחר האישור, בקשת התשלום תסומן כמאושרת ותהיה מוכנה לביצוע התשלום בפועל.
+              לאחר האישור, הבקשה תועבר לשלב: {nextStepName}
             </AlertDescription>
           </Alert>
 
-          {/* Signature (Optional) */}
-          <div className="space-y-2">
-            <Label>חתימה (אופציונלי)</Label>
-            <SignatureCanvas 
-              onSign={setSignature}
-              className="border-0 shadow-none p-0"
-            />
-          </div>
+          {/* Conditional signature section */}
+          {requiresSignature && signatureType === 'drawn' && (
+            <div className="space-y-2">
+              <Label>חתימה</Label>
+              <SignatureCanvas 
+                onSign={setSignature}
+                className="border-0 shadow-none p-0"
+              />
+            </div>
+          )}
+
+          {requiresSignature && signatureType === 'checkbox' && (
+            <div className="flex items-center gap-3 p-3 border rounded-lg">
+              <Checkbox
+                id="approval-confirm"
+                checked={checkboxConfirmed}
+                onCheckedChange={(checked) => setCheckboxConfirmed(!!checked)}
+              />
+              <Label htmlFor="approval-confirm" className="text-sm cursor-pointer">
+                אני מאשר/ת את בקשת התשלום ואת נכונות הפרטים
+              </Label>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -171,10 +198,10 @@ export function ApprovePaymentDialog({
           </Button>
           <Button 
             onClick={handleApprove} 
-            disabled={loading}
+            disabled={loading || !canSubmit}
             className="bg-green-600 hover:bg-green-700"
           >
-            {loading ? 'מאשר...' : 'אשר תשלום'}
+            {loading ? 'מאשר...' : 'אשר'}
           </Button>
         </DialogFooter>
       </DialogContent>

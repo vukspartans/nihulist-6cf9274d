@@ -5,7 +5,7 @@ import { usePaymentStatusDefinitions } from '@/hooks/usePaymentStatusDefinitions
 import { useMemo } from 'react';
 
 interface PaymentStatusBadgeProps {
-  status: PaymentMilestoneStatus | PaymentRequestStatus;
+  status: string;
   type?: 'milestone' | 'request';
 }
 

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, Plus, Filter } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { PaymentRequestCard } from './PaymentRequestCard';
+import { useApprovalChain } from '@/hooks/useApprovalChain';
 
 interface PaymentRequestsTableProps {
   requests: PaymentRequest[];
@@ -14,6 +15,7 @@ interface PaymentRequestsTableProps {
   onMarkPaid: (request: PaymentRequest) => void;
   onView: (request: PaymentRequest) => void;
   onDelete: (request: PaymentRequest) => void;
+  approvalChain: ReturnType<typeof useApprovalChain>;
 }
 
 export function PaymentRequestsTable({ 
@@ -24,6 +26,7 @@ export function PaymentRequestsTable({
   onMarkPaid,
   onView,
   onDelete,
+  approvalChain,
 }: PaymentRequestsTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -32,14 +35,17 @@ export function PaymentRequestsTable({
     return request.status === statusFilter;
   });
 
-  const statusCounts = {
-    all: requests.length,
-    prepared: requests.filter(r => r.status === 'prepared').length,
-    submitted: requests.filter(r => r.status === 'submitted').length,
-    approved: requests.filter(r => r.status === 'approved').length,
-    paid: requests.filter(r => r.status === 'paid').length,
-    rejected: requests.filter(r => r.status === 'rejected').length,
-  };
+  // Build dynamic status counts from actual data
+  const statusCounts: Record<string, number> = { all: requests.length };
+  for (const r of requests) {
+    statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+  }
+
+  // Build filter options from the approval chain statuses
+  const filterOptions = approvalChain.statuses.map((s) => ({
+    value: s.code,
+    label: `${s.name} (${statusCounts[s.code] || 0})`,
+  }));
 
   return (
     <Card dir="rtl">
@@ -53,16 +59,16 @@ export function PaymentRequestsTable({
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <Select dir="rtl" value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger dir="rtl" className="w-[140px] h-8">
+                <SelectTrigger dir="rtl" className="w-[160px] h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">הכל ({statusCounts.all})</SelectItem>
-                  <SelectItem value="prepared">טיוטה ({statusCounts.prepared})</SelectItem>
-                  <SelectItem value="submitted">הוגש ({statusCounts.submitted})</SelectItem>
-                  <SelectItem value="approved">מאושר ({statusCounts.approved})</SelectItem>
-                  <SelectItem value="paid">שולם ({statusCounts.paid})</SelectItem>
-                  <SelectItem value="rejected">נדחה ({statusCounts.rejected})</SelectItem>
+                  {filterOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -90,6 +96,10 @@ export function PaymentRequestsTable({
               onMarkPaid={onMarkPaid}
               onView={onView}
               onDelete={onDelete}
+              nextStep={approvalChain.getNextStep(request.status)}
+              currentStepIndex={approvalChain.currentStepIndex(request.status)}
+              totalSteps={approvalChain.totalSteps}
+              statuses={approvalChain.statuses}
             />
           ))
         )}
