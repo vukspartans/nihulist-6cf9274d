@@ -1,38 +1,65 @@
 
-
-# Fix: Load Only Current Stage Tasks from Templates
+# Add "Next Stage" Button and Fix Duplicate Prevention
 
 ## Problem
-
-The "Load from templates" dialog currently shows tasks from ALL licensing phases (Initial inspection, Initial planning, Submitting a permit application, etc.). It should only show tasks for the **current project stage**.
-
-## Solution
-
-Add a `currentPhase` prop to `LoadTaskTemplatesDialog` and filter the fetched templates to only include those whose `licensing_phase` name matches the current project phase.
+1. The phase selector is at the top of the page, far from the Tasks tab -- users can't easily advance stages while working on tasks
+2. `existingTemplateIds` is passed as `new Set()` in `ProjectDetail.tsx`, so both `StageTaskLoadDialog` and duplicate detection never work
+3. Test task data from previous loads needs to be cleared
 
 ## Changes
 
-### 1. `LoadTaskTemplatesDialog.tsx` -- Add phase filtering
+### 1. TaskBoard.tsx -- Add "Next Stage" button + fix existingTemplateIds propagation
 
-- Add a new optional prop: `currentPhase?: string | null`
-- In `fetchTemplates()`, after fetching templates, filter results to only include templates where `licensing_phases.name === currentPhase`
-- If `currentPhase` is null/undefined, fall back to showing all (backward compatible)
-- Update the dialog description to mention the current phase name
+- Add a prominent "שלב הבא" (Next Stage) button in the task toolbar (next to "Load from templates" and "Add task")
+- Import `PROJECT_PHASES` to calculate the next phase
+- Accept a new `onPhaseChange` callback prop from `ProjectDetail`
+- When clicked, call `onPhaseChange(nextPhase)` which triggers the phase update + `StageTaskLoadDialog` in ProjectDetail
+- Disable the button when on the last phase ("הסתיים")
+- Show current phase name on the button for context
 
-### 2. `TaskBoard.tsx` -- Pass `projectPhase` to the dialog
+### 2. ProjectDetail.tsx -- Fix existingTemplateIds for StageTaskLoadDialog
 
-- Pass the existing `projectPhase` prop through to `LoadTaskTemplatesDialog` as `currentPhase`
-- The `TaskBoard` already receives `projectPhase` in its props but doesn't forward it
+- Before rendering `StageTaskLoadDialog`, fetch existing `template_id` values from `project_tasks` for the current project
+- Store them in state and pass to the dialog
+- Pass `handlePhaseChange` down to `TaskBoard` as `onPhaseChange` prop
+- Add a state variable to hold `existingTemplateIds` fetched from the database
 
-## Technical Detail
+### 3. StageTaskLoadDialog.tsx -- Self-fetch existing template IDs
 
-In `fetchTemplates()`, after each query returns data, add a filter:
+- Instead of relying on props for `existingTemplateIds`, have the dialog fetch them directly from `project_tasks` when it opens
+- This makes it self-contained and always accurate
+- Remove the `existingTemplateIds` prop requirement
 
-```typescript
-if (currentPhase) {
-  data = data.filter(t => t.licensing_phases?.name === currentPhase);
-}
+### 4. Clear test data
+
+- Delete all rows from `project_tasks` for the test project (aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004) so the flow can be tested fresh
+
+## Technical Details
+
+**Next Stage button logic:**
+```text
+Current phase index = PROJECT_PHASES.indexOf(projectPhase)
+Next phase = PROJECT_PHASES[currentIndex + 1]
+Button disabled if currentIndex === PROJECT_PHASES.length - 1
 ```
 
-This uses the already-joined `licensing_phases` relation to match by name, consistent with how `StageTaskLoadDialog` works.
+**Self-fetching existingTemplateIds in StageTaskLoadDialog:**
+```text
+const { data } = await supabase
+  .from('project_tasks')
+  .select('template_id')
+  .eq('project_id', projectId)
+  .not('template_id', 'is', null);
+const existingIds = new Set(data.map(d => d.template_id));
+```
 
+This removes the broken pattern of passing `new Set()` and makes both dialogs always accurate.
+
+## Files to Edit
+
+| File | Change |
+|---|---|
+| `src/components/tasks/TaskBoard.tsx` | Add "Next Stage" button, accept `onPhaseChange` prop |
+| `src/pages/ProjectDetail.tsx` | Pass `handlePhaseChange` to TaskBoard, remove broken `new Set()` |
+| `src/components/tasks/StageTaskLoadDialog.tsx` | Self-fetch existingTemplateIds instead of relying on prop |
+| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | Self-fetch existingTemplateIds instead of relying on prop |
