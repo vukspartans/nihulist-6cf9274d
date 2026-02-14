@@ -549,7 +549,7 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} />
+          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} />
         </TabsContent>
 
         <TabsContent value="payments">

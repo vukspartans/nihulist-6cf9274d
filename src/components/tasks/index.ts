@@ -14,3 +14,4 @@ export { TaskFilters } from './TaskFilters';
 export { TaskCommentsSection } from './TaskCommentsSection';
 export { TaskFilesSection } from './TaskFilesSection';
 export { AutoTaskSuggestionBanner } from './AutoTaskSuggestionBanner';
+export { LoadTaskTemplatesDialog } from './LoadTaskTemplatesDialog';

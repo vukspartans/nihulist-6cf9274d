@@ -15,7 +15,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle, Table as TableIcon, Columns } from 'lucide-react';
+import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle, Table as TableIcon, Columns, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { TaskCard } from './TaskCard';
@@ -27,6 +27,7 @@ import { AllProjectsTaskTable } from './AllProjectsTaskTable';
 import { Progress } from '@/components/ui/progress';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { AutoTaskSuggestionBanner } from './AutoTaskSuggestionBanner';
+import { LoadTaskTemplatesDialog } from './LoadTaskTemplatesDialog';
 import type { ProjectTask, TaskStatus } from '@/types/task';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
 
@@ -34,6 +35,7 @@ interface TaskBoardProps {
   projectId: string;
   projectType?: string | null;
   projectPhase?: string | null;
+  municipalityId?: string | null;
 }
 
 interface Column {
@@ -52,7 +54,7 @@ const COLUMNS: Column[] = [
   { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600', accentColor: 'bg-green-500' },
 ];
 
-export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardProps) {
+export function TaskBoard({ projectId, projectType, projectPhase, municipalityId }: TaskBoardProps) {
   const { 
     tasks, 
     loading, 
@@ -67,6 +69,7 @@ export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardPro
 
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
@@ -171,6 +174,10 @@ export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardPro
     );
   }
 
+  const existingTemplateIds = new Set(
+    tasks.filter(t => t.template_id).map(t => t.template_id!)
+  );
+
   return (
     <div dir="rtl">
       {/* Header */}
@@ -198,6 +205,12 @@ export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardPro
               קנבן
             </ToggleGroupItem>
           </ToggleGroup>
+          {projectType && (
+            <Button size="sm" variant="outline" onClick={() => setTemplateDialogOpen(true)}>
+              <Download className="h-4 w-4 ml-1" />
+              טען מתבניות
+            </Button>
+          )}
           <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 ml-1" />
             הוספת משימה
@@ -298,6 +311,18 @@ export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardPro
         projectAdvisors={projectAdvisors}
         allProjectTasks={tasks.map(t => ({ id: t.id, name: t.name, status: t.status }))}
       />
+
+      {projectType && (
+        <LoadTaskTemplatesDialog
+          open={templateDialogOpen}
+          onOpenChange={setTemplateDialogOpen}
+          projectId={projectId}
+          projectType={projectType}
+          municipalityId={municipalityId}
+          existingTemplateIds={existingTemplateIds}
+          onTasksCreated={refetch}
+        />
+      )}
     </div>
   );
 }
