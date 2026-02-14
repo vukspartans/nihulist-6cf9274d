@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Wallet, Loader2, Receipt } from 'lucide-react';
 import { useProjectPayments } from '@/hooks/useProjectPayments';
+import { useApprovalChain } from '@/hooks/useApprovalChain';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { PaymentSummaryCards } from './PaymentSummaryCards';
 import { PaymentMilestoneList } from './PaymentMilestoneList';
@@ -32,6 +33,8 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
     deletePaymentRequest,
     updateMilestoneStatus,
   } = useProjectPayments(projectId);
+
+  const approvalChain = useApprovalChain();
 
   // Dialog states
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
@@ -70,7 +73,6 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
 
   const handleMarkPaid = async (request: PaymentRequest) => {
     await updatePaymentRequestStatus(request.id, 'paid');
-    // Also update milestone if linked
     if (request.payment_milestone_id) {
       await updateMilestoneStatus(request.payment_milestone_id, 'paid');
     }
@@ -88,7 +90,10 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
   };
 
   const handleApproveSubmit = async (request: PaymentRequest, signatureId?: string) => {
-    await updatePaymentRequestStatus(request.id, 'approved', {
+    const nextStep = approvalChain.getNextStep(request.status);
+    const targetStatus = nextStep?.code || 'paid';
+
+    await updatePaymentRequestStatus(request.id, targetStatus, {
       approved_by: user?.id,
       approver_signature_id: signatureId,
     });
@@ -111,9 +116,13 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
     );
   }
 
+  // Compute next step for selected request (used by ApprovePaymentDialog)
+  const selectedNextStep = selectedRequest
+    ? approvalChain.getNextStep(selectedRequest.status)
+    : null;
+
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -126,10 +135,8 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Cash Flow Chart */}
       <CashFlowChart milestones={milestones} paymentRequests={paymentRequests} />
 
-      {/* Invoice-ready milestones alert */}
       {milestones.some(m => m.status === 'due') && (
         <Alert className="border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800">
           <Receipt className="h-4 w-4 text-green-600" />
@@ -139,14 +146,12 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
         </Alert>
       )}
 
-      {/* Milestones */}
       <PaymentMilestoneList
         milestones={milestones}
         onCreateMilestone={handleCreateMilestone}
         onRequestPayment={handleRequestPaymentFromMilestone}
       />
 
-      {/* Payment Requests */}
       <PaymentRequestsTable
         requests={paymentRequests}
         onCreateRequest={handleCreateRequest}
@@ -155,9 +160,9 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
         onMarkPaid={handleMarkPaid}
         onView={handleView}
         onDelete={handleDelete}
+        approvalChain={approvalChain}
       />
 
-      {/* Dialogs */}
       <CreateMilestoneDialog
         open={milestoneDialogOpen}
         onOpenChange={setMilestoneDialogOpen}
@@ -179,6 +184,9 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
         onOpenChange={setApproveDialogOpen}
         request={selectedRequest}
         onApprove={handleApproveSubmit}
+        nextStepName={selectedNextStep?.name || 'מאושר'}
+        requiresSignature={selectedNextStep?.requiresSignature ?? false}
+        signatureType={selectedNextStep?.signatureType ?? 'none'}
       />
 
       <RejectPaymentDialog

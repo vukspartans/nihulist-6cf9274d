@@ -41,7 +41,7 @@ export interface PaymentRequest {
   currency: string;
   category: 'consultant' | 'external' | 'other';
   source_type: string;
-  status: 'prepared' | 'submitted' | 'approved' | 'paid' | 'rejected';
+  status: string;
   invoice_file_url: string | null;
   attachments: any[];
   notes: string | null;

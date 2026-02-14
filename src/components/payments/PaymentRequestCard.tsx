@@ -1,8 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Check, X, Wallet, Eye, Trash2 } from 'lucide-react';
+import { FileText, Check, X, Wallet, Eye, Trash2, ArrowLeft } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
+import { ApprovalProgressStepper } from './ApprovalProgressStepper';
+import { NextStep } from '@/hooks/useApprovalChain';
+import { PaymentStatusDefinition } from '@/types/paymentStatus';
 
 interface PaymentRequestCardProps {
   request: PaymentRequest;
@@ -11,6 +14,10 @@ interface PaymentRequestCardProps {
   onMarkPaid: (request: PaymentRequest) => void;
   onView: (request: PaymentRequest) => void;
   onDelete?: (request: PaymentRequest) => void;
+  nextStep: NextStep | null;
+  currentStepIndex: number;
+  totalSteps: number;
+  statuses: PaymentStatusDefinition[];
 }
 
 export function PaymentRequestCard({ 
@@ -19,7 +26,11 @@ export function PaymentRequestCard({
   onReject, 
   onMarkPaid,
   onView,
-  onDelete 
+  onDelete,
+  nextStep,
+  currentStepIndex,
+  totalSteps,
+  statuses,
 }: PaymentRequestCardProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
@@ -38,6 +49,19 @@ export function PaymentRequestCard({
     || request.external_party_name 
     || 'לא צוין';
 
+  const isPrepared = request.status === 'prepared';
+  const isAwaitingPayment = request.status === 'awaiting_payment';
+  const isPaid = request.status === 'paid';
+  const isRejected = request.status === 'rejected';
+  const isTerminal = isPaid || isRejected;
+
+  // Show advance button for non-terminal, non-prepared statuses that have a next step
+  const showAdvanceButton = !isPrepared && !isTerminal && !isAwaitingPayment && nextStep;
+  // Show mark paid for awaiting_payment
+  const showMarkPaid = isAwaitingPayment;
+  // Show reject for non-terminal, non-prepared
+  const showReject = !isPrepared && !isTerminal;
+
   return (
     <Card className="hover:shadow-sm transition-shadow" dir="rtl">
       <CardContent className="p-4">
@@ -49,8 +73,13 @@ export function PaymentRequestCard({
               </span>
               <PaymentStatusBadge status={request.status} />
             </div>
+
+            <ApprovalProgressStepper
+              statuses={statuses}
+              currentStepIndex={currentStepIndex}
+            />
             
-            <p className="font-medium truncate">{advisorName}</p>
+            <p className="font-medium truncate mt-1">{advisorName}</p>
             
             {request.payment_milestone?.name && (
               <p className="text-sm text-muted-foreground">
@@ -99,30 +128,31 @@ export function PaymentRequestCard({
                 <Eye className="w-4 h-4" />
               </Button>
 
-              {request.status === 'submitted' && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onApprove(request)}
-                    className="h-8 text-xs text-green-600 border-green-200 hover:bg-green-50"
-                  >
-                    <Check className="w-3 h-3 ml-1" />
-                    אשר
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onReject(request)}
-                    className="h-8 text-xs text-destructive border-destructive/20 hover:bg-destructive/10"
-                  >
-                    <X className="w-3 h-3 ml-1" />
-                    דחה
-                  </Button>
-                </>
+              {showAdvanceButton && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onApprove(request)}
+                  className="h-8 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                >
+                  <Check className="w-3 h-3 ml-1" />
+                  {nextStep.name}
+                </Button>
               )}
 
-              {request.status === 'approved' && (
+              {showReject && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onReject(request)}
+                  className="h-8 text-xs text-destructive border-destructive/20 hover:bg-destructive/10"
+                >
+                  <X className="w-3 h-3 ml-1" />
+                  דחה
+                </Button>
+              )}
+
+              {showMarkPaid && (
                 <Button
                   size="sm"
                   onClick={() => onMarkPaid(request)}
@@ -133,7 +163,7 @@ export function PaymentRequestCard({
                 </Button>
               )}
 
-              {request.status === 'prepared' && onDelete && (
+              {isPrepared && onDelete && (
                 <Button
                   size="sm"
                   variant="ghost"
