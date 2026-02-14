@@ -1,81 +1,52 @@
 
 
-# Fix: Add "Load from Templates" Button and Support Per-Stage Template Loading
+# Seed Default Task Templates for Common Project Types
 
-## Problems Identified
-
-1. **No templates in database**: The `task_templates` table is empty, so the `AutoTaskSuggestionBanner` never shows (it requires `templates.length > 0`).
-2. **No explicit button**: There is no "Load from Templates" button in the toolbar -- the only mechanism is a banner that auto-appears when there are zero tasks.
-3. **No per-stage loading**: Once a project has tasks, there is no way to load additional templates for the current or next licensing stage.
+## Problem
+The "Load from Templates" button exists and works, but the `task_templates` table is completely empty (0 rows). Without templates, there is nothing to load.
 
 ## Solution
 
-### 1. Add a "Load from Templates" button to the TaskBoard toolbar
+Create a database migration that seeds a starter set of task templates for common project types, grouped by licensing phases. This gives immediate value when clicking "Load from Templates".
 
-Add a button (e.g., "טען מתבניות" with a `Download` or `Sparkles` icon) next to the existing "הוספת משימה" button in the TaskBoard header. This button is always visible, regardless of whether tasks already exist.
+### Templates to Seed
 
-### 2. Create a `LoadTaskTemplatesDialog` component
+We will seed templates for the most common project type visible in the system ("מגורים" / Residential), organized by licensing phase. Each template includes name, default duration, advisor specialty, and display order.
 
-A dialog that:
-- Fetches available templates using `useTemplateResolver` (already exists), filtered by the project's `projectType`, `municipalityId`, and optionally by licensing phase/stage
-- Shows templates grouped by licensing phase
-- Allows the user to select which phase's templates to load (or select all)
-- Shows a preview of templates with checkboxes (name, duration, specialty)
-- Has a "Load Selected" button that calls `useBulkTaskCreation.createTasksFromTemplates()`
-- Skips templates that already have corresponding tasks (by `template_id`) to avoid duplicates
+**Phase: בדיקה ראשונית (Initial Review)**
+- בדיקת היתכנות תכנונית (14 days, architect)
+- בדיקת זכויות בנייה (7 days, architect)
+- סקר סביבתי ראשוני (10 days, environmental consultant)
 
-### 3. Keep the AutoTaskSuggestionBanner for the empty state
+**Phase: תכנון ראשוני (Initial Planning)**
+- הכנת תוכנית אדריכלית ראשונית (21 days, architect)
+- חישובי שטחים ראשוניים (7 days, architect)
+- תיאום יועצים ראשוני (5 days, project manager)
 
-The banner remains as a convenience for brand-new projects, but the button provides full control at any stage.
+**Phase: הגשת בקשה להיתר (Permit Application)**
+- הכנת תיק בקשה להיתר (14 days, architect)
+- הגשת מסמכים לוועדה (3 days, architect)
+- תשלום אגרות (2 days, entrepreneur)
 
-## Files to Create/Edit
+**Phase: ביצוע (Execution)**
+- פיקוח עליון (ongoing, architect) -- milestone
+- בדיקות בטון (as needed, engineer) -- payment critical
 
-| File | Action | Description |
-|---|---|---|
-| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | NEW | Dialog to browse and selectively load templates by stage |
-| `src/components/tasks/TaskBoard.tsx` | EDIT | Add "Load from Templates" button to toolbar that opens the dialog |
-| `src/components/tasks/index.ts` | EDIT | Export the new dialog |
+### Technical Approach
 
-## Technical Details
+1. **Migration file**: A single SQL migration that inserts rows into `task_templates`, referencing existing `licensing_phases` by name lookup.
+2. **Fallback**: If licensing phases don't exist yet, templates are inserted with `licensing_phase_id = NULL` (grouped under "General Tasks").
+3. **Project type matching**: Templates use `project_type = 'מגורים'` and `municipality_id = NULL` (general/all municipalities).
 
-### LoadTaskTemplatesDialog
+### What Changes
 
-```text
-+------------------------------------------+
-| Load Task Templates            [X close] |
-|------------------------------------------|
-| Project Type: מגורים בבנייה רוויה        |
-| Municipality: (none / Tel Aviv)          |
-|------------------------------------------|
-| Phase: בדיקה ראשונית                     |
-|   [x] Template 1 (14 days, architect)    |
-|   [x] Template 2 (7 days, engineer)      |
-|   [ ] Template 3 (already loaded)        |
-|------------------------------------------|
-| Phase: תכנון ראשוני                      |
-|   [x] Template 4 (21 days)               |
-|------------------------------------------|
-| [Select All]    [Load Selected (3)]      |
-+------------------------------------------+
-```
+| Item | Action |
+|---|---|
+| `supabase/migrations/seed_task_templates.sql` | NEW -- inserts ~10-12 starter templates |
 
-Key logic:
-- Query `task_templates` filtered by `project_type` and `municipality_id` (with fallback, using existing `useTemplateResolver` pattern)
-- Cross-reference with existing `project_tasks` by `template_id` to mark already-loaded templates as disabled
-- Group results by `licensing_phases.name` for clear stage-based selection
-- On submit, call `createTasksFromTemplates` with only the selected templates
-- After success, trigger `refetch` to update the board
+### After This
 
-### TaskBoard toolbar change
-
-```text
-Before: [Table] [Kanban]  [+ הוספת משימה]
-After:  [Table] [Kanban]  [טען מתבניות]  [+ הוספת משימה]
-```
-
-The "Load from Templates" button opens `LoadTaskTemplatesDialog`. It passes `projectId`, `projectType`, `projectPhase`, and the current task list (for duplicate detection).
-
-### Duplicate prevention
-
-When loading templates, filter out any template whose `id` already matches an existing task's `template_id` in the project. These appear greyed out in the dialog with a note "already loaded".
-
+- Opening a "מגורים" project and clicking "טען מתבניות" will show templates grouped by phase
+- Users can select which ones to load
+- The `AutoTaskSuggestionBanner` will also start working for new empty projects
+- Additional project types and municipality-specific templates can be added later via the Admin panel
