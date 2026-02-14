@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { TaskStatusBadge } from './TaskStatusBadge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { InlineStatusSelector } from './InlineStatusSelector';
+import { PriorityStars } from './PriorityStars';
 import { Progress } from '@/components/ui/progress';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
+import type { TaskStatus } from '@/types/task';
 import { ArrowUpDown, AlertTriangle, Flag, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { differenceInDays } from 'date-fns';
@@ -12,10 +15,12 @@ interface AllProjectsTaskTableProps {
   tasks: ProjectTaskWithDetails[];
   onProjectClick?: (projectId: string) => void;
   onTaskClick?: (taskId: string) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onPriorityChange?: (taskId: string, priority: number) => void;
   dependencyCounts?: Record<string, { total: number; blocking: number }>;
 }
 
-type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent' | 'variance';
+type SortKey = 'name' | 'project_name' | 'phase' | 'status' | 'planned_end_date' | 'progress_percent' | 'variance' | 'priority';
 
 const isDelayed = (task: ProjectTaskWithDetails): boolean => {
   if (task.status === 'delayed') return true;
@@ -24,7 +29,6 @@ const isDelayed = (task: ProjectTaskWithDetails): boolean => {
   return new Date(task.planned_end_date) < new Date(new Date().toDateString());
 };
 
-/** Compute variance in days: negative = behind, positive = ahead, 0 = on track */
 const getVarianceDays = (task: ProjectTaskWithDetails): number | null => {
   if (!task.planned_end_date) return null;
   const planned = new Date(task.planned_end_date);
@@ -35,7 +39,12 @@ const getVarianceDays = (task: ProjectTaskWithDetails): number | null => {
   return differenceInDays(planned, new Date());
 };
 
-export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, dependencyCounts = {} }: AllProjectsTaskTableProps) {
+const getInitials = (name: string | null): string => {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2);
+};
+
+export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, onStatusChange, onPriorityChange, dependencyCounts = {} }: AllProjectsTaskTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('planned_end_date');
   const [sortAsc, setSortAsc] = useState(true);
   const showProjectColumn = !!onProjectClick;
@@ -55,8 +64,17 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
     if (aDelayed && !bDelayed) return -1;
     if (!aDelayed && bDelayed) return 1;
 
-    const av = sortKey === 'variance' ? getVarianceDays(a) : a[sortKey];
-    const bv = sortKey === 'variance' ? getVarianceDays(b) : b[sortKey];
+    let av: any, bv: any;
+    if (sortKey === 'variance') {
+      av = getVarianceDays(a);
+      bv = getVarianceDays(b);
+    } else if (sortKey === 'priority') {
+      av = (a as any).priority || 0;
+      bv = (b as any).priority || 0;
+    } else {
+      av = a[sortKey];
+      bv = b[sortKey];
+    }
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
@@ -100,6 +118,7 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
             <TableHead><SortHeader label="שלב" sortKeyName="phase" /></TableHead>
             <TableHead>יועץ</TableHead>
             <TableHead><SortHeader label="סטטוס" sortKeyName="status" /></TableHead>
+            <TableHead><SortHeader label="עדיפות" sortKeyName="priority" /></TableHead>
             <TableHead>תלויות</TableHead>
             <TableHead><SortHeader label="יעד" sortKeyName="planned_end_date" /></TableHead>
             <TableHead><SortHeader label="סטייה" sortKeyName="variance" /></TableHead>
@@ -147,10 +166,36 @@ export function AllProjectsTaskTable({ tasks, onProjectClick, onTaskClick, depen
                   <span className="text-xs text-muted-foreground">{task.phase || '—'}</span>
                 </TableCell>
                 <TableCell className="py-2">
-                  <span className="text-xs">{task.advisor_name || '—'}</span>
+                  {task.advisor_name ? (
+                    <div className="flex items-center gap-1.5">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {getInitials(task.advisor_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs truncate max-w-[80px]">{task.advisor_name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell className="py-2">
-                  <TaskStatusBadge status={task.status} />
+                  {onStatusChange ? (
+                    <InlineStatusSelector
+                      status={task.status}
+                      onStatusChange={(s) => onStatusChange(task.id, s)}
+                    />
+                  ) : (
+                    <InlineStatusSelector status={task.status} onStatusChange={() => {}} />
+                  )}
+                </TableCell>
+                <TableCell className="py-2">
+                  <PriorityStars
+                    value={(task as any).priority || 0}
+                    onChange={onPriorityChange ? (v) => onPriorityChange(task.id, v) : undefined}
+                    max={3}
+                    size={12}
+                  />
                 </TableCell>
                 <TableCell className="py-2">
                   {(() => {

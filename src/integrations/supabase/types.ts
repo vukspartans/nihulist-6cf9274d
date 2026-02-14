@@ -1943,6 +1943,7 @@ export type Database = {
           phase: string | null
           planned_end_date: string | null
           planned_start_date: string | null
+          priority: number | null
           progress_percent: number | null
           project_id: string
           stage_id: string | null
@@ -1975,6 +1976,7 @@ export type Database = {
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
+          priority?: number | null
           progress_percent?: number | null
           project_id: string
           stage_id?: string | null
@@ -2007,6 +2009,7 @@ export type Database = {
           phase?: string | null
           planned_end_date?: string | null
           planned_start_date?: string | null
+          priority?: number | null
           progress_percent?: number | null
           project_id?: string
           stage_id?: string | null

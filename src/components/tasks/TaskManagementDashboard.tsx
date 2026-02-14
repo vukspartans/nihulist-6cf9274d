@@ -153,6 +153,24 @@ export function TaskManagementDashboard() {
     }
   }, [refetch]);
 
+  const handleInlineStatusChange = useCallback(async (taskId: string, status: TaskStatus) => {
+    await handleTaskSubmit(taskId, { status } as any);
+  }, [handleTaskSubmit]);
+
+  const handlePriorityChange = useCallback(async (taskId: string, priority: number) => {
+    try {
+      const { error } = await supabase
+        .from('project_tasks')
+        .update({ priority })
+        .eq('id', taskId);
+      if (error) throw error;
+      refetch();
+    } catch (err) {
+      console.error('Error updating priority:', err);
+      toast.error('שגיאה בעדכון עדיפות');
+    }
+  }, [refetch]);
+
   const handleTaskDelete = useCallback(async (taskId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -345,6 +363,8 @@ export function TaskManagementDashboard() {
             setFilters(f => ({ ...f, projectId: pid }));
           }}
           onTaskClick={handleTaskClick}
+          onStatusChange={handleInlineStatusChange}
+          onPriorityChange={handlePriorityChange}
         />
       ) : (
         <ProjectTaskView
