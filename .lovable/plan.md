@@ -1,174 +1,138 @@
 
 
-# Chunk 2: Multi-Step Approval Chain -- Implementation Plan
+# Chunk 3: Consultant Invoice Portal -- Implementation Plan
 
-## Current State
+## Overview
 
-The DB has 7 `payment_status_definitions` ordered as a pipeline:
+Add a "Payments" tab to the Advisor Dashboard, allowing consultants to view their payment requests, submit new invoices for eligible milestones, and respond to "Tax Invoice Required" prompts after payment.
+
+---
+
+## New File: `src/components/payments/AdvisorPaymentsView.tsx`
+
+A self-contained component that:
+
+1. **Fetches data** for the current advisor:
+   - Queries `advisors` to get the advisor record for `auth.uid()`
+   - Queries `project_advisors` to get all `project_advisor` IDs for this advisor
+   - Queries `payment_requests` filtered by those `project_advisor_id` values, joining `payment_milestone` (name) and project (name via `project_id`)
+   - Queries `payment_milestones` with `status = 'due'` for the same project_advisor IDs (for the submission dropdown)
+
+2. **Renders a payment requests table** with columns:
+   - Project Name (from joined project data)
+   - Milestone Name
+   - Amount (total_amount)
+   - Status (using `PaymentStatusBadge`)
+   - Submission Date (submitted_at or created_at)
+
+3. **Filter toggle**: "Open" (non-terminal statuses) vs "Paid/Closed" (paid + rejected)
+
+4. **"Tax Invoice Required" alert**: For requests with `status === 'paid'`, show a prominent alert card with an action button. Clicking marks it as acknowledged (local state toggle per request ID, stored in a Set). This avoids a DB migration for now.
+
+5. **"New Payment Request" button** that opens `CreatePaymentRequestDialog` in **advisor-locked mode** (new props below).
+
+---
+
+## Edit: `src/components/payments/CreatePaymentRequestDialog.tsx`
+
+Add two new optional props to support advisor-locked mode:
+
+```typescript
+interface CreatePaymentRequestDialogProps {
+  // ... existing props
+  lockedAdvisorId?: string;        // Lock the consultant dropdown to this project_advisor_id
+  advisorMode?: boolean;           // When true: hide category selector, lock to 'consultant', only show 'due' milestones
+}
+```
+
+**Changes when `advisorMode === true`:**
+- Category is forced to `'consultant'` (hide the category selector)
+- The "Consultant" dropdown is disabled and pre-filled with `lockedAdvisorId`
+- The milestone dropdown filters to only show milestones with `status === 'due'` (instead of all non-paid)
+- This enforces the Chunk 1 rule: only milestones unlocked by task completion are available
+
+---
+
+## Edit: `src/pages/AdvisorDashboard.tsx`
+
+Minimal changes:
+
+1. Add `'payments'` to the `activeTab` union type (line 144):
+   ```typescript
+   const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations' | 'tasks' | 'payments'>('rfp-invites');
+   ```
+
+2. Expand the TabsList from `grid-cols-4` to `grid-cols-5` (line 1013)
+
+3. Add a new `TabsTrigger` for payments with a Wallet icon:
+   ```tsx
+   <TabsTrigger value="payments" className="flex items-center gap-2">
+     <Wallet className="h-4 w-4" />
+     תשלומים
+   </TabsTrigger>
+   ```
+
+4. Add the `TabsContent`:
+   ```tsx
+   <TabsContent value="payments">
+     <AdvisorPaymentsView />
+   </TabsContent>
+   ```
+
+The `AdvisorPaymentsView` component is fully self-contained -- it fetches its own data using the current user's auth context, so no additional props are needed from the dashboard.
+
+---
+
+## Data Flow
 
 ```text
-prepared -> submitted -> professionally_approved -> budget_approved -> awaiting_payment -> paid
-                                                                                         (rejected = terminal branch)
-```
-
-Two statuses require signatures: `professionally_approved` (checkbox) and `budget_approved` (drawn signature).
-
-However, the current code:
-- `PaymentDashboard.handleApproveSubmit` hardcodes transition to `'approved'` (a status code that does NOT exist in the DB)
-- `PaymentRequestCard` only shows Approve/Reject buttons for `status === 'submitted'` and Mark Paid for `status === 'approved'`
-- `handleMarkPaid` hardcodes transition to `'paid'`
-- The `organization_approval_chains` table is empty -- the status definitions table itself IS the chain
-
----
-
-## Architecture Decision
-
-Use `payment_status_definitions` (ordered by `display_order`) as the canonical approval chain. The `organization_approval_chains` table exists for future per-organization customization, but the system statuses are the baseline. This avoids requiring every organization to populate chains before the workflow works.
-
----
-
-## Fix 1: Create `useApprovalChain` Hook
-
-**File:** `src/hooks/useApprovalChain.ts` (new)
-
-**Purpose:** Given the current status of a payment request, determine:
-- The next status in the chain
-- Whether the current step requires a signature (and what type)
-- The Hebrew label for the action button
-- Whether the current status is actionable by the current user
-
-**Logic:**
-1. Fetch all active `payment_status_definitions` ordered by `display_order`
-2. Find the current status's position in the chain
-3. Return the next non-terminal status as `nextStatus`
-4. If `nextStatus.requires_signature` is true, the `ApprovePaymentDialog` will enforce signature collection matching `signature_type`
-5. Expose a `getNextStep(currentStatusCode)` function returning `{ nextCode, nextName, requiresSignature, signatureType }`
-6. Expose `isTerminal(statusCode)` helper
-
-**Return shape:**
-```typescript
-{
-  statuses: PaymentStatusDefinition[],       // full ordered chain
-  getNextStep: (code: string) => NextStep | null,
-  isTerminal: (code: string) => boolean,
-  isLoading: boolean,
-  currentStepIndex: (code: string) => number,
-  totalSteps: number,
-}
+AdvisorPaymentsView
+  |
+  |-- useAuth() -> user.id
+  |-- Query: advisors WHERE user_id = auth.uid() -> advisor.id
+  |-- Query: project_advisors WHERE advisor_id = advisor.id -> [project_advisor_ids]
+  |-- Query: payment_requests WHERE project_advisor_id IN [...] -> requests list
+  |-- Query: payment_milestones WHERE project_advisor_id IN [...] AND status = 'due' -> eligible milestones
+  |
+  |-- Renders: Table of requests with PaymentStatusBadge
+  |-- Renders: "Tax Invoice Required" alerts for paid requests
+  |-- Opens: CreatePaymentRequestDialog(advisorMode=true, lockedAdvisorId=pa.id)
 ```
 
 ---
 
-## Fix 2: Upgrade `updatePaymentRequestStatus` in `useProjectPayments`
+## Milestone Eligibility Enforcement
 
-**File:** `src/hooks/useProjectPayments.ts`
+The milestone dropdown in advisor mode only shows `status === 'due'` milestones. Combined with the Chunk 1 DB trigger (`auto_unlock_payment_milestone`), this means:
 
-**Changes to `updatePaymentRequestStatus`:**
-- No changes to the function signature (it already accepts any `status: string`)
-- The caller (`PaymentDashboard`) will now pass the correct next status code instead of hardcoded `'approved'`
-
-**Changes to `PaymentDashboard.handleApproveSubmit`:**
-- Instead of `updatePaymentRequestStatus(request.id, 'approved', ...)`, it will:
-  1. Call `getNextStep(request.status)` from the hook
-  2. Pass the `nextCode` as the status (e.g., `'professionally_approved'` when current is `'submitted'`)
-- For `handleMarkPaid`: only callable when status is `'awaiting_payment'`, transitions to `'paid'`
-- For `handleReject`: callable from any non-terminal status, transitions to `'rejected'`
-
-**File:** `src/components/payments/PaymentDashboard.tsx`
-
-**Changes:**
-- Import and use `useApprovalChain` hook
-- Replace `handleApproveSubmit` to use dynamic next status
-- Replace `handleMarkPaid` to only work from `awaiting_payment`
-- Pass approval chain data down to `PaymentRequestCard` and `ApprovePaymentDialog`
+1. Consultant completes critical tasks
+2. DB trigger sets milestone to `due`
+3. Milestone appears in consultant's "Submit Invoice" dropdown
+4. Consultant submits payment request
+5. Request enters the multi-step approval chain (Chunk 2)
 
 ---
 
-## Fix 3: UI -- Dynamic Buttons in `PaymentRequestCard`
+## Tax Invoice Prompt (Lightweight)
 
-**File:** `src/components/payments/PaymentRequestCard.tsx`
-
-**Current hardcoded logic:**
-- `submitted` -> show Approve/Reject
-- `approved` -> show Mark Paid
-- `prepared` -> show Delete
-
-**New dynamic logic:**
-- Receive `approvalChain` data as a prop (or use the hook directly)
-- For any non-terminal, non-final status: show "Advance" button with the next step's name (e.g., "אשר מקצועית", "אשר תקציבי", "העבר לתשלום")
-- For `awaiting_payment`: show "סמן כשולם" (Mark Paid)
-- For `prepared`: show Delete
-- Always show Reject button for non-terminal statuses (except `prepared`)
-- Add a small step indicator showing position in chain (e.g., "שלב 3/6")
-
-**New props:**
-```typescript
-interface PaymentRequestCardProps {
-  // ... existing
-  nextStep: { code: string; name: string; requiresSignature: boolean } | null;
-  currentStepIndex: number;
-  totalSteps: number;
-}
-```
+When a payment request reaches `status === 'paid'`:
+- A yellow alert card appears at the top of the advisor's payment list
+- Text: "נדרש: הנפקת חשבונית מס"
+- Description: "התשלום עבור [milestone name] אושר. נא להנפיק חשבונית מס ולהעלותה."
+- Action button: "סימון כהונפק" -- toggles local state (no DB change needed now; a `tax_invoice_issued` column can be added later)
 
 ---
 
-## Fix 4: Upgrade `ApprovePaymentDialog` for Dynamic Signatures
-
-**File:** `src/components/payments/ApprovePaymentDialog.tsx`
-
-**Changes:**
-- Accept `nextStepName` and `requiresSignature` and `signatureType` as props
-- Dialog title changes dynamically: "אישור מקצועי" / "אישור תקציבי" etc.
-- If `requiresSignature` is true AND type is `'drawn'`, show SignatureCanvas (already there)
-- If `requiresSignature` is true AND type is `'checkbox'`, show a checkbox instead of the canvas
-- If `requiresSignature` is false, hide the signature section entirely
-- The confirmation alert text updates to describe the next step: "לאחר האישור, הבקשה תועבר ל[nextStepName]"
-
----
-
-## Fix 5: Approval Progress Stepper
-
-**File:** `src/components/payments/ApprovalProgressStepper.tsx` (new)
-
-A small inline component showing the approval chain progress. Rendered inside `PaymentRequestCard` below the status badge.
-
-**Visual:** Small circles/dots connected by lines, colored based on completion:
-- Completed steps: filled with the status color
-- Current step: outlined with a pulse
-- Future steps: gray outline
-
-RTL layout (right-to-left flow matching Hebrew).
-
----
-
-## Fix 6: Notification Stub
-
-**File:** `src/hooks/useProjectPayments.ts`
-
-In `updatePaymentRequestStatus`, after the successful status update, add:
-```typescript
-// Notification stub - will be replaced with edge function
-console.log(`[Approval Chain] Status changed to ${status}. Notification would be sent to next approver.`);
-toast({ title: 'הבקשה הועברה', description: `סטטוס עודכן: הודעה תישלח לגורם המאשר הבא` });
-```
-
----
-
-## Summary of Files
+## Files Summary
 
 | File | Action | Description |
 |---|---|---|
-| `src/hooks/useApprovalChain.ts` | NEW | Hook to read chain, compute next step, check signatures |
-| `src/hooks/useProjectPayments.ts` | EDIT | Add notification stub in `updatePaymentRequestStatus` |
-| `src/components/payments/PaymentDashboard.tsx` | EDIT | Use hook, pass dynamic status to approve/mark-paid |
-| `src/components/payments/PaymentRequestCard.tsx` | EDIT | Dynamic buttons based on chain position |
-| `src/components/payments/ApprovePaymentDialog.tsx` | EDIT | Dynamic title, conditional signature by type |
-| `src/components/payments/ApprovalProgressStepper.tsx` | NEW | Visual step indicator |
-| `src/components/payments/PaymentRequestsTable.tsx` | EDIT | Pass chain data to cards |
-| `src/types/payment.ts` | EDIT | Update status type to include new codes |
+| `src/components/payments/AdvisorPaymentsView.tsx` | NEW | Full advisor payments view with table, filters, alerts |
+| `src/components/payments/CreatePaymentRequestDialog.tsx` | EDIT | Add `advisorMode` and `lockedAdvisorId` props |
+| `src/pages/AdvisorDashboard.tsx` | EDIT | Add 5th tab "Payments" pointing to AdvisorPaymentsView |
+| `src/components/payments/index.ts` | EDIT | Export AdvisorPaymentsView |
 
 ## No DB Migration Required
 
-All status definitions already exist in the database. The logic change is purely in the frontend -- reading and respecting the existing `payment_status_definitions` instead of ignoring them.
+All queries use existing tables and RLS policies. Advisors already have SELECT + INSERT permissions on `payment_requests` and SELECT on `payment_milestones` for their `project_advisor_id`.
 
