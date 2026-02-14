@@ -1,31 +1,70 @@
 
-# Fix Stage Task Loading Dialog
 
-## Problem
-The recent "skip dialog when no new tasks" change is preventing the dialog from appearing when it should. The auto-close check runs before the user ever sees the dialog, so switching phases appears to do nothing.
+# Validation: Licensing Task Management System
 
-## Root Cause
-The `hasNewTemplates` check on line 91 of `StageTaskLoadDialog.tsx` compares fetched templates against ALL existing project tasks (across all phases). If the user previously loaded templates for a phase and then switches back or to a new phase where templates overlap, the dialog auto-closes immediately.
+## Status: Nearly Complete - UI Enhancement Needed
 
-Additionally, the dialog shows ALL templates (including already-loaded ones) but the submit logic silently filters them out, creating confusion about what will actually be created.
+Your vision describes a centralized licensing task management platform. **The good news: ~95% of the backend logic and features already exist.** Here's the detailed validation:
 
-## Solution
-Instead of auto-closing the dialog, filter the template list to show ONLY genuinely new templates. If none remain after filtering, then skip the dialog silently.
+## Feature-by-Feature Comparison
 
-## Changes (1 file)
+| Requirement | Status | Existing Implementation |
+|---|---|---|
+| Task board per project type | Built | `TaskBoard` + `StageTaskLoadDialog` auto-generates tasks from templates by project type, municipality, and licensing phase |
+| Consultant assignment per task | Built | `TaskAssignment` component + auto-assignment by expertise matching |
+| Payment milestones linked to tasks | Built | `PaymentDashboard` + database trigger `trg_auto_unlock_milestone` auto-unlocks milestones when critical tasks complete |
+| Visual licensing timeline | Built | `LicensingTimeline` component shows 13-phase progress with real-time updates |
+| Delay detection and alerts | Built | `check_task_delay` database trigger + email notifications via `task-delay-notification` edge function |
+| Reschedule proposals | Built | `RescheduleBanner` + `RescheduleReviewDialog` for automated schedule adjustment suggestions |
+| Cash flow forecasting | Built | `CashFlowChart` comparing projected vs actual payments over time |
+| Task-to-contract link | Built | Tasks link to advisors assigned from the RFP/tender phase via `project_advisors` |
+| Add/remove tasks freely | Built | `CreateTaskDialog` + delete functionality in `TaskBoard` |
+| Variance tracking (plan vs actual) | Built | `AllProjectsTaskTable` shows variance column in days |
+| Auto phase advancement | Built | Database trigger advances project phase when all stage tasks are completed |
 
-**`src/components/tasks/StageTaskLoadDialog.tsx`**:
+## What's Missing: UI Polish to Match the Reference
 
-1. After fetching results, filter to only new templates: `const newTemplates = results.filter(t => !fetchedIds.has(t.id))`
-2. Use `newTemplates` (not `results`) for `setTemplates` and `setSelectedIds`
-3. Keep the auto-close but check `newTemplates.length === 0` instead of the current `hasNewTemplates` logic
-4. Remove the `existingTemplateIds` state entirely since it's no longer needed -- already-loaded templates won't be in the list at all
-5. Remove the filtering in `handleSubmit` since all displayed templates are new
-6. Clean up UI: remove the "already loaded" badge since those templates won't appear
-7. Fix the `selectableCount` / button count to simply use `selectedIds.size`
+The reference image (Monday.com-style board) shows specific UI patterns not yet implemented:
 
-This way:
-- The dialog shows only what's actionable (new tasks for this stage)
-- If there's nothing new, the dialog doesn't appear
-- The entrepreneur can select/deselect freely among new tasks
-- No confusion about disabled items or misleading counts
+1. **Inline status editing** -- The reference shows colored status pills (yellow "Working on it", red "Stuck") that are clickable dropdowns directly in the table row. Currently, status changes require opening a detail dialog or drag-and-drop in Kanban mode.
+
+2. **Avatar-based assignee display** -- The reference shows circular profile photos in the assignee column. The current table shows text names only.
+
+3. **Phase progress header with checkmarks** -- The reference shows a horizontal bar with checkmark circles for completed phases, highlighted current phase (yellow), and grey future phases. The existing `LicensingTimeline` is similar but uses numbered circles rather than checkmark icons inside a styled header bar.
+
+4. **Star ratings / priority column** -- The reference shows a star-based priority or rating column that doesn't exist in the current task table.
+
+## Proposed Enhancements (UI Only)
+
+### 1. Inline Status Selector in Table Rows
+Replace the static `TaskStatusBadge` in `AllProjectsTaskTable` with a clickable dropdown that lets users change task status directly from the table without opening a dialog.
+
+### 2. Avatar Assignee Column
+Show advisor avatars (or initials fallback) in the assignee column of the task table, using the existing `Avatar` component from the UI library.
+
+### 3. Priority Column
+Add a priority field (e.g., 1-5 stars or Low/Medium/High/Critical) to the task model and display it as a visual indicator in the table.
+
+### 4. Phase Progress Bar Redesign
+Update `LicensingTimeline` to more closely match the reference: checkmarks for completed phases, a highlighted "current" pill, and a cleaner horizontal layout integrated into the task board header.
+
+## Technical Details
+
+### Files to Modify
+- `src/components/tasks/AllProjectsTaskTable.tsx` -- Add inline status dropdown and avatar column
+- `src/components/tasks/LicensingTimeline.tsx` -- Redesign to match reference style
+- `src/types/task.ts` -- Add optional `priority` field to `ProjectTask`
+- Database migration -- Add `priority` column to `project_tasks` table
+
+### Files That Need No Changes (Already Working)
+- All hooks (`useProjectTasks`, `useAllProjectsTasks`, `useAutoTaskLoader`, etc.)
+- Payment system (`PaymentDashboard`, `CashFlowChart`, milestone triggers)
+- Delay detection and notification system
+- Reschedule proposal system
+- Template loading system (`StageTaskLoadDialog`, `LoadTaskTemplatesDialog`)
+- Task dependency enforcement
+
+## Summary
+
+The system you described is already built and functional at the data and logic level. The remaining work is purely visual -- making the task table look and feel more like a Monday.com board with inline editing, avatars, and a polished phase timeline header.
+
