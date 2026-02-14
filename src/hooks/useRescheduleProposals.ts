@@ -22,9 +22,52 @@ export interface RescheduleProposal {
   trigger_task_name?: string;
 }
 
+/**
+ * Applies date changes for a list of tasks and syncs linked payment milestones.
+ * Uses Promise.all for concurrent updates instead of sequential N+1 queries.
+ */
+async function batchApplyChanges(changes: ProposedChange[]): Promise<void> {
+  // 1. Batch-update all task dates concurrently
+  const taskUpdates = changes
+    .filter(c => c.new_start || c.new_end)
+    .map(c => {
+      const updates: Record<string, string> = {};
+      if (c.new_start) updates.planned_start_date = c.new_start;
+      if (c.new_end) updates.planned_end_date = c.new_end;
+      return supabase.from('project_tasks').update(updates).eq('id', c.task_id);
+    });
+
+  const results = await Promise.all(taskUpdates);
+  const firstError = results.find(r => r.error);
+  if (firstError?.error) throw firstError.error;
+
+  // 2. Sync payment milestones for tasks with new end dates
+  const taskIdsWithNewEnd = changes.filter(c => c.new_end).map(c => c.task_id);
+  if (taskIdsWithNewEnd.length === 0) return;
+
+  const { data: linkedTasks } = await supabase
+    .from('project_tasks')
+    .select('id, payment_milestone_id, planned_end_date')
+    .in('id', taskIdsWithNewEnd)
+    .not('payment_milestone_id', 'is', null);
+
+  if (linkedTasks && linkedTasks.length > 0) {
+    const milestoneUpdates = linkedTasks.map(t =>
+      supabase
+        .from('payment_milestones')
+        .update({ due_date: t.planned_end_date })
+        .eq('id', t.payment_milestone_id!)
+    );
+    await Promise.all(milestoneUpdates);
+  }
+}
+
 export function useRescheduleProposals(projectIds: string[]) {
   const [proposals, setProposals] = useState<RescheduleProposal[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Stable key for dependency tracking
+  const projectKey = projectIds.join(',');
 
   const fetchProposals = useCallback(async () => {
     if (projectIds.length === 0) {
@@ -57,7 +100,8 @@ export function useRescheduleProposals(projectIds: string[]) {
       );
     }
     setLoading(false);
-  }, [projectIds.join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectKey]);
 
   useEffect(() => {
     fetchProposals();
@@ -69,43 +113,16 @@ export function useRescheduleProposals(projectIds: string[]) {
     onSuccess?: () => void,
   ) => {
     try {
-      // Batch update all affected tasks
-      for (const change of changes) {
-        const updates: Record<string, any> = {};
-        if (change.new_start) updates.planned_start_date = change.new_start;
-        if (change.new_end) updates.planned_end_date = change.new_end;
-
-        if (Object.keys(updates).length > 0) {
-          const { error } = await supabase
-            .from('project_tasks')
-            .update(updates)
-            .eq('id', change.task_id);
-          if (error) throw error;
-
-          // Sync payment milestone if linked
-          if (change.new_end) {
-            const { data: task } = await supabase
-              .from('project_tasks')
-              .select('payment_milestone_id')
-              .eq('id', change.task_id)
-              .single();
-            if (task?.payment_milestone_id) {
-              await supabase
-                .from('payment_milestones')
-                .update({ due_date: change.new_end })
-                .eq('id', task.payment_milestone_id);
-            }
-          }
-        }
-      }
+      await batchApplyChanges(changes);
 
       // Mark proposal as accepted
+      const userId = (await supabase.auth.getUser()).data.user?.id;
       await supabase
         .from('reschedule_proposals')
         .update({
           status: 'accepted',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: userId,
         })
         .eq('id', proposalId);
 
@@ -120,12 +137,13 @@ export function useRescheduleProposals(projectIds: string[]) {
 
   const dismissProposal = useCallback(async (proposalId: string) => {
     try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
       await supabase
         .from('reschedule_proposals')
         .update({
           status: 'dismissed',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: userId,
         })
         .eq('id', proposalId);
 

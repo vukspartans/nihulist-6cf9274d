@@ -1,17 +1,50 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { ProjectTask, TaskStatus, ProjectAdvisorOption } from '@/types/task';
+
+/**
+ * Checks if the project's phase changed after a task update and shows a toast.
+ * Called after any task status change that could trigger auto_advance_project_phase.
+ */
+async function detectPhaseAdvancement(
+  projectId: string,
+  phaseBefore: string | null
+): Promise<void> {
+  if (!phaseBefore) return;
+  const { data } = await supabase
+    .from('projects')
+    .select('phase')
+    .eq('id', projectId)
+    .single();
+  if (data?.phase && data.phase !== phaseBefore) {
+    toast.success(`🎉 שלב הפרויקט התקדם ל-${data.phase}`);
+  }
+}
+
+/** Syncs a task's planned_end_date to its linked payment milestone. */
+async function syncPaymentMilestone(
+  taskId: string,
+  newEndDate: string,
+  localTasks: ProjectTask[]
+): Promise<void> {
+  const task = localTasks.find(t => t.id === taskId);
+  if ((task as any)?.payment_milestone_id) {
+    await supabase
+      .from('payment_milestones')
+      .update({ due_date: newEndDate })
+      .eq('id', (task as any).payment_milestone_id);
+  }
+}
 
 export function useProjectTasks(projectId: string) {
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisorOption[]>([]);
-  const { toast } = useToast();
 
   const fetchTasks = useCallback(async () => {
     if (!projectId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('project_tasks')
@@ -27,23 +60,18 @@ export function useProjectTasks(projectId: string) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      
       setTasks((data || []) as ProjectTask[]);
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן לטעון את המשימות",
-        variant: "destructive",
-      });
+      toast.error('לא ניתן לטעון את המשימות');
     } finally {
       setLoading(false);
     }
-  }, [projectId, toast]);
+  }, [projectId]);
 
   const fetchProjectAdvisors = useCallback(async () => {
     if (!projectId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('project_advisors')
@@ -58,14 +86,13 @@ export function useProjectTasks(projectId: string) {
         .eq('status', 'active');
 
       if (error) throw error;
-      
-      const options: ProjectAdvisorOption[] = (data || []).map((pa: any) => ({
-        id: pa.id,
-        advisor_id: pa.advisor_id,
-        company_name: pa.advisors?.company_name || null,
-      }));
-      
-      setProjectAdvisors(options);
+      setProjectAdvisors(
+        (data || []).map((pa: any) => ({
+          id: pa.id,
+          advisor_id: pa.advisor_id,
+          company_name: pa.advisors?.company_name || null,
+        }))
+      );
     } catch (error) {
       console.error('Error fetching project advisors:', error);
     }
@@ -76,10 +103,20 @@ export function useProjectTasks(projectId: string) {
     fetchProjectAdvisors();
   }, [fetchTasks, fetchProjectAdvisors]);
 
+  /** Capture the project's current phase (for post-update comparison). */
+  const captureProjectPhase = useCallback(async (): Promise<string | null> => {
+    const { data } = await supabase
+      .from('projects')
+      .select('phase')
+      .eq('id', projectId)
+      .single();
+    return data?.phase || null;
+  }, [projectId]);
+
   const createTask = async (task: Partial<ProjectTask>) => {
     try {
-      const maxOrder = tasks.length > 0 
-        ? Math.max(...tasks.map(t => t.display_order || 0)) 
+      const maxOrder = tasks.length > 0
+        ? Math.max(...tasks.map(t => t.display_order || 0))
         : 0;
 
       const { data, error } = await supabase
@@ -101,28 +138,22 @@ export function useProjectTasks(projectId: string) {
         .single();
 
       if (error) throw error;
-
       await fetchTasks();
-      
-      toast({
-        title: "נוצר בהצלחה",
-        description: "המשימה נוספה",
-      });
-
+      toast.success('המשימה נוספה');
       return data;
     } catch (error) {
       console.error('Error creating task:', error);
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן ליצור את המשימה",
-        variant: "destructive",
-      });
+      toast.error('לא ניתן ליצור את המשימה');
       return null;
     }
   };
 
   const updateTask = async (taskId: string, updates: Partial<ProjectTask>) => {
     try {
+      // Capture phase before update for advancement detection
+      const isStatusChange = updates.status !== undefined;
+      const phaseBefore = isStatusChange ? await captureProjectPhase() : null;
+
       const { error } = await supabase
         .from('project_tasks')
         .update({
@@ -145,32 +176,23 @@ export function useProjectTasks(projectId: string) {
 
       if (error) throw error;
 
-      // Sync planned_end_date to linked payment milestone
+      // Sync payment milestone date
       if (updates.planned_end_date) {
-        const task = tasks.find(t => t.id === taskId);
-        if ((task as any)?.payment_milestone_id) {
-          await supabase
-            .from('payment_milestones')
-            .update({ due_date: updates.planned_end_date })
-            .eq('id', (task as any).payment_milestone_id);
-        }
+        await syncPaymentMilestone(taskId, updates.planned_end_date, tasks);
       }
 
       await fetchTasks();
-      
-      toast({
-        title: "עודכן בהצלחה",
-        description: "המשימה עודכנה",
-      });
+      toast.success('המשימה עודכנה');
+
+      // Detect phase advancement (runs after refetch so timeline updates)
+      if (isStatusChange && phaseBefore) {
+        await detectPhaseAdvancement(projectId, phaseBefore);
+      }
 
       return true;
     } catch (error) {
       console.error('Error updating task:', error);
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן לעדכן את המשימה",
-        variant: "destructive",
-      });
+      toast.error('לא ניתן לעדכן את המשימה');
       return false;
     }
   };
@@ -194,17 +216,13 @@ export function useProjectTasks(projectId: string) {
 
       if (unfinished.length > 0) {
         const names = unfinished.map((d: any) => d.blocking_task?.name).join(', ');
-        toast({
-          title: "לא ניתן לסמן כ'הושלם'",
-          description: `משימות תלויות שטרם הושלמו: ${names}`,
-          variant: "destructive",
-        });
+        toast.error(`משימות תלויות שטרם הושלמו: ${names}`);
         return false;
       }
     }
 
     const updates: Partial<ProjectTask> = { status };
-    
+
     if (status === 'in_progress') {
       const task = tasks.find(t => t.id === taskId);
       if (!task?.actual_start_date) {
@@ -216,7 +234,7 @@ export function useProjectTasks(projectId: string) {
     } else if (status === 'blocked') {
       updates.is_blocked = true;
     }
-    
+
     if (status !== 'blocked') {
       updates.is_blocked = false;
       updates.block_reason = null;
@@ -233,22 +251,12 @@ export function useProjectTasks(projectId: string) {
         .eq('id', taskId);
 
       if (error) throw error;
-
       await fetchTasks();
-      
-      toast({
-        title: "נמחק בהצלחה",
-        description: "המשימה נמחקה",
-      });
-
+      toast.success('המשימה נמחקה');
       return true;
     } catch (error) {
       console.error('Error deleting task:', error);
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן למחוק את המשימה",
-        variant: "destructive",
-      });
+      toast.error('לא ניתן למחוק את המשימה');
       return false;
     }
   };
