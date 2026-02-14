@@ -1,45 +1,74 @@
 
-# Fix Stage Navigation and Task Loading
+# Fix Stage-Based Task Management
 
-## Problems Identified
+## Root Cause Analysis
 
-1. **Tasks created with wrong/null `phase` field**: When tasks are created from templates, the code uses `template.phase` (a rarely-populated free-text field) instead of the licensing phase name (`template.licensing_phases?.name`). This means tasks don't get tagged with the correct stage name, so filtering by stage doesn't work.
+Three distinct problems are causing the "same tasks keep appearing" behavior:
 
-2. **No "Previous Stage" button**: The toolbar only has a "Next Stage" button -- users can't navigate backward.
+1. **Existing tasks have `phase = NULL`**: The 3 tasks created before our fix have no phase tag, so the phase filter in TaskBoard can't match them to any stage. They appear under every stage (or none).
 
-3. **Phase filter doesn't auto-select**: When changing stages, the phase filter pills don't auto-select the new stage, so users see all tasks mixed together instead of the new stage's tasks.
+2. **Stage navigation triggers `StageTaskLoadDialog` which auto-closes when no templates exist**: Only 4 of 13 phases have templates (בדיקה ראשונית, תכנון ראשוני, הגשת בקשה להיתר, ביצוע). Navigating to the other 9 phases opens the dialog, finds nothing, and silently closes -- giving the impression nothing happened.
 
-## Changes
+3. **Phase filter is too aggressive**: When changing stages, the auto-filter hides tasks from other phases. If the current phase has no tasks, users see an empty board with no context.
 
-### 1. `useBulkTaskCreation.ts` -- Fix phase assignment
+## Solution
 
-Set the task's `phase` field to the licensing phase name from the joined relation, falling back to `template.phase`:
+### 1. Fix existing NULL-phase tasks (migration)
 
+Run a one-time UPDATE to backfill `phase` on existing tasks by looking up their `template_id` to the `task_templates` table and joining to `licensing_phases`:
+
+```sql
+UPDATE project_tasks pt
+SET phase = lp.name
+FROM task_templates tt
+JOIN licensing_phases lp ON tt.licensing_phase_id = lp.id
+WHERE pt.template_id = tt.id
+  AND pt.phase IS NULL;
 ```
-phase: template.licensing_phases?.name || template.phase || null,
-```
 
-This ensures every task created from a template gets the correct stage name (e.g., "בדיקה ראשונית", "תכנון ראשוני").
+This fixes the 3 existing tasks (and any future ones that slipped through).
 
-### 2. `TaskBoard.tsx` -- Add bidirectional stage navigation
+### 2. Don't auto-open StageTaskLoadDialog when no templates exist
 
-- Add a "Previous Stage" button alongside the existing "Next Stage" button
-- Use `PROJECT_PHASES` to calculate both directions
-- Auto-set the phase filter to the current project phase when it changes, so users immediately see tasks for the active stage
+In `ProjectDetail.tsx`, modify `handlePhaseChange` to only open the `StageTaskLoadDialog` when templates actually exist for the new phase. Alternatively (simpler), just remove the auto-close hack in `StageTaskLoadDialog` and instead show a friendly "no templates for this stage" message, then let the user dismiss it. This is better UX than a silently disappearing dialog.
 
-### 3. `TaskBoard.tsx` -- Auto-filter to current phase on stage change
+### 3. Remove auto-phase-filter on stage change
 
-When `projectPhase` changes, automatically set `phaseFilter` to the new phase so the board shows the relevant tasks immediately. Add a `useEffect` that watches `projectPhase`.
+The `useEffect` that auto-sets `phaseFilter = projectPhase` is problematic -- when the project is on stage "באישור תחילת עבודות" but all tasks are tagged "בדיקה ראשונית", users see nothing. Instead:
 
-### 4. `LoadTaskTemplatesDialog.tsx` -- Set phase on created tasks
+- Remove the auto-filter effect
+- Always show **all tasks** by default (phaseFilter = null)
+- Keep the phase filter pills for manual filtering
+- Show the current project stage as a label/indicator, not as an active filter
 
-Pass `currentPhase` through to the bulk creation so newly loaded tasks get the correct phase tag. Update the dialog to pass the phase name to `createTasksFromTemplates`.
+### 4. Improve stage navigation UX
 
-## Technical Summary
+When clicking "Next Stage" or "Previous Stage":
+- Update the project phase in DB (already works)
+- Show the StageTaskLoadDialog only if the new phase has available templates
+- Don't force-filter the board to the new phase
+- Add a small current-stage indicator label so users know where they are
+
+## Files to Change
 
 | File | Change |
 |---|---|
-| `src/hooks/useBulkTaskCreation.ts` | Use `template.licensing_phases?.name` for `phase` field |
-| `src/components/tasks/TaskBoard.tsx` | Add previous stage button, auto-filter to current phase |
-| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | Pass phase override to bulk creation |
-| `src/components/tasks/StageTaskLoadDialog.tsx` | Pass phase name override to bulk creation |
+| `supabase/migrations/` | New migration to backfill NULL phases on existing tasks |
+| `src/components/tasks/TaskBoard.tsx` | Remove auto-filter useEffect; add current stage label; keep manual phase pills |
+| `src/components/tasks/StageTaskLoadDialog.tsx` | Replace silent auto-close with "no templates" message |
+| `src/pages/ProjectDetail.tsx` | Minor: no changes needed beyond what TaskBoard handles |
+
+## Technical Details
+
+**TaskBoard.tsx changes:**
+- Delete the `useEffect` at lines 90-95 that auto-sets `phaseFilter`
+- Add a small "Current stage: X" indicator text near the header
+- Keep phase filter pills working as manual toggles (unchanged)
+
+**StageTaskLoadDialog.tsx changes:**
+- Remove lines 148-152 (the auto-close setTimeout)
+- In the template list, when `templates.length === 0 && !loading`, show: "No templates defined for this stage. You can add tasks manually."
+- Add a "Close" button so the user can dismiss
+
+**Migration:**
+- Backfill `phase` from `licensing_phases.name` via `task_templates` join for all project_tasks where `phase IS NULL` and `template_id IS NOT NULL`
