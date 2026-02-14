@@ -38,6 +38,7 @@ interface TaskBoardProps {
   projectPhase?: string | null;
   municipalityId?: string | null;
   onPhaseChange?: (newPhase: string) => void;
+  onRefetchReady?: (refetch: () => void) => void;
 }
 
 interface Column {
@@ -56,7 +57,7 @@ const COLUMNS: Column[] = [
   { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600', accentColor: 'bg-green-500' },
 ];
 
-export function TaskBoard({ projectId, projectType, projectPhase, municipalityId, onPhaseChange }: TaskBoardProps) {
+export function TaskBoard({ projectId, projectType, projectPhase, municipalityId, onPhaseChange, onRefetchReady }: TaskBoardProps) {
   const { 
     tasks, 
     loading, 
@@ -78,6 +79,11 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
   const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
   const [depCounts, setDepCounts] = useState<Record<string, { total: number; blocking: number }>>({});
   const [autoTriggered, setAutoTriggered] = useState(false);
+
+  // Expose refetch to parent
+  useEffect(() => {
+    onRefetchReady?.(refetch);
+  }, [refetch, onRefetchReady]);
 
   // Auto-open template dialog when project has zero tasks
   useEffect(() => {
