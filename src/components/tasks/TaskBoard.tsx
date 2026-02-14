@@ -93,7 +93,12 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
     }
   }, [loading, tasks.length, projectType, autoTriggered]);
 
-  // No auto-filter — show all tasks by default, let users manually filter
+  // Auto-filter to current project phase when it changes
+  useEffect(() => {
+    if (projectPhase) {
+      setPhaseFilter(projectPhase);
+    }
+  }, [projectPhase]);
 
   // Fetch dependency counts for all tasks
   const fetchDepCounts = useCallback(async () => {
