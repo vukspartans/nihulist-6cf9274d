@@ -24,6 +24,7 @@ export interface ProjectTask {
   is_blocked?: boolean | null;
   block_reason?: string | null;
   notes?: string | null;
+  priority?: number | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;

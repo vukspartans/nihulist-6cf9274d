@@ -189,13 +189,14 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
     is_milestone: t.is_milestone || null,
     is_payment_critical: false,
     payment_milestone_id: t.payment_milestone_id || null,
+    priority: (t as any).priority || 0,
     display_order: t.display_order || null,
     created_at: t.created_at || '',
     updated_at: t.updated_at || '',
     project_name: '',
     project_phase: null,
     project_type: null,
-    advisor_name: null,
+    advisor_name: t.advisors?.company_name || null,
   }));
 
   if (loading) {
@@ -325,7 +326,21 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
           </Button>
         </div>
       ) : viewMode === 'table' ? (
-        <AllProjectsTaskTable tasks={tasksForTable} onTaskClick={handleTaskClickById} dependencyCounts={depCounts} />
+        <AllProjectsTaskTable
+          tasks={tasksForTable}
+          onTaskClick={handleTaskClickById}
+          dependencyCounts={depCounts}
+          onStatusChange={async (taskId, status) => {
+            await updateTaskStatus(taskId, status);
+          }}
+          onPriorityChange={async (taskId, priority) => {
+            try {
+              const { error } = await supabase.from('project_tasks').update({ priority }).eq('id', taskId);
+              if (error) throw error;
+              refetch();
+            } catch { /* silent */ }
+          }}
+        />
       ) : (
         <DndContext
           sensors={sensors}

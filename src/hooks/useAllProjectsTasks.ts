@@ -19,6 +19,7 @@ export interface ProjectTaskWithDetails {
   is_milestone: boolean | null;
   is_payment_critical: boolean | null;
   payment_milestone_id: string | null;
+  priority: number | null;
   display_order: number | null;
   created_at: string;
   updated_at: string;
@@ -113,6 +114,7 @@ export function useAllProjectsTasks() {
         is_milestone: t.is_milestone,
         is_payment_critical: t.is_payment_critical,
         payment_milestone_id: t.payment_milestone_id,
+        priority: t.priority || 0,
         display_order: t.display_order,
         created_at: t.created_at,
         updated_at: t.updated_at,
