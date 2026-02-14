@@ -90,9 +90,33 @@ export function TaskManagementDashboard() {
       const projectBefore = task ? projects.find(p => p.id === task.project_id) : null;
       const phaseBefore = projectBefore?.phase;
 
+      // Dependency check: block completion if unfinished blockers exist
+      if (updates.status === 'completed') {
+        const { data: deps } = await supabase
+          .from('task_dependencies')
+          .select('depends_on_task_id, project_tasks!task_dependencies_depends_on_task_id_fkey(name, status)')
+          .eq('task_id', taskId);
+
+        const blockers = (deps || []).filter((d: any) => {
+          const status = d.project_tasks?.status;
+          return status && status !== 'completed' && status !== 'cancelled';
+        });
+
+        if (blockers.length > 0) {
+          const names = blockers.map((b: any) => b.project_tasks?.name || 'משימה').join(', ');
+          toast.error(`לא ניתן להשלים: משימות חוסמות - ${names}`);
+          return false;
+        }
+      }
+
+      // Filter out undefined values to prevent data corruption
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      );
+
       const { error } = await supabase
         .from('project_tasks')
-        .update(updates)
+        .update(cleanUpdates)
         .eq('id', taskId);
       if (error) throw error;
 

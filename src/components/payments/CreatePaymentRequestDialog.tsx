@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { getIndexLabel, INDEX_TYPES } from '@/constants/indexTypes';
 import { TrendingUp, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProjectAdvisor {
   id: string;
@@ -53,6 +54,7 @@ export function CreatePaymentRequestDialog({
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisor[]>([]);
   const [indexTerms, setIndexTerms] = useState<IndexTerms | null>(null);
   const [indexCurrentValue, setIndexCurrentValue] = useState('');
+  const [incompleteTasksWarning, setIncompleteTasksWarning] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     amount: '',
     vat_percent: '17',
@@ -157,6 +159,7 @@ export function CreatePaymentRequestDialog({
   }, [projectId, open, preselectedMilestone]);
 
   const handleMilestoneChange = (milestoneId: string) => {
+    setIncompleteTasksWarning(null);
     const milestone = milestones.find(m => m.id === milestoneId);
     if (milestone) {
       setFormData(prev => ({
@@ -172,9 +175,26 @@ export function CreatePaymentRequestDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIncompleteTasksWarning(null);
     setLoading(true);
     
     try {
+      // Validate: block if linked milestone has incomplete critical tasks
+      if (formData.payment_milestone_id) {
+        const { data: incompleteTasks } = await supabase
+          .from('project_tasks')
+          .select('name, status')
+          .eq('payment_milestone_id', formData.payment_milestone_id)
+          .eq('is_payment_critical', true)
+          .not('status', 'in', '("completed","cancelled")');
+
+        if (incompleteTasks && incompleteTasks.length > 0) {
+          const names = incompleteTasks.map(t => t.name).join(', ');
+          setIncompleteTasksWarning(`לא ניתן להגיש חשבון: משימות קריטיות לא הושלמו — ${names}`);
+          setLoading(false);
+          return;
+        }
+      }
       const submitData: Partial<PaymentRequest> = {
         amount: parseFloat(formData.amount),
         vat_percent: parseFloat(formData.vat_percent),
@@ -417,6 +437,13 @@ export function CreatePaymentRequestDialog({
               rows={2}
             />
           </div>
+
+          {incompleteTasksWarning && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{incompleteTasksWarning}</AlertDescription>
+            </Alert>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

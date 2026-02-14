@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { LicensingTimeline } from './LicensingTimeline';
 import { AllProjectsTaskTable } from './AllProjectsTaskTable';
+import { TaskDetailDialog } from './TaskDetailDialog';
 import { useAdvisorTasks } from '@/hooks/useAdvisorTasks';
-import type { TaskStatus } from '@/types/task';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import type { ProjectTask, ProjectAdvisorOption, TaskStatus } from '@/types/task';
 import type { ProjectOption } from '@/hooks/useAllProjectsTasks';
 
 interface AdvisorTasksViewProps {
@@ -25,6 +28,54 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
 export function AdvisorTasksView({ advisorId }: AdvisorTasksViewProps) {
   const { tasks, projects, loading, filters, setFilters, openTasksCount } = useAdvisorTasks(advisorId);
 
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisorOption[]>([]);
+
+  const selectedTask: ProjectTask | null = selectedTaskId
+    ? (tasks.find((t: any) => t.id === selectedTaskId) as unknown as ProjectTask) || null
+    : null;
+
+  // Fetch project advisors when a task is selected
+  useEffect(() => {
+    if (!selectedTask) return;
+    const loadAdvisors = async () => {
+      const { data } = await supabase
+        .from('project_advisors')
+        .select('id, advisor_id, advisors(company_name)')
+        .eq('project_id', selectedTask.project_id);
+      setProjectAdvisors(
+        (data || []).map((pa: any) => ({
+          id: pa.id,
+          advisor_id: pa.advisor_id,
+          company_name: pa.advisors?.company_name || null,
+        }))
+      );
+    };
+    loadAdvisors();
+  }, [selectedTask?.project_id]);
+
+  const handleTaskClick = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId);
+    setDialogOpen(true);
+  }, []);
+
+  const handleTaskSubmit = useCallback(async (taskId: string, updates: Partial<ProjectTask>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('project_tasks')
+        .update(updates)
+        .eq('id', taskId);
+      if (error) throw error;
+      toast.success('המשימה עודכנה בהצלחה');
+      return true;
+    } catch (err) {
+      console.error('Error updating task:', err);
+      toast.error('שגיאה בעדכון המשימה');
+      return false;
+    }
+  }, []);
+
   const toggleStatus = (status: TaskStatus) => {
     const current = filters.statuses;
     const next = current.includes(status)
@@ -42,6 +93,12 @@ export function AdvisorTasksView({ advisorId }: AdvisorTasksViewProps) {
     phase: p.phase,
     type: p.type,
   }));
+
+  const allProjectTasksForDialog = selectedTask
+    ? tasks
+        .filter((t: any) => t.project_id === selectedTask.project_id && t.id !== selectedTask.id)
+        .map((t: any) => ({ id: t.id, name: t.name, status: t.status }))
+    : [];
 
   if (loading) {
     return (
@@ -109,7 +166,18 @@ export function AdvisorTasksView({ advisorId }: AdvisorTasksViewProps) {
       {/* Tasks Table */}
       <AllProjectsTaskTable
         tasks={tasks as any}
+        onTaskClick={handleTaskClick}
         onProjectClick={undefined}
+      />
+
+      {/* Task Detail Dialog */}
+      <TaskDetailDialog
+        task={selectedTask}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleTaskSubmit}
+        projectAdvisors={projectAdvisors}
+        allProjectTasks={allProjectTasksForDialog}
       />
     </div>
   );

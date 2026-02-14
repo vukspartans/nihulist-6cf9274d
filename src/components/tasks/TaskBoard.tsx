@@ -282,6 +282,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         onSubmit={updateTask}
+        onDelete={deleteTask}
         projectAdvisors={projectAdvisors}
         allProjectTasks={tasks.map(t => ({ id: t.id, name: t.name, status: t.status }))}
       />
