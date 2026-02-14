@@ -22,7 +22,7 @@ interface LoadTaskTemplatesDialogProps {
   projectId: string;
   projectType: string;
   municipalityId?: string | null;
-  existingTemplateIds: Set<string>;
+  existingTemplateIds?: Set<string>;
   onTasksCreated: () => void;
   currentPhase?: string | null;
 }
@@ -39,7 +39,6 @@ export function LoadTaskTemplatesDialog({
   projectId,
   projectType,
   municipalityId,
-  existingTemplateIds,
   onTasksCreated,
   currentPhase,
 }: LoadTaskTemplatesDialogProps) {
@@ -47,11 +46,21 @@ export function LoadTaskTemplatesDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [existingTemplateIds, setExistingTemplateIds] = useState<Set<string>>(new Set());
   const { createTasksFromTemplates } = useBulkTaskCreation();
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
+      // Self-fetch existing template IDs
+      const { data: existingData } = await supabase
+        .from('project_tasks')
+        .select('template_id')
+        .eq('project_id', projectId)
+        .not('template_id', 'is', null);
+      const fetchedIds = new Set((existingData || []).map((d: any) => d.template_id as string));
+      setExistingTemplateIds(fetchedIds);
+
       // Strategy: municipality+projectType → municipality general → projectType general
       let data: TaskTemplate[] = [];
 
@@ -119,7 +128,7 @@ export function LoadTaskTemplatesDialog({
       // Pre-select all non-existing templates
       const newSelected = new Set<string>();
       data.forEach(t => {
-        if (!existingTemplateIds.has(t.id)) {
+        if (!fetchedIds.has(t.id)) {
           newSelected.add(t.id);
         }
       });
@@ -129,7 +138,7 @@ export function LoadTaskTemplatesDialog({
     } finally {
       setLoading(false);
     }
-  }, [projectType, municipalityId, existingTemplateIds, currentPhase]);
+  }, [projectType, municipalityId, projectId, currentPhase]);
 
   useEffect(() => {
     if (open) {

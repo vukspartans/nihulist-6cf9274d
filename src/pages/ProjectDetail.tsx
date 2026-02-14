@@ -556,7 +556,7 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} />
+          <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} onPhaseChange={handlePhaseChange} />
         </TabsContent>
 
         <TabsContent value="payments">
@@ -573,7 +573,7 @@ export const ProjectDetail = () => {
           projectType={project.type}
           phaseName={pendingPhaseName}
           municipalityId={project.municipality_id}
-          existingTemplateIds={new Set()} 
+           
           onTasksCreated={() => {
             // TaskBoard will refetch via its own hook
           }}

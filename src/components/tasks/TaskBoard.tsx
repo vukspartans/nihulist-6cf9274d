@@ -15,7 +15,8 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle, Table as TableIcon, Columns, Download } from 'lucide-react';
+import { Plus, CheckSquare, Clock, PlayCircle, AlertTriangle, CheckCircle, Table as TableIcon, Columns, Download, ChevronLeft } from 'lucide-react';
+import { PROJECT_PHASES } from '@/constants/project';
 import { supabase } from '@/integrations/supabase/client';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { TaskCard } from './TaskCard';
@@ -36,6 +37,7 @@ interface TaskBoardProps {
   projectType?: string | null;
   projectPhase?: string | null;
   municipalityId?: string | null;
+  onPhaseChange?: (newPhase: string) => void;
 }
 
 interface Column {
@@ -54,7 +56,7 @@ const COLUMNS: Column[] = [
   { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600', accentColor: 'bg-green-500' },
 ];
 
-export function TaskBoard({ projectId, projectType, projectPhase, municipalityId }: TaskBoardProps) {
+export function TaskBoard({ projectId, projectType, projectPhase, municipalityId, onPhaseChange }: TaskBoardProps) {
   const { 
     tasks, 
     loading, 
@@ -223,6 +225,16 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
               קנבן
             </ToggleGroupItem>
           </ToggleGroup>
+          {onPhaseChange && projectPhase && (() => {
+            const currentIdx = PROJECT_PHASES.indexOf(projectPhase as any);
+            const nextPhase = currentIdx >= 0 && currentIdx < PROJECT_PHASES.length - 1 ? PROJECT_PHASES[currentIdx + 1] : null;
+            return nextPhase ? (
+              <Button size="sm" variant="default" onClick={() => onPhaseChange(nextPhase)} className="gap-1">
+                <ChevronLeft className="h-4 w-4" />
+                שלב הבא: {nextPhase}
+              </Button>
+            ) : null;
+          })()}
           {projectType && (
             <Button size="sm" variant="outline" onClick={() => setTemplateDialogOpen(true)}>
               <Download className="h-4 w-4 ml-1" />
