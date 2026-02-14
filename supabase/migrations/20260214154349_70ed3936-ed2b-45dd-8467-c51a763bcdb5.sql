@@ -1,0 +1,1 @@
+DELETE FROM project_tasks WHERE project_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004';
