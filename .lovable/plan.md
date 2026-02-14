@@ -1,51 +1,81 @@
 
-# Add Auto-Task Template Loading to Project Detail Task Board
 
-## Problem
-The `TaskBoard` component (rendered inside `ProjectDetail.tsx`) shows a plain empty state ("No tasks yet, add first task") when a project has no tasks. It does NOT show the `AutoTaskSuggestionBanner` that would offer to auto-load tasks from admin-configured templates.
+# Fix: Add "Load from Templates" Button and Support Per-Stage Template Loading
 
-The `AutoTaskSuggestionBanner` currently only appears in the standalone `TaskManagementDashboard` -- not in the per-project Task Board.
+## Problems Identified
+
+1. **No templates in database**: The `task_templates` table is empty, so the `AutoTaskSuggestionBanner` never shows (it requires `templates.length > 0`).
+2. **No explicit button**: There is no "Load from Templates" button in the toolbar -- the only mechanism is a banner that auto-appears when there are zero tasks.
+3. **No per-stage loading**: Once a project has tasks, there is no way to load additional templates for the current or next licensing stage.
 
 ## Solution
 
-### 1. Update `TaskBoard.tsx` to accept project metadata props
+### 1. Add a "Load from Templates" button to the TaskBoard toolbar
 
-Add optional `projectType` and `projectPhase` props so the banner knows which templates to suggest:
+Add a button (e.g., "טען מתבניות" with a `Download` or `Sparkles` icon) next to the existing "הוספת משימה" button in the TaskBoard header. This button is always visible, regardless of whether tasks already exist.
 
-```typescript
-interface TaskBoardProps {
-  projectId: string;
-  projectType?: string | null;
-  projectPhase?: string | null;
-}
-```
+### 2. Create a `LoadTaskTemplatesDialog` component
 
-### 2. Add `AutoTaskSuggestionBanner` to the empty state in `TaskBoard.tsx`
+A dialog that:
+- Fetches available templates using `useTemplateResolver` (already exists), filtered by the project's `projectType`, `municipalityId`, and optionally by licensing phase/stage
+- Shows templates grouped by licensing phase
+- Allows the user to select which phase's templates to load (or select all)
+- Shows a preview of templates with checkboxes (name, duration, specialty)
+- Has a "Load Selected" button that calls `useBulkTaskCreation.createTasksFromTemplates()`
+- Skips templates that already have corresponding tasks (by `template_id`) to avoid duplicates
 
-When `tasks.length === 0` and `projectType` is available, render the `AutoTaskSuggestionBanner` above the existing "Add first task" button. On successful load, trigger a refetch of tasks.
+### 3. Keep the AutoTaskSuggestionBanner for the empty state
 
-### 3. Pass project data from `ProjectDetail.tsx`
+The banner remains as a convenience for brand-new projects, but the button provides full control at any stage.
 
-Update the `<TaskBoard>` call in `ProjectDetail.tsx` to pass the project's type and phase:
+## Files to Create/Edit
 
-```tsx
-<TaskBoard 
-  projectId={project.id} 
-  projectType={project.project_type} 
-  projectPhase={project.phase} 
-/>
-```
-
-## Files to Edit
-
-| File | Change |
-|---|---|
-| `src/components/tasks/TaskBoard.tsx` | Add `projectType`/`projectPhase` props; import and render `AutoTaskSuggestionBanner` in empty state; trigger refetch on load |
-| `src/pages/ProjectDetail.tsx` | Pass `projectType` and `projectPhase` to `TaskBoard` |
+| File | Action | Description |
+|---|---|---|
+| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | NEW | Dialog to browse and selectively load templates by stage |
+| `src/components/tasks/TaskBoard.tsx` | EDIT | Add "Load from Templates" button to toolbar that opens the dialog |
+| `src/components/tasks/index.ts` | EDIT | Export the new dialog |
 
 ## Technical Details
 
-- The `AutoTaskSuggestionBanner` internally uses `useAutoTaskLoader`, which queries `task_templates` filtered by project type, municipality, and licensing phase
-- It calls `useBulkTaskCreation.createTasksFromTemplates()` to insert the tasks
-- After loading, the `onTasksCreated` callback triggers a refetch so the board re-renders with the new tasks
-- The banner includes a dismiss button so users can skip the suggestion
+### LoadTaskTemplatesDialog
+
+```text
++------------------------------------------+
+| Load Task Templates            [X close] |
+|------------------------------------------|
+| Project Type: מגורים בבנייה רוויה        |
+| Municipality: (none / Tel Aviv)          |
+|------------------------------------------|
+| Phase: בדיקה ראשונית                     |
+|   [x] Template 1 (14 days, architect)    |
+|   [x] Template 2 (7 days, engineer)      |
+|   [ ] Template 3 (already loaded)        |
+|------------------------------------------|
+| Phase: תכנון ראשוני                      |
+|   [x] Template 4 (21 days)               |
+|------------------------------------------|
+| [Select All]    [Load Selected (3)]      |
++------------------------------------------+
+```
+
+Key logic:
+- Query `task_templates` filtered by `project_type` and `municipality_id` (with fallback, using existing `useTemplateResolver` pattern)
+- Cross-reference with existing `project_tasks` by `template_id` to mark already-loaded templates as disabled
+- Group results by `licensing_phases.name` for clear stage-based selection
+- On submit, call `createTasksFromTemplates` with only the selected templates
+- After success, trigger `refetch` to update the board
+
+### TaskBoard toolbar change
+
+```text
+Before: [Table] [Kanban]  [+ הוספת משימה]
+After:  [Table] [Kanban]  [טען מתבניות]  [+ הוספת משימה]
+```
+
+The "Load from Templates" button opens `LoadTaskTemplatesDialog`. It passes `projectId`, `projectType`, `projectPhase`, and the current task list (for duplicate detection).
+
+### Duplicate prevention
+
+When loading templates, filter out any template whose `id` already matches an existing task's `template_id` in the project. These appear greyed out in the dialog with a note "already loaded".
+
