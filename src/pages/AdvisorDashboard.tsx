@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy, Handshake, ArrowLeft, ListTodo } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy, Handshake, ArrowLeft, ListTodo, Wallet } from 'lucide-react';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useIsMobile } from '@/hooks/use-mobile';
 import LegalFooter from '@/components/LegalFooter';
 import { AdvisorTasksView } from '@/components/tasks/AdvisorTasksView';
+import { AdvisorPaymentsView } from '@/components/payments/AdvisorPaymentsView';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -141,7 +142,7 @@ const AdvisorDashboard = () => {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [selectedInviteToDecline, setSelectedInviteToDecline] = useState<string | null>(null);
   const [proposalMap, setProposalMap] = useState<Map<string, AdvisorProposal>>(new Map());
-  const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations' | 'tasks'>('rfp-invites');
+  const [activeTab, setActiveTab] = useState<'rfp-invites' | 'my-proposals' | 'negotiations' | 'tasks' | 'payments'>('rfp-invites');
   const [filterType, setFilterType] = useState<'all' | 'new' | 'unsubmitted'>('all');
   const [negotiations, setNegotiations] = useState<NegotiationItem[]>([]);
   const [negotiationByInvite, setNegotiationByInvite] = useState<Map<string, NegotiationItem>>(new Map());
@@ -1010,7 +1011,7 @@ const AdvisorDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6" dir="rtl">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <ListTodo className="h-4 w-4" />
               משימות
@@ -1032,10 +1033,18 @@ const AdvisorDashboard = () => {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              תשלומים
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="tasks">
             <AdvisorTasksView advisorId={advisorProfile.id} />
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <AdvisorPaymentsView />
           </TabsContent>
 
           <TabsContent value="rfp-invites" className="space-y-4">

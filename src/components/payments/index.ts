@@ -10,3 +10,4 @@ export { CreatePaymentRequestDialog } from './CreatePaymentRequestDialog';
 export { ApprovePaymentDialog } from './ApprovePaymentDialog';
 export { RejectPaymentDialog } from './RejectPaymentDialog';
 export { PaymentRequestDetailDialog } from './PaymentRequestDetailDialog';
+export { AdvisorPaymentsView } from './AdvisorPaymentsView';

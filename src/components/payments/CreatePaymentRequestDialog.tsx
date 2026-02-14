@@ -40,6 +40,10 @@ interface CreatePaymentRequestDialogProps {
   milestones: PaymentMilestone[];
   preselectedMilestone?: PaymentMilestone | null;
   onSubmit: (request: Partial<PaymentRequest>) => Promise<any>;
+  /** When true: lock category to 'consultant', disable advisor dropdown, filter milestones to 'due' only */
+  advisorMode?: boolean;
+  /** Pre-fill and lock the consultant dropdown to this project_advisor_id */
+  lockedAdvisorId?: string;
 }
 
 export function CreatePaymentRequestDialog({ 
@@ -48,7 +52,9 @@ export function CreatePaymentRequestDialog({
   projectId,
   milestones,
   preselectedMilestone,
-  onSubmit 
+  onSubmit,
+  advisorMode = false,
+  lockedAdvisorId,
 }: CreatePaymentRequestDialogProps) {
   const [loading, setLoading] = useState(false);
   const [projectAdvisors, setProjectAdvisors] = useState<ProjectAdvisor[]>([]);
@@ -58,9 +64,9 @@ export function CreatePaymentRequestDialog({
   const [formData, setFormData] = useState({
     amount: '',
     vat_percent: '17',
-    project_advisor_id: '',
+    project_advisor_id: lockedAdvisorId || '',
     payment_milestone_id: '',
-    category: 'consultant',
+    category: advisorMode ? 'consultant' : 'consultant',
     notes: '',
     external_party_name: '',
   });
@@ -147,12 +153,17 @@ export function CreatePaymentRequestDialog({
     if (open) {
       fetchProjectAdvisors();
       
+      // Pre-fill locked advisor
+      if (advisorMode && lockedAdvisorId) {
+        setFormData(prev => ({ ...prev, project_advisor_id: lockedAdvisorId }));
+      }
+      
       if (preselectedMilestone) {
         setFormData(prev => ({
           ...prev,
           amount: preselectedMilestone.amount.toString(),
           payment_milestone_id: preselectedMilestone.id,
-          project_advisor_id: preselectedMilestone.project_advisor_id || '',
+          project_advisor_id: preselectedMilestone.project_advisor_id || prev.project_advisor_id,
         }));
       }
     }
@@ -251,22 +262,24 @@ export function CreatePaymentRequestDialog({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>קטגוריה</Label>
-            <Select 
-              value={formData.category} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="consultant">יועץ</SelectItem>
-                <SelectItem value="external">גורם חיצוני</SelectItem>
-                <SelectItem value="other">אחר</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!advisorMode && (
+            <div className="space-y-2">
+              <Label>קטגוריה</Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="consultant">יועץ</SelectItem>
+                  <SelectItem value="external">גורם חיצוני</SelectItem>
+                  <SelectItem value="other">אחר</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {formData.category === 'consultant' && (
             <>
@@ -281,7 +294,7 @@ export function CreatePaymentRequestDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {milestones
-                      .filter(m => m.status !== 'paid')
+                      .filter(m => advisorMode ? m.status === 'due' : m.status !== 'paid')
                       .map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.name} - {formatCurrency(m.amount)}
@@ -296,6 +309,7 @@ export function CreatePaymentRequestDialog({
                 <Select 
                   value={formData.project_advisor_id} 
                   onValueChange={(value) => setFormData(prev => ({ ...prev, project_advisor_id: value }))}
+                  disabled={advisorMode && !!lockedAdvisorId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="בחר יועץ" />
