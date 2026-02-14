@@ -1,65 +1,45 @@
 
-# Add "Next Stage" Button and Fix Duplicate Prevention
+# Fix Stage Navigation and Task Loading
 
-## Problem
-1. The phase selector is at the top of the page, far from the Tasks tab -- users can't easily advance stages while working on tasks
-2. `existingTemplateIds` is passed as `new Set()` in `ProjectDetail.tsx`, so both `StageTaskLoadDialog` and duplicate detection never work
-3. Test task data from previous loads needs to be cleared
+## Problems Identified
+
+1. **Tasks created with wrong/null `phase` field**: When tasks are created from templates, the code uses `template.phase` (a rarely-populated free-text field) instead of the licensing phase name (`template.licensing_phases?.name`). This means tasks don't get tagged with the correct stage name, so filtering by stage doesn't work.
+
+2. **No "Previous Stage" button**: The toolbar only has a "Next Stage" button -- users can't navigate backward.
+
+3. **Phase filter doesn't auto-select**: When changing stages, the phase filter pills don't auto-select the new stage, so users see all tasks mixed together instead of the new stage's tasks.
 
 ## Changes
 
-### 1. TaskBoard.tsx -- Add "Next Stage" button + fix existingTemplateIds propagation
+### 1. `useBulkTaskCreation.ts` -- Fix phase assignment
 
-- Add a prominent "שלב הבא" (Next Stage) button in the task toolbar (next to "Load from templates" and "Add task")
-- Import `PROJECT_PHASES` to calculate the next phase
-- Accept a new `onPhaseChange` callback prop from `ProjectDetail`
-- When clicked, call `onPhaseChange(nextPhase)` which triggers the phase update + `StageTaskLoadDialog` in ProjectDetail
-- Disable the button when on the last phase ("הסתיים")
-- Show current phase name on the button for context
+Set the task's `phase` field to the licensing phase name from the joined relation, falling back to `template.phase`:
 
-### 2. ProjectDetail.tsx -- Fix existingTemplateIds for StageTaskLoadDialog
-
-- Before rendering `StageTaskLoadDialog`, fetch existing `template_id` values from `project_tasks` for the current project
-- Store them in state and pass to the dialog
-- Pass `handlePhaseChange` down to `TaskBoard` as `onPhaseChange` prop
-- Add a state variable to hold `existingTemplateIds` fetched from the database
-
-### 3. StageTaskLoadDialog.tsx -- Self-fetch existing template IDs
-
-- Instead of relying on props for `existingTemplateIds`, have the dialog fetch them directly from `project_tasks` when it opens
-- This makes it self-contained and always accurate
-- Remove the `existingTemplateIds` prop requirement
-
-### 4. Clear test data
-
-- Delete all rows from `project_tasks` for the test project (aaaaaaaa-bbbb-cccc-dddd-eeeeeeee0004) so the flow can be tested fresh
-
-## Technical Details
-
-**Next Stage button logic:**
-```text
-Current phase index = PROJECT_PHASES.indexOf(projectPhase)
-Next phase = PROJECT_PHASES[currentIndex + 1]
-Button disabled if currentIndex === PROJECT_PHASES.length - 1
+```
+phase: template.licensing_phases?.name || template.phase || null,
 ```
 
-**Self-fetching existingTemplateIds in StageTaskLoadDialog:**
-```text
-const { data } = await supabase
-  .from('project_tasks')
-  .select('template_id')
-  .eq('project_id', projectId)
-  .not('template_id', 'is', null);
-const existingIds = new Set(data.map(d => d.template_id));
-```
+This ensures every task created from a template gets the correct stage name (e.g., "בדיקה ראשונית", "תכנון ראשוני").
 
-This removes the broken pattern of passing `new Set()` and makes both dialogs always accurate.
+### 2. `TaskBoard.tsx` -- Add bidirectional stage navigation
 
-## Files to Edit
+- Add a "Previous Stage" button alongside the existing "Next Stage" button
+- Use `PROJECT_PHASES` to calculate both directions
+- Auto-set the phase filter to the current project phase when it changes, so users immediately see tasks for the active stage
+
+### 3. `TaskBoard.tsx` -- Auto-filter to current phase on stage change
+
+When `projectPhase` changes, automatically set `phaseFilter` to the new phase so the board shows the relevant tasks immediately. Add a `useEffect` that watches `projectPhase`.
+
+### 4. `LoadTaskTemplatesDialog.tsx` -- Set phase on created tasks
+
+Pass `currentPhase` through to the bulk creation so newly loaded tasks get the correct phase tag. Update the dialog to pass the phase name to `createTasksFromTemplates`.
+
+## Technical Summary
 
 | File | Change |
 |---|---|
-| `src/components/tasks/TaskBoard.tsx` | Add "Next Stage" button, accept `onPhaseChange` prop |
-| `src/pages/ProjectDetail.tsx` | Pass `handlePhaseChange` to TaskBoard, remove broken `new Set()` |
-| `src/components/tasks/StageTaskLoadDialog.tsx` | Self-fetch existingTemplateIds instead of relying on prop |
-| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | Self-fetch existingTemplateIds instead of relying on prop |
+| `src/hooks/useBulkTaskCreation.ts` | Use `template.licensing_phases?.name` for `phase` field |
+| `src/components/tasks/TaskBoard.tsx` | Add previous stage button, auto-filter to current phase |
+| `src/components/tasks/LoadTaskTemplatesDialog.tsx` | Pass phase override to bulk creation |
+| `src/components/tasks/StageTaskLoadDialog.tsx` | Pass phase name override to bulk creation |
