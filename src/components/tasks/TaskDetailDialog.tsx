@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -88,6 +89,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete,
         assigned_advisor_id: task.assigned_advisor_id,
         progress_percent: task.progress_percent || 0,
         is_milestone: task.is_milestone || false,
+        is_payment_critical: task.is_payment_critical || false,
         is_blocked: task.is_blocked || false,
         block_reason: task.block_reason || '',
         notes: task.notes || '',
@@ -390,16 +392,35 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSubmit, onDelete,
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                      <Checkbox
-                        id="edit_is_milestone"
-                        checked={formData.is_milestone || false}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
-                      />
-                      <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
-                        אבן דרך
-                      </Label>
+                    <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/50">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="edit_is_milestone"
+                          checked={formData.is_milestone || false}
+                          onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
+                        />
+                        <Label htmlFor="edit_is_milestone" className="cursor-pointer text-xs whitespace-nowrap">
+                          אבן דרך
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="edit_is_payment_critical" className="cursor-pointer text-xs whitespace-nowrap text-orange-600 dark:text-orange-400">
+                          קריטי לתשלום
+                        </Label>
+                        <div dir="ltr">
+                          <Switch
+                            id="edit_is_payment_critical"
+                            checked={formData.is_payment_critical || false}
+                            onCheckedChange={(checked) => setFormData({ ...formData, is_payment_critical: checked })}
+                          />
+                        </div>
+                      </div>
                     </div>
+                    {formData.is_payment_critical && (
+                      <p className="text-[10px] text-orange-600/80 dark:text-orange-400/80 mt-1">
+                        משימה זו חוסמת הגשת חשבון עבור אבן הדרך המקושרת
+                      </p>
+                    )}
                   </div>
 
                   {/* Dependencies */}

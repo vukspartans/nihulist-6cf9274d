@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { TaskAssignment } from './TaskAssignment';
 import { PROJECT_PHASES } from '@/constants/project';
 import type { ProjectTask, ProjectAdvisorOption } from '@/types/task';
@@ -28,6 +29,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
     planned_end_date: '',
     assigned_advisor_id: null as string | null,
     is_milestone: false,
+    is_payment_critical: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +46,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
         planned_end_date: formData.planned_end_date || undefined,
         assigned_advisor_id: formData.assigned_advisor_id || undefined,
         is_milestone: formData.is_milestone,
+        is_payment_critical: formData.is_payment_critical,
       });
 
       if (result) {
@@ -55,6 +58,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
           planned_end_date: '',
           assigned_advisor_id: null,
           is_milestone: false,
+          is_payment_critical: false,
         });
         onOpenChange(false);
       }
@@ -172,16 +176,35 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="is_milestone"
-              checked={formData.is_milestone}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
-            />
-            <Label htmlFor="is_milestone" className="cursor-pointer">
-              סמן כאבן דרך
-            </Label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is_milestone"
+                checked={formData.is_milestone}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_milestone: !!checked })}
+              />
+              <Label htmlFor="is_milestone" className="cursor-pointer">
+                סמן כאבן דרך
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="is_payment_critical" className="cursor-pointer text-sm text-orange-600 dark:text-orange-400">
+                קריטי לתשלום
+              </Label>
+              <div dir="ltr">
+                <Switch
+                  id="is_payment_critical"
+                  checked={formData.is_payment_critical}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_payment_critical: checked })}
+                />
+              </div>
+            </div>
           </div>
+          {formData.is_payment_critical && (
+            <p className="text-xs text-orange-600/80 dark:text-orange-400/80">
+              משימה זו תחסום הגשת חשבון עבור אבן הדרך המקושרת
+            </p>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

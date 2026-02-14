@@ -132,6 +132,7 @@ export function useProjectTasks(projectId: string) {
           planned_end_date: task.planned_end_date,
           assigned_advisor_id: task.assigned_advisor_id,
           is_milestone: task.is_milestone,
+          is_payment_critical: task.is_payment_critical,
           notes: task.notes,
         })
         .select()
@@ -168,6 +169,7 @@ export function useProjectTasks(projectId: string) {
           assigned_advisor_id: updates.assigned_advisor_id,
           progress_percent: updates.progress_percent,
           is_milestone: updates.is_milestone,
+          is_payment_critical: updates.is_payment_critical,
           is_blocked: updates.is_blocked,
           block_reason: updates.block_reason,
           notes: updates.notes,
