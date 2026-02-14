@@ -1,28 +1,27 @@
 
 
-# Fix: "invalid input syntax for type date" Error
+# Fix: UUID Type Mismatch in `check_task_delay()` Trigger
 
 ## Problem
-When saving a task with empty date fields, empty strings (`""`) are sent to Supabase instead of `null`. PostgreSQL rejects `""` as an invalid date value (error code 22007).
+When marking a task as "completed", the `check_task_delay()` trigger fires and tries to insert `NEW.id::text` into the `activity_log.entity_id` column (type `uuid`). PostgreSQL rejects this with error `42804`. The same `::text` cast is used in a `notification_queue` query comparison.
 
 ## Root Cause
-In `useProjectTasks.ts`, both `createTask` and `updateTask` pass date fields directly without converting empty strings to `null`. The form stores empty dates as `""` (from the HTML date input), but PostgreSQL date columns require either a valid date string or `null`.
-
-## Fix
-
-### `src/hooks/useProjectTasks.ts`
-Add a small helper to convert empty strings to `null`, then apply it to all four date fields in both `createTask` and `updateTask`:
-
-```typescript
-const emptyToNull = (val: string | undefined | null) => val || null;
+Line 87 of `check_task_delay()`:
+```sql
+'task_delayed', 'system', 'task', NEW.id::text, NEW.project_id, ...
 ```
+`entity_id` is `uuid`, but `NEW.id::text` produces a `text` value. Simply using `NEW.id` (already uuid) fixes it.
 
-Apply to these fields in both functions:
-- `planned_start_date`
-- `planned_end_date`
-- `actual_start_date`
-- `actual_end_date`
+## Fix (single migration)
+Replace the function body to remove the `::text` casts in two places:
 
-Also apply to other string fields that map to nullable columns: `description`, `phase`, `assigned_advisor_id`, `block_reason`, `notes`.
+1. **Activity log insert** (line 87): `NEW.id::text` -> `NEW.id`
+2. **Notification dedup query** (line 101): `entity_id = NEW.id::text` -> `entity_id = NEW.id`
 
-This is a one-file fix with no UI changes needed.
+No code changes needed -- this is purely a database trigger fix.
+
+## Technical Detail
+- A `CREATE OR REPLACE FUNCTION` migration will update the existing `check_task_delay()` function
+- The trigger binding (`trg_check_task_delay`) stays unchanged
+- All other logic (reschedule proposals, email notifications) remains identical
+
