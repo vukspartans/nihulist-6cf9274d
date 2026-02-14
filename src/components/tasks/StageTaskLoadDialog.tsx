@@ -87,6 +87,13 @@ export function StageTaskLoadDialog({
       const { data } = await query;
       const results = (data || []) as TaskTemplate[];
 
+      // If all templates are already loaded, skip the dialog
+      const hasNewTemplates = results.some(t => !fetchedIds.has(t.id));
+      if (!hasNewTemplates) {
+        onOpenChange(false);
+        return;
+      }
+
       setTemplates(results);
       // Pre-select ALL templates so user starts with everything checked
       const newSelected = new Set<string>(results.map(t => t.id));
