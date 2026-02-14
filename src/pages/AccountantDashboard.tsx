@@ -27,11 +27,13 @@ function LiabilitiesTab({
   requests,
   onUpdateDate,
   onMarkPaid,
+  onAdvance,
   getNextStep,
 }: {
   requests: AccountantRequest[];
   onUpdateDate: (id: string, date: string | null) => void;
   onMarkPaid: (id: string, paidDate?: string) => void;
+  onAdvance: (id: string, statusCode: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
 }) {
   const [filter, setFilter] = useState<'open' | 'closed'>('open');
@@ -135,7 +137,7 @@ function LiabilitiesTab({
                         />
                       </TableCell>
                       <TableCell>
-                        {canMarkPaid && (
+                        {canMarkPaid ? (
                           <div className="flex items-center gap-1">
                             <Input
                               type="date"
@@ -153,7 +155,16 @@ function LiabilitiesTab({
                               שולם
                             </Button>
                           </div>
-                        )}
+                        ) : next ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onAdvance(req.id, next.code)}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                            {next.name}
+                          </Button>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   );
@@ -389,6 +400,7 @@ export default function AccountantDashboard() {
               requests={allRequests}
               onUpdateDate={updateExpectedDate}
               onMarkPaid={handleMarkPaid}
+              onAdvance={(id, code) => updateRequestStatus(id, code)}
               getNextStep={getNextStep}
             />
           </TabsContent>
