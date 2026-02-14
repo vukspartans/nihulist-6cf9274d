@@ -1,52 +1,69 @@
 
 
-# Seed Default Task Templates for Common Project Types
+# Assessment: Licensing Task Management -- Current State vs. Vision
 
-## Problem
-The "Load from Templates" button exists and works, but the `task_templates` table is completely empty (0 rows). Without templates, there is nothing to load.
+## What's Already Built (90% Complete)
 
-## Solution
+The system already implements most of the described requirements:
 
-Create a database migration that seeds a starter set of task templates for common project types, grouped by licensing phases. This gives immediate value when clicking "Load from Templates".
+| Requirement | Status | Where |
+|---|---|---|
+| Task board per project type | Done | `TaskBoard`, `LoadTaskTemplatesDialog` |
+| Template-based task generation | Done | `useBulkTaskCreation`, seeded templates |
+| Add/remove tasks | Done | `CreateTaskDialog`, delete in `TaskBoard` |
+| Assign consultants to tasks | Done | `TaskAssignment`, auto-assign by specialty |
+| Payment milestones per task | Done | `payment_milestones`, `is_payment_critical` flag |
+| Visual timeline (phases) | Done | `LicensingTimeline` (13 phases) |
+| Real-time progress tracking | Done | `auto_advance_project_phase` trigger |
+| Delay detection | Done | `check_task_delay` database trigger |
+| Delay notifications | Done | `task-delay-notification` email template |
+| Auto-reschedule proposals | Done | `useRescheduleProposals`, cascade calculation |
+| Cash flow forecast | Done | `CashFlowChart` (projected vs actual) |
+| Task dependencies | Done | `task_dependencies` with blocking enforcement |
+| Plan vs. Actual dates | Done | `planned_start/end` vs `actual_start/end` fields |
 
-### Templates to Seed
+## Remaining Gaps (3 Items)
 
-We will seed templates for the most common project type visible in the system ("מגורים" / Residential), organized by licensing phase. Each template includes name, default duration, advisor specialty, and display order.
+### 1. Contract-to-Task Advisor Linkage
 
-**Phase: בדיקה ראשונית (Initial Review)**
-- בדיקת היתכנות תכנונית (14 days, architect)
-- בדיקת זכויות בנייה (7 days, architect)
-- סקר סביבתי ראשוני (10 days, environmental consultant)
+Currently advisors are assigned to tasks manually or by specialty matching. There's no automatic linkage from an approved proposal/contract to task assignments -- i.e., when an advisor's proposal is approved, their tasks should auto-populate with that advisor assigned.
 
-**Phase: תכנון ראשוני (Initial Planning)**
-- הכנת תוכנית אדריכלית ראשונית (21 days, architect)
-- חישובי שטחים ראשוניים (7 days, architect)
-- תיאום יועצים ראשוני (5 days, project manager)
+**Changes:**
+- Add a post-approval hook in `useProposalApproval` that, after approving a proposal, checks if the project has tasks matching the advisor's specialty and auto-assigns the advisor to those tasks.
+- Show a "linked from contract" indicator on auto-assigned tasks.
 
-**Phase: הגשת בקשה להיתר (Permit Application)**
-- הכנת תיק בקשה להיתר (14 days, architect)
-- הגשת מסמכים לוועדה (3 days, architect)
-- תשלום אגרות (2 days, entrepreneur)
+**Files:** `src/hooks/useProposalApproval.ts`, `src/components/tasks/TaskCard.tsx`
 
-**Phase: ביצוע (Execution)**
-- פיקוח עליון (ongoing, architect) -- milestone
-- בדיקות בטון (as needed, engineer) -- payment critical
+### 2. Plan vs. Actual Visual Comparison in Timeline
 
-### Technical Approach
+The `LicensingTimeline` shows phase progress but doesn't visually compare planned vs. actual dates per task. A small enhancement to the task table would add a "variance" column showing days ahead/behind schedule.
 
-1. **Migration file**: A single SQL migration that inserts rows into `task_templates`, referencing existing `licensing_phases` by name lookup.
-2. **Fallback**: If licensing phases don't exist yet, templates are inserted with `licensing_phase_id = NULL` (grouped under "General Tasks").
-3. **Project type matching**: Templates use `project_type = 'מגורים'` and `municipality_id = NULL` (general/all municipalities).
+**Changes:**
+- Add a computed "variance" column to `AllProjectsTaskTable` showing the difference between `planned_end_date` and `actual_end_date` (or today if in progress).
+- Color-code: green (ahead), red (behind), gray (on track).
 
-### What Changes
+**Files:** `src/components/tasks/AllProjectsTaskTable.tsx`
 
-| Item | Action |
-|---|---|
-| `supabase/migrations/seed_task_templates.sql` | NEW -- inserts ~10-12 starter templates |
+### 3. Auto-Generate Tasks on Project Creation
 
-### After This
+Currently tasks are only loaded manually via the "Load from Templates" button. The vision describes automatic generation when a project is opened.
 
-- Opening a "מגורים" project and clicking "טען מתבניות" will show templates grouped by phase
-- Users can select which ones to load
-- The `AutoTaskSuggestionBanner` will also start working for new empty projects
-- Additional project types and municipality-specific templates can be added later via the Admin panel
+**Changes:**
+- In `ProjectDetail.tsx`, when the Tasks tab is first opened and the project has zero tasks, automatically trigger the `LoadTaskTemplatesDialog` (or show the `AutoTaskSuggestionBanner` more prominently).
+- Alternative: Add a one-time trigger in the project creation wizard (`ProjectWizard.tsx`) that calls `createTasksFromTemplates` with matching templates.
+
+**Files:** `src/pages/ProjectWizard.tsx` or `src/components/tasks/TaskBoard.tsx`
+
+## Implementation Priority
+
+1. **Variance column** -- Small, high-value visual improvement (1 file edit)
+2. **Contract-to-task linkage** -- Medium effort, connects procurement to execution (2 file edits)
+3. **Auto-generate on creation** -- Small UX improvement (1 file edit)
+
+## Technical Notes
+
+- All database tables, triggers, and RLS policies needed for this system are already in place
+- No new database migrations are required for items 1-3
+- The existing `useBulkTaskCreation` hook handles task generation with advisor auto-assignment by specialty
+- The `syncPaymentMilestone` pattern in `useProjectTasks` already keeps financial data in sync with schedule changes
+
