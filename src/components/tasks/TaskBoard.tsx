@@ -68,6 +68,7 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
   } = useProjectTasks(projectId);
 
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [phaseFilter, setPhaseFilter] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -148,8 +149,16 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
     }
   };
 
+  // Get unique phases from tasks
+  const taskPhases = Array.from(new Set(tasks.map(t => t.phase).filter(Boolean))) as string[];
+
+  // Filter tasks by selected phase
+  const filteredTasks = phaseFilter
+    ? tasks.filter(t => t.phase === phaseFilter)
+    : tasks;
+
   // Convert tasks to ProjectTaskWithDetails for the table component
-  const tasksForTable: ProjectTaskWithDetails[] = tasks.map(t => ({
+  const tasksForTable: ProjectTaskWithDetails[] = filteredTasks.map(t => ({
     id: t.id,
     project_id: projectId,
     name: t.name,
@@ -226,8 +235,37 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
           </Button>
         </div>
       </div>
+      {/* Phase filter pills */}
+      {taskPhases.length > 1 && (
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <Badge
+            variant={phaseFilter === null ? 'default' : 'outline'}
+            className="cursor-pointer text-xs"
+            onClick={() => setPhaseFilter(null)}
+          >
+            הכל ({tasks.length})
+          </Badge>
+          {taskPhases.map(phase => (
+            <Badge
+              key={phase}
+              variant={phaseFilter === phase ? 'default' : 'outline'}
+              className="cursor-pointer text-xs"
+              onClick={() => setPhaseFilter(phaseFilter === phase ? null : phase)}
+            >
+              {phase} ({tasks.filter(t => t.phase === phase).length})
+            </Badge>
+          ))}
+        </div>
+      )}
 
-      {tasks.length === 0 ? (
+      {filteredTasks.length === 0 && tasks.length > 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>אין משימות בשלב "{phaseFilter}"</p>
+          <Button variant="link" onClick={() => setPhaseFilter(null)} className="mt-2">
+            הצג את כל המשימות
+          </Button>
+        </div>
+      ) : tasks.length === 0 ? (
         <div className="text-center py-12 space-y-4">
           {projectType && (
             <AutoTaskSuggestionBanner
@@ -256,7 +294,7 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
             {COLUMNS.map((column) => {
-              const columnTasks = getTasksByStatus(column.id);
+              const columnTasks = filteredTasks.filter(t => t.status === column.id);
               return (
                 <DroppableColumn
                   key={column.id}

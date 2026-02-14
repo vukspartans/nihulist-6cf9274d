@@ -26,6 +26,7 @@ import NavigationLogo from '@/components/NavigationLogo';
 import { UserHeader } from '@/components/UserHeader';
 import BackToTop from '@/components/BackToTop';
 import { TaskBoard } from '@/components/tasks';
+import { StageTaskLoadDialog } from '@/components/tasks/StageTaskLoadDialog';
 import { PaymentDashboard } from '@/components/payments';
 import LegalFooter from '@/components/LegalFooter';
 
@@ -70,6 +71,8 @@ export const ProjectDetail = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState('proposals');
+  const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const [pendingPhaseName, setPendingPhaseName] = useState<string>('');
   const [selectedAdvisorType, setSelectedAdvisorType] = useState<string>('');
 
   // Check for edit mode and tab from URL params
@@ -244,6 +247,10 @@ export const ProjectDetail = () => {
         title: "עודכן בהצלחה",
         description: "שלב הפרויקט עודכן",
       });
+
+      // Trigger stage task loading for the new phase
+      setPendingPhaseName(newPhase);
+      setStageDialogOpen(true);
     } catch (error) {
       console.error('Error updating phase:', error);
       toast({
@@ -556,6 +563,22 @@ export const ProjectDetail = () => {
           <PaymentDashboard projectId={project.id} />
         </TabsContent>
       </Tabs>
+
+      {/* Stage Task Load Dialog — triggered on phase change */}
+      {project.type && pendingPhaseName && (
+        <StageTaskLoadDialog
+          open={stageDialogOpen}
+          onOpenChange={setStageDialogOpen}
+          projectId={project.id}
+          projectType={project.type}
+          phaseName={pendingPhaseName}
+          municipalityId={project.municipality_id}
+          existingTemplateIds={new Set()} 
+          onTasksCreated={() => {
+            // TaskBoard will refetch via its own hook
+          }}
+        />
+      )}
 
       <ProposalComparisonDialog
         open={comparisonDialogOpen}
