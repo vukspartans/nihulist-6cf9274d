@@ -88,13 +88,8 @@ export function StageTaskLoadDialog({
       const results = (data || []) as TaskTemplate[];
 
       setTemplates(results);
-      // Pre-select all non-existing templates
-      const newSelected = new Set<string>();
-      results.forEach(t => {
-        if (!fetchedIds.has(t.id)) {
-          newSelected.add(t.id);
-        }
-      });
+      // Pre-select ALL templates so user starts with everything checked
+      const newSelected = new Set<string>(results.map(t => t.id));
       setSelectedIds(newSelected);
     } catch (error) {
       console.error('Error fetching stage templates:', error);
@@ -110,7 +105,7 @@ export function StageTaskLoadDialog({
   }, [open, phaseName, fetchTemplatesForPhase]);
 
   const toggleTemplate = (id: string) => {
-    if (existingTemplateIds.has(id)) return;
+    
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -120,7 +115,8 @@ export function StageTaskLoadDialog({
   };
 
   const handleSubmit = async () => {
-    const selected = templates.filter(t => selectedIds.has(t.id));
+    // Only create tasks for templates not already loaded
+    const selected = templates.filter(t => selectedIds.has(t.id) && !existingTemplateIds.has(t.id));
     if (selected.length === 0) return;
 
     setSubmitting(true);
@@ -173,13 +169,10 @@ export function StageTaskLoadDialog({
                 return (
                   <label
                     key={t.id}
-                    className={`flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors ${
-                      alreadyLoaded ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
                   >
                     <Checkbox
-                      checked={alreadyLoaded || selectedIds.has(t.id)}
-                      disabled={alreadyLoaded}
+                      checked={selectedIds.has(t.id)}
                       onCheckedChange={() => toggleTemplate(t.id)}
                     />
                     <div className="flex-1 min-w-0">
