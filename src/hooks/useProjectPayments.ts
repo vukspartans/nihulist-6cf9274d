@@ -262,12 +262,24 @@ export function useProjectPayments(projectId: string) {
 
       if (error) throw error;
 
-      // Notification stub - will be replaced with edge function
-      console.log(`[Approval Chain] Status changed to ${status}. Notification would be sent to next approver.`);
+      // Send notification for status change
+      try {
+        if (status === 'paid') {
+          await supabase.functions.invoke('notify-payment-status', {
+            body: { type: 'payment_marked_paid', payment_request_id: requestId },
+          });
+        } else if (status !== 'prepared' && status !== 'rejected') {
+          await supabase.functions.invoke('notify-payment-status', {
+            body: { type: 'status_changed', payment_request_id: requestId },
+          });
+        }
+      } catch (notifyErr) {
+        console.warn('[Payment] Notification send failed (non-blocking):', notifyErr);
+      }
 
       toast({
         title: "הבקשה הועברה",
-        description: "סטטוס עודכן: הודעה תישלח לגורם המאשר הבא",
+        description: "סטטוס עודכן: הודעה נשלחה לגורם הרלוונטי",
       });
 
       await fetchPaymentRequests();

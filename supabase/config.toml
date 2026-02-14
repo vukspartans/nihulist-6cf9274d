@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.notify-proposal-resubmitted]
 verify_jwt = true
+
+[functions.notify-payment-status]
+verify_jwt = false
+
+[functions.payment-deadline-reminder]
+verify_jwt = false

@@ -31,10 +31,12 @@ function LiabilitiesTab({
 }: {
   requests: AccountantRequest[];
   onUpdateDate: (id: string, date: string | null) => void;
-  onMarkPaid: (id: string) => void;
+  onMarkPaid: (id: string, paidDate?: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
 }) {
   const [filter, setFilter] = useState<'open' | 'closed'>('open');
+  const [bulkDate, setBulkDate] = useState('');
+  const [paidDateInputs, setPaidDateInputs] = useState<Record<string, string>>({});
 
   const filtered = useMemo(() => {
     if (filter === 'open') {
@@ -43,23 +45,48 @@ function LiabilitiesTab({
     return requests.filter(r => r.status === 'paid' || r.status === 'rejected');
   }, [requests, filter]);
 
+  const handleBulkDateApply = () => {
+    if (!bulkDate) return;
+    filtered.forEach(req => {
+      if (req.status !== 'paid' && req.status !== 'rejected') {
+        onUpdateDate(req.id, bulkDate);
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant={filter === 'open' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('open')}
-        >
-          פתוחות
-        </Button>
-        <Button
-          variant={filter === 'closed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('closed')}
-        >
-          סגורות
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={filter === 'open' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('open')}
+          >
+            פתוחות
+          </Button>
+          <Button
+            variant={filter === 'closed' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('closed')}
+          >
+            סגורות
+          </Button>
+        </div>
+        {filter === 'open' && filtered.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              className="w-36 text-sm"
+              value={bulkDate}
+              onChange={e => setBulkDate(e.target.value)}
+              placeholder="תאריך אחיד"
+            />
+            <Button size="sm" variant="outline" onClick={handleBulkDateApply} disabled={!bulkDate}>
+              החל על הכל
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>
@@ -69,6 +96,7 @@ function LiabilitiesTab({
               <TableRow>
                 <TableHead className="text-right">פרויקט</TableHead>
                 <TableHead className="text-right">יועץ</TableHead>
+                <TableHead className="text-right">חברה</TableHead>
                 <TableHead className="text-right">אבן דרך</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
                 <TableHead className="text-right">סכום</TableHead>
@@ -80,7 +108,7 @@ function LiabilitiesTab({
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     אין בקשות תשלום {filter === 'open' ? 'פתוחות' : 'סגורות'}
                   </TableCell>
                 </TableRow>
@@ -93,6 +121,7 @@ function LiabilitiesTab({
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{req.project_name}</TableCell>
                       <TableCell>{req.advisor_company_name || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{req.advisor_company_name || '—'}</TableCell>
                       <TableCell>{req.milestone_name || '—'}</TableCell>
                       <TableCell><PaymentStatusBadge status={req.status} /></TableCell>
                       <TableCell>{formatCurrency(req.total_amount || req.amount)}</TableCell>
@@ -107,10 +136,23 @@ function LiabilitiesTab({
                       </TableCell>
                       <TableCell>
                         {canMarkPaid && (
-                          <Button size="sm" variant="outline" onClick={() => onMarkPaid(req.id)}>
-                            <CheckCircle className="w-3.5 h-3.5 ml-1" />
-                            שולם
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="date"
+                              className="w-32 text-xs"
+                              value={paidDateInputs[req.id] || ''}
+                              onChange={e => setPaidDateInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                              placeholder="תאריך תשלום"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onMarkPaid(req.id, paidDateInputs[req.id] || undefined)}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                              שולם
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -259,8 +301,9 @@ export default function AccountantDashboard() {
   const { allRequests, vendorSummaries, loading, updateExpectedDate, updateRequestStatus } = useAccountantData();
   const { getNextStep } = useApprovalChain();
 
-  const handleMarkPaid = (requestId: string) => {
-    updateRequestStatus(requestId, 'paid');
+  const handleMarkPaid = (requestId: string, paidDate?: string) => {
+    const additionalData = paidDate ? { paid_at: new Date(paidDate).toISOString() } : undefined;
+    updateRequestStatus(requestId, 'paid', additionalData);
   };
 
   if (loading) {

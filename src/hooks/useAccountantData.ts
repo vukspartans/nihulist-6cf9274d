@@ -173,7 +173,7 @@ export function useAccountantData() {
   const updateRequestStatus = async (requestId: string, status: string, additionalData?: any) => {
     try {
       const updateData: any = { status, ...additionalData };
-      if (status === 'paid') updateData.paid_at = new Date().toISOString();
+      if (status === 'paid' && !updateData.paid_at) updateData.paid_at = new Date().toISOString();
       else if (status === 'rejected') updateData.rejected_at = new Date().toISOString();
       else if (status !== 'prepared' && status !== 'submitted') {
         updateData.approved_at = new Date().toISOString();
@@ -185,6 +185,13 @@ export function useAccountantData() {
         .eq('id', requestId);
 
       if (error) throw error;
+
+      // Send payment notification (non-blocking)
+      if (status === 'paid') {
+        supabase.functions.invoke('notify-payment-status', {
+          body: { type: 'payment_marked_paid', payment_request_id: requestId },
+        }).catch(err => console.warn('[Accountant] Notification failed:', err));
+      }
 
       toast({ title: 'עודכן', description: 'סטטוס הבקשה עודכן בהצלחה' });
       await fetchData();
