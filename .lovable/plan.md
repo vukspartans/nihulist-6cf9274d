@@ -1,89 +1,74 @@
 
 
-# Fix: The "Prepared" Trap + Golden Path Verification
+# Seed Test Data for Full Payment Lifecycle Testing
 
-## Part 1: The Critical Fix
+## What We Have
 
-### Problem
-When a consultant creates a payment request in `AdvisorPaymentsView`, it starts as `prepared` (draft). There is no "Submit" button anywhere in the consultant UI to transition it to `submitted`. The entrepreneur's `PaymentRequestCard` explicitly skips actions for `prepared` status. Result: invoices are permanently stuck in draft.
+Both test users already exist in the database:
 
-### Solution
-Add a "Submit Request" action column to the consultant's table in `AdvisorPaymentsView.tsx`. For rows where `status === 'prepared'`, show two buttons:
-- **"הגש בקשה" (Submit Request)** -- transitions status to `submitted` via the existing `updatePaymentRequestStatus` logic.
-- **"מחק" (Delete)** -- deletes the draft (already partially supported but not wired in the table view).
+| User | Email | User ID | Role |
+|------|-------|---------|------|
+| Entrepreneur | entrepreneur.test+billding@example.com | `aaaa...0001` | entrepreneur |
+| Vendor/Consultant | vendor.test+billding@example.com | `aaaa...0002` | advisor |
 
-### File: `src/components/payments/AdvisorPaymentsView.tsx`
+A sandbox project ("TEST_ONLY__Sandbox Project 001") exists, owned by the entrepreneur. The vendor has an advisor record. However, the project is missing:
 
-**Changes:**
-1. Add an "Actions" column (`<TableHead>`) to the table header.
-2. In each table row, render action buttons based on status:
-   - `prepared`: Show "Submit" button (blue, with `Send` icon) and "Delete" button (red trash icon).
-   - All other non-terminal statuses: No actions (consultant waits for approval chain).
-   - `paid`: No action (handled by the Tax Invoice alert banner above).
-3. The "Submit" handler calls `supabase.from('payment_requests').update({ status: 'submitted', submitted_at: now, submitted_by: user.id })` and triggers the `notify-payment-status` edge function with type `status_changed`.
-4. The "Delete" handler calls `supabase.from('payment_requests').delete()` with a confirmation dialog.
-5. After either action, re-fetch the requests list.
+1. A `project_advisors` link (vendor not assigned to project)
+2. Payment milestones
+3. Payment-critical tasks linked to milestones
 
-### No other files need changes
-- `useProjectPayments.ts` already handles `submitted` status transitions correctly (line 244-245 sets `submitted_at`).
-- `PaymentRequestCard` does not need changes -- it is only used in the Entrepreneur view.
-- The approval chain (`payment_status_definitions`) already has `submitted` as step 2 with `display_order: 2`.
+## What We Will Seed
 
----
+We will create a migration that inserts the minimal data needed to test the full Golden Path:
 
-## Part 2: Golden Path Verification Results
+### Data to Insert
 
-| Step | Description | Result |
-|------|-------------|--------|
-| 1 | Task marked DONE triggers milestone to `due` | PASS -- `trg_auto_unlock_milestone` fires on `project_tasks.status` update, checks all `is_payment_critical` tasks, sets milestone `due` |
-| 2 | Consultant creates + submits invoice | FAIL (pre-fix) -- Creation works, dropdown filters `due` milestones correctly, but no Submit button exists to move from `prepared` to `submitted` |
-| 3 | Entrepreneur approves through chain | PASS -- `getNextStep('submitted')` returns `professionally_approved`, then `budget_approved`, then `awaiting_payment`. Never jumps to `paid` |
-| 4 | Accountant schedules + marks paid | PASS -- `AccountantDashboard` shows approved requests, inline date editing works, "Mark as Paid" sets status to `paid` with `paid_at` timestamp |
-| 5 | Consultant sees Tax Invoice alert | PASS -- `paidRequests` filter (status=paid, not acknowledged) triggers amber alert banner with "Please issue Tax Invoice" message |
+1. **`project_advisors`** -- Link the vendor consultant to the sandbox project with a fee of 50,000 ILS.
 
-### Post-fix expected result: All 5 steps PASS.
+2. **`payment_milestones`** (2 milestones) -- 
+   - "Milestone A: Plan Submission" -- 25,000 ILS, status `pending`
+   - "Milestone B: Committee Approval" -- 25,000 ILS, status `pending`
 
----
+3. **Update 2 existing `project_tasks`** -- Mark them as `is_payment_critical = true` and link them to the milestones:
+   - Task "בדיקת היתכנות תכנונית" (Feasibility Study) linked to Milestone A
+   - Task "הגשת תוכניות למכון בקרה" (Plan Submission) linked to Milestone B
+
+### Test Flow After Seeding
+
+Once the data is seeded, you can test the full lifecycle:
+
+1. **Log in as Entrepreneur** -- Go to Task Board, mark "בדיקת היתכנות תכנונית" as Done. The trigger should auto-unlock Milestone A to `due`.
+
+2. **Log in as Vendor** -- Go to Payments tab. The "New Payment Request" button should now be enabled. Create a request for Milestone A (25,000 ILS). Then click the new "Submit" button to move it from `prepared` to `submitted`.
+
+3. **Log back in as Entrepreneur** -- Go to Payment Dashboard. The submitted request should appear. Click "Approve" to advance it through the chain.
+
+4. **Go to /accountant** -- The approved request appears in the Liabilities tab. Set a payment date and click "Mark as Paid".
+
+5. **Log back in as Vendor** -- The request should show as `paid` with a "Tax Invoice Required" alert.
 
 ## Technical Details
 
-### Exact changes in `AdvisorPaymentsView.tsx`
+A single Supabase migration file will be created with:
 
-**Add to imports:** `Send, Trash2` from lucide-react (Trash2 already imported indirectly but not used in table).
+```text
+-- 1. Insert project_advisors record
+INSERT INTO project_advisors (project_id, advisor_id, fee_amount, fee_currency, status, advisor_type)
+VALUES ('sandbox-project-id', 'vendor-advisor-id', 50000, 'ILS', 'active', 'יועץ בדיקות (TEST)');
 
-**Add handler functions:**
-```typescript
-const handleSubmitRequest = async (requestId: string) => {
-  const { error } = await supabase
-    .from('payment_requests')
-    .update({
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-      submitted_by: user?.id,
-    })
-    .eq('id', requestId);
+-- 2. Insert 2 payment milestones linked to that project_advisor
+INSERT INTO payment_milestones (project_id, project_advisor_id, name, amount, status, percentage_of_total, display_order)
+VALUES 
+  (..., 'Milestone A: Plan Submission', 25000, 'pending', 50, 1),
+  (..., 'Milestone B: Committee Approval', 25000, 'pending', 50, 2);
 
-  if (error) { /* show error toast */ return; }
+-- 3. Update 2 existing tasks to be payment-critical and link to milestones
+UPDATE project_tasks SET is_payment_critical = true, payment_milestone_id = <milestone_a_id>
+WHERE id = 'task-feasibility-id';
 
-  // Trigger notification
-  try {
-    await supabase.functions.invoke('notify-payment-status', {
-      body: { type: 'status_changed', payment_request_id: requestId },
-    });
-  } catch {}
-
-  toast({ title: 'הבקשה הוגשה', description: 'בקשת התשלום נשלחה לאישור.' });
-  // Re-fetch data
-};
-
-const handleDeleteRequest = async (requestId: string) => {
-  if (!confirm('האם למחוק את בקשת התשלום?')) return;
-  await supabase.from('payment_requests').delete().eq('id', requestId);
-  // Re-fetch data
-};
+UPDATE project_tasks SET is_payment_critical = true, payment_milestone_id = <milestone_b_id>
+WHERE id = 'task-plan-submission-id';
 ```
 
-**Add table column:** One new `<TableHead>` for "פעולות" (Actions) and corresponding `<TableCell>` with conditional buttons:
-- `status === 'prepared'`: Submit button + Delete button
-- Otherwise: em-dash or empty
+All IDs will use deterministic UUIDs for easy reference and cleanup.
 
