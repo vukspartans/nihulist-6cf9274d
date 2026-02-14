@@ -24,6 +24,7 @@ interface LoadTaskTemplatesDialogProps {
   municipalityId?: string | null;
   existingTemplateIds: Set<string>;
   onTasksCreated: () => void;
+  currentPhase?: string | null;
 }
 
 interface GroupedTemplates {
@@ -40,6 +41,7 @@ export function LoadTaskTemplatesDialog({
   municipalityId,
   existingTemplateIds,
   onTasksCreated,
+  currentPhase,
 }: LoadTaskTemplatesDialogProps) {
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,6 +110,11 @@ export function LoadTaskTemplatesDialog({
         data = (allTemplates || []) as TaskTemplate[];
       }
 
+      // Filter by current phase if provided
+      if (currentPhase) {
+        data = data.filter(t => t.licensing_phases?.name === currentPhase);
+      }
+
       setTemplates(data);
       // Pre-select all non-existing templates
       const newSelected = new Set<string>();
@@ -122,7 +129,7 @@ export function LoadTaskTemplatesDialog({
     } finally {
       setLoading(false);
     }
-  }, [projectType, municipalityId, existingTemplateIds]);
+  }, [projectType, municipalityId, existingTemplateIds, currentPhase]);
 
   useEffect(() => {
     if (open) {
@@ -194,7 +201,9 @@ export function LoadTaskTemplatesDialog({
             טעינת משימות מתבניות
           </DialogTitle>
           <DialogDescription>
-            בחר משימות מהתבניות המוגדרות עבור סוג פרויקט: {projectType}
+            {currentPhase
+              ? `משימות לשלב: ${currentPhase}`
+              : `בחר משימות מהתבניות המוגדרות עבור סוג פרויקט: ${projectType}`}
           </DialogDescription>
         </DialogHeader>
 
