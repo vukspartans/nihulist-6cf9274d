@@ -1,24 +1,30 @@
 
 
-# Fix: Approval Chain Not Loaded When Table Renders
+# Create a New Admin Account for Phase 2 Testing
 
-## Root Cause
+## What We'll Do
+Create a new admin user account with known credentials so you can log in and test the full Phase 2 functionality (task templates per phases, licensing management, etc.).
 
-The `AccountantDashboard` waits for `useAccountantData().loading` before rendering, but does NOT wait for `useApprovalChain().isLoading`. The approval chain statuses load asynchronously from the `payment_status_definitions` table. When the table renders, the statuses array is still empty, so `getNextStep()` always returns `null` -- meaning no action button appears.
+## Steps
 
-## Fix
+### 1. Create the user via the `manage-users` edge function
+- Call the existing `manage-users` edge function with action `create`
+- Email: `test-admin@billding.ai`
+- Password: `TestAdmin2024!`
+- Name: `מנהל בדיקות` (Test Admin)
+- Roles: `['admin']`
 
-**File: `src/pages/AccountantDashboard.tsx`**
+### 2. Verify access
+- Log in at `/heyadmin/login` with the credentials above
+- Navigate through the admin panel to test task template management per licensing phases
 
-In the main `AccountantDashboard` component, include `useApprovalChain().isLoading` in the loading check:
+## Technical Detail
+- The `manage-users` edge function already handles user creation + role assignment
+- No database migrations or code changes needed
+- The `AdminRoute` component will grant access once the `admin` role is set in `user_roles`
 
-```
-Current:  if (loading) { ... show spinner ... }
-Fixed:    if (loading || approvalChainLoading) { ... show spinner ... }
-```
+## Login Credentials (after creation)
+- **URL**: `/heyadmin/login`
+- **Email**: `test-admin@billding.ai`
+- **Password**: `TestAdmin2024!`
 
-Specifically:
-- Destructure `isLoading` (aliased as `approvalChainLoading`) from the existing `useApprovalChain()` call
-- Update the early-return loading condition to: `if (loading || approvalChainLoading)`
-
-No other changes needed -- the button logic is already correct, it just needs the data to be ready before rendering.
