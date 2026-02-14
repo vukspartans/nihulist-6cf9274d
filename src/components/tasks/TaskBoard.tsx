@@ -87,12 +87,7 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
     }
   }, [loading, tasks.length, projectType, autoTriggered]);
 
-  // Auto-filter to current phase when it changes
-  useEffect(() => {
-    if (projectPhase) {
-      setPhaseFilter(projectPhase);
-    }
-  }, [projectPhase]);
+  // No auto-filter — show all tasks by default, let users manually filter
 
   // Fetch dependency counts for all tasks
   const fetchDepCounts = useCallback(async () => {
@@ -265,8 +260,13 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
           </Button>
         </div>
       </div>
-      {/* Phase filter pills */}
-      {taskPhases.length > 1 && (
+      {/* Current stage indicator + Phase filter pills */}
+      {projectPhase && (
+        <div className="text-xs text-muted-foreground mb-2">
+          שלב נוכחי: <span className="font-medium text-foreground">{projectPhase}</span>
+        </div>
+      )}
+      {taskPhases.length > 0 && (
         <div className="flex items-center gap-1.5 mb-3 flex-wrap">
           <Badge
             variant={phaseFilter === null ? 'default' : 'outline'}
