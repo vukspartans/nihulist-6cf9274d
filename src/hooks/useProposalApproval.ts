@@ -117,10 +117,45 @@ export const useProposalApproval = () => {
         });
       }
 
+      // Auto-assign advisor to matching project tasks by specialty
+      try {
+        console.log('[Approval] Auto-assigning advisor to matching tasks');
+        
+        // Get advisor specialty
+        const { data: advisorData } = await supabase
+          .from('advisors')
+          .select('id, expertise')
+          .eq('id', data.advisorId)
+          .single();
+
+        if (advisorData?.expertise && advisorData.expertise.length > 0) {
+          // Find unassigned tasks in this project that match the advisor's specialty
+          const { data: matchingTasks } = await supabase
+            .from('project_tasks')
+            .select('id, phase')
+            .eq('project_id', data.projectId)
+            .is('assigned_advisor_id', null)
+            .in('phase', advisorData.expertise);
+
+          if (matchingTasks && matchingTasks.length > 0) {
+            const taskIds = matchingTasks.map(t => t.id);
+            await supabase
+              .from('project_tasks')
+              .update({ assigned_advisor_id: data.advisorId })
+              .in('id', taskIds);
+            
+            console.log(`[Approval] Auto-assigned ${taskIds.length} tasks to advisor ${data.advisorId}`);
+          }
+        }
+      } catch (assignErr) {
+        console.error('[Approval] Auto-assign tasks error (non-blocking):', assignErr);
+      }
+
       // Invalidate relevant caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-advisors', data.projectId] });
       queryClient.invalidateQueries({ queryKey: ['activity-log', data.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', data.projectId] });
 
       return { success: true };
     } catch (error: any) {
