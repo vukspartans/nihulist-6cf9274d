@@ -23,7 +23,7 @@ interface StageTaskLoadDialogProps {
   projectType: string;
   phaseName: string;
   municipalityId?: string | null;
-  existingTemplateIds: Set<string>;
+  existingTemplateIds?: Set<string>;
   onTasksCreated: () => void;
 }
 
@@ -34,11 +34,11 @@ export function StageTaskLoadDialog({
   projectType,
   phaseName,
   municipalityId,
-  existingTemplateIds,
   onTasksCreated,
 }: StageTaskLoadDialogProps) {
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  const [existingTemplateIds, setExistingTemplateIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { createTasksFromTemplates } = useBulkTaskCreation();
@@ -46,6 +46,15 @@ export function StageTaskLoadDialog({
   const fetchTemplatesForPhase = useCallback(async () => {
     setLoading(true);
     try {
+      // Self-fetch existing template IDs
+      const { data: existingData } = await supabase
+        .from('project_tasks')
+        .select('template_id')
+        .eq('project_id', projectId)
+        .not('template_id', 'is', null);
+      const fetchedIds = new Set((existingData || []).map((d: any) => d.template_id as string));
+      setExistingTemplateIds(fetchedIds);
+
       // Find the licensing_phase matching phaseName + projectType
       const { data: phaseData } = await supabase
         .from('licensing_phases')
@@ -82,7 +91,7 @@ export function StageTaskLoadDialog({
       // Pre-select all non-existing templates
       const newSelected = new Set<string>();
       results.forEach(t => {
-        if (!existingTemplateIds.has(t.id)) {
+        if (!fetchedIds.has(t.id)) {
           newSelected.add(t.id);
         }
       });
@@ -92,7 +101,7 @@ export function StageTaskLoadDialog({
     } finally {
       setLoading(false);
     }
-  }, [phaseName, projectType, municipalityId, existingTemplateIds]);
+  }, [phaseName, projectType, municipalityId, projectId]);
 
   useEffect(() => {
     if (open && phaseName) {
