@@ -26,11 +26,14 @@ import { TaskDetailDialog } from './TaskDetailDialog';
 import { AllProjectsTaskTable } from './AllProjectsTaskTable';
 import { Progress } from '@/components/ui/progress';
 import { TaskStatusBadge } from './TaskStatusBadge';
+import { AutoTaskSuggestionBanner } from './AutoTaskSuggestionBanner';
 import type { ProjectTask, TaskStatus } from '@/types/task';
 import type { ProjectTaskWithDetails } from '@/hooks/useAllProjectsTasks';
 
 interface TaskBoardProps {
   projectId: string;
+  projectType?: string | null;
+  projectPhase?: string | null;
 }
 
 interface Column {
@@ -49,7 +52,7 @@ const COLUMNS: Column[] = [
   { id: 'completed', title: 'הושלם', icon: CheckCircle, color: 'text-green-600', accentColor: 'bg-green-500' },
 ];
 
-export function TaskBoard({ projectId }: TaskBoardProps) {
+export function TaskBoard({ projectId, projectType, projectPhase }: TaskBoardProps) {
   const { 
     tasks, 
     loading, 
@@ -58,7 +61,8 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
     updateTask, 
     updateTaskStatus,
     deleteTask,
-    getTasksByStatus 
+    getTasksByStatus,
+    refetch,
   } = useProjectTasks(projectId);
 
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -202,7 +206,15 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
       </div>
 
       {tasks.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 space-y-4">
+          {projectType && (
+            <AutoTaskSuggestionBanner
+              projectId={projectId}
+              projectType={projectType}
+              projectPhase={projectPhase ?? null}
+              onTasksCreated={refetch}
+            />
+          )}
           <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">אין משימות עדיין</h3>
           <p className="text-muted-foreground mb-4">התחל לנהל את הפרויקט על ידי הוספת משימות</p>
