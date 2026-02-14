@@ -9,7 +9,7 @@ import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { CreatePaymentRequestDialog } from './CreatePaymentRequestDialog';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet, Plus, AlertTriangle, CheckCircle, FileText, Loader2, Check, X } from 'lucide-react';
+import { Wallet, Plus, AlertTriangle, CheckCircle, FileText, Loader2, Check, X, Send, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -223,6 +223,62 @@ export function AdvisorPaymentsView() {
     toast({ title: 'סומן כהונפק', description: 'חשבונית המס סומנה כהונפקה.' });
   };
 
+  const refetchRequests = async () => {
+    if (!advisorId) return;
+    const { data: reqData } = await supabase
+      .from('payment_requests')
+      .select(`*, payment_milestone:payment_milestones!payment_requests_payment_milestone_id_fkey (id, name, due_date)`)
+      .in('project_advisor_id', projectAdvisorIds)
+      .order('created_at', { ascending: false });
+    const { data: pas } = await supabase
+      .from('project_advisors')
+      .select('id, project_id, fee_amount')
+      .eq('advisor_id', advisorId)
+      .eq('status', 'active');
+    const enriched = await enrichRequests(reqData || [], pas as any[], advisorId);
+    setRequests(enriched);
+  };
+
+  const handleSubmitRequest = async (requestId: string) => {
+    const { error } = await supabase
+      .from('payment_requests')
+      .update({
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+        submitted_by: user?.id,
+      })
+      .eq('id', requestId);
+
+    if (error) {
+      toast({ title: 'שגיאה', description: 'לא ניתן להגיש את הבקשה', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      await supabase.functions.invoke('notify-payment-status', {
+        body: { type: 'status_changed', payment_request_id: requestId },
+      });
+    } catch {}
+
+    toast({ title: 'הבקשה הוגשה', description: 'בקשת התשלום נשלחה לאישור.' });
+    await refetchRequests();
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!confirm('האם למחוק את בקשת התשלום?')) return;
+    const { error } = await supabase
+      .from('payment_requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      toast({ title: 'שגיאה', description: 'לא ניתן למחוק את הבקשה', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'נמחקה', description: 'בקשת התשלום נמחקה.' });
+    await refetchRequests();
+  };
+
   const handleNewRequest = async (data: Partial<PaymentRequest>) => {
     if (!selectedProjectId || !advisorId) return;
     try {
@@ -397,12 +453,13 @@ export function AdvisorPaymentsView() {
                     <TableHead className="text-right">תשלום לפי חוזה</TableHead>
                     <TableHead className="text-right">תשלום צפוי</TableHead>
                     <TableHead className="text-right">תאריך הגשה</TableHead>
+                    <TableHead className="text-right">פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                         {showClosed ? 'אין בקשות שהושלמו' : 'אין בקשות פתוחות'}
                       </TableCell>
                     </TableRow>
@@ -439,6 +496,31 @@ export function AdvisorPaymentsView() {
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {format(new Date(req.submitted_at || req.created_at), 'dd/MM/yyyy', { locale: he })}
+                        </TableCell>
+                        <TableCell>
+                          {req.status === 'prepared' ? (
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => handleSubmitRequest(req.id)}
+                              >
+                                <Send className="h-3 w-3 ml-1" />
+                                הגש
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteRequest(req.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
