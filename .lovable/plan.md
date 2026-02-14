@@ -1,39 +1,33 @@
 
 
-# Fix: Payment Milestone Status Constraint
+# Fix: Payment Request Status Constraint
 
 ## Problem
 
-When you mark a task as "Done", the database trigger `trg_auto_unlock_milestone` tries to set the linked payment milestone's status to `'due'`. However, a check constraint `valid_milestone_status` only allows these values:
+Same pattern as the milestone fix. The `valid_request_status` check constraint on `payment_requests` only allows:
 
 ```text
-'pending', 'eligible', 'invoiced', 'paid'
+'prepared', 'submitted', 'in_accounting', 'awaiting_payment', 'paid', 'rejected'
 ```
 
-The value `'due'` is rejected, causing the entire task update to fail with "לא ניתן לעדכן את המשימה".
+But the approval chain defined in `payment_status_definitions` uses these codes:
 
-## Root Cause
+```text
+'prepared', 'submitted', 'professionally_approved', 'budget_approved', 'awaiting_payment', 'paid', 'rejected'
+```
 
-The check constraint was created with a different set of statuses than what the application code and the trigger function actually use. The app uses: `'pending', 'due', 'paid', 'overdue'`.
+When the entrepreneur approves a submitted request, it tries to set status to `professionally_approved`, which the constraint rejects.
 
 ## Fix
 
-A single database migration to replace the check constraint with the correct allowed values:
+A single database migration to replace the check constraint with a union of all values:
 
 ```text
-DROP the old constraint: valid_milestone_status
-ADD a new constraint allowing: 'pending', 'due', 'eligible', 'invoiced', 'paid', 'overdue'
+DROP the old constraint: valid_request_status
+ADD a new constraint allowing: 'prepared', 'submitted', 'in_accounting', 'professionally_approved', 'budget_approved', 'awaiting_payment', 'paid', 'rejected'
 ```
-
-This is a union of both the old and new status values to avoid breaking anything.
 
 ## No Code Changes Required
 
-The front-end code already expects `'due'` as a valid status -- this is purely a database constraint fix.
+This is purely a database constraint fix -- the front-end and approval chain already use the correct codes.
 
-## After the Fix
-
-Marking "בדיקת היתכנות תכנונית" as Done will:
-1. Update the task status to `completed`
-2. The trigger will set Milestone A to `due`
-3. The vendor's "New Payment Request" button will become enabled
