@@ -70,7 +70,7 @@ export function useBulkTaskCreation() {
           stage_id: stageId || null,
           name: template.name,
           description: template.description,
-          phase: template.phase || null,
+          phase: template.licensing_phases?.name || template.phase || null,
           status: 'pending' as const,
           display_order: index + 1,
           planned_start_date: plannedStart,

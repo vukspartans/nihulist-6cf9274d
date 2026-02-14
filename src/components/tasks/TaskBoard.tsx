@@ -87,6 +87,13 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
     }
   }, [loading, tasks.length, projectType, autoTriggered]);
 
+  // Auto-filter to current phase when it changes
+  useEffect(() => {
+    if (projectPhase) {
+      setPhaseFilter(projectPhase);
+    }
+  }, [projectPhase]);
+
   // Fetch dependency counts for all tasks
   const fetchDepCounts = useCallback(async () => {
     if (!projectId || tasks.length === 0) return;
@@ -227,13 +234,24 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
           </ToggleGroup>
           {onPhaseChange && projectPhase && (() => {
             const currentIdx = PROJECT_PHASES.indexOf(projectPhase as any);
+            const prevPhase = currentIdx > 0 ? PROJECT_PHASES[currentIdx - 1] : null;
             const nextPhase = currentIdx >= 0 && currentIdx < PROJECT_PHASES.length - 1 ? PROJECT_PHASES[currentIdx + 1] : null;
-            return nextPhase ? (
-              <Button size="sm" variant="default" onClick={() => onPhaseChange(nextPhase)} className="gap-1">
-                <ChevronLeft className="h-4 w-4" />
-                שלב הבא: {nextPhase}
-              </Button>
-            ) : null;
+            return (
+              <div className="flex items-center gap-1">
+                {prevPhase && (
+                  <Button size="sm" variant="outline" onClick={() => onPhaseChange(prevPhase)} className="gap-1">
+                    שלב קודם: {prevPhase}
+                    <ChevronLeft className="h-4 w-4 rotate-180" />
+                  </Button>
+                )}
+                {nextPhase && (
+                  <Button size="sm" variant="default" onClick={() => onPhaseChange(nextPhase)} className="gap-1">
+                    <ChevronLeft className="h-4 w-4" />
+                    שלב הבא: {nextPhase}
+                  </Button>
+                )}
+              </div>
+            );
           })()}
           {projectType && (
             <Button size="sm" variant="outline" onClick={() => setTemplateDialogOpen(true)}>
