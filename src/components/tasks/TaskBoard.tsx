@@ -368,6 +368,7 @@ export function TaskBoard({ projectId, projectType, projectPhase, municipalityId
           municipalityId={municipalityId}
           existingTemplateIds={existingTemplateIds}
           onTasksCreated={refetch}
+          currentPhase={projectPhase}
         />
       )}
     </div>
