@@ -91,7 +91,7 @@ export const PaymentTermsTab = ({
       if (categoryId) {
         query = query.eq('category_id', categoryId);
       } else if (advisorType) {
-        query = query.or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`);
+        query = query.eq('advisor_specialty', advisorType).not('category_id', 'is', null);
       }
       
       const { data, error } = await query;
@@ -142,13 +142,14 @@ export const PaymentTermsTab = ({
     }
   }, [categoryId, advisorType, updateField, toast]);
 
-  // Auto-load milestones when categoryId changes and milestones are empty
+  // Auto-load milestones when categoryId changes or on initial mount with categoryId
   useEffect(() => {
-    if (categoryId && categoryId !== prevCategoryIdRef.current) {
-      const milestones = paymentTerms.milestone_payments || [];
-      if (milestones.length === 0) {
-        fetchAndLoadTemplate(false);
-      }
+    const milestones = paymentTerms.milestone_payments || [];
+    const isInitialMount = prevCategoryIdRef.current === undefined && categoryId;
+    const isCategoryChange = categoryId && categoryId !== prevCategoryIdRef.current;
+    
+    if ((isInitialMount || isCategoryChange) && milestones.length === 0) {
+      fetchAndLoadTemplate(false);
     }
     prevCategoryIdRef.current = categoryId;
   }, [categoryId]);
