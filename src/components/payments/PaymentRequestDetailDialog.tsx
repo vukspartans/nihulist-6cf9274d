@@ -6,10 +6,14 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Calendar, User, Building, CreditCard, TrendingUp } from 'lucide-react';
+import { FileText, Calendar, User, Building, CreditCard, TrendingUp, Download, Loader2 } from 'lucide-react';
 import { PaymentRequest } from '@/types/payment';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { getIndexLabel } from '@/constants/indexTypes';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { safeOpenFile } from '@/utils/safeFileOpen';
 
 interface PaymentRequestDetailDialogProps {
   open: boolean;
@@ -22,6 +26,8 @@ export function PaymentRequestDetailDialog({
   onOpenChange, 
   request,
 }: PaymentRequestDetailDialogProps) {
+  const [fileLoading, setFileLoading] = useState(false);
+
   if (!request) return null;
 
   const formatCurrency = (amount: number) => {
@@ -240,15 +246,33 @@ export function PaymentRequestDetailDialog({
 
           {request.invoice_file_url && (
             <div className="pt-2">
-              <a 
-                href={request.invoice_file_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1"
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fileLoading}
+                onClick={async () => {
+                  setFileLoading(true);
+                  try {
+                    const { data, error } = await supabase.storage
+                      .from('payment-files')
+                      .createSignedUrl(request.invoice_file_url!, 3600);
+                    if (error || !data?.signedUrl) throw error;
+                    safeOpenFile(data.signedUrl);
+                  } catch {
+                    console.error('[PaymentDetail] Failed to get signed URL');
+                  } finally {
+                    setFileLoading(false);
+                  }
+                }}
+                className="gap-1"
               >
-                <FileText className="w-4 h-4" />
-                צפה בחשבונית המצורפת
-              </a>
+                {fileLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                צפה בקובץ המצורף
+              </Button>
             </div>
           )}
         </div>

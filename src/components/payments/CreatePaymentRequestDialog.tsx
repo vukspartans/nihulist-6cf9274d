@@ -16,6 +16,7 @@ import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { getIndexLabel, INDEX_TYPES } from '@/constants/indexTypes';
 import { TrendingUp, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PaymentFileUpload } from './PaymentFileUpload';
 
 interface ProjectAdvisor {
   id: string;
@@ -61,6 +62,8 @@ export function CreatePaymentRequestDialog({
   const [indexTerms, setIndexTerms] = useState<IndexTerms | null>(null);
   const [indexCurrentValue, setIndexCurrentValue] = useState('');
   const [incompleteTasksWarning, setIncompleteTasksWarning] = useState<string | null>(null);
+  const [invoiceFilePath, setInvoiceFilePath] = useState<string | null>(null);
+  const [milestoneBudget, setMilestoneBudget] = useState<{ milestoneAmount: number; alreadyUsed: number } | null>(null);
   const [formData, setFormData] = useState({
     amount: '',
     vat_percent: '17',
@@ -82,6 +85,17 @@ export function CreatePaymentRequestDialog({
   
   const vatAmount = adjustedAmount * (vatPercent / 100);
   const totalAmount = adjustedAmount + vatAmount;
+
+  // Budget overrun detection
+  const remainingBudget = milestoneBudget ? milestoneBudget.milestoneAmount - milestoneBudget.alreadyUsed : null;
+  const isMilestoneOverrun = remainingBudget !== null && amount > 0 && amount > remainingBudget;
+  
+  // Check against total advisor fee
+  const selectedAdvisor = projectAdvisors.find(pa => pa.id === formData.project_advisor_id);
+  const totalFee = selectedAdvisor?.fee_amount || 0;
+  const isFeeOverrun = totalFee > 0 && amount > totalFee;
+  
+  const requiresJustification = isMilestoneOverrun || isFeeOverrun;
 
   // Fetch index terms when advisor changes
   useEffect(() => {
@@ -169,8 +183,9 @@ export function CreatePaymentRequestDialog({
     }
   }, [projectId, open, preselectedMilestone]);
 
-  const handleMilestoneChange = (milestoneId: string) => {
+  const handleMilestoneChange = async (milestoneId: string) => {
     setIncompleteTasksWarning(null);
+    setMilestoneBudget(null);
     const milestone = milestones.find(m => m.id === milestoneId);
     if (milestone) {
       setFormData(prev => ({
@@ -179,6 +194,18 @@ export function CreatePaymentRequestDialog({
         amount: milestone.amount.toString(),
         project_advisor_id: milestone.project_advisor_id || prev.project_advisor_id,
       }));
+
+      // Fetch existing requests for this milestone to calculate used budget
+      const { data: siblingRequests } = await supabase
+        .from('payment_requests')
+        .select('amount, total_amount, status')
+        .eq('payment_milestone_id', milestoneId)
+        .not('status', 'eq', 'rejected');
+
+      const alreadyUsed = (siblingRequests || []).reduce(
+        (sum, r) => sum + (r.amount || 0), 0
+      );
+      setMilestoneBudget({ milestoneAmount: milestone.amount, alreadyUsed });
     } else {
       setFormData(prev => ({ ...prev, payment_milestone_id: milestoneId }));
     }
@@ -214,6 +241,7 @@ export function CreatePaymentRequestDialog({
         category: formData.category as 'consultant' | 'external' | 'other',
         notes: formData.notes || null,
         external_party_name: formData.category === 'external' ? formData.external_party_name : null,
+        invoice_file_url: invoiceFilePath,
       };
 
       // Add index data if applicable
@@ -238,6 +266,7 @@ export function CreatePaymentRequestDialog({
       });
       setIndexCurrentValue('');
       setIndexTerms(null);
+      setInvoiceFilePath(null);
       onOpenChange(false);
     } finally {
       setLoading(false);
@@ -365,6 +394,24 @@ export function CreatePaymentRequestDialog({
             </div>
           </div>
 
+          {/* Budget overrun warnings */}
+          {isFeeOverrun && amount > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                הסכום חורג מסך שכ״ט בהסכם ({formatCurrency(totalFee)})
+              </AlertDescription>
+            </Alert>
+          )}
+          {isMilestoneOverrun && !isFeeOverrun && amount > 0 && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                הסכום חורג מהיתרה לאבן הדרך ({formatCurrency(remainingBudget!)})
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Index Adjustment Section */}
           {hasIndex && amount > 0 && (
             <div className="border rounded-lg p-3 space-y-3 bg-accent/30">
@@ -442,13 +489,25 @@ export function CreatePaymentRequestDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="notes">הערות</Label>
+            <Label htmlFor="notes">
+              הערות {requiresJustification && <span className="text-destructive">* (נדרש נימוק לחריגה)</span>}
+            </Label>
             <Textarea
               id="notes"
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="הערות לבקשה..."
+              placeholder={requiresJustification ? 'נא לנמק את החריגה מהסכום...' : 'הערות לבקשה...'}
               rows={2}
+              required={requiresJustification}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>צירוף קובץ</Label>
+            <PaymentFileUpload
+              projectId={projectId}
+              value={invoiceFilePath}
+              onChange={setInvoiceFilePath}
             />
           </div>
 
@@ -463,7 +522,7 @@ export function CreatePaymentRequestDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               ביטול
             </Button>
-            <Button type="submit" disabled={loading || !formData.amount}>
+            <Button type="submit" disabled={loading || !formData.amount || (requiresJustification && !formData.notes.trim())}>
               {loading ? 'יוצר...' : 'צור בקשה'}
             </Button>
           </DialogFooter>
