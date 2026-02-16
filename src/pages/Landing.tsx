@@ -33,6 +33,7 @@ import HeroImageCarousel from "@/components/HeroImageCarousel";
 import LazySection from "@/components/LazySection";
 import MobileNav from "@/components/MobileNav";
 import Logo from "@/components/Logo";
+import { useIsMobile } from "@/hooks/use-mobile";
 import BackToTop from "@/components/BackToTop";
 import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
 import { TermsAndConditions } from "@/components/TermsAndConditions";
@@ -92,6 +93,8 @@ const Landing = memo(() => {
     }
   };
 
+  const isMobile = useIsMobile();
+
   const handleMainCTAClick = () => {
     setDialogMode('signup');
     setShowUserTypeDialog(true);
@@ -115,7 +118,7 @@ const Landing = memo(() => {
             }} 
             className={user ? "cursor-pointer" : ""}
           >
-            <Logo size="xl" />
+            <Logo size="xl" height={isMobile ? 85 : undefined} />
           </div>
           
           {/* Desktop Navigation */}

@@ -3,6 +3,7 @@ import billdingLogoWhite from '@/assets/billding-logo-white.svg';
 
 interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  height?: number;
   className?: string;
   variant?: 'default' | 'white';
 }
@@ -15,8 +16,8 @@ const sizeHeights: Record<string, number> = {
   xl: 68,
 };
 
-const Logo = ({ size = 'md', className = '', variant = 'default' }: LogoProps) => {
-  const height = sizeHeights[size];
+const Logo = ({ size = 'md', height: heightOverride, className = '', variant = 'default' }: LogoProps) => {
+  const height = heightOverride ?? sizeHeights[size];
   const src = variant === 'white' ? billdingLogoWhite : billdingLogo;
 
   return (
