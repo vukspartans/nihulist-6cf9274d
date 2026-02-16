@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, XCircle } from 'lucide-react';
 import { LoadTemplateButton } from './LoadTemplateButton';
 import { RFPFeeItem, FeeUnit, ChargeType } from '@/types/rfpRequest';
 import { 
@@ -58,6 +58,9 @@ export const FeeItemsTable = ({
 
       if (categoryId) {
         query = query.eq('category_id', categoryId);
+      } else {
+        // Only load orphaned (unassigned) templates when no category selected
+        query = query.is('category_id', null);
       }
       if (submissionMethodId) {
         query = query.eq('submission_method_id', submissionMethodId);
@@ -115,10 +118,10 @@ export const FeeItemsTable = ({
     }
   }, [advisorType, categoryId, submissionMethodId, onItemsChange, onOptionalItemsChange]);
 
-  // Auto-load fee items when categoryId + submissionMethodId change
+  // Auto-load fee items when categoryId changes (submissionMethodId optional)
   useEffect(() => {
-    if (!advisorType || !categoryId || !submissionMethodId) return;
-    const key = `${categoryId}:${submissionMethodId}`;
+    if (!advisorType || !categoryId) return;
+    const key = `${categoryId}:${submissionMethodId || 'any'}`;
     if (lastAutoLoadRef.current === key) return;
     lastAutoLoadRef.current = key;
     loadTemplatesCb();
@@ -195,6 +198,11 @@ export const FeeItemsTable = ({
   // loadTemplates is now loadTemplatesCb (useCallback above)
   const loadTemplates = loadTemplatesCb;
 
+  const clearItems = (isOptional: boolean) => {
+    const setItems = isOptional ? onOptionalItemsChange : onItemsChange;
+    setItems([]);
+  };
+
   const renderTable = (tableItems: RFPFeeItem[], isOptional: boolean, title: string) => (
     <div className="space-y-3" dir="rtl">
       <div className="flex items-center justify-between flex-col-reverse sm:flex-row-reverse gap-2">
@@ -214,6 +222,18 @@ export const FeeItemsTable = ({
               onClick={loadTemplates}
               loading={loadingTemplates}
             />
+          )}
+          {tableItems.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => clearItems(isOptional)}
+              className="h-7 gap-1 text-muted-foreground hover:text-destructive text-xs"
+            >
+              <XCircle className="h-3 w-3" />
+              נקה
+            </Button>
           )}
         </div>
         <Label className="text-base font-semibold text-right">{title}</Label>
