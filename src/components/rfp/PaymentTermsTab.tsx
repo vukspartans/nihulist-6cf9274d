@@ -35,7 +35,7 @@ export const PaymentTermsTab = ({
 }: PaymentTermsTabProps) => {
   const { toast } = useToast();
   const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const prevCategoryIdRef = useRef<string | undefined>(categoryId);
+  const lastAutoLoadRef = useRef<string | null>(null);
   
   // Set default index type when component mounts or defaultIndexType changes
   useEffect(() => {
@@ -142,17 +142,13 @@ export const PaymentTermsTab = ({
     }
   }, [categoryId, advisorType, updateField, toast]);
 
-  // Auto-load milestones when categoryId changes or on initial mount with categoryId
+  // Auto-load milestones when categoryId changes (like FeeItemsTable)
   useEffect(() => {
-    const milestones = paymentTerms.milestone_payments || [];
-    const isInitialMount = prevCategoryIdRef.current === undefined && categoryId;
-    const isCategoryChange = categoryId && categoryId !== prevCategoryIdRef.current;
-    
-    if ((isInitialMount || isCategoryChange) && milestones.length === 0) {
-      fetchAndLoadTemplate(false);
-    }
-    prevCategoryIdRef.current = categoryId;
-  }, [categoryId]);
+    if (!categoryId) return;
+    if (lastAutoLoadRef.current === categoryId) return;
+    lastAutoLoadRef.current = categoryId;
+    fetchAndLoadTemplate(false);
+  }, [categoryId, fetchAndLoadTemplate]);
 
   const loadTemplate = () => fetchAndLoadTemplate(true);
 
@@ -174,6 +170,10 @@ export const PaymentTermsTab = ({
         <div className="flex items-center justify-between">
           <Label className="text-right font-medium">אבני דרך לתשלום</Label>
           <div className="flex items-center gap-1">
+            <LoadTemplateButton
+              onClick={loadTemplate}
+              loading={loadingTemplate}
+            />
             {milestones.length > 0 && (
               <Button
                 type="button"
@@ -186,10 +186,6 @@ export const PaymentTermsTab = ({
                 נקה
               </Button>
             )}
-            <LoadTemplateButton
-              onClick={loadTemplate}
-              loading={loadingTemplate}
-            />
           </div>
         </div>
         

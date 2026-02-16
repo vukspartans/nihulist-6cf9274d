@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { FileText, Upload, List, Plus, X, Loader2, FileStack, ChevronDown } from 'lucide-react';
+import { FileText, Upload, List, Plus, X, Loader2, FileStack, ChevronDown, XCircle } from 'lucide-react';
 import { LoadTemplateButton } from './LoadTemplateButton';
 import { ServiceScopeItem, UploadedFileMetadata, RFPFeeItem } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
@@ -322,7 +322,19 @@ export const ServiceDetailsTab = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div onClick={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                {scopeItems.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onScopeItemsChange([])}
+                    className="h-7 gap-1 text-muted-foreground hover:text-destructive text-xs"
+                  >
+                    <XCircle className="h-3 w-3" />
+                    נקה
+                  </Button>
+                )}
                 <LoadTemplateButton
                   onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
                   loading={loadingTemplates}
