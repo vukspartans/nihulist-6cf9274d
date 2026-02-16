@@ -3,17 +3,21 @@ import Logo from '@/components/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface NavigationLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  mobileSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   to?: string;
 }
 
-export default function NavigationLogo({ size = 'md', className = '', to }: NavigationLogoProps) {
+export default function NavigationLogo({ size = 'lg', mobileSize = 'md', className = '', to }: NavigationLogoProps) {
   const navigate = useNavigate();
   const { primaryRole } = useAuth();
+  const isMobile = useIsMobile();
   const destination = to ?? getDashboardRouteForRole(primaryRole);
+  const effectiveSize = isMobile ? mobileSize : size;
 
   const handleClick = () => {
     console.info('[NavigationLogo] Navigating to:', destination, 'role:', primaryRole);
@@ -27,7 +31,7 @@ export default function NavigationLogo({ size = 'md', className = '', to }: Navi
       onClick={handleClick}
       className={cn('cursor-pointer', className)}
     >
-      <Logo size={size} />
+      <Logo size={effectiveSize} />
     </div>
   );
 }

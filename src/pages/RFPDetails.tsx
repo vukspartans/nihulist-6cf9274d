@@ -664,7 +664,7 @@ const RFPDetails = () => {
     <div className="min-h-screen bg-background pb-24" dir="rtl">
       {/* Sticky Header */}
       <div className="sticky top-0 z-50 flex justify-between items-center px-4 py-3 md:px-6 md:py-4 border-b bg-background/95 backdrop-blur-sm">
-        <NavigationLogo size="md" />
+        <NavigationLogo size="lg" />
         <div className="flex items-center gap-2 md:gap-4">
           <Button 
             variant="ghost" 

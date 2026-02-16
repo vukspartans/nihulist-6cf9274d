@@ -344,7 +344,7 @@ export const ProjectDetail = () => {
     <div dir="rtl">
       {/* Sticky Top Bar - Consistent with Dashboard */}
       <div className="sticky top-0 z-50 bg-background flex justify-between items-center p-6 border-b">
-        <NavigationLogo size="md" />
+        <NavigationLogo size="lg" />
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 

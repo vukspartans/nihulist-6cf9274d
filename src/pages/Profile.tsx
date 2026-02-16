@@ -729,7 +729,7 @@ const Profile = () => {
         <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <NavigationLogo size="sm" className="flex-shrink-0" />
+              <NavigationLogo size="lg" className="flex-shrink-0" />
               <div className="h-6 w-px bg-border hidden sm:block" />
               <Button 
                 variant="outline" 
@@ -772,7 +772,7 @@ const Profile = () => {
       <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <NavigationLogo size="sm" className="flex-shrink-0" />
+            <NavigationLogo size="lg" className="flex-shrink-0" />
             <div className="h-6 w-px bg-border hidden sm:block" />
             <Button 
               variant="outline" 
