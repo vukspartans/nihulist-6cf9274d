@@ -1,90 +1,46 @@
 
 
-# תוכנית יישום: לשונית ריכוז מנהלים + צפייה ישירה במסמכים
+# תוכנית: נורמליזציה של כפתורי "טען תבנית" ו"נקה" בכל הטאבים
 
-## סקירת מצב נוכחי
+## בעיות שזוהו
 
-### פער 5 - ריכוז מנהלים
-הלשונית "תזרים גלובלי" (`GlobalCashFlowTab`) מציגה **רק גרף עמודות** של צפי יציאות ל-6 חודשים. האפיון דורש **טבלת סיכום per-project** עם עמודות כמו: סה"כ הסכם, שולם, יתרת חוב, מספר חשבונות פתוחים -- ורק אז את הגרף.
+1. **פירוט שירותים (ServiceDetailsTab)**: חסר כפתור "נקה" לאיפוס רשימת השירותים
+2. **תשלום (PaymentTermsTab)**: הטעינה האוטומטית לא עובדת -- התנאי `milestones.length === 0` נבדק כש-categoryId כבר מוגדר מראש, כך ש-`useEffect` לא מזהה שינוי. בנוסף, סדר הכפתורים הפוך: "נקה" מופיע מימין ל"טען תבנית" (ב-RTL), בעוד בשכ"ט הסדר הפוך
+3. **שכ"ט (FeeItemsTable)**: עובד נכון -- זה הסטנדרט לחיקוי
 
-### פער 6 - צפייה ישירה במסמכים
-בטבלת ההתחייבויות (`LiabilitiesTab`) ובטבלת ריכוז ספקים (`VendorConcentrationTab`) אין שום חיווי או קישור לקבצים מצורפים. כדי לראות קובץ, צריך לפתוח dialog נפרד. בנוסף, ה-hook `useAccountantData` **לא שולף את השדה `invoice_file_url`** מה-DB כלל.
+## סטנדרט אחיד (לפי טאב שכ"ט)
 
----
-
-## שינויים מתוכננים
-
-### 1. הוספת `invoice_file_url` ל-Data Layer
-
-**קובץ: `src/hooks/useAccountantData.ts`**
-- הוספת `invoice_file_url` ל-SELECT query של payment_requests
-- הוספת השדה ל-interface `AccountantRequest`
-- מיפוי השדה ב-mapping function
-
-### 2. לשונית ריכוז מנהלים (Per-Project Summary)
-
-**קובץ: `src/pages/AccountantDashboard.tsx`**
-
-החלפת `GlobalCashFlowTab` בלשונית `ManagerSummaryTab` שתכלול:
-
-**טבלת סיכום per-project:**
-
-| עמודה | מקור |
-|--------|------|
-| שם פרויקט | `project_name` |
-| מספר יועצים | distinct `project_advisor_id` per project |
-| סה"כ חשבונות | count per project |
-| חשבונות פתוחים | count where status != paid/rejected |
-| סה"כ שולם | sum of paid requests |
-| יתרת חוב פתוחה | sum of non-paid/rejected |
-| צפי חודש נוכחי | requests with expected_payment_date in current month |
-
-- הנתונים מחושבים client-side מתוך `allRequests` באמצעות `useMemo` -- קיבוץ לפי `project_id`
-- שורת סיכום (totals) בתחתית הטבלה
-- הגרף הקיים (6 חודשים) יישאר **מתחת לטבלה** כחלק מאותה לשונית
-
-### 3. צפייה ישירה במסמכים מהטבלאות
-
-**קובץ: `src/pages/AccountantDashboard.tsx`**
-
-בשתי הטבלאות (LiabilitiesTab + VendorConcentrationTab):
-- הוספת עמודה "קובץ" עם אייקון `Paperclip`
-- כשיש `invoice_file_url` -- האייקון לחיץ ופותח signed URL בחלון חדש
-- כשאין קובץ -- תא ריק (ללא אייקון)
-- שימוש ב-`supabase.storage.from('payment-files').createSignedUrl()` ליצירת URL זמני
-
----
-
-## פירוט טכני
-
-### קבצים שישתנו
-
-| קובץ | סוג שינוי |
-|-------|-----------|
-| `src/hooks/useAccountantData.ts` | הוספת `invoice_file_url` ל-interface, query ו-mapping |
-| `src/pages/AccountantDashboard.tsx` | החלפת `GlobalCashFlowTab` ב-`ManagerSummaryTab`; הוספת עמודת קובץ ל-`LiabilitiesTab` ו-`VendorConcentrationTab` |
-
-### לוגיקת Signed URL
-
-פונקציית helper פנימית בקומפוננטה:
+כל טאב יציג את הכפתורים באותו מיקום ובאותו סדר:
 
 ```text
-async function openFileUrl(filePath: string) {
-  const { data } = await supabase.storage
-    .from('payment-files')
-    .createSignedUrl(filePath, 300); // 5 min
-  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-}
+[כותרת הסקציה]                    [נקה] [טען תבנית]
 ```
 
-### מבנה ManagerSummaryTab
+- כותרת בצד ימין (RTL)
+- כפתורי פעולה בצד שמאל: קודם "נקה" (ghost, מוצג רק כשיש פריטים), אח"כ "טען תבנית" (LoadTemplateButton)
+- כפתור "נקה" זהה בסגנון: variant="ghost", size="sm", XCircle icon, text-xs, hover:text-destructive
 
-1. `useMemo` שמקבץ את `allRequests` לפי `project_id`
-2. לכל פרויקט מחשב: advisorCount, totalRequests, openRequests, totalPaid, totalOutstanding, currentMonthForecast
-3. מציג טבלה עם שורת totals
-4. מתחת -- הגרף הקיים (6 חודשים) ללא שינוי
+## שינויים
 
-### שינוי שם Tab
+### קובץ 1: `src/components/rfp/ServiceDetailsTab.tsx`
 
-- הטאב ישנה שם מ-"תזרים גלובלי" ל-"ריכוז מנהלים" עם אייקון `BarChart3` (נשאר אותו אייקון)
+**הוספת כפתור "נקה"** ליד כפתור "טען תבנית" בכותרת ה-Collapsible של "רשימת שירותים":
+- כפתור "נקה" שמבצע `onScopeItemsChange([])`
+- מוצג רק כש-`scopeItems.length > 0`
+- ממוקם לפני (שמאלית ל) כפתור "טען תבנית"
+
+### קובץ 2: `src/components/rfp/PaymentTermsTab.tsx`
+
+**תיקון 1 -- טעינה אוטומטית**: הבעיה היא שב-`useEffect` (שורה 146-155), הבדיקה `milestones.length === 0` מונעת טעינה כשכבר יש אבני דרך default מהרנדור הקודם, וגם ה-`prevCategoryIdRef` מאותחל ל-`undefined` ואז מקבל ערך בפעם הראשונה -- מה שמפעיל את הטעינה רק פעם אחת. כשמחליפים קטגוריה בטאב שירותים, ה-categoryId כבר משתנה לפני שנכנסים לטאב תשלום, כך שה-effect לא רץ שוב.
+
+התיקון: להסיר את התנאי `milestones.length === 0` ולטעון תמיד כשה-categoryId משתנה (כמו שעובד ב-FeeItemsTable), תוך שימוש ב-`lastAutoLoadRef` כדי למנוע כפילות.
+
+**תיקון 2 -- סדר כפתורים**: להחליף את סדר הכפתורים כך ש"נקה" יופיע ראשון (שמאלי יותר) ו"טען תבנית" אחרון (ימני יותר, קרוב יותר לכותרת) -- בדיוק כמו בטאב שכ"ט.
+
+### סיכום קבצים
+
+| קובץ | שינוי |
+|-------|-------|
+| `src/components/rfp/ServiceDetailsTab.tsx` | הוספת כפתור "נקה" ליד "טען תבנית" |
+| `src/components/rfp/PaymentTermsTab.tsx` | תיקון auto-load + תיקון סדר כפתורים |
 
