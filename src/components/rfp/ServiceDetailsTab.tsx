@@ -323,6 +323,11 @@ export const ServiceDetailsTab = ({
             </div>
             <div className="flex items-center gap-2">
               <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                <LoadTemplateButton
+                  onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
+                  loading={loadingTemplates}
+                  disabled={!advisorType || !selectedCategoryId}
+                />
                 {scopeItems.length > 0 && (
                   <Button
                     type="button"
@@ -335,11 +340,6 @@ export const ServiceDetailsTab = ({
                     נקה
                   </Button>
                 )}
-                <LoadTemplateButton
-                  onClick={() => selectedCategoryId && loadTemplatesForCategory(selectedCategoryId)}
-                  loading={loadingTemplates}
-                  disabled={!advisorType || !selectedCategoryId}
-                />
               </div>
               <ChevronDown className={`h-4 w-4 transition-transform ${checklistOpen ? 'rotate-180' : ''}`} />
             </div>
