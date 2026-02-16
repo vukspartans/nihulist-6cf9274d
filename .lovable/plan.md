@@ -1,22 +1,17 @@
 
-
-# Fix Logo Sizes on Landing Page
-
-## Problems Identified
-1. **Top navigation bar**: Logo uses `size="sm"` (28px) which is too small for a header logo with the new SVG format
-2. **Hero section**: The logo is placed as a standalone element above the headline text, which looks disconnected and awkward -- it should be removed from the hero since the branding is already in the nav bar
-3. **Footer**: Logo at `size="lg"` (48px) is fine
+# Increase Logo Size + Compact Top Bar
 
 ## Changes
 
-### 1. Navigation bar logo -- increase size (`src/pages/Landing.tsx`, line 118)
-- Change `size="sm"` to `size="md"` (36px height) for better visibility
-- Remove the `className="sm:h-10"` override since `md` already provides a good size
-- This gives the logo proper presence in the top bar without being oversized
+### 1. Logo size increase (~20%) in `src/components/Logo.tsx`
+- Current `xl` is 56px. Increase to 67px (56 * 1.2 = ~67)
+- Update the size map: `xl: 67`
+- Alternatively, keep size tiers clean and round to 68px
 
-### 2. Remove standalone logo from hero section (`src/pages/Landing.tsx`, lines 170-172)
-- Remove the `<Logo size="xl" />` block that sits awkwardly above the headline text "מחברים יזמי נדל״ן"
-- The logo is already displayed in the navigation bar -- having it twice is redundant and looks odd
+### 2. Compact the nav bar in `src/pages/Landing.tsx`
+- Current nav padding: `py-4 sm:py-6` -- reduce to `py-2 sm:py-3` to cut vertical padding roughly in half
+- This removes wasted whitespace while still giving the logo breathing room
 
 ### Files to modify
-- `src/pages/Landing.tsx` (2 edits)
+- `src/components/Logo.tsx` -- change `xl` height from 56 to 68
+- `src/pages/Landing.tsx` -- reduce nav padding from `py-4 sm:py-6` to `py-2 sm:py-3`
