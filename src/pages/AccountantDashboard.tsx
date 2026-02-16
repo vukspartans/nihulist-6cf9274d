@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAccountantData, AccountantRequest } from '@/hooks/useAccountantData';
+import { supabase } from '@/integrations/supabase/client';
 import { useApprovalChain } from '@/hooks/useApprovalChain';
 import { PaymentStatusBadge } from '@/components/payments/PaymentStatusBadge';
 import NavigationLogo from '@/components/NavigationLogo';
@@ -24,6 +25,22 @@ const formatCurrency = (amount: number) =>
 
 const formatDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('he-IL') : '—';
+
+async function openFileUrl(filePath: string) {
+  const { data } = await supabase.storage
+    .from('payment-files')
+    .createSignedUrl(filePath, 300);
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+}
+
+function FileCell({ url }: { url: string | null }) {
+  if (!url) return <span />;
+  return (
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openFileUrl(url)}>
+      <Paperclip className="w-4 h-4 text-muted-foreground hover:text-primary" />
+    </Button>
+  );
+}
 
 // ── Tab 1: Liabilities ──────────────────────────────────────────────
 
@@ -250,13 +267,14 @@ function LiabilitiesTab({
                 <TableHead className="text-right">סכום</TableHead>
                 <TableHead className="text-right">תאריך הגשה</TableHead>
                 <TableHead className="text-right">תשלום צפוי</TableHead>
+                <TableHead className="text-right w-10">קובץ</TableHead>
                 <TableHead className="text-right">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     אין בקשות תשלום {filter === 'open' ? 'פתוחות' : 'סגורות'}
                   </TableCell>
                 </TableRow>
@@ -282,6 +300,7 @@ function LiabilitiesTab({
                           onChange={e => onUpdateDate(req.id, e.target.value || null)}
                         />
                       </TableCell>
+                      <TableCell><FileCell url={req.invoice_file_url} /></TableCell>
                       <TableCell>
                         {canMarkPaid ? (
                           <div className="flex items-center gap-1">
@@ -365,6 +384,7 @@ function VendorConcentrationTab({
                         <TableHead className="text-right">סטטוס</TableHead>
                         <TableHead className="text-right">סכום</TableHead>
                         <TableHead className="text-right">תאריך</TableHead>
+                        <TableHead className="text-right w-10">קובץ</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -375,6 +395,7 @@ function VendorConcentrationTab({
                           <TableCell><PaymentStatusBadge status={req.status} /></TableCell>
                           <TableCell>{formatCurrency(req.total_amount || req.amount)}</TableCell>
                           <TableCell>{formatDate(req.submitted_at || req.created_at)}</TableCell>
+                          <TableCell><FileCell url={req.invoice_file_url} /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -389,8 +410,81 @@ function VendorConcentrationTab({
   );
 }
 
-// ── Tab 3: Global Cash Flow ──────────────────────────────────────────
-function GlobalCashFlowTab({ requests }: { requests: AccountantRequest[] }) {
+// ── Tab 3: Manager Summary (per-project) ─────────────────────────────
+interface ProjectSummary {
+  projectId: string;
+  projectName: string;
+  advisorCount: number;
+  totalRequests: number;
+  openRequests: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  currentMonthForecast: number;
+}
+
+function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
+  const projectSummaries = useMemo(() => {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const map = new Map<string, ProjectSummary>();
+
+    requests.forEach(req => {
+      if (!map.has(req.project_id)) {
+        map.set(req.project_id, {
+          projectId: req.project_id,
+          projectName: req.project_name,
+          advisorCount: 0,
+          totalRequests: 0,
+          openRequests: 0,
+          totalPaid: 0,
+          totalOutstanding: 0,
+          currentMonthForecast: 0,
+        });
+      }
+      const s = map.get(req.project_id)!;
+      s.totalRequests++;
+      const amt = req.total_amount || req.amount;
+
+      if (req.status === 'paid') {
+        s.totalPaid += amt;
+      } else if (req.status !== 'rejected') {
+        s.openRequests++;
+        s.totalOutstanding += amt;
+        const epd = req.expected_payment_date;
+        if (epd && epd.substring(0, 7) === currentMonth) {
+          s.currentMonthForecast += amt;
+        }
+      }
+    });
+
+    // Count distinct advisors per project
+    const advisorSets = new Map<string, Set<string>>();
+    requests.forEach(req => {
+      if (!req.project_advisor_id) return;
+      if (!advisorSets.has(req.project_id)) advisorSets.set(req.project_id, new Set());
+      advisorSets.get(req.project_id)!.add(req.project_advisor_id);
+    });
+    advisorSets.forEach((set, pid) => {
+      const s = map.get(pid);
+      if (s) s.advisorCount = set.size;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+  }, [requests]);
+
+  const totals = useMemo(() => projectSummaries.reduce(
+    (t, s) => ({
+      advisorCount: t.advisorCount + s.advisorCount,
+      totalRequests: t.totalRequests + s.totalRequests,
+      openRequests: t.openRequests + s.openRequests,
+      totalPaid: t.totalPaid + s.totalPaid,
+      totalOutstanding: t.totalOutstanding + s.totalOutstanding,
+      currentMonthForecast: t.currentMonthForecast + s.currentMonthForecast,
+    }),
+    { advisorCount: 0, totalRequests: 0, openRequests: 0, totalPaid: 0, totalOutstanding: 0, currentMonthForecast: 0 }
+  ), [projectSummaries]);
+
+  // Keep the existing 6-month chart data
   const chartData = useMemo(() => {
     const now = new Date();
     const months: string[] = [];
@@ -398,10 +492,7 @@ function GlobalCashFlowTab({ requests }: { requests: AccountantRequest[] }) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
-
     const monthMap = new Map<string, number>(months.map(m => [m, 0]));
-
-    // Only non-terminal, non-rejected requests
     requests
       .filter(r => r.status !== 'paid' && r.status !== 'rejected')
       .forEach(r => {
@@ -412,19 +503,79 @@ function GlobalCashFlowTab({ requests }: { requests: AccountantRequest[] }) {
           monthMap.set(key, (monthMap.get(key) || 0) + (r.total_amount || r.amount));
         }
       });
-
     const heMonths = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
     return months.map(m => {
       const [y, mo] = m.split('-');
-      return {
-        month: `${heMonths[parseInt(mo, 10) - 1]} ${y.slice(2)}`,
-        amount: monthMap.get(m) || 0,
-      };
+      return { month: `${heMonths[parseInt(mo, 10) - 1]} ${y.slice(2)}`, amount: monthMap.get(m) || 0 };
     });
   }, [requests]);
 
   return (
     <div className="space-y-4">
+      {/* Per-project summary table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">סיכום לפי פרויקט</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table dir="rtl">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">פרויקט</TableHead>
+                  <TableHead className="text-right">יועצים</TableHead>
+                  <TableHead className="text-right">סה"כ חשבונות</TableHead>
+                  <TableHead className="text-right">פתוחים</TableHead>
+                  <TableHead className="text-right">שולם</TableHead>
+                  <TableHead className="text-right">יתרת חוב</TableHead>
+                  <TableHead className="text-right">צפי חודש נוכחי</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projectSummaries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      אין נתונים להצגה
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {projectSummaries.map(s => (
+                      <TableRow key={s.projectId}>
+                        <TableCell className="font-medium">{s.projectName}</TableCell>
+                        <TableCell>{s.advisorCount}</TableCell>
+                        <TableCell>{s.totalRequests}</TableCell>
+                        <TableCell>
+                          {s.openRequests > 0 ? (
+                            <Badge variant="secondary">{s.openRequests}</Badge>
+                          ) : '0'}
+                        </TableCell>
+                        <TableCell>{formatCurrency(s.totalPaid)}</TableCell>
+                        <TableCell className={s.totalOutstanding > 0 ? 'text-destructive font-medium' : ''}>
+                          {formatCurrency(s.totalOutstanding)}
+                        </TableCell>
+                        <TableCell>{formatCurrency(s.currentMonthForecast)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Totals row */}
+                    <TableRow className="bg-muted/50 font-bold border-t-2">
+                      <TableCell>סה"כ</TableCell>
+                      <TableCell>{totals.advisorCount}</TableCell>
+                      <TableCell>{totals.totalRequests}</TableCell>
+                      <TableCell>{totals.openRequests}</TableCell>
+                      <TableCell>{formatCurrency(totals.totalPaid)}</TableCell>
+                      <TableCell className="text-destructive">{formatCurrency(totals.totalOutstanding)}</TableCell>
+                      <TableCell>{formatCurrency(totals.currentMonthForecast)}</TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Existing 6-month forecast chart */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
@@ -535,9 +686,9 @@ export default function AccountantDashboard() {
               <Users className="w-4 h-4" />
               ריכוז ספקים
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="gap-1.5">
+            <TabsTrigger value="manager" className="gap-1.5">
               <BarChart3 className="w-4 h-4" />
-              תזרים גלובלי
+              ריכוז מנהלים
             </TabsTrigger>
           </TabsList>
 
@@ -555,8 +706,8 @@ export default function AccountantDashboard() {
             <VendorConcentrationTab vendorSummaries={vendorSummaries} />
           </TabsContent>
 
-          <TabsContent value="cashflow">
-            <GlobalCashFlowTab requests={allRequests} />
+          <TabsContent value="manager">
+            <ManagerSummaryTab requests={allRequests} />
           </TabsContent>
         </Tabs>
       </div>
