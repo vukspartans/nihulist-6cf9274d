@@ -12,7 +12,7 @@ const sizeHeights: Record<string, number> = {
   sm: 28,
   md: 36,
   lg: 48,
-  xl: 56,
+  xl: 68,
 };
 
 const Logo = ({ size = 'md', className = '', variant = 'default' }: LogoProps) => {
