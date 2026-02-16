@@ -1,28 +1,31 @@
+import billdingLogo from '@/assets/billding-logo.svg';
+import billdingLogoWhite from '@/assets/billding-logo-white.svg';
+
 interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   variant?: 'default' | 'white';
 }
 
-const sizeClasses = {
-  xs: 'text-lg',
-  sm: 'text-xl',
-  md: 'text-2xl',
-  lg: 'text-3xl',
-  xl: 'text-4xl'
+const sizeHeights: Record<string, number> = {
+  xs: 20,
+  sm: 28,
+  md: 36,
+  lg: 48,
+  xl: 56,
 };
 
 const Logo = ({ size = 'md', className = '', variant = 'default' }: LogoProps) => {
+  const height = sizeHeights[size];
+  const src = variant === 'white' ? billdingLogoWhite : billdingLogo;
+
   return (
-    <span 
-      className={`font-bold tracking-tight ${sizeClasses[size]} ${
-        variant === 'white' 
-          ? 'text-white' 
-          : 'bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent'
-      } ${className}`}
-    >
-      Billding
-    </span>
+    <img
+      src={src}
+      alt="Billding"
+      style={{ height: `${height}px`, width: 'auto' }}
+      className={className}
+    />
   );
 };
 

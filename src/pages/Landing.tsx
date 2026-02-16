@@ -167,9 +167,10 @@ const Landing = memo(() => {
               </div>
 
               {/* Main headline - Mobile optimized */}
+            <div className="animate-slide-up mb-2">
+                <Logo size="xl" />
+              </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
-                <span className="gradient-text">Billding</span>
-                <br />
                 <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
                 <span className="gradient-text text-2xl sm:text-3xl md:text-4xl lg:text-4xl xl:text-5xl">חכם יותר, מהיר יותר</span>
