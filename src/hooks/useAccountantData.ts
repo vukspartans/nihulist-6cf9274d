@@ -19,6 +19,7 @@ export interface AccountantRequest {
   submitted_at: string | null;
   paid_at: string | null;
   expected_payment_date: string | null;
+  invoice_file_url: string | null;
   created_at: string;
 }
 
@@ -66,7 +67,7 @@ export function useAccountantData() {
         .select(`
           id, project_id, project_advisor_id, payment_milestone_id,
           amount, total_amount, currency, status,
-          submitted_at, paid_at, expected_payment_date, created_at,
+          submitted_at, paid_at, expected_payment_date, invoice_file_url, created_at,
           project_advisor:project_advisors!payment_requests_project_advisor_id_fkey (
             id, advisor_id,
             advisors!fk_project_advisors_advisor ( id, company_name )
@@ -97,6 +98,7 @@ export function useAccountantData() {
         submitted_at: r.submitted_at,
         paid_at: r.paid_at,
         expected_payment_date: r.expected_payment_date,
+        invoice_file_url: r.invoice_file_url || null,
         created_at: r.created_at,
       }));
 
