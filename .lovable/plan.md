@@ -1,130 +1,90 @@
 
 
-# Sanity Check: שלב 2.2 – רשימת חשבונות לתשלום ובקרה תקציבית
+# תוכנית יישום: לשונית ריכוז מנהלים + צפייה ישירה במסמכים
 
-## סיכום כללי
+## סקירת מצב נוכחי
 
-מתוך 8 סעיפי המשנה במסמך האפיון, **5 מיושמים באופן מלא או כמעט מלא**, **2 מיושמים חלקית**, ו-**1 לא מיושם כלל**.
+### פער 5 - ריכוז מנהלים
+הלשונית "תזרים גלובלי" (`GlobalCashFlowTab`) מציגה **רק גרף עמודות** של צפי יציאות ל-6 חודשים. האפיון דורש **טבלת סיכום per-project** עם עמודות כמו: סה"כ הסכם, שולם, יתרת חוב, מספר חשבונות פתוחים -- ורק אז את הגרף.
 
----
-
-## מצב יישום לפי סעיף
-
-### 2.1 חיבור משימות לאבני דרך תשלום -- IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| הגדרת אבני דרך מראש (אדמין) | Done | טבלת `payment_milestones` + ניהול אדמין |
-| תנאי השלמה (משימות קריטיות) | Done | `is_payment_critical` flag בטבלת `project_tasks` |
-| טריגר אוטומטי | Done | `trg_auto_unlock_milestone` -- DB trigger שמעביר ל-`due` |
-| מניעת זיהוי בעיכוב | Done | רק כשכל הקריטיות `completed`/`cancelled` |
-| הבדלה בין משימות תומכות לקריטיות | Done | Toggle "קריטי לתשלום" ב-`CreateTaskDialog` ו-`TaskDetailDialog` |
-| קישור משימה-אבן דרך | Done | `payment_milestone_id` FK |
-| התראה וזכאות | Done | Alert ירוק ב-`PaymentDashboard` + הודעה ב-`AdvisorPaymentsView` |
-
-### 2.2 דרישת תשלום ליועצים -- IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| פתיחת דרישה רק אחרי זיהוי | Done | כפתור מושבת כש-`dueMilestones.length === 0`; ב-advisorMode מסנן `status === 'due'` |
-| שיוך לאבן דרך אחת | Done | בורר אבן דרך בדיאלוג |
-| סכום נגזר מהסכם | Done | Amount pre-filled מאבן הדרך |
-| חריגה דורשת סימון והנמקה | Done | Alerts צהוב/אדום + notes חובה |
-| טופס מובנה | Done | שם פרויקט (implicit), יועץ, אבן דרך, סכום, מע"מ, הערות |
-| % ביצוע מצטבר | Done | עמודת `cumulative_percent` ב-`AdvisorPaymentsView` |
-| צירוף קבצים | Done | `PaymentFileUpload` component + `invoice_file_url` |
-
-**פער קטן**: הטופס לא מציג במפורש "שם פרויקט" ו"תחום יועץ" כשדות קריאה (הם מוצגים בטבלה אבל לא בדיאלוג עצמו). זה קוסמטי בלבד.
-
-### 2.3 קליטה וניהול חשבונות חיצוניים -- NOT IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| חלופה 1: קליטה דרך מייל | Missing | אין מנגנון אימייל כניסה |
-| חלופה 2: קליטה מתוך המערכת | Partial | יש קטגוריית `external` ב-`CreatePaymentRequestDialog` עם שדה "שם גורם חיצוני", אבל אין AI extraction |
-| חילוץ נתונים AI | Missing | אין OCR/AI parsing לקבצי חשבון חיצוניים |
-| שיוך לפרויקט | Done | כל בקשה משויכת לפרויקט |
-| סיווג לקטגוריה | Partial | 3 קטגוריות קשיחות (consultant/external/other); אין קטגוריות אדמין דינמיות ולא AI-suggested |
-
-**זהו הפער המשמעותי ביותר** -- המערכת לא תומכת בקליטת חשבונות חיצוניים עם חילוץ נתונים אוטומטי.
-
-### 2.4 סטטוסים ותהליך אישור -- IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| שרשרת סטטוסים דינמית | Done | טבלת `payment_status_definitions` + `useApprovalChain` |
-| הוספת תחנות אישור ע"י יזם | Done | ניהול אדמין ב-`PaymentStatusesManagement` |
-| סדר קבוע (sequential) | Done | `display_order` + `getNextStep` |
-| מנגנון התראות | Done | `notify-payment-status` edge function |
-| חתימה דיגיטלית (checkbox/drawn) | Done | `ApprovePaymentDialog` + `SignatureCanvas` + `signatures` table |
-| Timestamp לכל אישור | Done | `approved_at`, `submitted_at`, `paid_at` בציר הזמן |
-
-**פער**: החתימה נשמרת בטבלת `signatures` אבל **לא מוטמעת על גבי המסמך המצורף** כפי שדורש האפיון ("החתימה וה-Timestamp יופיעו גם על המסמכים המצורפים"). הטמעה על PDF דורשת ספריית PDF manipulation בצד שרת.
-
-### 2.5 מסך הנהלת חשבונות -- MOSTLY IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| לשונית 1: ריכוז יועצים | Done | `VendorConcentrationTab` -- expandable per vendor, paid YTD, outstanding |
-| לשונית 2: ריכוז מנהלים | Partial | Tab "תזרים גלובלי" קיים, אבל לא מציג סיכום עמודות per-project כפי שמתואר |
-| לשונית 3: רשימת חשבונות | Done | `LiabilitiesTab` עם סינון מתקדם |
-| סינון לפי פרויקט, יועץ, סטטוס | Done | Filter bar מלא |
-| סינון לפי תאריכים | Done | submitted + expected date ranges |
-| סינון לפי סכום | Done | min/max |
-| סינון חריגות | Done | "חריגות בלבד" toggle |
-| צפייה במסמכים מצורפים | Partial | לא מוצג בלשונית הנה"ח; קיים רק ב-`PaymentRequestDetailDialog` |
-| ייצוא היררכי (ZIP) | Missing | אין כפתור ייצוא עם מבנה תיקיות |
-| עמודת "הוכר ע"י שמאי" | Missing | אין שדה DB ולא UI |
-
-### 2.6 תזרים וצפי תשלומים -- IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| צפי תשלומים עתידי | Done | `CashFlowChart` ברמת פרויקט (צפי vs בפועל מצטבר) |
-| דו"ח רוחבי | Done | `GlobalCashFlowTab` ב-`AccountantDashboard` -- 6 חודשים קדימה |
-
-### 2.7 התראות -- IMPLEMENTED
-
-| דרישה | סטטוס | הערות |
-|--------|--------|-------|
-| התראות על מועד טיפול | Done | `payment-deadline-reminder` edge function |
-| התראות על חשבונות שלא אושרו | Done | `notify-payment-status` edge function |
-| התראת חשבונית מס ליועץ | Done | Alert ב-`AdvisorPaymentsView` כש-`status === 'paid'` |
-
-### 2.8 בדיקות QA -- NOT IMPLEMENTED
-
-אין test files לרכיבי התשלום (לא unit tests ולא integration tests).
+### פער 6 - צפייה ישירה במסמכים
+בטבלת ההתחייבויות (`LiabilitiesTab`) ובטבלת ריכוז ספקים (`VendorConcentrationTab`) אין שום חיווי או קישור לקבצים מצורפים. כדי לראות קובץ, צריך לפתוח dialog נפרד. בנוסף, ה-hook `useAccountantData` **לא שולף את השדה `invoice_file_url`** מה-DB כלל.
 
 ---
 
-## סיכום פערים לפי עדיפות
+## שינויים מתוכננים
 
-### Priority 1 (פערים פונקציונליים משמעותיים)
+### 1. הוספת `invoice_file_url` ל-Data Layer
 
-1. **סעיף 2.3 -- קליטת חשבונות חיצוניים**: חסר flow מלא לקליטת חשבונות מגורמים חיצוניים עם AI extraction. היום רק אפשר ליצור בקשה "חיצונית" ידנית.
+**קובץ: `src/hooks/useAccountantData.ts`**
+- הוספת `invoice_file_url` ל-SELECT query של payment_requests
+- הוספת השדה ל-interface `AccountantRequest`
+- מיפוי השדה ב-mapping function
 
-2. **ייצוא היררכי (ZIP)**: אין כפתור export שמוריד ריכוז + תיקיות מסמכים.
+### 2. לשונית ריכוז מנהלים (Per-Project Summary)
 
-3. **עמודת "הוכר ע"י שמאי"**: חסר שדה DB (`appraiser_approved`) + UI. דורש גם role/permission לשמאי.
+**קובץ: `src/pages/AccountantDashboard.tsx`**
 
-### Priority 2 (פערים טכניים)
+החלפת `GlobalCashFlowTab` בלשונית `ManagerSummaryTab` שתכלול:
 
-4. **הטמעת חתימה על מסמכים**: החתימה נשמרת בנפרד אבל לא מוטמעת על ה-PDF המצורף. דורש PDF manipulation (edge function).
+**טבלת סיכום per-project:**
 
-5. **לשונית "ריכוז מנהלים"**: הלשונית הקיימת מציגה תזרים גלובלי ולא סיכום per-project עם העמודות שמתוארות בסעיף 3 של המסמך.
+| עמודה | מקור |
+|--------|------|
+| שם פרויקט | `project_name` |
+| מספר יועצים | distinct `project_advisor_id` per project |
+| סה"כ חשבונות | count per project |
+| חשבונות פתוחים | count where status != paid/rejected |
+| סה"כ שולם | sum of paid requests |
+| יתרת חוב פתוחה | sum of non-paid/rejected |
+| צפי חודש נוכחי | requests with expected_payment_date in current month |
 
-6. **צפייה במסמכים מהטבלה**: בלשונית הנה"ח אין קישור ישיר לקבצים מצורפים; צריך לפתוח dialog פרטים.
+- הנתונים מחושבים client-side מתוך `allRequests` באמצעות `useMemo` -- קיבוץ לפי `project_id`
+- שורת סיכום (totals) בתחתית הטבלה
+- הגרף הקיים (6 חודשים) יישאר **מתחת לטבלה** כחלק מאותה לשונית
 
-### Priority 3 (שיפורים)
+### 3. צפייה ישירה במסמכים מהטבלאות
 
-7. **קטגוריות דינמיות**: במקום 3 קטגוריות קשיחות (consultant/external/other), האפיון מבקש קטגוריות שהאדמין מגדיר.
+**קובץ: `src/pages/AccountantDashboard.tsx`**
 
-8. **בדיקות QA**: אין tests כלל.
+בשתי הטבלאות (LiabilitiesTab + VendorConcentrationTab):
+- הוספת עמודה "קובץ" עם אייקון `Paperclip`
+- כשיש `invoice_file_url` -- האייקון לחיץ ופותח signed URL בחלון חדש
+- כשאין קובץ -- תא ריק (ללא אייקון)
+- שימוש ב-`supabase.storage.from('payment-files').createSignedUrl()` ליצירת URL זמני
 
 ---
 
-## המלצה
+## פירוט טכני
 
-הנושאים ב-Priority 1 דורשים תכנון נפרד (בעיקר סעיף 2.3 שהוא מודול שלם). מומלץ לטפל ב-Priority 2 לפני שמתקדמים -- בפרט פריטים 5 ו-6 שהם שיפורי UI קטנים יחסית.
+### קבצים שישתנו
 
-האם תרצה שאכין תוכנית יישום לאחד מהפערים הללו?
+| קובץ | סוג שינוי |
+|-------|-----------|
+| `src/hooks/useAccountantData.ts` | הוספת `invoice_file_url` ל-interface, query ו-mapping |
+| `src/pages/AccountantDashboard.tsx` | החלפת `GlobalCashFlowTab` ב-`ManagerSummaryTab`; הוספת עמודת קובץ ל-`LiabilitiesTab` ו-`VendorConcentrationTab` |
+
+### לוגיקת Signed URL
+
+פונקציית helper פנימית בקומפוננטה:
+
+```text
+async function openFileUrl(filePath: string) {
+  const { data } = await supabase.storage
+    .from('payment-files')
+    .createSignedUrl(filePath, 300); // 5 min
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+}
+```
+
+### מבנה ManagerSummaryTab
+
+1. `useMemo` שמקבץ את `allRequests` לפי `project_id`
+2. לכל פרויקט מחשב: advisorCount, totalRequests, openRequests, totalPaid, totalOutstanding, currentMonthForecast
+3. מציג טבלה עם שורת totals
+4. מתחת -- הגרף הקיים (6 חודשים) ללא שינוי
+
+### שינוי שם Tab
+
+- הטאב ישנה שם מ-"תזרים גלובלי" ל-"ריכוז מנהלים" עם אייקון `BarChart3` (נשאר אותו אייקון)
+
