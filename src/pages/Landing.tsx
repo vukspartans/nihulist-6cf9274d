@@ -115,7 +115,7 @@ const Landing = memo(() => {
             }} 
             className={user ? "cursor-pointer" : ""}
           >
-            <Logo size="md" />
+            <Logo size="xl" />
           </div>
           
           {/* Desktop Navigation */}
