@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, AlertCircle, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle, TrendingUp, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PaymentTerms, MilestonePayment, IndexType } from '@/types/rfpRequest';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +35,7 @@ export const PaymentTermsTab = ({
 }: PaymentTermsTabProps) => {
   const { toast } = useToast();
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const prevCategoryIdRef = useRef<string | undefined>(categoryId);
   
   // Set default index type when component mounts or defaultIndexType changes
   useEffect(() => {
@@ -78,7 +79,7 @@ export const PaymentTermsTab = ({
     updateField('milestone_payments', newMilestones);
   };
 
-  const loadTemplate = async () => {
+  const fetchAndLoadTemplate = useCallback(async (showToast: boolean) => {
     setLoadingTemplate(true);
     try {
       let query = supabase
@@ -87,11 +88,9 @@ export const PaymentTermsTab = ({
         .eq('is_active', true)
         .order('display_order');
       
-      // Filter by category_id first if provided (most specific)
       if (categoryId) {
         query = query.eq('category_id', categoryId);
       } else if (advisorType) {
-        // Fallback to advisor specialty filter
         query = query.or(`advisor_specialty.eq.${advisorType},advisor_specialty.is.null`);
       }
       
@@ -106,37 +105,58 @@ export const PaymentTermsTab = ({
           trigger: m.description || m.name
         }));
         updateField('milestone_payments', milestones);
-        toast({ 
-          title: `נטענו ${data.length} אבני דרך מתבנית`,
-          description: 'ניתן לערוך את האחוזים והתיאורים'
-        });
+        if (showToast) {
+          toast({ 
+            title: `נטענו ${data.length} אבני דרך מתבנית`,
+            description: 'ניתן לערוך את האחוזים והתיאורים'
+          });
+        }
       } else {
-        // Fallback to hardcoded template
         updateField('milestone_payments', [
           { description: 'בחתימה על ההסכם', percentage: 30, trigger: 'בחתימה על ההסכם' },
           { description: 'עם קבלת היתר בנייה', percentage: 40, trigger: 'עם קבלת היתר בנייה' },
           { description: 'עם סיום התכנון', percentage: 30, trigger: 'עם סיום התכנון' }
         ]);
-        toast({ 
-          title: 'נטענה תבנית ברירת מחדל',
-          description: 'לא נמצאו תבניות אבני דרך במערכת'
-        });
+        if (showToast) {
+          toast({ 
+            title: 'נטענה תבנית ברירת מחדל',
+            description: 'לא נמצאו תבניות אבני דרך במערכת'
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading milestone templates:', error);
-      // Fallback to hardcoded template on error
       updateField('milestone_payments', [
         { description: 'בחתימה על ההסכם', percentage: 30, trigger: 'בחתימה על ההסכם' },
         { description: 'עם קבלת היתר בנייה', percentage: 40, trigger: 'עם קבלת היתר בנייה' },
         { description: 'עם סיום התכנון', percentage: 30, trigger: 'עם סיום התכנון' }
       ]);
-      toast({ 
-        title: 'נטענה תבנית ברירת מחדל',
-        variant: 'destructive'
-      });
+      if (showToast) {
+        toast({ 
+          title: 'נטענה תבנית ברירת מחדל',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setLoadingTemplate(false);
     }
+  }, [categoryId, advisorType, updateField, toast]);
+
+  // Auto-load milestones when categoryId changes and milestones are empty
+  useEffect(() => {
+    if (categoryId && categoryId !== prevCategoryIdRef.current) {
+      const milestones = paymentTerms.milestone_payments || [];
+      if (milestones.length === 0) {
+        fetchAndLoadTemplate(false);
+      }
+    }
+    prevCategoryIdRef.current = categoryId;
+  }, [categoryId]);
+
+  const loadTemplate = () => fetchAndLoadTemplate(true);
+
+  const clearMilestones = () => {
+    updateField('milestone_payments', []);
   };
 
   // Calculate total percentage (milestones only)
@@ -152,10 +172,24 @@ export const PaymentTermsTab = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-right font-medium">אבני דרך לתשלום</Label>
-          <LoadTemplateButton
-            onClick={loadTemplate}
-            loading={loadingTemplate}
-          />
+          <div className="flex items-center gap-1">
+            {milestones.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearMilestones}
+                className="h-7 gap-1 text-muted-foreground hover:text-destructive text-xs"
+              >
+                <XCircle className="h-3 w-3" />
+                נקה
+              </Button>
+            )}
+            <LoadTemplateButton
+              onClick={loadTemplate}
+              loading={loadingTemplate}
+            />
+          </div>
         </div>
         
         <div className="border rounded-lg overflow-hidden">
