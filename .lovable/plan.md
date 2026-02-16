@@ -1,56 +1,101 @@
 
 
-# Fix Template Loading Bugs: Duplicates and Missing Templates
+# Phase 2.2 Gaps - Implementation Plan (3 Features)
 
-## Problems Identified
+## Feature 1: File Upload for Payment Requests
 
-### Bug 1: Duplicate/merged rows in fees and milestones
-**Root cause**: Legacy templates exist in the database without a `category_id` (orphaned). When a category IS selected, the queries correctly filter by `category_id`. However, when no category is selected yet, the fallback queries pull in both advisor-specific AND generic (null) templates. If the user then selects a category, new templates load but old items may persist or mix in certain scenarios.
+### Current State
+The `CreatePaymentRequestDialog` has an `invoice_file_url` field in the database but NO upload UI. The spec requires optional file attachments (PDF invoices, email confirmations, etc.).
 
-For milestones specifically (`PaymentTermsTab`), the fallback query at line 94 uses:
-```
-advisor_specialty.eq.${advisorType},advisor_specialty.is.null
-```
-This pulls 5 generic milestones (null advisor) PLUS advisor-specific ones, causing duplicates.
+### Changes
 
-### Bug 2: Templates not loading for מעליות, נגישות, קרינה
-**Root cause**: These advisor types have ALL their fee item templates assigned to a specific `category_id` AND `submission_method_id`. The auto-load in `FeeItemsTable` (line 120) requires ALL THREE: `advisorType`, `categoryId`, AND `submissionMethodId`. The `ServiceDetailsTab` auto-selects the default category, which cascades to method selection -- but there's a timing issue where the method hasn't been set yet when the fee tab tries to auto-load.
+**New component: `src/components/payments/PaymentFileUpload.tsx`**
+- Reusable file upload widget using Supabase Storage bucket `payment-files`
+- Accept PDF, images, and common document types
+- 20MB max file size (per system standard)
+- Upload to path: `{projectId}/{requestId or 'draft'}/{uuid}.{ext}`
+- Display uploaded file with name, size, and delete option
+- Return the storage path on upload
 
-For milestones, the `PaymentTermsTab` auto-load effect only fires when `categoryId` changes AND milestones are empty, but doesn't re-fire when the component first mounts with a `categoryId` already set.
+**Modify: `src/components/payments/CreatePaymentRequestDialog.tsx`**
+- Add `PaymentFileUpload` component below the notes field
+- Store uploaded file path in `invoice_file_url` field
+- On form reset, clear file state
+- Optional -- not required for form submission
 
-## Solution
+**Modify: `src/components/payments/PaymentRequestDetailDialog.tsx`**
+- Display attached file with download link (signed URL)
+- Show file name and a download/preview button
 
-### File 1: `src/components/rfp/PaymentTermsTab.tsx`
+**Modify: `src/components/payments/AdvisorPaymentsView.tsx`**
+- Add file icon indicator in the table for requests that have `invoice_file_url`
+- Clicking opens the file (signed URL)
 
-1. **Fix milestone query to exclude orphaned templates when categoryId is set**: When `categoryId` is provided, only query by `category_id` (already correct). When `categoryId` is NOT provided but `advisorType` is, filter strictly by `advisor_specialty` WITHOUT including `advisor_specialty.is.null` -- the generic null-advisor milestones are legacy data that shouldn't be mixed in.
+**Database**: No schema changes needed -- `invoice_file_url` column already exists. Storage bucket `payment-files` may need creation (will check and create via Supabase if missing).
 
-2. **Fix auto-load to trigger on initial mount**: The current effect only fires when `categoryId` changes from a previous value. Add logic to also fire on initial mount when `categoryId` is already set and milestones are empty.
+---
 
-3. **Keep clear button and manual load button** as implemented.
+## Feature 2: Advanced Filtering in Accountant Liabilities Tab
 
-### File 2: `src/components/rfp/FeeItemsTable.tsx`
+### Current State
+The `LiabilitiesTab` in `AccountantDashboard.tsx` only has open/closed toggle. The spec requires filtering by: project, advisor, specialty, status, dates, amounts, and overdue flags.
 
-1. **Fix fee items query to exclude orphaned templates**: When `categoryId` is provided, the query already filters correctly. But when only `advisorType` is set (no category), add `.is('category_id', null)` to avoid pulling category-assigned items alongside orphaned ones.
+### Changes
 
-2. **Relax auto-load requirement**: Currently requires all three of `advisorType + categoryId + submissionMethodId`. Change to also auto-load when `categoryId` is set but `submissionMethodId` is not yet available -- in this case, load items matching `categoryId` without filtering by method. This fixes the timing issue for advisors where all templates have a method assigned.
+**Modify: `src/pages/AccountantDashboard.tsx` (LiabilitiesTab)**
+- Add a collapsible filter bar below the open/closed toggle with:
+  - **Project filter**: `Select` dropdown populated from distinct project names in requests
+  - **Advisor filter**: `Select` dropdown from distinct advisor names
+  - **Status filter**: Multi-select or `Select` from payment_status_definitions
+  - **Date range**: Two date inputs for submitted_at range
+  - **Expected payment date range**: Two date inputs
+  - **Amount range**: Min/max number inputs
+  - **Overdue toggle**: Checkbox to show only requests past their expected_payment_date
+- All filters applied client-side via `useMemo` on the existing `allRequests` array
+- "Reset filters" button to clear all
+- Filter state managed with a single `useState` object
+- Filter bar toggleable via a "Filters" button with `Filter` icon to keep the UI clean when not needed
 
-3. **Add clear button**: Add the same "נקה" (Clear) pattern from PaymentTermsTab to allow users to empty fee items.
+---
 
-### Database cleanup (recommended, not code)
-The admin page already shows a warning: "יש X תבניות קיימות שלא שויכו לסוג תבנית" (There are X existing templates not assigned to a template type). These orphaned templates should eventually be reassigned or deleted via the admin panel. The code fix ensures they don't interfere regardless.
+## Feature 3: Budget Overrun Validation
 
-## Technical Details
+### Current State
+`CreatePaymentRequestDialog` does not validate whether the requested amount exceeds the agreement amount. The spec requires: "deviation from the amount requires marking and justification."
 
-### PaymentTermsTab changes:
-- Line 94: Change fallback from `advisor_specialty.eq.X,advisor_specialty.is.null` to just `advisor_specialty.eq.X`
-- Lines 120-126 (auto-load effect): Also trigger when component mounts with a `categoryId` already present and milestones are empty (handle initial render, not just changes)
+### Changes
 
-### FeeItemsTable changes:
-- Lines 54-65: When `categoryId` is NOT provided, add `.is('category_id', null)` to exclude category-assigned templates from the fallback
-- Lines 119-125: Allow auto-load when `categoryId` is set even without `submissionMethodId` (load all items for that category). Keep the composite key tracking to avoid duplicate loads
-- Add a "נקה" (Clear) button next to "טען תבנית" matching PaymentTermsTab pattern
+**Modify: `src/components/payments/CreatePaymentRequestDialog.tsx`**
+- After milestone selection, calculate:
+  - `agreementAmount`: The milestone's defined amount
+  - `alreadyPaid`: Sum of all paid/pending requests for this milestone
+  - `remainingBudget`: `agreementAmount - alreadyPaid`
+- When user enters an amount exceeding `remainingBudget`:
+  - Show a yellow `Alert` warning: "הסכום חורג מהיתרה לאבן הדרך ({remainingBudget})"
+  - Make the `notes` field **required** with placeholder "נא לנמק את החריגה"
+  - Add a visual indicator (warning icon) next to the amount field
+- When user enters an amount exceeding the total advisor `fee_amount`:
+  - Show a red `Alert` warning: "הסכום חורג מסך שכה"ט בהסכם"
+  - Still allow submission but require justification in notes
+- Fetch existing requests for the selected milestone to calculate cumulative usage
+- New helper query in the submit handler to fetch sibling payment requests for the same milestone
 
-## Files to modify
-1. `src/components/rfp/PaymentTermsTab.tsx`
-2. `src/components/rfp/FeeItemsTable.tsx`
+**Modify: `src/hooks/useProjectPayments.ts`**
+- No changes needed -- the validation logic stays in the dialog component since it's form-specific
+
+---
+
+## Implementation Order
+1. **File Upload** -- standalone new component + small dialog changes
+2. **Advanced Filtering** -- self-contained changes to AccountantDashboard
+3. **Budget Validation** -- focused changes to CreatePaymentRequestDialog
+
+## Files Summary
+| File | Action |
+|------|--------|
+| `src/components/payments/PaymentFileUpload.tsx` | Create |
+| `src/components/payments/CreatePaymentRequestDialog.tsx` | Modify (upload + validation) |
+| `src/components/payments/PaymentRequestDetailDialog.tsx` | Modify (show file) |
+| `src/components/payments/AdvisorPaymentsView.tsx` | Modify (file indicator) |
+| `src/pages/AccountantDashboard.tsx` | Modify (filters) |
 
