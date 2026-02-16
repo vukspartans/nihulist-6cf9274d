@@ -9,7 +9,7 @@ import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { CreatePaymentRequestDialog } from './CreatePaymentRequestDialog';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet, Plus, AlertTriangle, CheckCircle, FileText, Loader2, Check, X, Send, Trash2 } from 'lucide-react';
+import { Wallet, Plus, AlertTriangle, CheckCircle, FileText, Loader2, Check, X, Send, Trash2, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -303,6 +303,7 @@ export function AdvisorPaymentsView() {
           source_type: 'consultant_milestone',
           status: 'prepared',
           notes: data.notes,
+          invoice_file_url: data.invoice_file_url || null,
           index_type: data.index_type || null,
           index_base_value: data.index_base_value || null,
           index_current_value: data.index_current_value || null,
@@ -451,6 +452,7 @@ export function AdvisorPaymentsView() {
                       </Tooltip>
                     </TableHead>
                     <TableHead className="text-right">תשלום לפי חוזה</TableHead>
+                    <TableHead className="text-center">קובץ</TableHead>
                     <TableHead className="text-right">תשלום צפוי</TableHead>
                     <TableHead className="text-right">תאריך הגשה</TableHead>
                     <TableHead className="text-right">פעולות</TableHead>
@@ -459,7 +461,7 @@ export function AdvisorPaymentsView() {
                 <TableBody>
                   {filteredRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
                         {showClosed ? 'אין בקשות שהושלמו' : 'אין בקשות פתוחות'}
                       </TableCell>
                     </TableRow>
@@ -488,6 +490,11 @@ export function AdvisorPaymentsView() {
                           {req.milestone_due_date
                             ? format(new Date(req.milestone_due_date), 'dd/MM/yyyy', { locale: he })
                             : '—'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {req.invoice_file_url ? (
+                            <Paperclip className="h-4 w-4 text-muted-foreground mx-auto" />
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {req.expected_payment_date

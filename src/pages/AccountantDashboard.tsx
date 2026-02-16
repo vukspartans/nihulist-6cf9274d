@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAccountantData, AccountantRequest } from '@/hooks/useAccountantData';
@@ -23,6 +26,28 @@ const formatDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('he-IL') : '—';
 
 // ── Tab 1: Liabilities ──────────────────────────────────────────────
+
+interface LiabilityFilters {
+  project: string;
+  advisor: string;
+  status: string;
+  submittedFrom: string;
+  submittedTo: string;
+  expectedFrom: string;
+  expectedTo: string;
+  amountMin: string;
+  amountMax: string;
+  overdueOnly: boolean;
+}
+
+const emptyFilters: LiabilityFilters = {
+  project: '', advisor: '', status: '',
+  submittedFrom: '', submittedTo: '',
+  expectedFrom: '', expectedTo: '',
+  amountMin: '', amountMax: '',
+  overdueOnly: false,
+};
+
 function LiabilitiesTab({
   requests,
   onUpdateDate,
@@ -39,13 +64,50 @@ function LiabilitiesTab({
   const [filter, setFilter] = useState<'open' | 'closed'>('open');
   const [bulkDate, setBulkDate] = useState('');
   const [paidDateInputs, setPaidDateInputs] = useState<Record<string, string>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<LiabilityFilters>(emptyFilters);
+
+  // Derive unique values for dropdowns
+  const projectOptions = useMemo(() =>
+    [...new Set(requests.map(r => r.project_name).filter(Boolean))].sort(),
+    [requests]
+  );
+  const advisorOptions = useMemo(() =>
+    [...new Set(requests.map(r => r.advisor_company_name).filter(Boolean) as string[])].sort(),
+    [requests]
+  );
+  const statusOptions = useMemo(() =>
+    [...new Set(requests.map(r => r.status))].sort(),
+    [requests]
+  );
 
   const filtered = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    let list = requests;
+
+    // Open/closed toggle
     if (filter === 'open') {
-      return requests.filter(r => r.status !== 'paid' && r.status !== 'rejected');
+      list = list.filter(r => r.status !== 'paid' && r.status !== 'rejected');
+    } else {
+      list = list.filter(r => r.status === 'paid' || r.status === 'rejected');
     }
-    return requests.filter(r => r.status === 'paid' || r.status === 'rejected');
-  }, [requests, filter]);
+
+    // Advanced filters
+    if (filters.project) list = list.filter(r => r.project_name === filters.project);
+    if (filters.advisor) list = list.filter(r => r.advisor_company_name === filters.advisor);
+    if (filters.status) list = list.filter(r => r.status === filters.status);
+    if (filters.submittedFrom) list = list.filter(r => r.submitted_at && r.submitted_at >= filters.submittedFrom);
+    if (filters.submittedTo) list = list.filter(r => r.submitted_at && r.submitted_at <= filters.submittedTo + 'T23:59:59');
+    if (filters.expectedFrom) list = list.filter(r => r.expected_payment_date && r.expected_payment_date >= filters.expectedFrom);
+    if (filters.expectedTo) list = list.filter(r => r.expected_payment_date && r.expected_payment_date <= filters.expectedTo);
+    if (filters.amountMin) list = list.filter(r => (r.total_amount || r.amount) >= parseFloat(filters.amountMin));
+    if (filters.amountMax) list = list.filter(r => (r.total_amount || r.amount) <= parseFloat(filters.amountMax));
+    if (filters.overdueOnly) list = list.filter(r => r.expected_payment_date && r.expected_payment_date < today && r.status !== 'paid');
+
+    return list;
+  }, [requests, filter, filters]);
+
+  const hasActiveFilters = Object.entries(filters).some(([k, v]) => k === 'overdueOnly' ? v : !!v);
 
   const handleBulkDateApply = () => {
     if (!bulkDate) return;
@@ -74,6 +136,15 @@ function LiabilitiesTab({
           >
             סגורות
           </Button>
+          <Button
+            variant={filtersOpen || hasActiveFilters ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <Filter className="w-3.5 h-3.5 ml-1" />
+            סינון
+            {hasActiveFilters && <span className="mr-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5">!</span>}
+          </Button>
         </div>
         {filter === 'open' && filtered.length > 0 && (
           <div className="flex items-center gap-2">
@@ -90,6 +161,81 @@ function LiabilitiesTab({
           </div>
         )}
       </div>
+
+      {/* Advanced Filters */}
+      {filtersOpen && (
+        <Card className="p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">פרויקט</Label>
+              <Select value={filters.project} onValueChange={v => setFilters(p => ({ ...p, project: v === '__all__' ? '' : v }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">הכל</SelectItem>
+                  {projectOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">יועץ</Label>
+              <Select value={filters.advisor} onValueChange={v => setFilters(p => ({ ...p, advisor: v === '__all__' ? '' : v }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">הכל</SelectItem>
+                  {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">סטטוס</Label>
+              <Select value={filters.status} onValueChange={v => setFilters(p => ({ ...p, status: v === '__all__' ? '' : v }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">הכל</SelectItem>
+                  {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">סכום (טווח)</Label>
+              <div className="flex gap-1">
+                <Input type="number" className="h-8 text-sm" placeholder="מ-" value={filters.amountMin} onChange={e => setFilters(p => ({ ...p, amountMin: e.target.value }))} />
+                <Input type="number" className="h-8 text-sm" placeholder="עד" value={filters.amountMax} onChange={e => setFilters(p => ({ ...p, amountMax: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">תאריך הגשה</Label>
+              <div className="flex gap-1">
+                <Input type="date" className="h-8 text-sm" value={filters.submittedFrom} onChange={e => setFilters(p => ({ ...p, submittedFrom: e.target.value }))} />
+                <Input type="date" className="h-8 text-sm" value={filters.submittedTo} onChange={e => setFilters(p => ({ ...p, submittedTo: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">תשלום צפוי</Label>
+              <div className="flex gap-1">
+                <Input type="date" className="h-8 text-sm" value={filters.expectedFrom} onChange={e => setFilters(p => ({ ...p, expectedFrom: e.target.value }))} />
+                <Input type="date" className="h-8 text-sm" value={filters.expectedTo} onChange={e => setFilters(p => ({ ...p, expectedTo: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex items-end gap-2 col-span-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="overdue"
+                  checked={filters.overdueOnly}
+                  onCheckedChange={v => setFilters(p => ({ ...p, overdueOnly: !!v }))}
+                />
+                <Label htmlFor="overdue" className="text-sm cursor-pointer">חריגות בלבד</Label>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={() => setFilters(emptyFilters)} className="mr-auto">
+                  <RotateCcw className="w-3.5 h-3.5 ml-1" />
+                  נקה סינון
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="overflow-x-auto">
