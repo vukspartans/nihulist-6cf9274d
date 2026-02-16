@@ -115,7 +115,7 @@ const Landing = memo(() => {
             }} 
             className={user ? "cursor-pointer" : ""}
           >
-            <Logo size="sm" className="sm:h-10" />
+            <Logo size="md" />
           </div>
           
           {/* Desktop Navigation */}
@@ -167,9 +167,6 @@ const Landing = memo(() => {
               </div>
 
               {/* Main headline - Mobile optimized */}
-            <div className="animate-slide-up mb-2">
-                <Logo size="xl" />
-              </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-black leading-tight animate-slide-up">
                 <span className="text-foreground">מחברים יזמי נדל"ן ומומחי בנייה</span>
                 <br />
