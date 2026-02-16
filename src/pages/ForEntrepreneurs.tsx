@@ -78,7 +78,7 @@ const ForEntrepreneurs = () => {
       <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
           <Link to="/" className="flex items-center">
-            <Logo size="sm" className="sm:h-10" />
+            <Logo size="xl" />
           </Link>
           
           {/* Desktop Navigation */}
