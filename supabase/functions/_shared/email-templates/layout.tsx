@@ -26,7 +26,7 @@ export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => 
         <Section style={header}>
           <Img
             src="https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/email-assets/billding-logo.png"
-            width="180"
+            width="200"
             alt="Billding"
             style={logo}
           />
