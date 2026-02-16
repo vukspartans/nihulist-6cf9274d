@@ -14,7 +14,7 @@ interface NavigationLogoProps {
   to?: string;
 }
 
-export default function NavigationLogo({ size = 'lg', mobileSize = 'md', height = 72, mobileHeight = 54, className = '', to }: NavigationLogoProps) {
+export default function NavigationLogo({ size = 'lg', mobileSize = 'md', height = 48, mobileHeight = 36, className = '', to }: NavigationLogoProps) {
   const navigate = useNavigate();
   const { primaryRole } = useAuth();
   const isMobile = useIsMobile();

@@ -339,7 +339,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 bg-background p-3 md:p-6 border-b">
+      <div className="sticky top-0 z-50 bg-background px-3 py-2 md:px-6 md:py-2 border-b">
         <div className="flex items-center justify-between gap-2">
           <NavigationLogo size="lg" className="flex-shrink-0" />
           <div className="flex items-center gap-2">

@@ -800,7 +800,7 @@ const AdvisorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="sticky top-0 z-50 flex justify-between items-center p-4 md:p-6 border-b bg-background/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-50 flex justify-between items-center px-3 py-2 md:px-6 md:py-2 border-b bg-background/95 backdrop-blur-sm">
           <NavigationLogo size="lg" />
         <div className="flex items-center gap-2 md:gap-4">
           <NotificationsDropdown 
