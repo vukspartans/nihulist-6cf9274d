@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy, Handshake, ArrowLeft, ListTodo, Wallet } from 'lucide-react';
+import { Calendar, MapPin, Coins, Clock, FileText, AlertTriangle, Star, Bell, Upload, Building2, ShieldCheck, AlertCircle, XCircle, Trophy, Handshake, ArrowLeft, ListTodo, Wallet, FlaskConical } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UserHeader } from '@/components/UserHeader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -566,6 +567,14 @@ const AdvisorDashboard = () => {
     return option ? option.image : ''; // Default to no cover
   };
 
+  const isRecruited = proposals.some(p => p.status === 'accepted');
+
+  // Reset tab if user is on tasks/payments but not recruited
+  useEffect(() => {
+    if (!isRecruited && (activeTab === 'tasks' || activeTab === 'payments')) {
+      setActiveTab('rfp-invites');
+    }
+  }, [isRecruited, activeTab]);
 
   const getStatusColor = (status: string, openedAt?: string | null) => {
     // For 'sent' status, check if it was opened to determine color
@@ -1011,11 +1020,7 @@ const AdvisorDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6" dir="rtl">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="tasks" className="flex items-center gap-2">
-              <ListTodo className="h-4 w-4" />
-              משימות
-            </TabsTrigger>
+          <TabsList className={`grid w-full ${isRecruited ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="rfp-invites" className="flex items-center gap-2">
               הזמנות להצעת מחיר
               {newInvites.length > 0 && (
@@ -1033,19 +1038,39 @@ const AdvisorDashboard = () => {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              תשלומים
-            </TabsTrigger>
+            {isRecruited && (
+              <TabsTrigger value="tasks" className="flex items-center gap-2">
+                <ListTodo className="h-4 w-4" />
+                משימות
+              </TabsTrigger>
+            )}
+            {isRecruited && (
+              <TabsTrigger value="payments" className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                תשלומים
+              </TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="tasks">
-            <AdvisorTasksView advisorId={advisorProfile.id} />
-          </TabsContent>
+          {isRecruited && (
+            <TabsContent value="tasks">
+              <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+                <FlaskConical className="h-4 w-4" />
+                <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+              </Alert>
+              <AdvisorTasksView advisorId={advisorProfile.id} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="payments">
-            <AdvisorPaymentsView />
-          </TabsContent>
+          {isRecruited && (
+            <TabsContent value="payments">
+              <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+                <FlaskConical className="h-4 w-4" />
+                <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+              </Alert>
+              <AdvisorPaymentsView />
+            </TabsContent>
+          )}
 
           <TabsContent value="rfp-invites" className="space-y-4">
             {/* Active Filter Feedback */}
