@@ -363,27 +363,22 @@ const Dashboard = () => {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">לוח הבקרה</h1>
-            <p className="text-lg text-muted-foreground">ניהול פרויקטים ובחירת ספקים</p>
-          </div>
-        </div>
-
-        {/* Dashboard Stats */}
-        <DashboardStats />
-
-        {/* Financial Center Link */}
-        <div className="mt-4">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            שלום, {profile?.name || 'משתמש'}
+          </h2>
           <Button variant="outline" size="sm" onClick={() => navigate('/accountant')} className="gap-1.5">
             <Calculator className="w-4 h-4" />
             מרכז פיננסי
           </Button>
         </div>
 
+        {/* Dashboard Stats */}
+        <DashboardStats />
+
         {/* Main Tabs */}
-        <Tabs defaultValue="projects" dir="rtl" className="mt-6">
+        <Tabs defaultValue="projects" dir="rtl" className="mt-3">
           <TabsList className="mb-4">
             <TabsTrigger value="projects" className="gap-1.5">
               <FolderOpen className="w-4 h-4" />
