@@ -100,6 +100,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
           <div className="space-y-2">
             <Label>שלב בפרויקט / תחום</Label>
             <Select 
+              dir="rtl"
               value={formData.phase} 
               onValueChange={(val) => {
                 let matchedAdvisorId: string | null = null;
