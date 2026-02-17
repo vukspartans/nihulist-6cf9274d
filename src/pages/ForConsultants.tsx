@@ -125,7 +125,7 @@ const ForConsultants = () => {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Navigation */}
-      <nav className="relative z-50 py-4 sm:py-6 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
+      <nav className="relative z-50 py-3 px-4 lg:px-6 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0">
         <div className="container mx-auto flex justify-between items-center">
           <Link to="/" className="flex items-center">
             <Logo size="xl" />
@@ -139,6 +139,7 @@ const ForConsultants = () => {
             <Link to="/for-entrepreneurs">
               <Button variant="ghost" size="sm">ליזמים</Button>
             </Link>
+            <Button variant="ghost" size="sm" className="font-bold text-primary pointer-events-none">ליועצים</Button>
             <Button 
               variant="premium" 
               size="sm" 
