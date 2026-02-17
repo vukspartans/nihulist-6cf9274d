@@ -76,27 +76,20 @@ export const DashboardStats = () => {
 
   if (loading) {
     return (
-      <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-3 md:p-5">
-                <div className="h-3 bg-muted rounded mb-2" />
-                <div className="h-6 bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2 md:gap-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-3 md:p-5">
-                <div className="h-3 bg-muted rounded mb-2" />
-                <div className="h-6 bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-2">
+        {[1, 2, 3, 4, 5, 6, 7].map(i => (
+          <Card key={i} className="animate-pulse border-border/50">
+            <CardContent className="p-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-muted rounded-md shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-2.5 bg-muted rounded mb-1.5 w-12" />
+                  <div className="h-5 bg-muted rounded w-8" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -106,44 +99,39 @@ export const DashboardStats = () => {
     : 0;
 
   return (
-    <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
-      {/* Row 1 – existing stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-        <StatCard label="פרויקטים" value={stats.totalProjects} icon={<BarChart className="w-4 h-4 md:w-5 md:h-5 text-primary" />} />
-        <StatCard label="עם בקשות" value={stats.projectsWithRfps} icon={<TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-success" />} />
-        <StatCard label="בקשות" value={stats.rfpsSent} icon={<FileText className="w-4 h-4 md:w-5 md:h-5 text-accent" />} />
-        <StatCard label="הצעות" value={stats.totalProposals} icon={<Users className="w-4 h-4 md:w-5 md:h-5 text-info" />} />
-      </div>
-
-      {/* Row 2 – new stats */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <StatCard label="תשלומים לטיפול" value={stats.pendingPayments} icon={<Coins className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />} />
-        <StatCard label="משימות" value={stats.totalTasks} icon={<ClipboardList className="w-4 h-4 md:w-5 md:h-5 text-primary" />} />
-        <StatCard
-          label="משימות באיחור"
-          value={stats.delayedTasks}
-          icon={<AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-destructive" />}
-          subtitle={stats.totalTasks > 0 ? `${stats.delayedTasks} מתוך ${stats.totalTasks} (${delayedPct}%)` : undefined}
-        />
-      </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-2">
+      <StatCard label="פרויקטים" value={stats.totalProjects} icon={<BarChart className="w-4 h-4 text-primary" />} />
+      <StatCard label="עם בקשות" value={stats.projectsWithRfps} icon={<TrendingUp className="w-4 h-4 text-success" />} />
+      <StatCard label="בקשות" value={stats.rfpsSent} icon={<FileText className="w-4 h-4 text-accent" />} />
+      <StatCard label="הצעות" value={stats.totalProposals} icon={<Users className="w-4 h-4 text-info" />} />
+      <StatCard label="תשלומים לטיפול" value={stats.pendingPayments} icon={<Coins className="w-4 h-4 text-orange-500" />} />
+      <StatCard label="משימות" value={stats.totalTasks} icon={<ClipboardList className="w-4 h-4 text-primary" />} />
+      <StatCard
+        label="באיחור"
+        value={stats.delayedTasks}
+        icon={<AlertCircle className="w-4 h-4 text-destructive" />}
+        subtitle={stats.totalTasks > 0 ? `${delayedPct}%` : undefined}
+      />
     </div>
   );
 };
 
 function StatCard({ label, value, icon, subtitle }: { label: string; value: number; icon: React.ReactNode; subtitle?: string }) {
   return (
-    <Card>
-      <CardContent className="p-3 md:p-5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">{label}</p>
-            <p className="text-lg md:text-2xl font-bold text-foreground">{value}</p>
-            {subtitle && (
-              <p className="text-[9px] md:text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>
-            )}
-          </div>
-          <div className="p-1.5 md:p-2.5 rounded-full bg-muted shrink-0">
+    <Card className="border-border/50">
+      <CardContent className="p-2.5">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-muted shrink-0">
             {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">{label}</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-lg font-bold text-foreground leading-tight">{value}</p>
+              {subtitle && (
+                <span className="text-[10px] text-muted-foreground">{subtitle}</span>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
