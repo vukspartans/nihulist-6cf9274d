@@ -94,7 +94,7 @@ export const useProposalSubmit = () => {
     try {
       // SECURITY: Rate limiting check
       const rateLimitKey = `proposal-submit-${data.advisorId}`;
-      const rateLimitCheck = checkRateLimit(rateLimitKey, 3, 60000);
+      const rateLimitCheck = checkRateLimit(rateLimitKey, 8, 120000);
       if (!rateLimitCheck.allowed) {
         throw new Error(rateLimitCheck.error);
       }
