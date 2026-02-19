@@ -18,6 +18,8 @@ import NavigationLogo from "@/components/NavigationLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import BackToTop from '@/components/BackToTop';
+import { FlaskConical } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useIsMobile } from "@/hooks/use-mobile";
 import LegalFooter from "@/components/LegalFooter";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -396,6 +398,10 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="tasks">
+            <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+              <FlaskConical className="h-4 w-4" />
+              <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+            </Alert>
             <TaskManagementDashboard />
           </TabsContent>
 

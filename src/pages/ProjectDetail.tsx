@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox, CheckSquare, Wallet } from 'lucide-react';
+import { ArrowRight, MapPin, Building, Coins, Users, Calculator, Clock, Package, FileText, Eye, FileSignature, Send, Inbox, CheckSquare, Wallet, FlaskConical } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { RFPWizard } from '@/components/RFPWizard';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
@@ -557,10 +558,18 @@ export const ProjectDetail = () => {
         </TabsContent>
 
         <TabsContent value="tasks">
+          <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+            <FlaskConical className="h-4 w-4" />
+            <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+          </Alert>
           <TaskBoard projectId={project.id} projectType={project.type} projectPhase={project.phase} municipalityId={project.municipality_id} onPhaseChange={handlePhaseChange} onRefetchReady={(fn) => { taskRefetchRef.current = fn; }} />
         </TabsContent>
 
         <TabsContent value="payments">
+          <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+            <FlaskConical className="h-4 w-4" />
+            <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+          </Alert>
           <PaymentDashboard projectId={project.id} />
         </TabsContent>
       </Tabs>
