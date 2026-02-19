@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Wallet, Loader2, Receipt } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Wallet, Receipt } from 'lucide-react';
 import { useProjectPayments } from '@/hooks/useProjectPayments';
 import { useApprovalChain } from '@/hooks/useApprovalChain';
 import { PaymentMilestone, PaymentRequest } from '@/types/payment';
@@ -108,11 +109,60 @@ export function PaymentDashboard({ projectId }: PaymentDashboardProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="space-y-6" dir="rtl">
+        {/* Summary cards skeleton */}
+        <Card>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-6 w-24" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Milestones skeleton */}
+        <Card>
+          <CardHeader className="pb-3"><Skeleton className="h-6 w-32" /></CardHeader>
+          <CardContent className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        {/* Requests skeleton */}
+        <Card>
+          <CardHeader className="pb-3"><Skeleton className="h-6 w-36" /></CardHeader>
+          <CardContent className="space-y-3">
+            {[1, 2].map(i => (
+              <div key={i} className="flex items-center gap-4 p-3 border rounded-lg">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
