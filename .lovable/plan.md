@@ -1,40 +1,39 @@
 
-# Fix: Proposal Email Link Returns 404
+# Add Alpha Banners to Entrepreneur-Side Features
 
-## Problem
+## What
+Add the same amber "Alpha" banner used on the Advisor Dashboard to the entrepreneur-side features that are still in development: **Task Management** and **Financial Center (Accountant Dashboard)**.
 
-The "notify-proposal-submitted" Edge Function generates the URL:
-```
-https://billding.ai/project/{id}
-```
+## Where to Add
 
-But the actual route in `App.tsx` is:
-```
-/projects/:id
-```
+### 1. Entrepreneur Dashboard - Tasks Tab (`src/pages/Dashboard.tsx`)
+Add the alpha banner above `<TaskManagementDashboard />` (line 399), identical to the advisor version.
 
-The missing "s" in "project" causes a 404 when the entrepreneur clicks the link in their email.
+### 2. Project Detail - Tasks Tab (`src/pages/ProjectDetail.tsx`)
+Add the alpha banner above `<TaskBoard ... />` (line 560).
 
-## Fix
+### 3. Project Detail - Payments Tab (`src/pages/ProjectDetail.tsx`)
+Add the alpha banner above `<PaymentDashboard ... />` (line 564).
 
-In `supabase/functions/notify-proposal-submitted/index.ts`, line 124, change:
+### 4. Accountant Dashboard (`src/pages/AccountantDashboard.tsx`)
+Add the alpha banner near the top of the page content.
 
-```typescript
-// Before
-const projectUrl = `https://billding.ai/project/${project.id}`;
+## Banner Code (exact match to advisor)
 
-// After
-const projectUrl = `https://billding.ai/projects/${project.id}`;
-```
+```tsx
+import { FlaskConical } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-Additionally, append `?tab=received` so the entrepreneur lands directly on the received proposals tab:
-
-```typescript
-const projectUrl = `https://billding.ai/projects/${project.id}?tab=received`;
+<Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+  <FlaskConical className="h-4 w-4" />
+  <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+</Alert>
 ```
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/notify-proposal-submitted/index.ts` | Fix URL from `/project/` to `/projects/` and add `?tab=received` |
+| `src/pages/Dashboard.tsx` | Add alpha banner above `TaskManagementDashboard` in the tasks tab |
+| `src/pages/ProjectDetail.tsx` | Add alpha banner above `TaskBoard` and above `PaymentDashboard` |
+| `src/pages/AccountantDashboard.tsx` | Add alpha banner at the top of the page content |
