@@ -121,7 +121,7 @@ serve(async (req) => {
     const filesCount = Array.isArray(proposal.files) ? proposal.files.length : 0;
 
     // Project URL
-    const projectUrl = `https://billding.ai/project/${project.id}`;
+    const projectUrl = `https://billding.ai/projects/${project.id}?tab=received`;
 
     // Render email
     const html = await renderAsync(
