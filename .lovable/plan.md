@@ -1,58 +1,94 @@
 
 
-# Advisor Dashboard: Tab Reorder, Conditional Visibility, and Alpha Badges
+# Fix: Advisors with Legacy Expertise Names Missing from Distribution Lists
 
-## Changes Overview
+## Problem
 
-### 1. Reorder Tabs
-Move "משימות" (Tasks) and "תשלומים" (Payments) tabs to the **left side** (end of the tab list in RTL), with Tasks to the right of Payments.
+The system defines the canonical advisor type as "אדריכל נוף ופיתוח" (Landscape Architect & Development), but most advisors in the database were registered with older names:
 
-**Current order (RTL, right-to-left):**
-```
-משימות | הזמנות להצעת מחיר | ההצעות שלי | משא ומתן | תשלומים
-```
+| Expertise in DB | Count | Found by system? |
+|---|---|---|
+| אדריכל נוף ופיתוח | 2 | Yes |
+| אדריכל נוף | 5 | No |
+| יועץ פיתוח | 2 | No |
+| יועץ אשפה (legacy for יועץ תברואה) | 1 | No |
 
-**New order:**
-```
-הזמנות להצעת מחיר | ההצעות שלי | משא ומתן | משימות | תשלומים
-```
+The matching logic in `useAdvisorsByExpertise.ts` uses exact string matching (`expertise.includes(type)`), so legacy names are invisible.
 
-### 2. Conditionally Show Tasks and Payments Tabs
+## Solution
 
-Only display these tabs when the advisor has been **recruited to at least one project** (i.e., has at least one proposal with status `accepted`). Without recruitment, these features have no data to show.
+Two-part fix to handle this both in the frontend matching and in the database itself:
 
-- Derive a boolean: `const isRecruited = proposals.some(p => p.status === 'accepted')`
-- If not recruited, render a 3-column grid instead of 5-column, and hide both tabs + their content
-- Reset activeTab to `rfp-invites` if user was on tasks/payments and becomes un-recruited (edge case)
+### Part 1: Use Canonicalization in Matching (immediate fix)
 
-### 3. Add Alpha Banners
+In `src/hooks/useAdvisorsByExpertise.ts`, update the advisor-to-type matching to use `canonicalizeAdvisor()` so that legacy names are mapped to their canonical equivalents.
 
-Inside **both** `TabsContent` for Tasks and Payments, add a subtle banner at the top:
-
-```
-[flask icon] פיצ'ר זה נמצא בגרסת אלפא -- ייתכנו שינויים ושיפורים
+**Current code (line 112-115):**
+```typescript
+selectedAdvisorTypes.forEach(type => {
+  const matchingAdvisors = advisors.filter(advisor => 
+    advisor.expertise?.includes(type)
+  );
 ```
 
-Styled as a soft amber/yellow info bar to indicate work-in-progress without being alarming.
+**Updated code:**
+```typescript
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
-### 4. Console Log Finding
+selectedAdvisorTypes.forEach(type => {
+  const canonicalType = canonicalizeAdvisor(type);
+  const matchingAdvisors = advisors.filter(advisor =>
+    advisor.expertise?.some(exp => canonicalizeAdvisor(exp) === canonicalType)
+  );
+```
 
-The console shows `AuthApiError: Invalid Refresh Token: Refresh Token Not Found` -- this is a standard token expiry error when switching between accounts or after session timeout. The Supabase Postgres logs show zero errors. No actionable backend issues found on the advisor side.
+This ensures that "אדריכל נוף" and "יועץ פיתוח" both resolve to "אדריכל נוף ופיתוח" when matching.
 
-## Technical Details
+### Part 2: Normalize Legacy Data in Database (one-time migration)
 
-### File: `src/pages/AdvisorDashboard.tsx`
+Create a migration that updates existing advisor records to use canonical names, so future exact-match queries also work correctly.
 
-**Tab reorder (lines 1014-1039):**
-- Move the Tasks and Payments `TabsTrigger` entries after Negotiations
-- Conditionally render them based on `isRecruited`
-- Adjust `grid-cols-5` to dynamic: `grid-cols-3` when not recruited, `grid-cols-5` when recruited
+**New migration file:**
+```sql
+-- Normalize "אדריכל נוף" -> "אדריכל נוף ופיתוח"
+UPDATE advisors
+SET expertise = array_replace(expertise, 'אדריכל נוף', 'אדריכל נוף ופיתוח')
+WHERE 'אדריכל נוף' = ANY(expertise);
 
-**Conditional logic (around line 145):**
-- Add `isRecruited` derived from proposals state
-- Guard the TabsContent blocks for tasks/payments
+-- Normalize "יועץ פיתוח" -> "אדריכל נוף ופיתוח"  
+UPDATE advisors
+SET expertise = array_replace(expertise, 'יועץ פיתוח', 'אדריכל נוף ופיתוח')
+WHERE 'יועץ פיתוח' = ANY(expertise);
 
-**Alpha banners (lines 1042-1048):**
-- Add a styled alert banner inside each TabsContent for tasks and payments
-- Use Flask icon from lucide-react with amber styling
+-- Normalize "יועץ אשפה" -> "יועץ תברואה"
+UPDATE advisors
+SET expertise = array_replace(expertise, 'יועץ אשפה', 'יועץ תברואה')
+WHERE 'יועץ אשפה' = ANY(expertise);
+
+-- Remove duplicates that may result from replacements
+UPDATE advisors
+SET expertise = (
+  SELECT array_agg(DISTINCT e)
+  FROM unnest(expertise) AS e
+)
+WHERE array_length(expertise, 1) > 0;
+```
+
+### Part 3: Protect Against Future Legacy Names in Bulk Upload
+
+In the bulk advisor upload edge function, apply canonicalization to expertise values before inserting.
+
+**File: `supabase/functions/bulk-create-advisors/index.ts`** -- apply `canonicalizeAdvisor` equivalent logic to each expertise string during import.
+
+## Files to Create/Modify
+
+| File | Change |
+|---|---|
+| `src/hooks/useAdvisorsByExpertise.ts` | Use `canonicalizeAdvisor()` in expertise matching |
+| `supabase/migrations/[new]_normalize_advisor_expertise.sql` | One-time data normalization |
+| `supabase/functions/bulk-create-advisors/index.ts` | Canonicalize expertise on import |
+
+## Impact
+
+After this fix, all 8 landscape/development advisors (and any with other legacy names) will correctly appear in distribution lists and RFP invitations.
 
