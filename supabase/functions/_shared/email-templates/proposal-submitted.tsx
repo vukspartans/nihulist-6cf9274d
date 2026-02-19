@@ -34,13 +34,35 @@ export const ProposalSubmittedEmail = ({
       </Text>
       
       <Text style={paragraph}>
-        קיבלת הצעת מחיר חדשה לפרויקט "{projectName}" מאת {advisorCompany} ({advisorType}).
+        התקבלה הצעת מחיר חדשה עבורך. להלן הפרטים:
       </Text>
 
-      <Text style={detailText}>
-        מחיר: ₪{price.toLocaleString('he-IL')}
-        {filesCount > 0 && <><br />קבצים: {filesCount}</>}
-      </Text>
+      <Section style={detailsBox}>
+        <table dir="rtl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tr>
+            <td style={labelCell}>פרויקט</td>
+            <td style={valueCell}>{projectName}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>משרד</td>
+            <td style={valueCell}>{advisorCompany}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>תחום</td>
+            <td style={valueCell}>{advisorType}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>מחיר</td>
+            <td style={valueCell}>{price?.toLocaleString('he-IL')} &#8362;</td>
+          </tr>
+          {filesCount > 0 && (
+            <tr>
+              <td style={labelCell}>קבצים מצורפים</td>
+              <td style={valueCell}>{filesCount}</td>
+            </tr>
+          )}
+        </table>
+      </Section>
 
       <Section style={buttonContainer}>
         <Button href={projectUrl} style={button}>
@@ -70,13 +92,33 @@ const paragraph = {
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
+  textAlign: 'right' as const,
 }
 
-const detailText = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#525252',
+const detailsBox = {
+  backgroundColor: '#f9fafb',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '16px',
   margin: '16px 0',
+}
+
+const labelCell = {
+  fontSize: '14px',
+  color: '#6b7280',
+  padding: '6px 0',
+  textAlign: 'right' as const,
+  width: '120px',
+  verticalAlign: 'top' as const,
+}
+
+const valueCell = {
+  fontSize: '14px',
+  color: '#1a1a1a',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
 }
 
 const buttonContainer = {
@@ -93,5 +135,6 @@ const button = {
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '12px 32px',
+  padding: '14px 40px',
+  minWidth: '200px',
 }
