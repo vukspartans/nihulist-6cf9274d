@@ -41,12 +41,33 @@ export const RFPInvitationEmail = ({
       </Text>
       
       <Text style={text}>
-        נשמח לקבל ממכם הצעת מחיר מטעם <strong>{senderOrganizationName}</strong> לפרויקט <strong>{projectName}</strong> ({projectType}, {projectLocation}).
+        נשמח לקבל ממכם הצעת מחיר. להלן פרטי הפרויקט:
       </Text>
-      
-      <Text style={text}>
-        מועד אחרון להגשה: <strong>{deadlineDate}</strong>
-      </Text>
+
+      <Section style={detailsBox}>
+        <table dir="rtl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tr>
+            <td style={labelCell}>מזמין</td>
+            <td style={valueCell}>{senderOrganizationName}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>פרויקט</td>
+            <td style={valueCell}>{projectName}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>סוג</td>
+            <td style={valueCell}>{projectType}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>מיקום</td>
+            <td style={valueCell}>{projectLocation}</td>
+          </tr>
+          <tr>
+            <td style={labelCell}>מועד אחרון</td>
+            <td style={deadlineCell}>{deadlineDate}</td>
+          </tr>
+        </table>
+      </Section>
       
       {requestTitle && (
         <Text style={requestTitleStyle}>
@@ -108,6 +129,43 @@ const text = {
   direction: 'rtl' as const,
 }
 
+const detailsBox = {
+  backgroundColor: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  padding: '16px',
+  margin: '16px 0',
+  direction: 'rtl' as const,
+  textAlign: 'right' as const,
+}
+
+const labelCell = {
+  fontSize: '14px',
+  color: '#6b7280',
+  padding: '6px 0',
+  textAlign: 'right' as const,
+  width: '100px',
+  verticalAlign: 'top' as const,
+}
+
+const valueCell = {
+  fontSize: '14px',
+  color: '#1a1a1a',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
+}
+
+const deadlineCell = {
+  fontSize: '14px',
+  color: '#dc2626',
+  fontWeight: '700' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
+}
+
 const requestTitleStyle = {
   color: '#1a1a1a',
   fontSize: '16px',
@@ -155,7 +213,8 @@ const button = {
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '12px 32px',
+  padding: '14px 40px',
+  minWidth: '200px',
   direction: 'rtl' as const,
 }
 

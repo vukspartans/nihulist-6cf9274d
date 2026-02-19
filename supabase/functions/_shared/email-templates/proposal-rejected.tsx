@@ -28,14 +28,23 @@ export const ProposalRejectedEmail = ({
       </Text>
       
       <Text style={paragraph}>
-        היזם החליט שלא לקבל את הצעת המחיר לפרויקט "{projectName}".
+        היזם החליט שלא לקבל את הצעת המחיר שלך.
       </Text>
 
-      {rejectionReason && rejectionReason.trim() && (
-        <Text style={reasonText}>
-          סיבה: {rejectionReason}
-        </Text>
-      )}
+      <Section style={detailsBox}>
+        <table dir="rtl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tr>
+            <td style={labelCell}>פרויקט</td>
+            <td style={valueCell}>{projectName}</td>
+          </tr>
+          {rejectionReason && rejectionReason.trim() && (
+            <tr>
+              <td style={labelCell}>סיבה</td>
+              <td style={valueCell}>{rejectionReason}</td>
+            </tr>
+          )}
+        </table>
+      </Section>
 
       <Text style={encourageText}>
         נשמח לעבוד איתך בפרויקטים עתידיים.
@@ -69,13 +78,33 @@ const paragraph = {
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
+  textAlign: 'right' as const,
 }
 
-const reasonText = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#64748b',
+const detailsBox = {
+  backgroundColor: '#f9fafb',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '16px',
   margin: '16px 0',
+}
+
+const labelCell = {
+  fontSize: '14px',
+  color: '#6b7280',
+  padding: '6px 0',
+  textAlign: 'right' as const,
+  width: '80px',
+  verticalAlign: 'top' as const,
+}
+
+const valueCell = {
+  fontSize: '14px',
+  color: '#1a1a1a',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
 }
 
 const encourageText = {
@@ -83,6 +112,7 @@ const encourageText = {
   lineHeight: '22px',
   color: '#525252',
   margin: '16px 0',
+  textAlign: 'right' as const,
 }
 
 const buttonContainer = {
@@ -99,5 +129,6 @@ const button = {
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '12px 32px',
+  padding: '14px 40px',
+  minWidth: '200px',
 }
