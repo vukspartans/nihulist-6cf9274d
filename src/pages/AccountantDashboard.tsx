@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -652,6 +653,11 @@ export default function AccountantDashboard() {
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         <h1 className="text-2xl font-bold mb-1">מרכז פיננסי</h1>
         <p className="text-muted-foreground mb-6">ניהול התחייבויות, ספקים ותזרים מזומנים</p>
+
+        <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+          <FlaskConical className="h-4 w-4" />
+          <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
+        </Alert>
 
         {/* Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
