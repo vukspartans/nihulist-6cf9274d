@@ -33,19 +33,33 @@ export const RFPDeadlineReminderEmail = ({
         </Text>
         
         <Text style={paragraph}>
-          נותרו <strong>{hoursRemaining} שעות</strong> להגשת הצעת מחיר עבור פרויקט "{projectName}".
+          נותרו <strong>{hoursRemaining} שעות</strong> להגשת הצעת מחיר. להלן הפרטים:
         </Text>
 
-        <Text style={detailText}>
-          סוג יועץ: {advisorType}<br />
-          מועד אחרון: {new Date(deadlineDate).toLocaleString('he-IL', {
-            day: 'numeric',
-            month: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
+        <Section style={detailsBox}>
+          <table dir="rtl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tr>
+              <td style={labelCell}>פרויקט</td>
+              <td style={valueCell}>{projectName}</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>תחום</td>
+              <td style={valueCell}>{advisorType}</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>מועד אחרון</td>
+              <td style={deadlineValueCell}>
+                {new Date(deadlineDate).toLocaleString('he-IL', {
+                  day: 'numeric',
+                  month: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </td>
+            </tr>
+          </table>
+        </Section>
 
         <Section style={buttonContainer}>
           <Button href={submitUrl} style={button}>
@@ -80,13 +94,42 @@ const paragraph = {
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
+  textAlign: 'right' as const,
 };
 
-const detailText = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#64748b',
+const detailsBox = {
+  backgroundColor: '#f9fafb',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '16px',
   margin: '16px 0',
+};
+
+const labelCell = {
+  fontSize: '14px',
+  color: '#6b7280',
+  padding: '6px 0',
+  textAlign: 'right' as const,
+  width: '100px',
+  verticalAlign: 'top' as const,
+};
+
+const valueCell = {
+  fontSize: '14px',
+  color: '#1a1a1a',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
+};
+
+const deadlineValueCell = {
+  fontSize: '14px',
+  color: '#dc2626',
+  fontWeight: '700' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
 };
 
 const buttonContainer = {
@@ -103,7 +146,8 @@ const button = {
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '12px 32px',
+  padding: '14px 40px',
+  minWidth: '200px',
 };
 
 const footer = {

@@ -27,9 +27,9 @@ export const ProposalResubmittedEmail = ({
 }: ProposalResubmittedEmailProps) => {
   const priceDiff = previousPrice - newPrice;
   const priceChange = priceDiff > 0 
-    ? `ירידה של ₪${priceDiff.toLocaleString('he-IL')}` 
+    ? `ירידה של ${priceDiff.toLocaleString('he-IL')} \u20AA` 
     : priceDiff < 0 
-      ? `עלייה של ₪${Math.abs(priceDiff).toLocaleString('he-IL')}` 
+      ? `עלייה של ${Math.abs(priceDiff).toLocaleString('he-IL')} \u20AA` 
       : 'ללא שינוי במחיר';
 
   return (
@@ -42,14 +42,37 @@ export const ProposalResubmittedEmail = ({
         </Text>
         
         <Text style={paragraph}>
-          קיבלת הצעה נגדית (מעודכנת) לפרויקט "{projectName}" מאת {advisorCompany} ({advisorType}).
+          התקבלה הצעה מעודכנת עבורך. להלן הפרטים:
         </Text>
 
-        <Text style={detailText}>
-          מחיר קודם: ₪{previousPrice.toLocaleString('he-IL')}<br />
-          מחיר חדש: ₪{newPrice.toLocaleString('he-IL')}<br />
-          <strong>{priceChange}</strong>
-        </Text>
+        <Section style={detailsBox}>
+          <table dir="rtl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tr>
+              <td style={labelCell}>פרויקט</td>
+              <td style={valueCell}>{projectName}</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>משרד</td>
+              <td style={valueCell}>{advisorCompany}</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>תחום</td>
+              <td style={valueCell}>{advisorType}</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>מחיר קודם</td>
+              <td style={valueCell}>{previousPrice?.toLocaleString('he-IL')} &#8362;</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>מחיר חדש</td>
+              <td style={newPriceCell}>{newPrice?.toLocaleString('he-IL')} &#8362;</td>
+            </tr>
+            <tr>
+              <td style={labelCell}>שינוי</td>
+              <td style={changeCell}>{priceChange}</td>
+            </tr>
+          </table>
+        </Section>
 
         <Section style={buttonContainer}>
           <Button href={projectUrl} style={button}>
@@ -80,16 +103,51 @@ const paragraph = {
   lineHeight: '24px',
   color: '#333',
   marginBottom: '12px',
+  textAlign: 'right' as const,
 }
 
-const detailText = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#525252',
+const detailsBox = {
+  backgroundColor: '#f9fafb',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '16px',
   margin: '16px 0',
-  backgroundColor: '#f5f5f5',
-  padding: '12px',
-  borderRadius: '6px',
+}
+
+const labelCell = {
+  fontSize: '14px',
+  color: '#6b7280',
+  padding: '6px 0',
+  textAlign: 'right' as const,
+  width: '100px',
+  verticalAlign: 'top' as const,
+}
+
+const valueCell = {
+  fontSize: '14px',
+  color: '#1a1a1a',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
+}
+
+const newPriceCell = {
+  fontSize: '14px',
+  color: '#059669',
+  fontWeight: '700' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
+}
+
+const changeCell = {
+  fontSize: '14px',
+  color: '#525252',
+  fontWeight: '600' as const,
+  padding: '6px 8px',
+  textAlign: 'right' as const,
+  verticalAlign: 'top' as const,
 }
 
 const buttonContainer = {
@@ -106,5 +164,6 @@ const button = {
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
-  padding: '12px 32px',
+  padding: '14px 40px',
+  minWidth: '200px',
 }
