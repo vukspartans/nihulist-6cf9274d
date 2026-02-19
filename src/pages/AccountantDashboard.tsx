@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical, AlertTriangle, Wallet } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -257,12 +258,11 @@ function LiabilitiesTab({
 
       <Card>
         <div className="overflow-x-auto">
-          <Table dir="rtl">
+          <Table dir="rtl" className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="text-right">פרויקט</TableHead>
                 <TableHead className="text-right">יועץ</TableHead>
-                <TableHead className="text-right">חברה</TableHead>
                 <TableHead className="text-right">אבן דרך</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
                 <TableHead className="text-right">סכום</TableHead>
@@ -275,7 +275,7 @@ function LiabilitiesTab({
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     אין בקשות תשלום {filter === 'open' ? 'פתוחות' : 'סגורות'}
                   </TableCell>
                 </TableRow>
@@ -288,7 +288,6 @@ function LiabilitiesTab({
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{req.project_name}</TableCell>
                       <TableCell>{req.advisor_company_name || '—'}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{req.advisor_company_name || '—'}</TableCell>
                       <TableCell>{req.milestone_name || '—'}</TableCell>
                       <TableCell><PaymentStatusBadge status={req.status} /></TableCell>
                       <TableCell>{formatCurrency(req.total_amount || req.amount)}</TableCell>
@@ -354,8 +353,16 @@ function VendorConcentrationTab({
     <div className="space-y-3">
       {vendorSummaries.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            אין נתוני ספקים להצגה
+          <CardContent className="py-12 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 rounded-full bg-muted">
+                <Users className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground">אין נתוני ספקים להצגה</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">נתונים יופיעו כאשר יוגשו בקשות תשלום מיועצים</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -535,8 +542,16 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
               <TableBody>
                 {projectSummaries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      אין נתונים להצגה
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-3 rounded-full bg-muted">
+                          <BarChart3 className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-muted-foreground">אין נתונים להצגה</p>
+                          <p className="text-sm text-muted-foreground/70 mt-1">נתוני סיכום יופיעו כאשר יהיו בקשות תשלום בפרויקטים שלך</p>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -617,10 +632,48 @@ export default function AccountantDashboard() {
 
   if (loading || approvalChainLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">טוען נתונים פיננסיים...</p>
+      <div className="min-h-screen bg-background" dir="rtl">
+        <div className="sticky top-0 z-50 bg-background px-3 py-2 md:px-6 md:py-2 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <NavigationLogo size="lg" className="flex-shrink-0" />
+            </div>
+            <Skeleton className="h-8 w-32" />
+          </div>
+        </div>
+        <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-5 w-72 mb-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {[1, 2, 3].map(i => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-7 w-28" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-10 w-80 mb-4" />
+          <Card>
+            <CardContent className="p-0">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex items-center gap-4 p-4 border-b last:border-0">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-32" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -662,21 +715,42 @@ export default function AccountantDashboard() {
         {/* Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <Card>
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-sm text-muted-foreground">סה"כ חוב פתוח</p>
-              <p className="text-2xl font-bold text-destructive">{formatCurrency(totalOutstanding)}</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/10">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">סה"כ חוב פתוח</p>
+                  <p className="text-lg font-bold text-destructive">{formatCurrency(totalOutstanding)}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-sm text-muted-foreground">שולם</p>
-              <p className="text-2xl font-bold text-primary">{formatCurrency(totalPaid)}</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">שולם</p>
+                  <p className="text-lg font-bold text-green-600">{formatCurrency(totalPaid)}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-sm text-muted-foreground">ספקים פעילים</p>
-              <p className="text-2xl font-bold">{vendorSummaries.length}</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">ספקים פעילים</p>
+                  <p className="text-lg font-bold text-blue-600">{vendorSummaries.length}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
