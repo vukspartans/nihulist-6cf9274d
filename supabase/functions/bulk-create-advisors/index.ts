@@ -111,10 +111,22 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Parse expertise
-        const expertiseArray = advisor.expertise
-          .split(",")
-          .map(e => e.trim())
-          .filter(e => e.length > 0);
+        const canonicalMap: Record<string, string> = {
+          'אדריכל נוף': 'אדריכל נוף ופיתוח',
+          'יועץ פיתוח': 'אדריכל נוף ופיתוח',
+          'יועץ אשפה': 'יועץ תברואה',
+          'אדריכל ראשי': 'אדריכל',
+          'אדריכלית': 'אדריכל',
+          'עו"ד מקרקעין': 'עורך דין מקרקעין',
+          'עורכת דין מקרקעין': 'עורך דין מקרקעין',
+        };
+        const expertiseArray = [...new Set(
+          advisor.expertise
+            .split(",")
+            .map(e => e.trim())
+            .filter(e => e.length > 0)
+            .map(e => canonicalMap[e] ?? e)
+        )];
 
         if (expertiseArray.length === 0) {
           throw new Error("At least one expertise is required");

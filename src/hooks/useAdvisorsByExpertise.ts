@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdvisorsValidation } from './useAdvisorsValidation';
 import { getAdvisorPhase, getPhaseInfo, type AdvisorPhase } from '@/constants/advisorPhases';
+import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 
 export interface AdvisorData {
   id: string;
@@ -110,8 +111,9 @@ export const useAdvisorsByExpertise = (
     const grouped: AdvisorsByType = {};
 
     selectedAdvisorTypes.forEach(type => {
+      const canonicalType = canonicalizeAdvisor(type);
       const matchingAdvisors = advisors.filter(advisor => 
-        advisor.expertise?.includes(type)
+        advisor.expertise?.some(exp => canonicalizeAdvisor(exp) === canonicalType)
       );
       grouped[type] = sortAdvisorsByRelevance(matchingAdvisors, projectLocation);
     });
