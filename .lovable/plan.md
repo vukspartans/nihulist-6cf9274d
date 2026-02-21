@@ -1,62 +1,47 @@
 
 
-# Fix: Negotiation Response Email Failing (No Email on Counter-Offers)
+# Fix: Negotiation Response Email - React Version Conflict
 
-## Bug Found
+## Problem Confirmed
 
-The activity log from today shows:
-
+After deploying the previous ternary fix and testing end-to-end, the email **still fails** with:
 ```
-negotiation_response_email_failed
-Error: Objects are not valid as a React child (found: object with keys 
-{$$typeof, type, key, ref, props, _owner, _store})
+Error: Objects are not valid as a React child (found: object with keys {$$typeof, type, key, ref, props, _owner, _store})
 ```
 
-**Impact**: When an advisor submits a counter-offer, the entrepreneur does NOT receive an email notification. Initial proposal emails work fine -- only the negotiation response email is broken.
+## Root Cause (Verified)
 
-## Root Cause
+Comparing the **working** `notify-proposal-submitted` imports with the **broken** `send-negotiation-response`:
 
-The `NegotiationResponseEmail` template at line 74 uses a conditional JSX expression inside a `<table>`:
+| Import | Working (notify-proposal-submitted) | Broken (send-negotiation-response) |
+|--------|-------------------------------------|-------------------------------------|
+| std | `https://deno.land/std@0.190.0/...` | `https://deno.land/std@0.168.0/...` |
+| supabase-js | `https://esm.sh/@supabase/supabase-js@2.55.0` | `https://esm.sh/@supabase/supabase-js@2.49.1` |
+| Resend | `npm:resend@4.0.0` | `https://esm.sh/resend@2.0.0` |
 
-```tsx
-{priceDiff > 0 && (
-  <tr>...</tr>
-)}
-```
-
-In React Email's `renderAsync` (v0.0.31), rendering `false` as a direct child inside an HTML `<table>` element can produce the "Objects are not valid as a React child" error. The `react-email` renderer struggles with falsy values in certain HTML contexts.
+The `esm.sh` URL for Resend bundles its own React internally, creating a **dual React instance** conflict. JSX elements created by `npm:react@18.3.1` are treated as invalid objects by the React bundled inside the esm.sh Resend package.
 
 ## Fix
 
-### File: `supabase/functions/_shared/email-templates/negotiation-response.tsx`
-
-Replace the short-circuit conditional `{priceDiff > 0 && (...)}` with a proper ternary that returns `null` instead of `false`:
-
-```tsx
-{priceDiff > 0 ? (
-  <tr>
-    <td style={labelCell}>...</td>
-    <td style={savingsCell}>...</td>
-  </tr>
-) : null}
-```
-
 ### File: `supabase/functions/send-negotiation-response/index.ts`
 
-Add safety coercion for numeric values to prevent any edge cases where `previousPrice` or `newPrice` might not be a plain number:
+Update lines 1-3 to match the working function's import style:
 
 ```ts
-previousPrice: Number((session.proposal as any).price) || 0,
-newPrice: Number(newTotal) || 0,
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { Resend } from "npm:resend@4.0.0";
 ```
+
+These three changes align the imports with the proven working pattern from `notify-proposal-submitted`.
 
 ### Deployment
 
-Redeploy the `send-negotiation-response` edge function after making the fix.
+Redeploy `send-negotiation-response` after the import fix.
 
 ### Verification
 
-After deploying, test by having an advisor submit a counter-offer and checking:
-1. The activity log shows `negotiation_response_email_sent` (not `_failed`)
-2. The entrepreneur receives the email
+After deploying, we already have a pending negotiation session to re-test. We can either:
+1. Create another negotiation request from the entrepreneur and have the vendor respond again
+2. Check the edge function logs to confirm `negotiation_response_email_sent` appears instead of `_failed`
 
