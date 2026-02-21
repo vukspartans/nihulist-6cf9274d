@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import coverOption1 from '@/assets/cover-option-1.jpg';
@@ -462,9 +463,8 @@ const AdvisorDashboard = () => {
             return total;
           };
 
-          // Filter to show only pending negotiations (awaiting vendor response)
+          // Show ALL negotiations (not just pending) so consultant sees full history
           const mappedNegotiations: NegotiationItem[] = (negotiationsData || [])
-            .filter((n: any) => n.status === 'awaiting_response' || n.status === 'open')
             .map((n: any) => {
               const feeLineItems = n.proposals?.fee_line_items || [];
               const filesData = n.files as any;
@@ -492,19 +492,29 @@ const AdvisorDashboard = () => {
               };
             });
           setNegotiations(mappedNegotiations);
-          console.debug('[AdvisorDashboard] ✅ Fetched pending negotiations:', mappedNegotiations.length);
+          console.debug('[AdvisorDashboard] ✅ Fetched negotiations (all statuses):', mappedNegotiations.length);
 
           // Build a map from rfp_invite_id -> active negotiation for RFP invite display
+          // Only map pending/open negotiations for the invite badge
           const negotiationInviteMap = new Map<string, NegotiationItem>();
-          mappedNegotiations.forEach(neg => {
-            // Find the proposal that matches this negotiation
-            const proposal = (proposalData || []).find(p => p.id === neg.proposal_id);
-            if (proposal?.rfp_invite_id) {
-              negotiationInviteMap.set(proposal.rfp_invite_id, neg);
+          mappedNegotiations
+            .filter(neg => neg.status === 'awaiting_response' || neg.status === 'open')
+            .forEach(neg => {
+              const proposal = (proposalData || []).find(p => p.id === neg.proposal_id);
+              if (proposal?.rfp_invite_id) {
+                negotiationInviteMap.set(proposal.rfp_invite_id, neg);
+              }
+            });
+          setNegotiationByInvite(negotiationInviteMap);
+          console.debug('[AdvisorDashboard] ✅ Mapped active negotiations to invites:', negotiationInviteMap.size);
+
+          // Log warnings for proposals that exist but might not render
+          (proposalData || []).forEach(p => {
+            const rendered = filteredProposals?.some?.((fp: any) => fp.id === p.id);
+            if (!rendered) {
+              console.warn('[AdvisorDashboard] ⚠️ Proposal exists but may not be rendered for Consultant:', p.id, p.status);
             }
           });
-          setNegotiationByInvite(negotiationInviteMap);
-          console.debug('[AdvisorDashboard] ✅ Mapped negotiations to invites:', negotiationInviteMap.size);
         }
       }
     } catch (error) {
@@ -681,12 +691,54 @@ const AdvisorDashboard = () => {
     }
   };
 
+  // Build map: proposal_id -> latest negotiated price for display on proposal cards
+  const negotiatedPriceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    negotiations.forEach(n => {
+      if (n.target_total && n.target_total > 0) {
+        const existing = map.get(n.proposal_id);
+        if (!existing) {
+          map.set(n.proposal_id, n.target_total);
+        }
+      }
+    });
+    return map;
+  }, [negotiations]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg text-muted-foreground">טוען...</p>
+      <div className="min-h-screen bg-background" dir="rtl">
+        <div className="sticky top-0 z-50 flex justify-between items-center px-3 py-2 md:px-6 md:py-2 border-b bg-background/95 backdrop-blur-sm">
+          <NavigationLogo size="lg" />
+          <div className="flex items-center gap-2 md:gap-4">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-24 rounded-md" />
+          </div>
+        </div>
+        <div className="p-4 md:p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Profile skeleton */}
+            <div className="flex items-start gap-4">
+              <Skeleton className="w-20 h-20 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            {/* Stats cards skeleton */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-28 rounded-lg" />
+              ))}
+            </div>
+            {/* Tab content skeleton */}
+            <Skeleton className="h-10 w-full rounded-md" />
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1397,12 +1449,18 @@ const AdvisorDashboard = () => {
             {filteredProposals.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
                     {proposalFilter === 'all' ? 'לא הוגשו הצעות מחיר עדיין' : 
                      proposalFilter === 'accepted' ? 'אין הצעות שאושרו' :
                      proposalFilter === 'submitted' ? 'אין הצעות ממתינות' : 
                      proposalFilter === 'under_review' ? 'אין הצעות בבדיקה' : 'אין הצעות נדחות'}
                   </p>
+                  {proposalFilter === 'all' && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      הצעות שתגיש דרך הזמנות להצעת מחיר יופיעו כאן
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -1448,6 +1506,17 @@ const AdvisorDashboard = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Negotiated price display */}
+                    {negotiatedPriceMap.has(proposal.id) && (
+                      <div className="flex items-center gap-2 mb-4 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                        <Handshake className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">מחיר לאחר מו״מ</p>
+                          <p className="font-semibold text-sm">₪{negotiatedPriceMap.get(proposal.id)!.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* View Proposal Button */}
                     <Button

@@ -125,6 +125,35 @@ serve(async (req) => {
       throw new Error("Not authorized - must be the consultant for this negotiation");
     }
 
+    // Build milestone adjustments from advisor's milestone responses
+    let updatedMilestones: any[] | null = null;
+    if (milestone_responses && milestone_responses.length > 0) {
+      const { data: proposalFull } = await supabase
+        .from("proposals")
+        .select("milestone_adjustments")
+        .eq("id", proposalData.id)
+        .single();
+
+      const currentMilestones = (proposalFull?.milestone_adjustments as any[]) || [];
+
+      if (Array.isArray(currentMilestones) && currentMilestones.length > 0) {
+        updatedMilestones = currentMilestones.map((m: any) => {
+          const response = milestone_responses!.find(
+            (r) => r.description === m.description
+          );
+          if (response) {
+            return {
+              ...m,
+              consultant_percentage: response.advisorResponsePercentage,
+              percentage: response.advisorResponsePercentage,
+            };
+          }
+          return m;
+        });
+        console.log("[Negotiation Response] Built milestone adjustments:", updatedMilestones.length);
+      }
+    }
+
     // Call the database function to create new version
     // Pass empty array if no line items (for proposals without itemized breakdown)
     const { data: result, error: rpcError } = await supabase.rpc(
@@ -133,6 +162,7 @@ serve(async (req) => {
         p_session_id: session_id,
         p_updated_line_items: updated_line_items || [],
         p_consultant_message: consultant_message,
+        p_milestone_adjustments: updatedMilestones || null,
       }
     );
 
