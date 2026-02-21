@@ -596,6 +596,10 @@ export const ProjectDetail = () => {
         proposalIds={selectedProposalIds}
         advisorType={selectedAdvisorType || project.type || 'כללי'}
         projectId={project.id}
+        onStatusChange={() => {
+          fetchProposals();
+          setComparisonDialogOpen(false);
+        }}
       />
 
       {selectedProposal && (
