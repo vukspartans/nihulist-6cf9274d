@@ -1,53 +1,116 @@
 
 
-# UX/UI Review & Improvements: מרכז פיננסי (Financial Center)
+# Fix: Milestone Changes Not Applied to Proposal During Negotiation
 
-## Issues Found
+## Problem
 
-### 1. Duplicate Column in Liabilities Table (Bug)
-The Liabilities tab has both "יועץ" (Advisor) and "חברה" (Company) columns that display the **exact same data** (`req.advisor_company_name`). This is redundant and wastes horizontal space.
+When an entrepreneur changes milestone percentages during negotiation, the advisor sees the changes in the negotiation view, but **when the advisor responds, the updated milestones are NOT written back to the proposal**. The root cause is in the `send-negotiation-response` edge function.
 
-**Fix**: Remove the "חברה" column entirely.
+## Root Cause Analysis
 
-### 2. Skeleton Loading States
-The current loading state uses a generic spinner. Replace with skeleton loaders that mimic the actual page layout (summary cards + table) for better perceived performance.
+The data flow has a gap:
 
-### 3. Empty States Need Guidance
-The "אין נתוני ספקים להצגה" empty state is passive. Add actionable context explaining how data populates (when payment requests are submitted).
+1. **Entrepreneur sends negotiation request** -- milestone adjustments are stored in `negotiation_sessions.milestone_adjustments` (correct)
+2. **Advisor views negotiation** -- sees the entrepreneur's requested changes via `session.milestone_adjustments` merged with `proposal.milestone_adjustments` (correct)
+3. **Advisor responds** -- the `send-negotiation-response` edge function calls the DB function `submit_negotiation_response` but **only passes 3 arguments**:
+   - `p_session_id`
+   - `p_updated_line_items`
+   - `p_consultant_message`
+4. The DB function signature accepts 5 args including `p_milestone_adjustments`, but since it's not passed, it defaults to `NULL`
+5. The DB function then does: `COALESCE(p_milestone_adjustments, v_proposal.milestone_adjustments)` -- which falls back to the **original** proposal milestones (unchanged)
 
-### 4. Summary Cards Visual Polish
-The top-level summary cards in the Accountant Dashboard use basic `text-center` layout. Align them with the project-level `PaymentSummaryCards` style (icon + colored background) for consistency.
+The `milestone_responses` from the advisor are only saved to `session.files.advisor_milestone_responses` (a JSON blob for display purposes) but never propagated to the actual `proposals.milestone_adjustments` column.
 
-### 5. Liabilities Table - Mobile Responsiveness
-The 10-column table is hard to use on mobile. Add `min-w` to the table container to ensure it scrolls properly with clear column widths.
+## Fix
 
-### 6. Code Cleanup
-- The `formatCurrency` function is duplicated across 5+ components. Already defined at module level in AccountantDashboard but also re-declared in PaymentMilestoneCard, PaymentRequestCard, PaymentRequestDetailDialog, and PaymentSummaryCards.
-- Unused `ArrowLeft` import reference in comments.
+### File: `supabase/functions/send-negotiation-response/index.ts`
 
----
+**Change 1**: Convert the advisor's `milestone_responses` into the format expected by the DB function (`p_milestone_adjustments`), then pass it to the RPC call.
 
-## Detailed Changes
+The advisor's milestone responses have this structure:
+```typescript
+{
+  description: string;
+  originalPercentage: number;
+  entrepreneurPercentage: number;
+  advisorResponsePercentage: number;  // <-- the advisor's final answer
+  accepted: boolean;
+}
+```
 
-### File: `src/pages/AccountantDashboard.tsx`
+The proposal's `milestone_adjustments` column stores:
+```typescript
+{
+  description: string;
+  entrepreneur_percentage: number;
+  consultant_percentage: number;  // <-- this needs updating
+  percentage?: number;
+}
+```
 
-1. **Remove duplicate "חברה" column** from the Liabilities table (lines 265 and 291).
-2. **Replace spinner loading** with skeleton cards + skeleton table rows.
-3. **Improve summary cards** - add icons and colored icon backgrounds (matching PaymentSummaryCards pattern): red for outstanding debt, green for paid, blue for active vendors.
-4. **Improve empty states** in VendorConcentrationTab and ManagerSummaryTab with descriptive text explaining when data appears.
-5. **Add `min-w-[800px]`** to the liabilities table for proper mobile horizontal scroll.
+**Logic**: After milestone_responses are received, rebuild the `milestone_adjustments` array by reading the current proposal milestones and updating each one's `consultant_percentage` (and `percentage`) with the advisor's `advisorResponsePercentage`.
 
-### File: `src/components/payments/PaymentDashboard.tsx`
+**Change 2**: Pass the rebuilt milestones to the RPC call:
+```typescript
+const { data: result, error: rpcError } = await supabase.rpc(
+  "submit_negotiation_response",
+  {
+    p_session_id: session_id,
+    p_updated_line_items: updated_line_items || [],
+    p_consultant_message: consultant_message,
+    p_milestone_adjustments: updatedMilestones || null,  // NEW
+  }
+);
+```
 
-1. **Replace spinner loading** with skeleton layout matching the actual content structure (summary cards + milestones + requests).
+**Change 3**: To build `updatedMilestones`, fetch the current proposal's `milestone_adjustments` from the DB (already available via `session.proposal`), then merge with the advisor's responses:
 
-### File: `src/components/payments/PaymentSummaryCards.tsx`
+```typescript
+let updatedMilestones = null;
+if (milestone_responses && milestone_responses.length > 0) {
+  // Fetch current proposal milestones
+  const { data: proposalFull } = await supabase
+    .from("proposals")
+    .select("milestone_adjustments")
+    .eq("id", proposalData.id)
+    .single();
 
-No changes needed - this component already has good UX patterns.
+  const currentMilestones = proposalFull?.milestone_adjustments || [];
 
-### Files: `src/components/payments/PaymentMilestoneCard.tsx`, `PaymentRequestCard.tsx`
+  if (Array.isArray(currentMilestones)) {
+    updatedMilestones = currentMilestones.map((m, idx) => {
+      // Find matching response by description
+      const response = milestone_responses.find(
+        r => r.description === m.description
+      );
+      if (response) {
+        return {
+          ...m,
+          consultant_percentage: response.advisorResponsePercentage,
+          percentage: response.advisorResponsePercentage,
+        };
+      }
+      return m;
+    });
+  }
+}
+```
 
-No changes needed - these are already well-structured.
+### Also in `supabase/functions/send-negotiation-response/index.ts`
+
+The RPC call on line 130-137 currently only passes 3 params. Update to pass 5 params (the DB function's full signature).
+
+## Previous Plan Integration
+
+The previously approved plan for showing all negotiations to consultants (removing the status filter on AdvisorDashboard line 467, adding negotiated price to proposal cards, skeleton loaders, empty states) will also be implemented in this same change set.
+
+### File: `src/pages/AdvisorDashboard.tsx`
+
+1. **Remove status filter** on line 467 (`.filter((n: any) => n.status === 'awaiting_response' || n.status === 'open')`) so responded/resolved negotiations remain visible to the consultant
+2. **Add negotiated price display** on proposal cards using a `negotiatedPriceMap` built from negotiation sessions
+3. **Add skeleton loaders** for each tab (RFP Invites, My Proposals, Negotiations)
+4. **Improve empty states** with icons and guidance text
+5. **Add console warning** when a proposal exists in data but is not rendered
 
 ---
 
@@ -55,6 +118,12 @@ No changes needed - these are already well-structured.
 
 | File | Changes |
 |------|---------|
-| `src/pages/AccountantDashboard.tsx` | Remove duplicate column, skeleton loading, improved summary cards with icons, better empty states, mobile scroll fix |
-| `src/components/payments/PaymentDashboard.tsx` | Skeleton loading state |
+| `supabase/functions/send-negotiation-response/index.ts` | Pass milestone responses to DB function as `p_milestone_adjustments` after converting format |
+| `src/pages/AdvisorDashboard.tsx` | Remove negotiation status filter, show negotiated price on proposals, add skeleton loaders, improve empty states |
+
+## Risk Assessment
+
+- The DB function `submit_negotiation_response` already handles `p_milestone_adjustments` correctly (line 121: `COALESCE(p_milestone_adjustments, v_proposal.milestone_adjustments)`) -- no DB migration needed
+- The edge function change is backward-compatible: if no milestone_responses are provided, `p_milestone_adjustments` stays `null` and the DB falls back to existing milestones
+- The advisor dashboard changes are UI-only with no data impact
 
