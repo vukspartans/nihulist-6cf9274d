@@ -1,35 +1,62 @@
 
 
-# Fix: Proposal Approval Dialog Not Closing + Status Not Updating
+# Fix: Negotiation Response Email Failing (No Email on Counter-Offers)
 
-## Issues from Bug Report
+## Bug Found
 
-1. **"מסך ההצעה לא נעלם לאחר האישור"** -- After approving a proposal in the comparison dialog, the dialog stays open and doesn't close or visually reflect the change.
+The activity log from today shows:
 
-2. **"הסטטוס לא משתנה מממתין למאושר"** -- The status badge on the main project page still shows "ממתין" (waiting) instead of "מאושר" (approved) until navigating away and back.
+```
+negotiation_response_email_failed
+Error: Objects are not valid as a React child (found: object with keys 
+{$$typeof, type, key, ref, props, _owner, _store})
+```
+
+**Impact**: When an advisor submits a counter-offer, the entrepreneur does NOT receive an email notification. Initial proposal emails work fine -- only the negotiation response email is broken.
 
 ## Root Cause
 
-The `ProposalComparisonDialog` in `ProjectDetail.tsx` is rendered **without** an `onStatusChange` callback (line 593-599). After approval:
-- The comparison dialog's internal `fetchProposals()` does refresh its own data (status updates inside the dialog)
-- But the parent `ProjectDetail` page never refreshes its proposals list
-- The comparison dialog itself stays open
+The `NegotiationResponseEmail` template at line 74 uses a conditional JSX expression inside a `<table>`:
 
-## Planned Changes
+```tsx
+{priceDiff > 0 && (
+  <tr>...</tr>
+)}
+```
 
-### 1. `src/pages/ProjectDetail.tsx`
-Add an `onStatusChange` callback to `ProposalComparisonDialog` that:
-- Refreshes the parent page's proposals data
-- Closes the comparison dialog after approval
+In React Email's `renderAsync` (v0.0.31), rendering `false` as a direct child inside an HTML `<table>` element can produce the "Objects are not valid as a React child" error. The `react-email` renderer struggles with falsy values in certain HTML contexts.
 
-### 2. `src/components/ProposalComparisonDialog.tsx`
-After a successful approval:
-- Close the comparison dialog automatically (call `onOpenChange(false)`)
-- Ensure `onStatusChange` is called to propagate the update to the parent
+## Fix
 
-## Technical Details
+### File: `supabase/functions/_shared/email-templates/negotiation-response.tsx`
 
-- **File 1** (`ProjectDetail.tsx`, line ~593-599): Add `onStatusChange` prop that calls the existing `fetchProposals()` function on the page and optionally closes the comparison dialog.
-- **File 2** (`ProposalComparisonDialog.tsx`, line ~1190-1195): After approval succeeds, also close the parent comparison dialog via `onOpenChange(false)`.
-- No database changes needed -- this is a frontend-only UI state management fix.
+Replace the short-circuit conditional `{priceDiff > 0 && (...)}` with a proper ternary that returns `null` instead of `false`:
+
+```tsx
+{priceDiff > 0 ? (
+  <tr>
+    <td style={labelCell}>...</td>
+    <td style={savingsCell}>...</td>
+  </tr>
+) : null}
+```
+
+### File: `supabase/functions/send-negotiation-response/index.ts`
+
+Add safety coercion for numeric values to prevent any edge cases where `previousPrice` or `newPrice` might not be a plain number:
+
+```ts
+previousPrice: Number((session.proposal as any).price) || 0,
+newPrice: Number(newTotal) || 0,
+```
+
+### Deployment
+
+Redeploy the `send-negotiation-response` edge function after making the fix.
+
+### Verification
+
+After deploying, test by having an advisor submit a counter-offer and checking:
+1. The activity log shows `negotiation_response_email_sent` (not `_failed`)
+2. The entrepreneur receives the email
 
