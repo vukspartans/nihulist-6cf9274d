@@ -71,12 +71,12 @@ export const NegotiationResponseEmail = ({
               <td style={labelCell}>{isHebrew ? 'מחיר חדש' : 'New'}</td>
               <td style={newPriceCell}>{formatCurrency(newPrice)}</td>
             </tr>
-            {priceDiff > 0 && (
+            {priceDiff > 0 ? (
               <tr>
                 <td style={labelCell}>{isHebrew ? 'חיסכון' : 'Savings'}</td>
                 <td style={savingsCell}>{formatCurrency(priceDiff)} ({percentChange}%)</td>
               </tr>
-            )}
+            ) : null}
           </table>
         </Section>
 
