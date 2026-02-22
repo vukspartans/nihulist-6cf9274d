@@ -9,7 +9,7 @@ import { Eye, Clock, Package, ChevronDown, ChevronUp, FileText, FileSignature, A
 import { cn } from '@/lib/utils';
 import { VersionBadge } from '@/components/negotiation/VersionBadge';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
-import { calculateFeeItemTotal, isRecurringChargeType } from '@/constants/rfpUnits';
+import { calculateFeeItemTotal, isRecurringChargeType, getFeeUnitLabel } from '@/constants/rfpUnits';
 
 interface FeeLineItem {
   item_id?: string;
@@ -407,7 +407,7 @@ export const ProposalComparisonTable = ({
                                     return (
                                       <TableRow key={idx} className={item.is_optional ? 'text-muted-foreground' : ''}>
                                         <TableCell className="text-xs">{item.description}</TableCell>
-                                        <TableCell className="text-xs">{item.unit || '-'}</TableCell>
+                                        <TableCell className="text-xs">{getFeeUnitLabel(item.unit || '') || '-'}</TableCell>
                                         <TableCell className="text-xs">{item.quantity ?? 1}</TableCell>
                                         <TableCell className="text-xs">{formatCurrency(item.unit_price)}</TableCell>
                                         <TableCell className="text-xs font-medium">{formatCurrency(itemTotal)}</TableCell>
