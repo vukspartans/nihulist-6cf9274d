@@ -638,13 +638,42 @@ const SubmitProposal = () => {
         .single();
 
       if (invite) {
-        const requestFiles = Array.isArray(invite.request_files) 
+        let requestFiles = Array.isArray(invite.request_files) 
           ? (invite.request_files as unknown as UploadedFileMetadata[])
           : [];
         
-        const serviceDetailsFile = invite.service_details_file 
+        // Refresh signed URLs for request files (they expire after 7 days)
+        if (requestFiles.length > 0) {
+          const refreshedFiles = await Promise.all(
+            requestFiles.map(async (file) => {
+              if (!file.path) return file;
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('rfp-request-files')
+                .createSignedUrl(file.path, 86400); // 24 hours
+              if (signedError || !signedData) {
+                console.error('[SubmitProposal] Error refreshing signed URL:', signedError);
+                return file;
+              }
+              return { ...file, url: signedData.signedUrl };
+            })
+          );
+          requestFiles = refreshedFiles;
+        }
+
+        let serviceDetailsFile = invite.service_details_file 
           ? (invite.service_details_file as unknown as UploadedFileMetadata) 
           : null;
+
+        // Refresh service details file URL
+        if (serviceDetailsFile?.path) {
+          const { data: signedData } = await supabase.storage
+            .from('rfp-request-files')
+            .createSignedUrl(serviceDetailsFile.path, 86400);
+          if (signedData) {
+            serviceDetailsFile = { ...serviceDetailsFile, url: signedData.signedUrl };
+          }
+        }
+
         const paymentTerms = invite.payment_terms 
           ? (invite.payment_terms as unknown as PaymentTerms) 
           : null;
