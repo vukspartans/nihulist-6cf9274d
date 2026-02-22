@@ -977,7 +977,7 @@ const RFPDetails = () => {
                                 ) : (
                                   <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                 )}
-                                <span className={`flex-1 text-sm ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
+                                <span className={`flex-1 text-sm text-right ${item.is_included ? '' : 'text-muted-foreground line-through'}`}>
                                   {item.task_name}
                                 </span>
                                 <div className="flex gap-1.5 flex-shrink-0">
