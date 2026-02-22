@@ -173,6 +173,13 @@ const AdvisorDashboard = () => {
       return;
     }
 
+    // Verify session is valid before making queries
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.warn('[AdvisorDashboard] No valid session, skipping fetch');
+      return;
+    }
+
     console.debug('[AdvisorDashboard] ========================================');
     console.debug('[AdvisorDashboard] Starting fetch for user:', user.id, user.email);
 
