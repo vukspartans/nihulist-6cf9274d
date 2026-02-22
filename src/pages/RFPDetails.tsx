@@ -968,7 +968,7 @@ const RFPDetails = () => {
                             {scopeItems.map((item) => (
                               <div 
                                 key={item.id} 
-                                className={`flex items-center gap-2 p-2.5 rounded-lg ${
+                                className={`flex flex-row-reverse items-center gap-2 p-2.5 rounded-lg ${
                                   item.is_included ? 'bg-green-50 dark:bg-green-950/20' : 'bg-muted'
                                 }`}
                               >
