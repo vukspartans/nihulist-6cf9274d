@@ -189,7 +189,7 @@ const AdvisorDashboard = () => {
         .from('profiles')
         .select('name, phone')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('[AdvisorDashboard] ❌ Profile error:', profileError);
@@ -202,7 +202,7 @@ const AdvisorDashboard = () => {
         .from('advisors')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (advisorError) {
         console.error('[AdvisorDashboard] ❌ Advisor profile error:', advisorError);
@@ -525,6 +525,7 @@ const AdvisorDashboard = () => {
         }
       }
     } catch (error) {
+      console.error('[AdvisorDashboard] Fatal error loading data:', error);
       toast({
         title: "Error",
         description: "Failed to load advisor data",
