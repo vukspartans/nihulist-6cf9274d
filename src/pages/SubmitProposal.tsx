@@ -1049,7 +1049,7 @@ const SubmitProposal = () => {
                             key={index}
                             className={`flex items-center gap-2 p-2 border rounded-lg ${item.is_included ? 'bg-muted/30' : 'bg-muted/10 opacity-60'}`}
                           >
-                            <span className={`flex-1 ${!item.is_included ? 'line-through text-muted-foreground' : ''}`}>
+                            <span className={`flex-1 text-right ${!item.is_included ? 'line-through text-muted-foreground' : ''}`}>
                               {item.task_name}
                             </span>
                             {item.is_optional && (
