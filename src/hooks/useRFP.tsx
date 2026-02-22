@@ -227,10 +227,14 @@ export const useRFP = () => {
 
         console.log('[useRFP] Processing advisor type:', advisorType, 'invites:', inviteIds.length);
 
-        // Update rfp_invites with service details and payment terms
-        // Now saves ALL service details regardless of mode (all fields are inclusive)
+        // Update rfp_invites with service details, payment terms, and per-type title
         const updateData: Record<string, any> = {};
-        
+
+        // Fix Bug 3: Set per-advisor-type request_title
+        if (typeData.requestTitle) {
+          updateData.request_title = typeData.requestTitle;
+        }
+
         if (typeData.serviceDetails) {
           // Always save all service details - no longer mode-based
           updateData.service_details_mode = typeData.serviceDetails.mode || 'checklist';
