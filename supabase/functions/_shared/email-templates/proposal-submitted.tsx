@@ -34,7 +34,7 @@ export const ProposalSubmittedEmail = ({
       </Text>
       
       <Text style={paragraph}>
-        התקבלה הצעת מחיר חדשה עבורך. להלן הפרטים:
+        {'התקבלה הצעת מחיר חדשה. להלן הפרטים:'}
       </Text>
 
       <Section style={detailsBox}>
@@ -55,12 +55,12 @@ export const ProposalSubmittedEmail = ({
             <td style={labelCell}>מחיר</td>
             <td style={valueCell}>{price?.toLocaleString('he-IL')} &#8362;</td>
           </tr>
-          {filesCount > 0 && (
+          {filesCount > 0 ? (
             <tr>
               <td style={labelCell}>קבצים מצורפים</td>
               <td style={valueCell}>{filesCount}</td>
             </tr>
-          )}
+          ) : null}
         </table>
       </Section>
 
