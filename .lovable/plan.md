@@ -1,52 +1,46 @@
 
 
-# Fix Stuck Notification Queue
+# Auto-Expire Stale Negotiation Sessions
 
 ## Problem
+9 negotiation sessions are stuck in `awaiting_response` status for up to 67 days with no expiry mechanism. Advisors who never respond leave these sessions hanging indefinitely.
 
-27 notifications are stuck in `pending` status (16 `payment_terms_changed`, 6 `negotiation_response`, 5 `negotiation_request`) with `attempts: 0` -- they've never been processed.
+## Solution
+Create a new edge function `expire-stale-negotiations` that runs on a cron schedule (daily) to cancel sessions stuck in `awaiting_response` for more than 30 days. Follows the exact same pattern as the existing `expire-invites` function.
 
-**Root cause**: The `pg_cron` extension is **not enabled** on this Supabase project, so the scheduled cron job to call `process-notification-queue` was never created. The edge function itself works perfectly (verified by test call that processed 5 notifications successfully).
+## Changes
 
-## Fix (2 steps)
+### 1. New Edge Function: `supabase/functions/expire-stale-negotiations/index.ts`
+- Query `negotiation_sessions` where `status = 'awaiting_response'` and `created_at < now() - 30 days`
+- Update status to `cancelled`
+- Set `resolved_at` to current timestamp
+- Log each expiration to `activity_log` with action `negotiation_session_expired`
+- Enqueue a notification to the initiator (entrepreneur) informing them the session expired
+- Return count of expired sessions
 
-### Step 1: Add `process-notification-queue` to config.toml
+### 2. Update `supabase/config.toml`
+- Add `[functions.expire-stale-negotiations]` with `verify_jwt = false` (called by cron)
 
-The function is missing from `supabase/config.toml`. Add it with `verify_jwt = false` so the cron job (which uses the anon key) can call it.
-
-### Step 2: Enable pg_cron and create the scheduled job
-
-Run SQL via the Supabase SQL Editor to:
-1. Enable `pg_cron` and `pg_net` extensions
-2. Create a cron job that calls `process-notification-queue` every 5 minutes
+### 3. Manual Step: Add Cron Job
+After deployment, the user runs SQL in the Supabase SQL Editor to schedule the function daily at 3 AM:
 
 ```text
--- Enable extensions
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
-
--- Schedule every 5 minutes
 SELECT cron.schedule(
-  'process-notification-queue',
-  '*/5 * * * *',
+  'expire-stale-negotiations-daily',
+  '0 3 * * *',
   $$ SELECT net.http_post(
-    url:='https://aazakceyruefejeyhkbk.supabase.co/functions/v1/process-notification-queue',
+    url:='https://aazakceyruefejeyhkbk.supabase.co/functions/v1/expire-stale-negotiations',
     headers:='{"Content-Type":"application/json","Authorization":"Bearer <anon_key>"}'::jsonb,
-    body:='{"batch_size":20}'::jsonb
+    body:='{}'::jsonb
   ) as request_id; $$
 );
 ```
 
-This SQL must be run manually in the Supabase SQL Editor (not as a migration) because it contains project-specific secrets.
-
-### Step 3: Process the existing 27 stuck notifications
-
-After deploying the config change, manually invoke the function once (without test_mode) to flush the backlog. This will be done by calling the edge function directly.
-
 ## Technical Details
 
-- The edge function code is correct and working -- no changes needed there
-- It sends emails via Resend, with retry logic and exponential backoff
-- Only `config.toml` needs a code change (1 line)
-- The cron setup requires manual SQL execution by the user in the Supabase dashboard
+- **Threshold**: 30 days from `created_at` (not `updated_at`, since `updated_at` auto-refreshes)
+- **New status**: Uses existing `cancelled` status from the `negotiation_status` enum -- no schema changes needed
+- **Notification**: Uses `enqueue_notification()` DB function to queue an email to the entrepreneur, which will be processed by the already-running `process-notification-queue` cron
+- **Idempotent**: Safe to run multiple times; only affects sessions still in `awaiting_response`
+- **Pattern**: Mirrors `expire-invites` function structure exactly
 
