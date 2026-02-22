@@ -312,7 +312,11 @@ export const RFPWizard = ({ projectId, projectName, projectType, projectLocation
     const loginUrl = `${PRODUCTION_URL}/auth?type=advisor&mode=login`;
     
     // Extract request data - sanitize before sending
-    const requestTitle = typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined;
+    // Don't pass a generic title when we have per-type titles -- saveAdvisorTypeData will set per-type titles
+    const hasMultipleTypes = Object.keys(enrichedRequestDataByType).length > 1;
+    const requestTitle = hasMultipleTypes
+      ? null
+      : (typeData?.requestTitle ? sanitizeText(typeData.requestTitle, 200) : undefined);
     const requestContent = typeData?.requestContent ? sanitizeText(typeData.requestContent, 5000) : undefined;
     const requestFiles = typeData?.requestAttachments;
     
