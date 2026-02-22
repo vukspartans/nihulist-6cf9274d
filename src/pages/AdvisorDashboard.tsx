@@ -515,13 +515,6 @@ const AdvisorDashboard = () => {
           setNegotiationByInvite(negotiationInviteMap);
           console.debug('[AdvisorDashboard] ✅ Mapped active negotiations to invites:', negotiationInviteMap.size);
 
-          // Log warnings for proposals that exist but might not render
-          (proposalData || []).forEach(p => {
-            const rendered = filteredProposals?.some?.((fp: any) => fp.id === p.id);
-            if (!rendered) {
-              console.warn('[AdvisorDashboard] ⚠️ Proposal exists but may not be rendered for Consultant:', p.id, p.status);
-            }
-          });
         }
       }
     } catch (error) {
