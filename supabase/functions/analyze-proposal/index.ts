@@ -358,7 +358,7 @@ serve(async (req) => {
     let analysis = '';
     const modelUsed = 'gpt-5.2';
 
-    // Use OpenAI GPT-5.2 directly (no fallback to Lovable Gateway)
+    // Use OpenAI GPT-5.2 directly
     console.log('[analyze-proposal] Using OpenAI gpt-5.2');
     
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
