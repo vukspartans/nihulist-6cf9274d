@@ -38,10 +38,15 @@ async function getTeamMemberEmails(
     .map((member: any) => member.email);
 }
 
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     console.log('[Deadline Reminder] Starting deadline reminder job');

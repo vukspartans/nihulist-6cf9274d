@@ -11,10 +11,15 @@ const corsHeaders = {
 
 const FROM_EMAIL = 'Billding <noreply@billding.ai>';
 
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
