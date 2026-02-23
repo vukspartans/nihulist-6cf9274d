@@ -8,11 +8,16 @@ const corsHeaders = {
 
 const MAX_RETRY_ATTEMPTS = 3
 
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     console.log('[retry-failed-emails] Starting retry process')

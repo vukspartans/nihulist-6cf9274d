@@ -10,11 +10,16 @@ const corsHeaders = {
  * Phase 2: Automated RFP Invite Expiration
  * This function runs on a cron schedule to automatically expire invites past their deadline
  */
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     console.log('[Expire Invites] Starting automated expiration check...')

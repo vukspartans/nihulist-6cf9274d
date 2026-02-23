@@ -48,10 +48,15 @@ interface ReminderResult {
   error?: string
 }
 
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   if (!resendApiKey) {

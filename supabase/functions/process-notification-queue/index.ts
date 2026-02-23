@@ -14,11 +14,16 @@ const corsHeaders = {
  * Processes pending notifications from the queue and sends them via email
  * Implements retry logic and failure tracking
  */
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     console.log('[Notification Queue] Starting queue processing...')

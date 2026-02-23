@@ -8,10 +8,15 @@ const corsHeaders = {
 
 const STALE_THRESHOLD_DAYS = 30
 
+import { validateCronRequest } from '../_shared/cron-auth.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const authError = validateCronRequest(req);
+  if (authError) return authError;
 
   try {
     console.log('[Expire Stale Negotiations] Starting check...')
