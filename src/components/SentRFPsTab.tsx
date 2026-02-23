@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, Ban, BarChart3 } from 'lucide-react';
+import { AlertCircle, Eye, CheckCircle2, Clock, XCircle, FileText, Send, Calendar, Loader2, Ban, BarChart3, TimerReset } from 'lucide-react';
 import { useRFPInvitesWithDetails, AdvisorTypeGroup, AdvisorTypeInvite } from '@/hooks/useRFPInvitesWithDetails';
 import { ProposalDetailDialog } from './ProposalDetailDialog';
 import { ProposalComparisonDialog } from './ProposalComparisonDialog';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ExtendDeadlineDialog } from './ExtendDeadlineDialog';
 
 interface SentRFPsTabProps {
   projectId: string;
@@ -34,6 +35,9 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
   // Comparison dialog state - tracks which advisor type is being compared
   const [comparisonAdvisorType, setComparisonAdvisorType] = useState<string | null>(null);
   
+  // Extend deadline dialog state
+  const [extendDeadlineGroup, setExtendDeadlineGroup] = useState<AdvisorTypeGroup | null>(null);
+  
   // Helper to get proposal IDs for a specific advisor type group
   const getGroupProposalIds = (group: AdvisorTypeGroup): string[] => {
     return group.invites
@@ -42,6 +46,28 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
         invite.proposalStatus !== 'rejected'
       )
       .map(invite => invite.proposalId!);
+  };
+
+  // Helper: get earliest non-terminal deadline for a group
+  const getGroupEarliestDeadline = (group: AdvisorTypeGroup): string | null => {
+    const activeDeadlines = group.invites
+      .filter(i => !['submitted', 'declined', 'expired'].includes(i.status) && i.deadlineAt)
+      .map(i => i.deadlineAt!);
+    if (activeDeadlines.length === 0) return null;
+    return activeDeadlines.reduce((earliest, d) => d < earliest ? d : earliest);
+  };
+
+  // Helper: check if group deadline is critical (< 24h)
+  const isGroupDeadlineCritical = (group: AdvisorTypeGroup): boolean => {
+    const deadline = getGroupEarliestDeadline(group);
+    if (!deadline) return false;
+    const remaining = new Date(deadline).getTime() - Date.now();
+    return remaining > 0 && remaining < 24 * 60 * 60 * 1000;
+  };
+
+  // Helper: get unique RFP IDs for a group
+  const getGroupRfpIds = (group: AdvisorTypeGroup): string[] => {
+    return [...new Set(group.invites.map(i => i.rfpId))];
   };
 
   // Helper function to translate status to Hebrew
@@ -385,9 +411,24 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
-              {/* Comparison button for this group - show when 2+ proposals */}
-              {group.proposalsCount >= 2 && (
-                <div className="mb-3 flex justify-end">
+              {/* Action buttons row */}
+              <div className="mb-3 flex justify-between items-center">
+                {/* Extend deadline button - visible when deadline < 24h */}
+                {isGroupDeadlineCritical(group) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExtendDeadlineGroup(group)}
+                    className="gap-1.5 border-amber-500/50 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                  >
+                    <TimerReset className="h-4 w-4" />
+                    הארכת מועד
+                  </Button>
+                )}
+                {!isGroupDeadlineCritical(group) && <div />}
+                
+                {/* Comparison button for this group - show when 2+ proposals */}
+                {group.proposalsCount >= 2 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -397,8 +438,8 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                     <BarChart3 className="h-4 w-4" />
                     השווה הצעות ({group.proposalsCount})
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
               
               {group.invites.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
@@ -448,6 +489,18 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
           )}
           advisorType={comparisonAdvisorType}
           projectId={projectId}
+        />
+      )}
+
+      {/* Extend Deadline Dialog */}
+      {extendDeadlineGroup && (
+        <ExtendDeadlineDialog
+          open={!!extendDeadlineGroup}
+          onOpenChange={(open) => !open && setExtendDeadlineGroup(null)}
+          rfpIds={getGroupRfpIds(extendDeadlineGroup)}
+          advisorType={extendDeadlineGroup.advisorType}
+          projectId={projectId}
+          currentDeadline={getGroupEarliestDeadline(extendDeadlineGroup)!}
         />
       )}
     </div>
