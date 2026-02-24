@@ -1,49 +1,135 @@
 
 
-# Fix: Negotiation Request Email Failing with React Rendering Error
+# Email Infrastructure Audit -- Comprehensive Findings
 
-## Root Cause
+## Executive Summary
 
-The activity log confirms emails are failing with:
-```
-Error: Objects are not valid as a React child (found: object with keys {$$typeof, type, key, ref, props, _owner, _store})
-```
+After reviewing all 16 email-sending edge functions, 14 email templates, the notification queue system, and the config.toml, I found **3 critical bugs**, **2 architectural gaps**, and **3 moderate issues**.
 
-This is a **duplicate React instance** issue. The `send-negotiation-request` function uses outdated import versions that create conflicting React instances during email rendering:
+---
 
-**Broken** (`send-negotiation-request/index.ts` line 1-3):
-```
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-```
+## CRITICAL -- Functions That Are Broken Right Now
 
-**Working** (`send-negotiation-response/index.ts` line 1-3):
+### 1. `reject-proposal` -- Dual React Instance (WILL CRASH)
+
+**Status:** Broken. Uses `https://esm.sh/resend@2.0.0` (line 3) alongside `npm:@react-email/components@0.0.31`. This is the exact same bug we just fixed in `send-negotiation-request`. When this function renders the `ProposalRejectedEmail` template via `renderAsync`, it will throw:
+
 ```
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
-import { Resend } from "npm:resend@4.0.0";
+Objects are not valid as a React child
 ```
 
-The key difference: Resend imported via `https://esm.sh/resend@2.0.0` brings its own React, conflicting with the `npm:react@18.3.1` import. The fix (already applied to `send-negotiation-response`) uses `npm:resend@4.0.0`.
-
-## Fix
-
-Update the first 3 import lines of `supabase/functions/send-negotiation-request/index.ts` to match the working pattern:
-
+**Fix:** Update lines 1-3:
 ```typescript
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { Resend } from "npm:resend@4.0.0";
 ```
+Also add the missing `import React from "npm:react@18.3.1"` -- currently absent, which means `renderAsync` has no React context at all.
 
-Then redeploy the `send-negotiation-request` edge function.
+### 2. `send-proposal-notification` -- DOES NOT SEND ANY EMAIL
 
-## Regarding the "click of a button" Navigation
+**Status:** Stub function. Line 50 literally says `// TODO: Send email notification to entrepreneur`. It logs activity but **never sends an email**. Any code path invoking this function silently succeeds without notifying anyone.
 
-The email template already includes a CTA button pointing to `https://billding.ai/negotiation/${session.id}`. The response URL and email template are correctly configured -- the only issue is the email never sends due to the React error.
+**Fix:** Either remove this function and redirect callers to `notify-proposal-submitted`, or implement actual email sending.
 
-## Verification
+### 3. `send-rfp-with-deadline` -- DOES NOT SEND ANY EMAIL
 
-After deploying, trigger a negotiation request and check the activity log. Instead of `negotiation_request_email_failed`, you should see `negotiation_request_email_sent`.
+**Status:** Creates RFP invites in the database but **never calls Resend or any email service**. It doesn't even import Resend. Invites are created with status `'sent'` but no email is actually dispatched. This appears to be a legacy function superseded by `send-rfp-email`, but it's still in config.toml and may still be called.
+
+---
+
+## MODERATE -- Functions with Stale Dependencies
+
+### 4. `bulk-create-advisors` -- Uses `esm.sh/resend@2.0.0`
+
+Uses the old `https://esm.sh/resend@2.0.0` import. This function sends plain HTML (not React templates), so it won't crash from dual-React, but `resend@2.0.0` is outdated and may have bugs or missing features. Should be updated to `npm:resend@4.0.0` for consistency.
+
+### 5. `manage-users` -- Uses outdated Deno/Supabase + `npm:resend@2.0.0`
+
+Uses `deno.land/std@0.168.0` and `esm.sh/@supabase/supabase-js@2.39.3`. While it uses `npm:resend@2.0.0` (not esm.sh, so no dual-React crash), the Supabase client version is severely outdated (2.39.3 vs 2.55.0). Should be standardized.
+
+---
+
+## ARCHITECTURAL GAPS
+
+### 6. Missing `config.toml` entries for 8 edge functions
+
+The following functions exist in the codebase but have NO entry in `config.toml`:
+
+| Function | Risk |
+|---|---|
+| `notify-proposal-approved` | Defaults to `verify_jwt = true` -- correct for user-invoked |
+| `notify-proposal-rejected` | Same -- correct |
+| `notify-proposal-submitted` | Same -- correct |
+| `send-rfp-email` | Same -- correct |
+| `notify-rfp-declined` | Same -- but called fire-and-forget from client, may fail without JWT in some edge cases |
+| `bulk-create-advisors` | Same -- correct for admin-invoked |
+| `manage-users` | Same -- correct for admin-invoked |
+| `expire-rfps` / `expire-invites` | **PROBLEM** -- These are cron jobs. Without `verify_jwt = false` in config.toml, they default to `verify_jwt = true` and will reject cron requests that use `x-cron-secret` instead of JWT. |
+
+### 7. No `expire-rfps` or `expire-invites` in config.toml
+
+These cron-triggered functions need `verify_jwt = false` to work with the `validateCronRequest` pattern. Without it, **expired RFPs and invites are never cleaned up**.
+
+---
+
+## ARCHITECTURAL OBSERVATIONS (Lower Priority)
+
+### 8. Duplicate rejection email paths
+
+There are **two** functions that send rejection emails:
+- `reject-proposal` -- Uses old imports, renders email inline, called from entrepreneur action
+- `notify-proposal-rejected` -- Uses correct imports, separate notification function
+
+These should be consolidated. Currently `reject-proposal` handles the DB mutation AND email sending, while `notify-proposal-rejected` is a standalone notifier. Having both creates maintenance burden and inconsistent behavior.
+
+### 9. `send-proposal-notification` vs `notify-proposal-submitted`
+
+Same duplication pattern. `send-proposal-notification` is a dead stub while `notify-proposal-submitted` is the working implementation. The stub should be removed.
+
+---
+
+## Proposed Fix Plan
+
+### Phase 1: Fix Critical Bugs (Immediate)
+
+1. **`reject-proposal/index.ts`** -- Update imports to standard pattern (`npm:resend@4.0.0`, add `React` import)
+2. **`bulk-create-advisors/index.ts`** -- Update `Resend` import to `npm:resend@4.0.0`
+3. **`config.toml`** -- Add missing entries for `expire-rfps` and `expire-invites` with `verify_jwt = false`
+
+### Phase 2: Clean Up Dead Code
+
+4. **`send-proposal-notification`** -- Either remove entirely or redirect to `notify-proposal-submitted`
+5. **`send-rfp-with-deadline`** -- Audit callers; if superseded by `send-rfp-email`, mark as deprecated or remove
+
+### Phase 3: Standardize
+
+6. **`manage-users/index.ts`** -- Update Deno std and Supabase client versions
+7. Add remaining missing `config.toml` entries for completeness
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `supabase/functions/reject-proposal/index.ts` | Fix imports (lines 1-5) |
+| `supabase/functions/bulk-create-advisors/index.ts` | Fix Resend import (line 3) |
+| `supabase/config.toml` | Add `expire-rfps`, `expire-invites` entries |
+| Deploy | `reject-proposal`, `bulk-create-advisors` |
+
+---
+
+## Technical Details
+
+### Standard Import Pattern (all email functions must use this)
+
+```typescript
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { Resend } from "npm:resend@4.0.0";
+// Only needed if using React Email templates:
+import { renderAsync } from "npm:@react-email/components@0.0.31";
+import React from "npm:react@18.3.1";
+```
+
+The key rule: **Never use `https://esm.sh/resend@*`** -- it bundles its own React, creating a dual-instance conflict when combined with `npm:react@18.3.1` used by `@react-email/components`.
 
