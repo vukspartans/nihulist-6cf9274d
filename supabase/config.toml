@@ -3,12 +3,6 @@ project_id = "aazakceyruefejeyhkbk"
 [functions.get-advisors-data]
 verify_jwt = false
 
-[functions.send-rfp-with-deadline]
-verify_jwt = true
-
-[functions.send-proposal-notification]
-verify_jwt = true
-
 [functions.deadline-reminder]
 verify_jwt = false
 
@@ -61,4 +55,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.expire-stale-negotiations]
+verify_jwt = false
+
+[functions.expire-rfps]
+verify_jwt = false
+
+[functions.expire-invites]
 verify_jwt = false
