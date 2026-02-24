@@ -7,11 +7,11 @@
  *
  * Secret rotation:
  *   Checks x-cron-secret against CRON_SECRET_CURRENT first, then CRON_SECRET_PREVIOUS.
- *   Fallback: service role key in Authorization header.
+ *   No other fallbacks — service role key and legacy CRON_SECRET are NOT accepted.
  *
  * Replay protection:
  *   Requires x-cron-timestamp header (unix epoch).
- *   Rejects if |now - timestamp| > 60 seconds (cron_secret auth only).
+ *   Rejects if missing, unparseable, or |now - timestamp| > 60 seconds.
  */
 
 const corsHeaders = {
@@ -21,7 +21,7 @@ const corsHeaders = {
 
 interface CronAuthResult {
   isValid: boolean;
-  authMethod: 'cron_secret_current' | 'cron_secret_previous' | 'service_role' | 'none';
+  authMethod: 'cron_secret_current' | 'cron_secret_previous' | 'none';
   timestampDelta: number | null;
   rejectReason?: string;
 }
@@ -32,8 +32,11 @@ export function validateCronRequest(req: Request): CronAuthResult {
   const secret = req.headers.get('x-cron-secret');
   const current = Deno.env.get('CRON_SECRET_CURRENT');
   const previous = Deno.env.get('CRON_SECRET_PREVIOUS');
-  // Backward compat: also check legacy CRON_SECRET
-  const legacy = Deno.env.get('CRON_SECRET');
+
+  // Step 1: Secret validation — only CURRENT and PREVIOUS accepted
+  if (!secret) {
+    return { isValid: false, authMethod: 'none', timestampDelta: null, rejectReason: 'missing_secret_header' };
+  }
 
   let authMethod: CronAuthResult['authMethod'] = 'none';
 
@@ -41,39 +44,28 @@ export function validateCronRequest(req: Request): CronAuthResult {
     authMethod = 'cron_secret_current';
   } else if (previous && secret === previous) {
     authMethod = 'cron_secret_previous';
-  } else if (legacy && secret === legacy) {
-    // Treat legacy as "current" for backward compat during migration
-    authMethod = 'cron_secret_current';
   } else {
-    // Fallback: service role key in Authorization header
-    const authHeader = req.headers.get('authorization');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (authHeader && serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
-      authMethod = 'service_role';
-    }
-  }
-
-  if (authMethod === 'none') {
     return { isValid: false, authMethod: 'none', timestampDelta: null, rejectReason: 'invalid_secret' };
   }
 
-  // Timestamp replay check (only for cron_secret auth, not service_role)
-  let timestampDelta: number | null = null;
+  // Step 2: Timestamp validation — required for all authenticated requests
+  const tsHeader = req.headers.get('x-cron-timestamp');
 
-  if (authMethod.startsWith('cron_secret')) {
-    const tsHeader = req.headers.get('x-cron-timestamp');
-    const tsEpoch = tsHeader ? parseFloat(tsHeader) : NaN;
-    const nowEpoch = Date.now() / 1000;
+  if (tsHeader === null) {
+    return { isValid: false, authMethod, timestampDelta: null, rejectReason: 'missing_timestamp' };
+  }
 
-    if (isNaN(tsEpoch)) {
-      return { isValid: false, authMethod, timestampDelta: null, rejectReason: 'missing_timestamp' };
-    }
+  const tsEpoch = parseFloat(tsHeader);
 
-    timestampDelta = Math.round((nowEpoch - tsEpoch) * 10) / 10; // 1 decimal
+  if (isNaN(tsEpoch)) {
+    return { isValid: false, authMethod, timestampDelta: null, rejectReason: 'unparseable_timestamp' };
+  }
 
-    if (Math.abs(timestampDelta) > MAX_TIMESTAMP_DRIFT_SECONDS) {
-      return { isValid: false, authMethod, timestampDelta, rejectReason: 'replay_rejected' };
-    }
+  const nowEpoch = Date.now() / 1000;
+  const timestampDelta = Math.round((nowEpoch - tsEpoch) * 10) / 10;
+
+  if (Math.abs(timestampDelta) > MAX_TIMESTAMP_DRIFT_SECONDS) {
+    return { isValid: false, authMethod, timestampDelta, rejectReason: 'replay_rejected' };
   }
 
   return { isValid: true, authMethod, timestampDelta };
