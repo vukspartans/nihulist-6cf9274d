@@ -1,46 +1,49 @@
 
 
-# The RLS Policy Cannot Be Fixed Via Migration — Direct SQL Required
+# Fix: Negotiation Request Email Failing with React Rendering Error
 
-## The Problem
+## Root Cause
 
-The policy **still** has `p.name` instead of `name`. The DROP + CREATE approach isn't working in your SQL Editor session — likely Supabase is silently not applying it, or there's a copy-paste issue with the `name` reference being ambiguous.
-
-## New Approach: Use `objects.name` Explicitly
-
-The issue may be that bare `name` is ambiguous between `storage.objects.name` and other columns. We need to use the fully qualified reference.
-
-**Run this exact SQL in the Supabase SQL Editor — copy the entire block:**
-
-```sql
--- Step 1: Drop the old policy
-DROP POLICY "Invited advisors can read project files" ON storage.objects;
+The activity log confirms emails are failing with:
+```
+Error: Objects are not valid as a React child (found: object with keys {$$typeof, type, key, ref, props, _owner, _store})
 ```
 
-Run that first, confirm "Success", then run:
+This is a **duplicate React instance** issue. The `send-negotiation-request` function uses outdated import versions that create conflicting React instances during email rendering:
 
-```sql
--- Step 2: Create the fixed policy  
-CREATE POLICY "Invited advisors can read project files"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'project-files'
-  AND auth.uid() IS NOT NULL
-  AND EXISTS (
-    SELECT 1
-    FROM rfp_invites ri
-    JOIN advisors a ON a.id = ri.advisor_id
-    JOIN rfps r ON r.id = ri.rfp_id
-    JOIN projects p ON p.id = r.project_id
-    WHERE a.user_id = auth.uid()
-      AND (p.id)::text = (storage.foldername(objects.name))[1]
-  )
-);
+**Broken** (`send-negotiation-request/index.ts` line 1-3):
+```
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 ```
 
-**Key difference:** Using `objects.name` (the table alias for `storage.objects`) instead of bare `name` to eliminate any ambiguity.
+**Working** (`send-negotiation-response/index.ts` line 1-3):
+```
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { Resend } from "npm:resend@4.0.0";
+```
 
-**Run them as two separate statements** — first the DROP, then the CREATE. This avoids any issue with combined execution.
+The key difference: Resend imported via `https://esm.sh/resend@2.0.0` brings its own React, conflicting with the `npm:react@18.3.1` import. The fix (already applied to `send-negotiation-response`) uses `npm:resend@4.0.0`.
 
-After both succeed, run the verification query again to confirm the output shows `objects.name` instead of `p.name`.
+## Fix
+
+Update the first 3 import lines of `supabase/functions/send-negotiation-request/index.ts` to match the working pattern:
+
+```typescript
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { Resend } from "npm:resend@4.0.0";
+```
+
+Then redeploy the `send-negotiation-request` edge function.
+
+## Regarding the "click of a button" Navigation
+
+The email template already includes a CTA button pointing to `https://billding.ai/negotiation/${session.id}`. The response URL and email template are correctly configured -- the only issue is the email never sends due to the React error.
+
+## Verification
+
+After deploying, trigger a negotiation request and check the activity log. Instead of `negotiation_request_email_failed`, you should see `negotiation_request_email_sent`.
 
