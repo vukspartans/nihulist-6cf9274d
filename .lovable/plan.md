@@ -1,186 +1,139 @@
 
 
-# Cron Security Hardening -- Secret Rotation, Replay Protection, and Centralized Wrapper
+# Finalize Cron Hardening: Remove Legacy, Harden Timestamps, SQL Script, Checklist
 
-## What Changes
+## Overview
 
-We will upgrade the shared cron authentication layer to support secret rotation, replay attack prevention, and structured logging -- then wrap all 10 cron-triggered edge functions with a clean `withCronSecurity` helper. No business logic changes.
-
----
-
-## Architecture
-
-```text
-pg_cron job
-  |
-  | sends: x-cron-secret + x-cron-timestamp headers
-  v
-Edge Function entry point
-  |
-  v
-withCronSecurity(handler)
-  |-- validates x-cron-secret against CRON_SECRET_CURRENT or CRON_SECRET_PREVIOUS
-  |-- validates x-cron-timestamp is within 60 seconds
-  |-- logs: function name, auth method, valid/invalid, timestamp delta
-  |-- on success: calls handler(req)
-  |-- on failure: returns 401
-```
+Four targeted changes to finalize the cron security layer. No business logic touched.
 
 ---
 
-## Files Changed
+## A. Remove Legacy Secret Fallback
 
-### 1. `supabase/functions/_shared/cron-auth.ts` -- Rewrite
+**File:** `supabase/functions/_shared/cron-auth.ts`
 
-Replace the current `validateCronRequest` with two exports:
+Remove lines 35-46 (the `CRON_SECRET` legacy check and the service role key fallback). The validation will only accept:
 
-- **`validateCronRequest(req)`** -- Updated to:
-  - Check `x-cron-secret` against `CRON_SECRET_CURRENT` first, then `CRON_SECRET_PREVIOUS` (rotation support)
-  - Fallback to service role key in Authorization header (backward compat)
-  - Validate `x-cron-timestamp` header: reject if missing or older than 60 seconds (replay protection)
-  - Return structured log object with `authMethod`, `isValid`, `timestampDelta`
+- `CRON_SECRET_CURRENT` -- primary
+- `CRON_SECRET_PREVIOUS` -- rotation window (skipped if env var is empty/unset)
 
-- **`withCronSecurity(functionName, handler)`** -- New wrapper:
-  - Handles OPTIONS/CORS
-  - Calls `validateCronRequest`
-  - Logs structured JSON: `{ function, authMethod, valid, timestampDelta, timestamp }`
-  - On success: delegates to `handler(req)`
-  - On failure: returns 401 with JSON error
-  - Catches unhandled errors from handler and returns 500
+The `service_role` fallback via Authorization header is also removed. The `authMethod` type narrows to `'cron_secret_current' | 'cron_secret_previous' | 'none'`.
 
-### 2. All 10 cron edge functions -- Simplified entry point
+Reject reasons become more specific:
+- `missing_secret_header` -- no `x-cron-secret` header sent
+- `invalid_secret` -- header present but doesn't match CURRENT or PREVIOUS
+- `missing_timestamp` -- no `x-cron-timestamp` header
+- `unparseable_timestamp` -- header present but not a valid number
+- `replay_rejected` -- timestamp drift exceeds 60 seconds
 
-Each function replaces the boilerplate:
-```typescript
-// BEFORE (in each function)
-import { validateCronRequest } from '../_shared/cron-auth.ts';
-serve(async (req) => {
-  if (req.method === 'OPTIONS') { return new Response(null, { headers: corsHeaders }) }
-  const authError = validateCronRequest(req);
-  if (authError) return authError;
-  try { /* business logic */ } catch { /* error handling */ }
-});
+## B. Resilient Timestamp Validation
 
-// AFTER
-import { withCronSecurity } from '../_shared/cron-auth.ts';
-serve(withCronSecurity('function-name', async (req) => {
-  // business logic only -- no auth, no CORS, no try/catch boilerplate
-}));
-```
+Same file. The timestamp check applies to ALL authenticated requests (not just `cron_secret_*` since service_role is removed). Changes:
 
-The 10 functions are:
-1. `expire-rfps`
-2. `expire-invites`
-3. `expire-stale-negotiations`
-4. `cleanup-unused-negotiation-files`
-5. `process-notification-queue`
-6. `deadline-reminder`
-7. `rfp-reminder-scheduler`
-8. `retry-failed-emails`
-9. `payment-deadline-reminder`
-10. `notify-payment-status`
+- Accept string or numeric epoch (already works via `parseFloat`)
+- Distinguish missing vs unparseable: check `tsHeader === null` separately from `isNaN`
+- Always compute and log `timestampDelta` when parseable, even on rejection
+- Round to 1 decimal place for clean logs
 
-### 3. Secrets -- Manual Step
+## C. SQL Script for All 10 pg_cron Jobs
 
-Two secrets must be added to Supabase Edge Function environment variables:
-- `CRON_SECRET_CURRENT` -- the active secret used in pg_cron headers
-- `CRON_SECRET_PREVIOUS` -- set to the old `CRON_SECRET` value during rotation, or empty string initially
+**New file:** `docs/cron-jobs-setup.sql`
 
-The old `CRON_SECRET` env var can be kept temporarily for backward compatibility but will no longer be checked.
+A single SQL script to run in the Supabase SQL Editor (NOT committed as a migration). It:
 
-### 4. pg_cron Jobs -- SQL Update (Manual)
+1. Unschedules all 10 jobs by name (with `IF EXISTS` safety via try/catch in a DO block)
+2. Reschedules all 10 with consistent naming, correct URLs, and headers including `x-cron-secret` and `x-cron-timestamp`
 
-All 10 cron jobs must be updated to send:
-```sql
-headers:=json_build_object(
-  'Content-Type', 'application/json',
-  'x-cron-secret', current_setting('app.cron_secret_current', true),
-  'x-cron-timestamp', extract(epoch from now())::text
-)::jsonb
-```
+The secret value uses a placeholder `'YOUR_CRON_SECRET_HERE'` that you replace before running. The timestamp is generated dynamically via `extract(epoch from now())::text`.
 
-However, `current_setting` requires a custom GUC which adds complexity. The simpler approach: reference the secret value directly in the SQL (it's stored in `cron.job` which is only accessible to the postgres role). This is the standard Supabase pattern -- the secret lives in the database's cron config, not in the git repo.
+The 10 jobs and their schedules:
 
-A setup SQL script will be provided (to run in SQL Editor, not committed to repo) that:
-- Unschedules old jobs
-- Reschedules all 10 with `x-cron-timestamp` header added using `extract(epoch from now())::text`
+| Job Name | Schedule | Function |
+|---|---|---|
+| `expire-rfps` | Every hour (`0 * * * *`) | expire-rfps |
+| `expire-invites` | Every hour (`0 * * * *`) | expire-invites |
+| `expire-stale-negotiations` | Daily 3 AM (`0 3 * * *`) | expire-stale-negotiations |
+| `cleanup-unused-negotiation-files` | Daily 4 AM (`0 4 * * *`) | cleanup-unused-negotiation-files |
+| `process-notification-queue` | Every 5 min (`*/5 * * * *`) | process-notification-queue |
+| `deadline-reminder` | Daily 8 AM (`0 8 * * *`) | deadline-reminder |
+| `rfp-reminder-scheduler` | Daily 9 AM (`0 9 * * *`) | rfp-reminder-scheduler |
+| `retry-failed-emails` | Every 15 min (`*/15 * * * *`) | retry-failed-emails |
+| `payment-deadline-reminder` | Daily 7 AM (`0 7 * * *`) | payment-deadline-reminder |
+| `notify-payment-status` | Every 30 min (`*/30 * * * *`) | notify-payment-status |
+
+## D. Checklist Document
+
+**New file:** `docs/cron-security-checklist.md`
+
+A one-page markdown doc covering:
+
+1. **Testing 401 cases** -- curl commands to test missing secret, wrong secret, missing timestamp, stale timestamp
+2. **Confirming jobs are scheduled** -- SQL queries to check `cron.job` and `cron.job_run_details`
+3. **Secret rotation procedure** -- step-by-step zero-downtime rotation using CURRENT/PREVIOUS
 
 ---
 
 ## Technical Details
 
-### `withCronSecurity` Signature
+### Updated `validateCronRequest` Logic
 
 ```typescript
-export function withCronSecurity(
-  functionName: string,
-  handler: (req: Request) => Promise<Response>
-): (req: Request) => Promise<Response>
-```
+export function validateCronRequest(req: Request): CronAuthResult {
+  const secret = req.headers.get('x-cron-secret');
+  const current = Deno.env.get('CRON_SECRET_CURRENT');
+  const previous = Deno.env.get('CRON_SECRET_PREVIOUS');
 
-### Validation Logic
+  // Step 1: Secret validation
+  let authMethod: CronAuthResult['authMethod'] = 'none';
 
-```typescript
-// 1. Secret check (rotation-safe)
-const secret = req.headers.get('x-cron-secret');
-const current = Deno.env.get('CRON_SECRET_CURRENT');
-const previous = Deno.env.get('CRON_SECRET_PREVIOUS');
+  if (!secret) {
+    return { isValid: false, authMethod: 'none', timestampDelta: null, rejectReason: 'missing_secret_header' };
+  }
 
-let authMethod = 'none';
-if (current && secret === current) authMethod = 'cron_secret_current';
-else if (previous && secret === previous) authMethod = 'cron_secret_previous';
-else {
-  // Fallback: service role key
-  const auth = req.headers.get('authorization');
-  const srk = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (auth && srk && auth === `Bearer ${srk}`) authMethod = 'service_role';
-}
+  if (current && secret === current) {
+    authMethod = 'cron_secret_current';
+  } else if (previous && secret === previous) {
+    authMethod = 'cron_secret_previous';
+  } else {
+    return { isValid: false, authMethod: 'none', timestampDelta: null, rejectReason: 'invalid_secret' };
+  }
 
-// 2. Timestamp check (replay protection)
-const tsHeader = req.headers.get('x-cron-timestamp');
-const tsEpoch = tsHeader ? parseFloat(tsHeader) : NaN;
-const nowEpoch = Date.now() / 1000;
-const delta = Math.abs(nowEpoch - tsEpoch);
+  // Step 2: Timestamp validation
+  const tsHeader = req.headers.get('x-cron-timestamp');
 
-// Reject if no timestamp or > 60s old (skip for service_role fallback)
-if (authMethod.startsWith('cron_secret') && (isNaN(tsEpoch) || delta > 60)) {
-  // reject as replay
-}
-```
+  if (tsHeader === null) {
+    return { isValid: false, authMethod, timestampDelta: null, rejectReason: 'missing_timestamp' };
+  }
 
-### Structured Log Output
+  const tsEpoch = parseFloat(tsHeader);
 
-```json
-{
-  "type": "cron_auth",
-  "function": "expire-rfps",
-  "authMethod": "cron_secret_current",
-  "valid": true,
-  "timestampDelta": 2.3,
-  "timestamp": "2026-02-24T12:00:00.000Z"
+  if (isNaN(tsEpoch)) {
+    return { isValid: false, authMethod, timestampDelta: null, rejectReason: 'unparseable_timestamp' };
+  }
+
+  const nowEpoch = Date.now() / 1000;
+  const timestampDelta = Math.round((nowEpoch - tsEpoch) * 10) / 10;
+
+  if (Math.abs(timestampDelta) > 60) {
+    return { isValid: false, authMethod, timestampDelta, rejectReason: 'replay_rejected' };
+  }
+
+  return { isValid: true, authMethod, timestampDelta };
 }
 ```
 
-### Error Handling in Wrapper
+### Files Changed Summary
 
-The `withCronSecurity` wrapper catches any unhandled error thrown by the handler and returns a 500 response with `{ error: message }`. This means individual functions no longer need their own top-level try/catch -- though they can keep internal error handling for partial failures.
+| File | Action |
+|---|---|
+| `supabase/functions/_shared/cron-auth.ts` | Remove legacy/service_role fallback, harden timestamp parsing |
+| `docs/cron-jobs-setup.sql` | New -- single SQL script for all 10 pg_cron jobs |
+| `docs/cron-security-checklist.md` | New -- testing and rotation checklist |
 
----
+### What Does NOT Change
 
-## Secret Rotation Procedure
-
-To rotate the cron secret:
-1. Set `CRON_SECRET_PREVIOUS` = current value of `CRON_SECRET_CURRENT`
-2. Set `CRON_SECRET_CURRENT` = new random value
-3. Update pg_cron jobs with the new secret value
-4. After confirming all jobs work, clear `CRON_SECRET_PREVIOUS`
-
----
-
-## What Does NOT Change
-
-- No business logic in any of the 10 functions
+- No business logic in any of the 10 cron functions
+- No config.toml changes (already correct)
 - No database schema changes
-- No config.toml changes (all already have `verify_jwt = false`)
-- No changes to non-cron edge functions
+- No frontend changes
 
