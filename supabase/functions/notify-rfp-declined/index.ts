@@ -54,31 +54,39 @@ serve(async (req) => {
           projects (
             id,
             name,
-            owner_id,
-            profiles!projects_owner_id_fkey (
-              name,
-              email
-            )
+            owner_id
           )
         )
       `)
       .eq('id', invite_id)
-      .single();
+      .maybeSingle();
 
     if (inviteError || !invite) {
       console.error('[RFP Declined] Invite not found:', inviteError);
-      throw new Error('Invite not found');
+      throw new Error(`Invite not found: ${inviteError?.message || 'no data'}`);
     }
 
-    console.log('[RFP Declined] Invite data:', invite);
+    console.log('[RFP Declined] Invite data:', JSON.stringify(invite));
 
     const rfp = invite.rfps as any;
     const project = rfp.projects as any;
     const advisor = invite.advisors as any;
-    const entrepreneurProfile = project.profiles as any;
 
-    if (!entrepreneurProfile?.email) {
-      console.error('[RFP Declined] Entrepreneur email not found');
+    // Fetch entrepreneur profile separately (no direct FK from projects to profiles)
+    const { data: entrepreneurProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', project.owner_id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('[RFP Declined] Profile fetch error:', profileError);
+    }
+
+    const entrepreneurEmail = entrepreneurProfile?.email;
+
+    if (!entrepreneurEmail) {
+      console.error('[RFP Declined] Entrepreneur email not found for owner_id:', project.owner_id);
       throw new Error('Entrepreneur email not found');
     }
 
