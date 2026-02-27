@@ -1,47 +1,24 @@
 
 
-# Financial Center — Review & Cleanup
+# Compact the Advanced Filter Panel
 
-## Issues Found
+## Problem
+The filter panel (lines 229-291) uses a `grid-cols-2 md:grid-cols-4` layout inside a full `Card` with `p-4`, which takes excessive vertical space — especially on smaller screens where it stacks into 2 columns showing 5 filter groups + checkbox row. The image confirms it dominates the viewport.
 
-### 1. Bug: "מאושר" and "שולם" buttons filter to identical data
-Lines 111-114: both `approved` and `paid` cases filter `r.status === 'paid'`. The counts (lines 136-137) are also identical. There is no separate "approved" status in the system — `approved` doesn't exist as a payment request status. The intended mapping should be:
-- **ממתין לאישור** → `submitted`, `in_accounting`, `professionally_approved`, `budget_approved`, `awaiting_payment`
-- **מאושר** → `awaiting_payment` (last step before payment, already fully approved)
-- **שולם** → `paid`
+## Solution
+Restructure the filter panel into a single compact horizontal strip that wraps naturally, removing the Card wrapper and using inline flex layout instead of grid.
 
-However, `awaiting_payment` is already in the "pending" group. The cleanest fix: collapse "מאושר" and "שולם" into just **two** buttons since no distinct "approved but not paid" status exists — OR redefine "מאושר" to mean `budget_approved` + `awaiting_payment` (approved stages) and "ממתין" to mean only the earlier stages (`submitted`, `in_accounting`, `professionally_approved`).
+### Changes to `src/pages/AccountantDashboard.tsx` (lines 228-291)
 
-**Recommended mapping:**
-- **ממתין לאישור** → `submitted`, `in_accounting`, `professionally_approved`
-- **מאושר** → `budget_approved`, `awaiting_payment`
-- **שולם** → `paid`
+**Replace** the Card-wrapped grid layout with a compact, border-based collapsible strip:
 
-### 2. Redundant status filter in advanced filters
-The advanced filter panel includes a "סטטוס" dropdown (lines 252-260) that duplicates the 3 status buttons. Since the buttons already filter by status group, the dropdown inside the filter panel is confusing and should be removed.
+1. **Remove `<Card className="p-4">`** wrapper — replace with a simple `div` with `border rounded-md p-3`
+2. **Change layout** from `grid grid-cols-2 md:grid-cols-4 gap-3` to `flex flex-wrap items-end gap-2` — all filters sit inline and wrap naturally
+3. **Remove `<Label>` elements** — use placeholder text inside each control instead (the labels like "פרויקט", "יועץ" are redundant when placeholders already say "הכל")
+4. **Shrink date inputs** — add `w-[120px]` to keep them compact
+5. **Merge the amount range** into a single inline pair with no separate label
+6. **Move "חריגות בלבד" checkbox and "נקה סינון" button** inline at the end of the flex row
+7. **Remove `space-y-1` wrappers** and `col-span-2` — not needed in flex layout
 
-### 3. Skeleton loader still shows removed summary cards
-Lines 690-703 render 3 skeleton cards that no longer exist in the actual view. Should be removed.
-
-### 4. Space & layout optimizations
-- The `Alert` banner (alpha warning, lines 745-748) takes vertical space on every visit. Consider removing it or making it dismissible — but since it's product-level, I'll leave it unless instructed.
-- The loading skeleton grid of 3 cards should be removed to match the actual layout.
-
-## Implementation Steps
-
-### File: `src/pages/AccountantDashboard.tsx`
-
-**A. Fix status button mapping (lines 104-115, 135-137)**
-```
-pending → submitted, in_accounting, professionally_approved
-approved → budget_approved, awaiting_payment
-paid → paid
-```
-Update `PENDING_STATUSES` to only early stages, add `APPROVED_STATUSES` array, fix filter logic and counts.
-
-**B. Remove status dropdown from advanced filters (lines 251-260)**
-Delete the "סטטוס" select in the filter panel since the 3 buttons already handle this.
-
-**C. Fix skeleton loader (lines 690-703)**
-Remove the 3-card skeleton grid to match the actual (card-free) layout.
+The result: a single-row (on desktop) / 2-row (on mobile) compact filter strip that takes roughly 50% less vertical space.
 
