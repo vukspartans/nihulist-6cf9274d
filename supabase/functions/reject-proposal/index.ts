@@ -149,11 +149,16 @@ serve(async (req) => {
 
       const dashboardUrl = "https://billding.ai/advisor-dashboard";
 
+      const sanitize = (s: string) => s
+        .replace(/[\u2010-\u2015]/g, '-')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"');
+
       const emailHtml = await renderAsync(
         ProposalRejectedEmail({
-          advisorCompany: advisorData.company_name || "יועץ",
-          projectName: projectData.name,
-          rejectionReason: rejection_reason,
+          advisorCompany: sanitize(advisorData.company_name || "יועץ"),
+          projectName: sanitize(projectData.name),
+          rejectionReason: rejection_reason ? sanitize(rejection_reason) : rejection_reason,
           dashboardUrl,
         })
       );

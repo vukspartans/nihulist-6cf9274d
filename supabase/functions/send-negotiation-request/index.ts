@@ -413,15 +413,20 @@ serve(async (req) => {
         const resend = new Resend(RESEND_API_KEY);
         const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
+        const sanitize = (s: string) => s
+          .replace(/[\u2010-\u2015]/g, '-')
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"');
+
         const emailHtml = await renderAsync(
           React.createElement(NegotiationRequestEmail, {
-            advisorCompany,
-            entrepreneurName: entrepreneurProfile?.name || "יזם",
-            projectName: project.name,
+            advisorCompany: sanitize(advisorCompany),
+            entrepreneurName: sanitize(entrepreneurProfile?.name || "יזם"),
+            projectName: sanitize(project.name),
             originalPrice: proposal.price,
             targetPrice: target_total,
             targetReductionPercent: target_reduction_percent,
-            globalComment: global_comment,
+            globalComment: global_comment ? sanitize(global_comment) : global_comment,
             responseUrl,
             locale: "he",
           })
