@@ -100,7 +100,7 @@ function UrgencySelect({ value, onChange }: { value: string; onChange: (v: strin
   const current = URGENCY_OPTIONS.find(o => o.value === value) || URGENCY_OPTIONS[0];
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-7 text-xs w-[90px] p-1">
+      <SelectTrigger className="h-7 text-xs w-[90px] p-1 flex-row text-right">
         <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', current.color)}>
           {current.label}
         </span>
@@ -344,14 +344,14 @@ function LiabilitiesTab({
         <div className="border rounded-md p-3" dir="rtl">
           <div className="flex flex-wrap items-end gap-2">
             <Select value={filters.project} onValueChange={v => setFilters(p => ({ ...p, project: v === '__all__' ? '' : v }))}>
-              <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="פרויקט" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm w-[140px] flex-row text-right"><SelectValue placeholder="פרויקט" /></SelectTrigger>
               <SelectContent dir="rtl">
                 <SelectItem value="__all__">הכל</SelectItem>
                 {projectOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.advisor} onValueChange={v => setFilters(p => ({ ...p, advisor: v === '__all__' ? '' : v }))}>
-              <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="יועץ" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm w-[140px] flex-row text-right"><SelectValue placeholder="יועץ" /></SelectTrigger>
               <SelectContent dir="rtl">
                 <SelectItem value="__all__">הכל</SelectItem>
                 {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
@@ -392,23 +392,23 @@ function LiabilitiesTab({
 
       <Card>
         <div className="overflow-x-auto">
-          <Table dir="rtl" className="min-w-[1400px]">
+          <Table dir="rtl" className="text-xs">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">פרויקט</TableHead>
-                <TableHead className="text-right">שם היועץ</TableHead>
-                <TableHead className="text-right">תחום</TableHead>
-                <TableHead className="text-right">תאריך ההגשה</TableHead>
-                <TableHead className="text-right">מס׳ חשבון</TableHead>
-                <TableHead className="text-right">סכום ללא מע״מ</TableHead>
-                <TableHead className="text-right">אבן דרך</TableHead>
-                <TableHead className="text-right">הערות היועץ</TableHead>
-                <TableHead className="text-right">ניתוח AI</TableHead>
-                <TableHead className="text-right">סטטוס</TableHead>
-                <TableHead className="text-right w-10">קבצים</TableHead>
-                <TableHead className="text-right">דחיפות</TableHead>
-                <TableHead className="text-right">הוסף הערות</TableHead>
-                <TableHead className="text-right">פעולות</TableHead>
+                <TableHead className="text-right whitespace-nowrap">פרויקט</TableHead>
+                <TableHead className="text-right whitespace-nowrap">שם היועץ</TableHead>
+                <TableHead className="text-right whitespace-nowrap">תחום</TableHead>
+                <TableHead className="text-right whitespace-nowrap">תאריך ההגשה</TableHead>
+                <TableHead className="text-right whitespace-nowrap w-[80px]">מס׳ חשבון</TableHead>
+                <TableHead className="text-right whitespace-nowrap">סכום ללא מע״מ</TableHead>
+                <TableHead className="text-right whitespace-nowrap">אבן דרך</TableHead>
+                <TableHead className="text-right whitespace-nowrap max-w-[100px]">הערות היועץ</TableHead>
+                <TableHead className="text-right whitespace-nowrap w-[60px]">ניתוח AI</TableHead>
+                <TableHead className="text-right whitespace-nowrap">סטטוס</TableHead>
+                <TableHead className="text-right whitespace-nowrap w-10">קבצים</TableHead>
+                <TableHead className="text-right whitespace-nowrap w-[80px]">דחיפות</TableHead>
+                <TableHead className="text-right whitespace-nowrap">הוסף הערות</TableHead>
+                <TableHead className="text-right whitespace-nowrap">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -425,15 +425,15 @@ function LiabilitiesTab({
 
                   return (
                     <TableRow key={req.id}>
-                      <TableCell className="font-medium text-right">{req.project_name}</TableCell>
-                      <TableCell className="text-right">{req.advisor_company_name || '—'}</TableCell>
-                      <TableCell className="text-right text-xs">{req.specialty ? (SPECIALTY_LABELS[req.specialty] || req.specialty) : '—'}</TableCell>
-                      <TableCell className="text-right">{formatDate(req.submitted_at)}</TableCell>
+                      <TableCell className="font-medium text-right whitespace-nowrap">{req.project_name}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{req.advisor_company_name || '—'}</TableCell>
+                      <TableCell className="text-right">{req.specialty ? (SPECIALTY_LABELS[req.specialty] || req.specialty) : '—'}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatDate(req.submitted_at)}</TableCell>
                       <TableCell className="text-right">{req.request_number || '—'}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(req.amount)}</TableCell>
-                      <TableCell className="text-right">{req.milestone_name || '—'}</TableCell>
-                      <TableCell className="text-right text-xs max-w-[150px] truncate" title={req.notes || undefined}>{req.notes || '—'}</TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground">—</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatCurrency(req.amount)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{req.milestone_name || '—'}</TableCell>
+                      <TableCell className="text-right max-w-[100px] truncate" title={req.notes || undefined}>{req.notes || '—'}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">—</TableCell>
                       <TableCell className="text-right"><PaymentStatusBadge status={req.status} /></TableCell>
                       <TableCell className="text-right"><FileCell url={req.invoice_file_url} /></TableCell>
                       <TableCell className="text-right">
@@ -449,7 +449,7 @@ function LiabilitiesTab({
                               value={paidDateInputs[req.id] || ''}
                               onChange={v => setPaidDateInputs(prev => ({ ...prev, [req.id]: v }))}
                               placeholder="תאריך"
-                              className="w-[110px]"
+                              className="w-[100px]"
                             />
                             <Button
                               size="sm"
