@@ -227,67 +227,53 @@ function LiabilitiesTab({
 
       {/* Advanced Filters */}
       {filtersOpen && (
-        <Card className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">פרויקט</Label>
-              <Select value={filters.project} onValueChange={v => setFilters(p => ({ ...p, project: v === '__all__' ? '' : v }))}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">הכל</SelectItem>
-                  {projectOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        <div className="border rounded-md p-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <Select value={filters.project} onValueChange={v => setFilters(p => ({ ...p, project: v === '__all__' ? '' : v }))}>
+              <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="פרויקט" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">הכל</SelectItem>
+                {projectOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.advisor} onValueChange={v => setFilters(p => ({ ...p, advisor: v === '__all__' ? '' : v }))}>
+              <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="יועץ" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">הכל</SelectItem>
+                {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
+              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="סכום מ-" value={filters.amountMin} onChange={e => setFilters(p => ({ ...p, amountMin: e.target.value }))} />
+              <span className="text-xs text-muted-foreground">–</span>
+              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="עד" value={filters.amountMax} onChange={e => setFilters(p => ({ ...p, amountMax: e.target.value }))} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">יועץ</Label>
-              <Select value={filters.advisor} onValueChange={v => setFilters(p => ({ ...p, advisor: v === '__all__' ? '' : v }))}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">הכל</SelectItem>
-                  {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-1">
+              <Input type="date" className="h-8 text-sm w-[120px]" title="הגשה מ-" value={filters.submittedFrom} onChange={e => setFilters(p => ({ ...p, submittedFrom: e.target.value }))} />
+              <span className="text-xs text-muted-foreground">–</span>
+              <Input type="date" className="h-8 text-sm w-[120px]" title="הגשה עד" value={filters.submittedTo} onChange={e => setFilters(p => ({ ...p, submittedTo: e.target.value }))} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">סכום (טווח)</Label>
-              <div className="flex gap-1">
-                <Input type="number" className="h-8 text-sm" placeholder="מ-" value={filters.amountMin} onChange={e => setFilters(p => ({ ...p, amountMin: e.target.value }))} />
-                <Input type="number" className="h-8 text-sm" placeholder="עד" value={filters.amountMax} onChange={e => setFilters(p => ({ ...p, amountMax: e.target.value }))} />
-              </div>
+            <div className="flex items-center gap-1">
+              <Input type="date" className="h-8 text-sm w-[120px]" title="תשלום צפוי מ-" value={filters.expectedFrom} onChange={e => setFilters(p => ({ ...p, expectedFrom: e.target.value }))} />
+              <span className="text-xs text-muted-foreground">–</span>
+              <Input type="date" className="h-8 text-sm w-[120px]" title="תשלום צפוי עד" value={filters.expectedTo} onChange={e => setFilters(p => ({ ...p, expectedTo: e.target.value }))} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">תאריך הגשה</Label>
-              <div className="flex gap-1">
-                <Input type="date" className="h-8 text-sm" value={filters.submittedFrom} onChange={e => setFilters(p => ({ ...p, submittedFrom: e.target.value }))} />
-                <Input type="date" className="h-8 text-sm" value={filters.submittedTo} onChange={e => setFilters(p => ({ ...p, submittedTo: e.target.value }))} />
-              </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="overdue"
+                checked={filters.overdueOnly}
+                onCheckedChange={v => setFilters(p => ({ ...p, overdueOnly: !!v }))}
+              />
+              <Label htmlFor="overdue" className="text-sm cursor-pointer whitespace-nowrap">חריגות בלבד</Label>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">תשלום צפוי</Label>
-              <div className="flex gap-1">
-                <Input type="date" className="h-8 text-sm" value={filters.expectedFrom} onChange={e => setFilters(p => ({ ...p, expectedFrom: e.target.value }))} />
-                <Input type="date" className="h-8 text-sm" value={filters.expectedTo} onChange={e => setFilters(p => ({ ...p, expectedTo: e.target.value }))} />
-              </div>
-            </div>
-            <div className="flex items-end gap-2 col-span-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="overdue"
-                  checked={filters.overdueOnly}
-                  onCheckedChange={v => setFilters(p => ({ ...p, overdueOnly: !!v }))}
-                />
-                <Label htmlFor="overdue" className="text-sm cursor-pointer">חריגות בלבד</Label>
-              </div>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={() => setFilters(emptyFilters)} className="mr-auto">
-                  <RotateCcw className="w-3.5 h-3.5 ml-1" />
-                  נקה סינון
-                </Button>
-              )}
-            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={() => setFilters(emptyFilters)}>
+                <RotateCcw className="w-3.5 h-3.5 ml-1" />
+                נקה
+              </Button>
+            )}
           </div>
-        </Card>
+        </div>
       )}
 
       <Card>
