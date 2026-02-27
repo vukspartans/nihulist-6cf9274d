@@ -80,7 +80,8 @@ function LiabilitiesTab({
   onAdvance: (id: string, statusCode: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
 }) {
-  const PENDING_STATUSES = ['submitted', 'in_accounting', 'professionally_approved', 'budget_approved', 'awaiting_payment'];
+  const PENDING_STATUSES = ['submitted', 'in_accounting', 'professionally_approved'];
+  const APPROVED_STATUSES = ['budget_approved', 'awaiting_payment'];
   const [filter, setFilter] = useState<'pending' | 'approved' | 'paid'>('pending');
   const [bulkDate, setBulkDate] = useState('');
   const [paidDateInputs, setPaidDateInputs] = useState<Record<string, string>>({});
@@ -109,7 +110,7 @@ function LiabilitiesTab({
     if (filter === 'pending') {
       list = list.filter(r => PENDING_STATUSES.includes(r.status));
     } else if (filter === 'approved') {
-      list = list.filter(r => r.status === 'paid');
+      list = list.filter(r => APPROVED_STATUSES.includes(r.status));
     } else if (filter === 'paid') {
       list = list.filter(r => r.status === 'paid');
     }
@@ -133,7 +134,7 @@ function LiabilitiesTab({
 
   // Counts for buttons
   const pendingCount = requests.filter(r => PENDING_STATUSES.includes(r.status)).length;
-  const approvedCount = requests.filter(r => r.status === 'paid').length; // TODO: separate approved vs paid when statuses exist
+  const approvedCount = requests.filter(r => APPROVED_STATUSES.includes(r.status)).length;
   const paidCount = requests.filter(r => r.status === 'paid').length;
 
   const exportCSV = useCallback(() => {
@@ -245,16 +246,6 @@ function LiabilitiesTab({
                 <SelectContent>
                   <SelectItem value="__all__">הכל</SelectItem>
                   {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">סטטוס</Label>
-              <Select value={filters.status} onValueChange={v => setFilters(p => ({ ...p, status: v === '__all__' ? '' : v }))}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="הכל" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">הכל</SelectItem>
-                  {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -687,21 +678,6 @@ export default function AccountantDashboard() {
         <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-5 w-72 mb-6" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            {[1, 2, 3].map(i => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-7 w-28" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
           <Skeleton className="h-10 w-80 mb-4" />
           <Card>
             <CardContent className="p-0">
