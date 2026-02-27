@@ -219,14 +219,19 @@ serve(async (req) => {
 
         const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
+        const sanitize = (s: string) => s
+          .replace(/[\u2010-\u2015]/g, '-')
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"');
+
         const emailHtml = await renderAsync(
           React.createElement(NegotiationResponseEmail, {
-            entrepreneurName: entrepreneurProfile.name || "יזם",
-            advisorCompany: advisorData.company_name || "יועץ",
-            projectName: projectData.name,
+            entrepreneurName: sanitize(entrepreneurProfile.name || "יזם"),
+            advisorCompany: sanitize(advisorData.company_name || "יועץ"),
+            projectName: sanitize(projectData.name),
             previousPrice: Number((session.proposal as any).price) || 0,
             newPrice: Number(newTotal) || 0,
-            consultantMessage: consultant_message,
+            consultantMessage: consultant_message ? sanitize(consultant_message) : consultant_message,
             proposalUrl,
             locale: "he",
           })

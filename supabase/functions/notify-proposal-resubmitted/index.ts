@@ -117,13 +117,19 @@ serve(async (req) => {
     // Project URL
     const projectUrl = `https://billding.ai/project/${project.id}?tab=received`;
 
+    // Sanitize Unicode characters that corrupt in email rendering
+    const sanitize = (s: string) => s
+      .replace(/[\u2010-\u2015]/g, '-')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"');
+
     // Render email
     const html = await renderAsync(
       React.createElement(ProposalResubmittedEmail, {
-        entrepreneurName: entrepreneurProfile.name || 'יזם',
-        projectName: project.name,
-        advisorCompany: advisor.company_name || 'יועץ',
-        advisorType: advisorType,
+        entrepreneurName: sanitize(entrepreneurProfile.name || 'יזם'),
+        projectName: sanitize(project.name),
+        advisorCompany: sanitize(advisor.company_name || 'יועץ'),
+        advisorType: sanitize(advisorType),
         previousPrice: previous_price || proposal.price,
         newPrice: proposal.price,
         projectUrl,

@@ -134,15 +134,21 @@ serve(async (req) => {
     // Project URL for advisor
     const projectUrl = `https://billding.ai/advisor-dashboard`;
 
+    // Sanitize Unicode characters that corrupt in email rendering
+    const sanitize = (s: string) => s
+      .replace(/[\u2010-\u2015]/g, '-')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"');
+
     // Render email
     const html = await renderAsync(
       React.createElement(ProposalApprovedEmail, {
-        advisorCompany: advisor.company_name || 'יועץ',
-        projectName: project.name,
-        entrepreneurName: entrepreneurProfile?.name || 'היזם',
+        advisorCompany: sanitize(advisor.company_name || 'יועץ'),
+        projectName: sanitize(project.name),
+        entrepreneurName: sanitize(entrepreneurProfile?.name || 'היזם'),
         price: proposal.price,
         timelineDays: proposal.timeline_days,
-        entrepreneurNotes: entrepreneur_notes || '',
+        entrepreneurNotes: sanitize(entrepreneur_notes || ''),
         projectUrl,
       })
     );
