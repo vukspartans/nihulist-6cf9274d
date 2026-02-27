@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical, AlertTriangle, Wallet } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,8 @@ function LiabilitiesTab({
   onAdvance: (id: string, statusCode: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
 }) {
-  const [filter, setFilter] = useState<'open' | 'closed'>('open');
+  const PENDING_STATUSES = ['submitted', 'in_accounting', 'professionally_approved', 'budget_approved', 'awaiting_payment'];
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'paid'>('pending');
   const [bulkDate, setBulkDate] = useState('');
   const [paidDateInputs, setPaidDateInputs] = useState<Record<string, string>>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -104,11 +105,13 @@ function LiabilitiesTab({
     const today = new Date().toISOString().slice(0, 10);
     let list = requests;
 
-    // Open/closed toggle
-    if (filter === 'open') {
-      list = list.filter(r => r.status !== 'paid' && r.status !== 'rejected');
-    } else {
-      list = list.filter(r => r.status === 'paid' || r.status === 'rejected');
+    // Status group toggle
+    if (filter === 'pending') {
+      list = list.filter(r => PENDING_STATUSES.includes(r.status));
+    } else if (filter === 'approved') {
+      list = list.filter(r => r.status === 'paid');
+    } else if (filter === 'paid') {
+      list = list.filter(r => r.status === 'paid');
     }
 
     // Advanced filters
@@ -128,6 +131,33 @@ function LiabilitiesTab({
 
   const hasActiveFilters = Object.entries(filters).some(([k, v]) => k === 'overdueOnly' ? v : !!v);
 
+  // Counts for buttons
+  const pendingCount = requests.filter(r => PENDING_STATUSES.includes(r.status)).length;
+  const approvedCount = requests.filter(r => r.status === 'paid').length; // TODO: separate approved vs paid when statuses exist
+  const paidCount = requests.filter(r => r.status === 'paid').length;
+
+  const exportCSV = useCallback(() => {
+    const header = ['פרויקט', 'יועץ', 'אבן דרך', 'סטטוס', 'סכום', 'תאריך הגשה', 'תשלום צפוי'];
+    const rows = filtered.map(r => [
+      r.project_name,
+      r.advisor_company_name || '',
+      r.milestone_name || '',
+      r.status,
+      String(r.total_amount || r.amount),
+      r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('he-IL') : '',
+      r.expected_payment_date || '',
+    ]);
+    const bom = '\uFEFF';
+    const csv = bom + [header, ...rows].map(row => row.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `התחייבויות_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filtered]);
+
   const handleBulkDateApply = () => {
     if (!bulkDate) return;
     filtered.forEach(req => {
@@ -142,19 +172,28 @@ function LiabilitiesTab({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Button
-            variant={filter === 'open' ? 'default' : 'outline'}
+            variant={filter === 'pending' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilter('open')}
+            onClick={() => setFilter('pending')}
           >
-            פתוחות
+            ממתין לאישור ({pendingCount})
           </Button>
           <Button
-            variant={filter === 'closed' ? 'default' : 'outline'}
+            variant={filter === 'approved' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilter('closed')}
+            onClick={() => setFilter('approved')}
           >
-            סגורות
+            מאושר ({approvedCount})
           </Button>
+          <Button
+            variant={filter === 'paid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('paid')}
+          >
+            שולם ({paidCount})
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
             variant={filtersOpen || hasActiveFilters ? 'secondary' : 'outline'}
             size="sm"
@@ -164,22 +203,26 @@ function LiabilitiesTab({
             סינון
             {hasActiveFilters && <span className="mr-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5">!</span>}
           </Button>
+          <Button variant="outline" size="sm" onClick={exportCSV}>
+            <Download className="w-3.5 h-3.5 ml-1" />
+            ייצוא
+          </Button>
         </div>
-        {filter === 'open' && filtered.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              className="w-36 text-sm"
-              value={bulkDate}
-              onChange={e => setBulkDate(e.target.value)}
-              placeholder="תאריך אחיד"
-            />
-            <Button size="sm" variant="outline" onClick={handleBulkDateApply} disabled={!bulkDate}>
-              החל על הכל
-            </Button>
-          </div>
-        )}
       </div>
+      {filter === 'pending' && filtered.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            className="w-36 text-sm"
+            value={bulkDate}
+            onChange={e => setBulkDate(e.target.value)}
+            placeholder="תאריך אחיד"
+          />
+          <Button size="sm" variant="outline" onClick={handleBulkDateApply} disabled={!bulkDate}>
+            החל על הכל
+          </Button>
+        </div>
+      )}
 
       {/* Advanced Filters */}
       {filtersOpen && (
@@ -276,7 +319,7 @@ function LiabilitiesTab({
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    אין בקשות תשלום {filter === 'open' ? 'פתוחות' : 'סגורות'}
+                    אין בקשות תשלום בקטגוריה זו
                   </TableCell>
                 </TableRow>
               ) : (
@@ -679,14 +722,6 @@ export default function AccountantDashboard() {
     );
   }
 
-  const totalOutstanding = allRequests
-    .filter(r => r.status !== 'paid' && r.status !== 'rejected')
-    .reduce((sum, r) => sum + (r.total_amount || r.amount), 0);
-
-  const totalPaid = allRequests
-    .filter(r => r.status === 'paid')
-    .reduce((sum, r) => sum + (r.total_amount || r.amount), 0);
-
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
@@ -711,49 +746,6 @@ export default function AccountantDashboard() {
           <FlaskConical className="h-4 w-4" />
           <AlertDescription>פיצ'ר זה נמצא בגרסת אלפא — ייתכנו שינויים ושיפורים</AlertDescription>
         </Alert>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-destructive/10">
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">סה"כ חוב פתוח</p>
-                  <p className="text-lg font-bold text-destructive">{formatCurrency(totalOutstanding)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">שולם</p>
-                  <p className="text-lg font-bold text-green-600">{formatCurrency(totalPaid)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">ספקים פעילים</p>
-                  <p className="text-lg font-bold text-blue-600">{vendorSummaries.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="liabilities" dir="rtl">
