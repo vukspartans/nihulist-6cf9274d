@@ -1,31 +1,38 @@
 
 
-# Bug Fix: Decline RFP fails with ENUM error
+# Fix: Add Unicode sanitization to ALL email-sending edge functions
 
 ## Problem
-The `DeclineRFPDialog` uses Hebrew strings as radio button values (e.g., "עומס עבודה גבוה") and passes them directly via `onDecline(reason)`. The database column `rfp_invites.decline_reason` is typed as `decline_reason_type` enum with values: `no_capacity`, `outside_expertise`, `timeline_conflict`, `budget_mismatch`, `other`.
+The `sanitize` function (replacing Unicode dashes with ASCII hyphens) was only added to `send-rfp-email`. All other email functions pass raw strings to `renderAsync`, causing question marks to appear in emails whenever project names, advisor types, or other fields contain Unicode dashes.
 
-`AdvisorDashboard` has a Hebrew-to-enum mapping but `RFPDetails` does not — it passes the Hebrew string straight to `declineRFP()`, causing the ENUM error.
+## Affected Functions (7 total)
 
-## Fix
+Each function needs a `sanitize` helper added, and all string props passed to `renderAsync` wrapped with it:
 
-**File: `src/components/DeclineRFPDialog.tsx`** — Move the mapping into the dialog itself so all consumers get the correct enum value.
+1. **`send-negotiation-request/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `globalComment`
+2. **`send-negotiation-response/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `consultantMessage`
+3. **`notify-proposal-submitted/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
+4. **`notify-proposal-approved/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `entrepreneurNotes`
+5. **`notify-proposal-resubmitted/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
+6. **`notify-rfp-declined/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
+7. **`reject-proposal/index.ts`** — `projectName`, `advisorCompany`, `rejectionReason`
+8. **`notify-proposal-rejected/index.ts`** — `projectName`, `advisorCompany`, `rejectionReason`
 
-1. Change `DECLINE_REASONS` from a plain string array to a mapped structure with `label` (Hebrew) and `value` (enum):
+## Implementation
+
+Add this shared sanitize helper before each `renderAsync` call:
+
 ```typescript
-const DECLINE_REASONS = [
-  { label: 'לא רלוונטי למומחיות שלי', value: 'outside_expertise' },
-  { label: 'עומס עבודה גבוה', value: 'no_capacity' },
-  { label: 'מיקום הפרויקט רחוק מדי', value: 'other' },
-  { label: 'תקציב נמוך מדי', value: 'budget_mismatch' },
-  { label: 'לוח זמנים לא מתאים', value: 'timeline_conflict' },
-  { label: 'אחר', value: 'other' },
-];
+const sanitize = (s: string) => s
+  .replace(/[\u2010-\u2015]/g, '-')
+  .replace(/[\u2018\u2019]/g, "'")
+  .replace(/[\u201C\u201D]/g, '"');
 ```
 
-2. Update the RadioGroup to use `value` as the radio value and `label` as the display text.
+This also handles smart quotes (`'` `'` `"` `"`) which can similarly corrupt.
 
-3. The `onDecline` callback now sends the enum value directly.
+Wrap every string prop in the `React.createElement` / template call with `sanitize()`.
 
-**File: `src/pages/AdvisorDashboard.tsx`** — Remove the now-redundant `reasonMap` from `handleDeclineConfirm` and pass the reason directly to `declineRFP`.
+## Deployment
+All 8 functions will be redeployed after changes.
 
