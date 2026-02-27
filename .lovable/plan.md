@@ -1,42 +1,31 @@
 
 
-# Bug Fix: Prevent milestone percentages exceeding 100% in negotiation
+# Bug Fix: Decline RFP fails with ENUM error
 
 ## Problem
-The entrepreneur can set milestone percentages that total more than 100% (e.g., 135% as shown in screenshot) when creating a negotiation request. The `MilestoneNegotiationTable` displays a warning but nothing prevents submission.
+The `DeclineRFPDialog` uses Hebrew strings as radio button values (e.g., "עומס עבודה גבוה") and passes them directly via `onDecline(reason)`. The database column `rfp_invites.decline_reason` is typed as `decline_reason_type` enum with values: `no_capacity`, `outside_expertise`, `timeline_conflict`, `budget_mismatch`, `other`.
 
-## Changes
+`AdvisorDashboard` has a Hebrew-to-enum mapping but `RFPDetails` does not — it passes the Hebrew string straight to `declineRFP()`, causing the ENUM error.
 
-### 1. `src/components/negotiation/NegotiationDialog.tsx` — Add validation in `handleSubmit`
+## Fix
 
-Before calling `createNegotiationSession` (~line 386), add a check:
+**File: `src/components/DeclineRFPDialog.tsx`** — Move the mapping into the dialog itself so all consumers get the correct enum value.
 
+1. Change `DECLINE_REASONS` from a plain string array to a mapped structure with `label` (Hebrew) and `value` (enum):
 ```typescript
-// Validate milestone percentages sum to 100% if any adjustments were made
-if (milestoneAdjustments.length > 0) {
-  // Calculate effective total: adjusted milestones use target_percentage, others keep original
-  const milestoneTotal = milestones.reduce((sum, m) => {
-    const milestoneId = m.id || m.name;
-    const adj = milestoneAdjustments.find(a => a.milestone_id === milestoneId);
-    return sum + (adj ? adj.target_percentage : m.percentage);
-  }, 0);
-  
-  if (Math.abs(milestoneTotal - 100) > 0.01) {
-    toast({
-      title: "שגיאה באבני דרך",
-      description: `סה"כ אחוזי אבני הדרך חייב להיות 100%. כרגע: ${milestoneTotal.toFixed(1)}%`,
-      variant: "destructive",
-    });
-    return;
-  }
-}
+const DECLINE_REASONS = [
+  { label: 'לא רלוונטי למומחיות שלי', value: 'outside_expertise' },
+  { label: 'עומס עבודה גבוה', value: 'no_capacity' },
+  { label: 'מיקום הפרויקט רחוק מדי', value: 'other' },
+  { label: 'תקציב נמוך מדי', value: 'budget_mismatch' },
+  { label: 'לוח זמנים לא מתאים', value: 'timeline_conflict' },
+  { label: 'אחר', value: 'other' },
+];
 ```
 
-### 2. `src/components/negotiation/NegotiationDialog.tsx` — Disable submit button when invalid
+2. Update the RadioGroup to use `value` as the radio value and `label` as the display text.
 
-Add a computed `isMilestoneInvalid` flag and use it to disable the submit button alongside the existing `loading || uploading` condition.
+3. The `onDecline` callback now sends the enum value directly.
 
-### 3. `supabase/functions/send-negotiation-request/index.ts` — Server-side validation
-
-Add a server-side check for milestone_adjustments total before creating the session, returning a 400 error if percentages exceed 100%.
+**File: `src/pages/AdvisorDashboard.tsx`** — Remove the now-redundant `reasonMap` from `handleDeclineConfirm` and pass the reason directly to `declineRFP`.
 
