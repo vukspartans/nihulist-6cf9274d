@@ -578,14 +578,12 @@ export const ProjectDetail = () => {
       {project.type && pendingPhaseName && (
         <StageTaskLoadDialog
           open={stageDialogOpen}
-          onOpenChange={(open) => {
-            setStageDialogOpen(open);
-            if (!open) setPendingPhaseName('');
-          }}
+          onOpenChange={setStageDialogOpen}
           projectId={project.id}
           projectType={project.type}
           phaseName={pendingPhaseName}
           municipalityId={project.municipality_id}
+           
           onTasksCreated={() => {
             taskRefetchRef.current?.();
           }}
