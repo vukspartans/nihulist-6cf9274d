@@ -1,49 +1,45 @@
 
 
-# Bug Fix: Payment Term Type Not Saved in conditions_json
+# Bug Fix: Original price not shown in V1 of negotiation timeline
 
 ## Problem
 
-The consultant's selected payment term type (`paymentTermType` dropdown - e.g., "שוטף + 30") is stored as a separate variable but never written into `conditions_json`. The entrepreneur's comparison table reads `conditions_json.payment_term_type`, which is always empty, showing "לא צוין".
+In the "Sent RFPs" tab, the negotiation timeline shows the **current** (post-negotiation) price for all versions, including V1 "הצעה מקורית". This happens because `originalPrice` is read from `proposals.price`, which gets updated after each negotiation round.
 
-## Data Flow
+In the screenshot: V1 and V2 both show ₪70,004 — the price after negotiation — instead of V1 showing the original submission price.
 
-```text
-Consultant selects "שוטף + 30" → paymentTermType state
-                                      ↓
-                         useProposalSubmit receives it
-                         BUT only uses it for change notifications
-                                      ↓
-                         conditions_json = data.conditions (from ConditionsBuilder)
-                         ← payment_term_type is MISSING here
-                                      ↓
-                         Entrepreneur sees "לא צוין"
-```
+## Root Cause
+
+**File: `src/hooks/useRFPInvitesWithDetails.ts`**
+
+- Line 219: `originalPrice = matchedProposal?.price` reads from `proposals.price`, which is the **latest** price (updated by `submit_negotiation_response`).
+- Line 148: This `originalPrice` is then used as the V1 step price in `buildNegotiationSteps`.
+- The actual original price is stored in `proposal_versions` where `version_number = 1`.
 
 ## Fix
 
-**File: `src/hooks/useProposalSubmit.ts`** (1 change)
+**File: `src/hooks/useRFPInvitesWithDetails.ts`** (2 changes)
 
-Merge `paymentTermType` and `paymentTermsComment` into `conditions_json` before saving:
+1. **In `buildNegotiationSteps`** (~line 142-148): Look up the V1 version price from `propVersions` and use it for the original offer step instead of the passed `originalPrice`:
 
 ```typescript
-// Line ~232: Change from:
-conditions_json: data.conditions as any,
+// Get V1 price from versions if available (proposals.price gets updated after negotiations)
+const v1Version = propVersions.find(v => v.version_number === 1);
+const v1Price = v1Version?.price ?? originalPrice;
 
-// To:
-conditions_json: {
-  ...data.conditions,
-  ...(data.paymentTermType && { payment_term_type: data.paymentTermType }),
-  ...(data.paymentTermsComment && { payment_terms_comment: data.paymentTermsComment }),
-} as any,
+steps.push({
+  ...
+  price: v1Price,  // was: originalPrice
+  ...
+});
 ```
 
-This ensures the consultant's selected payment term type is persisted in `conditions_json` where the comparison table and approval dialog already read it from.
+2. **Update `originalPrice` on the invite** (~line 280): Also use the V1 version price for the invite-level `originalPrice` field so the card header shows the correct original price:
 
-## Impact
+```typescript
+const v1Price = propVersions.find(v => v.version_number === 1)?.price;
+originalPrice: v1Price ?? originalPrice,
+```
 
-- Fixes the "לא צוין" display in `ProposalComparisonTable` and `ProposalApprovalDialog`
-- No schema changes needed - `conditions_json` is JSONB
-- Existing proposals without this data will still show "לא צוין" (backward compatible)
-- New submissions will correctly display the payment term
+This ensures V1 shows the true original submission price while V2+ show their respective version prices (already correct from `proposal_versions`).
 
