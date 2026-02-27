@@ -214,6 +214,26 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
+    // Server-side validation: milestone percentages must sum to 100%
+    if (milestone_adjustments && milestone_adjustments.length > 0) {
+      const totalPercent = milestone_adjustments.reduce(
+        (sum: number, adj: MilestoneAdjustment) => sum + (adj.target_percentage ?? 0),
+        0
+      );
+      if (Math.abs(totalPercent - 100) > 0.01) {
+        return new Response(
+          JSON.stringify({
+            error: "INVALID_MILESTONE_PERCENTAGES",
+            message: `סה"כ אחוזי אבני הדרך חייב להיות 100%. כרגע: ${totalPercent.toFixed(1)}%`,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
     // Create negotiation session
     const { data: session, error: sessionError } = await supabase
       .from("negotiation_sessions")
