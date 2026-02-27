@@ -1,48 +1,49 @@
 
 
-# Keep Only expire-rfps and expire-invites Active
+# Bug Fix: Payment Term Type Not Saved in conditions_json
 
-## What Changes
+## Problem
 
-Unschedule 8 cron jobs, leaving only `expire-rfps` and `expire-invites` running.
+The consultant's selected payment term type (`paymentTermType` dropdown - e.g., "שוטף + 30") is stored as a separate variable but never written into `conditions_json`. The entrepreneur's comparison table reads `conditions_json.payment_term_type`, which is always empty, showing "לא צוין".
 
-## Jobs to Remove
+## Data Flow
 
-| Job | Current Schedule |
-|---|---|
-| expire-stale-negotiations | Daily 3 AM |
-| cleanup-unused-negotiation-files | Daily 4 AM |
-| process-notification-queue | Every 5 min |
-| deadline-reminder | Daily 8 AM |
-| rfp-reminder-scheduler | Daily 9 AM |
-| retry-failed-emails | Every 15 min |
-| payment-deadline-reminder | Daily 7 AM |
-| notify-payment-status | Every 30 min |
-
-## Jobs That Stay
-
-| Job | Schedule |
-|---|---|
-| expire-rfps | Every hour |
-| expire-invites | Every hour |
-
-## How
-
-Run this SQL in the Supabase SQL Editor:
-
-```sql
-SELECT cron.unschedule('expire-stale-negotiations');
-SELECT cron.unschedule('cleanup-unused-negotiation-files');
-SELECT cron.unschedule('process-notification-queue');
-SELECT cron.unschedule('deadline-reminder');
-SELECT cron.unschedule('rfp-reminder-scheduler');
-SELECT cron.unschedule('retry-failed-emails');
-SELECT cron.unschedule('payment-deadline-reminder');
-SELECT cron.unschedule('notify-payment-status');
-
--- Verify only 2 remain
-SELECT jobname, schedule FROM cron.job ORDER BY jobname;
+```text
+Consultant selects "שוטף + 30" → paymentTermType state
+                                      ↓
+                         useProposalSubmit receives it
+                         BUT only uses it for change notifications
+                                      ↓
+                         conditions_json = data.conditions (from ConditionsBuilder)
+                         ← payment_term_type is MISSING here
+                                      ↓
+                         Entrepreneur sees "לא צוין"
 ```
 
-No code files are modified. This is a SQL-only change run manually in the dashboard.
+## Fix
+
+**File: `src/hooks/useProposalSubmit.ts`** (1 change)
+
+Merge `paymentTermType` and `paymentTermsComment` into `conditions_json` before saving:
+
+```typescript
+// Line ~232: Change from:
+conditions_json: data.conditions as any,
+
+// To:
+conditions_json: {
+  ...data.conditions,
+  ...(data.paymentTermType && { payment_term_type: data.paymentTermType }),
+  ...(data.paymentTermsComment && { payment_terms_comment: data.paymentTermsComment }),
+} as any,
+```
+
+This ensures the consultant's selected payment term type is persisted in `conditions_json` where the comparison table and approval dialog already read it from.
+
+## Impact
+
+- Fixes the "לא צוין" display in `ProposalComparisonTable` and `ProposalApprovalDialog`
+- No schema changes needed - `conditions_json` is JSONB
+- Existing proposals without this data will still show "לא צוין" (backward compatible)
+- New submissions will correctly display the payment term
 
