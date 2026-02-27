@@ -139,13 +139,17 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
         const propNegotiations = negotiationsByProposalId.get(proposalId) || [];
         const propVersions = versionsByProposalId.get(proposalId) || [];
 
+        // Get V1 price from versions if available (proposals.price gets updated after negotiations)
+        const v1Version = propVersions.find(v => v.version_number === 1);
+        const v1Price = v1Version?.price ?? originalPrice;
+
         // Step 1: Original offer
         steps.push({
           date: proposalSubmittedAt,
           label: 'הצעה מקורית',
           type: 'original_offer',
           version: 1,
-          price: originalPrice,
+          price: v1Price,
           currency: proposalCurrency,
           status: propNegotiations.length === 0 ? proposalStatus : undefined,
           viewData: { type: 'proposal', id: proposalId, version: 1 },
@@ -277,7 +281,7 @@ export const useRFPInvitesWithDetails = (projectId: string) => {
             createdAt: invite.created_at,
             negotiationSteps,
             currentPrice,
-            originalPrice,
+            originalPrice: propVersions.find(v => v.version_number === 1)?.price ?? originalPrice,
             currency,
           });
 
