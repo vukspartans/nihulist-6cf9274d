@@ -1,38 +1,26 @@
 
 
-# Fix: Add Unicode sanitization to ALL email-sending edge functions
+# Financial Center — Simplify UI & Add Export
 
-## Problem
-The `sanitize` function (replacing Unicode dashes with ASCII hyphens) was only added to `send-rfp-email`. All other email functions pass raw strings to `renderAsync`, causing question marks to appear in emails whenever project names, advisor types, or other fields contain Unicode dashes.
+## Changes to `src/pages/AccountantDashboard.tsx`
 
-## Affected Functions (7 total)
+### 1. Remove summary cards row (lines 716-756)
+Delete the entire 3-card grid (סה"כ חוב פתוח, שולם, ספקים פעילים).
 
-Each function needs a `sanitize` helper added, and all string props passed to `renderAsync` wrapped with it:
+### 2. Replace "פתוחות/סגורות" buttons in LiabilitiesTab with 3 status-group buttons
+Replace the current open/closed toggle (lines 143-157) with:
+- **ממתין לאישור (X)** — requests in statuses: `submitted`, `in_accounting`, `professionally_approved`, `budget_approved`, `awaiting_payment`
+- **מאושר (X)** — requests with status `paid`
+- **שולם (X)** — kept separate for clarity
 
-1. **`send-negotiation-request/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `globalComment`
-2. **`send-negotiation-response/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `consultantMessage`
-3. **`notify-proposal-submitted/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
-4. **`notify-proposal-approved/index.ts`** — `projectName`, `advisorCompany`, `entrepreneurName`, `entrepreneurNotes`
-5. **`notify-proposal-resubmitted/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
-6. **`notify-rfp-declined/index.ts`** — `projectName`, `advisorCompany`, `advisorType`, `entrepreneurName`
-7. **`reject-proposal/index.ts`** — `projectName`, `advisorCompany`, `rejectionReason`
-8. **`notify-proposal-rejected/index.ts`** — `projectName`, `advisorCompany`, `rejectionReason`
+The count `(X)` shown on each button.
 
-## Implementation
+### 3. Add "ייצוא" (Export CSV) button
+Position it in the toolbar row, right-aligned next to the existing סינון button. It exports the currently filtered/visible list as a CSV file with columns: project, advisor, milestone, status, amount, submission date, expected payment date.
 
-Add this shared sanitize helper before each `renderAsync` call:
-
-```typescript
-const sanitize = (s: string) => s
-  .replace(/[\u2010-\u2015]/g, '-')
-  .replace(/[\u2018\u2019]/g, "'")
-  .replace(/[\u201C\u201D]/g, '"');
-```
-
-This also handles smart quotes (`'` `'` `"` `"`) which can similarly corrupt.
-
-Wrap every string prop in the `React.createElement` / template call with `sanitize()`.
-
-## Deployment
-All 8 functions will be redeployed after changes.
+### Technical Details
+- CSV export uses native `Blob` + `URL.createObjectURL` — no new dependencies
+- The `filter` state changes from `'open' | 'closed'` to `'pending' | 'approved' | 'paid'`
+- Filter logic maps each button to the relevant status codes
+- Export button uses `Download` icon from lucide-react
 
