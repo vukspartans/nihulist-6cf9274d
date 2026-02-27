@@ -1,38 +1,43 @@
 
+# Fix: Tab Switch Resets Entrepreneur Wizard State
 
-# Fix Financial Center — Table Overflow, RTL Dropdowns & Responsiveness
+## Root Cause
+When switching tabs/minimizing, Supabase sometimes fires auth events that bypass the "same user skip" guard (e.g. `INITIAL_SESSION` or edge-case `SIGNED_IN` where `currentUserIdRef` is null). This sets `profileLoading=true` + `rolesLoading=true` → `loading=true` → `ProtectedRoute` unmounts the entire page tree → `RFPWizard.currentStep` resets to `1`.
 
-## Issues Found
-1. **Table overflows screen** — `min-w-[1400px]` forces horizontal scroll; 14 columns are too wide
-2. **Filter dropdowns** — placeholder text ("פרויקט", "יועץ") appears left-aligned inside the trigger due to the base `SelectTrigger` having `flex-row-reverse`; the dropdown chevron sits on the wrong side for this RTL context
-3. **"הוסף הערות" column header is cut off** on the left edge — visible in screenshot as "הוס"
+## Fix (single file: `src/hooks/useAuth.tsx`)
 
-## Plan
+### Change 1: Skip reload for ALL non-signout events when user is already loaded
+In the `onAuthStateChange` handler (lines 161-219), add an early return for **any** event where:
+- The session user ID matches the current ref
+- Profile and roles are already loaded (not in a loading state)
 
-### 1. Reduce table width — make columns responsive
-In `AccountantDashboard.tsx`, lines 395-476:
-- Remove `min-w-[1400px]` from the Table — let it use natural sizing
-- Add `whitespace-nowrap` to all `TableHead` elements to prevent header wrapping
-- Set compact widths on less important columns: `w-10` on קבצים, `w-[80px]` on דחיפות, `w-[90px]` on מס׳ חשבון
-- Truncate long text columns (הערות היועץ, הוסף הערות) with `max-w-[120px] truncate`
-- Make the table use `text-xs` globally for density
-- Keep `overflow-x-auto` as fallback but table should fit ~1280px screens now
+This covers `INITIAL_SESSION`, edge-case `SIGNED_IN`, and any other events that shouldn't trigger a full reload.
 
-### 2. Fix Select placeholder RTL alignment in filters
-In the filter `SelectTrigger` elements (lines 347, 354):
-- Override the base component's `flex-row-reverse` by adding `flex-row` and `text-right` classes to the filter SelectTriggers specifically
-- This ensures the placeholder text starts from the right and chevron sits on the left (correct for RTL dropdowns)
+```ts
+// After TOKEN_REFRESHED check (line 173), add:
+// Skip full reload if same user is already fully loaded
+if (session?.user?.id === currentUserIdRef.current && 
+    currentUserIdRef.current !== null &&
+    !profileLoading && !rolesLoading) {
+  console.log('[useAuth] Same user already loaded, skipping reload for event:', event);
+  setSession(session);
+  setUser(session?.user ?? null);
+  return;
+}
+```
 
-### 3. Fix UrgencySelect RTL
-In `UrgencySelect` (line 103):
-- Add `text-right` to the SelectTrigger
+This replaces the narrower `SIGNED_IN`-only check at lines 177-184 with a broader guard that covers all event types.
 
-### 4. Compact the "פעולות" column
-- Reduce DatePickerField width in paid-date to `w-[100px]`
-- Make action buttons smaller with `text-xs` and shorter labels
+### Change 2: Set `currentUserIdRef` during initial session load
+At line 226 (inside `getSession().then()`), set the ref immediately so it's available for any subsequent auth events:
 
-### Technical Details
-- All changes in `src/pages/AccountantDashboard.tsx`
-- No new dependencies or migrations
-- The project/advisor filter Selects already pull from `projectOptions`/`advisorOptions` derived from `requests` — they are correctly wired and will populate when data exists
+```ts
+currentUserIdRef.current = session?.user?.id ?? null;
+```
 
+This prevents the race where a tab-return event arrives before the ref is populated from the initial load.
+
+## Why This Fixes the Bug
+- No more unnecessary `loading=true` flashes on tab return
+- `ProtectedRoute` won't unmount children
+- `RFPWizard`, `RequestEditorDialog`, `ProposalApprovalDialog` etc. all preserve their local state
