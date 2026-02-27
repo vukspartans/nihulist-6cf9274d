@@ -21,6 +21,11 @@ export interface AccountantRequest {
   expected_payment_date: string | null;
   invoice_file_url: string | null;
   created_at: string;
+  request_number: string | null;
+  notes: string | null;
+  urgency: string;
+  accountant_notes: string | null;
+  specialty: string | null;
 }
 
 export interface VendorSummary {
@@ -68,6 +73,7 @@ export function useAccountantData() {
           id, project_id, project_advisor_id, payment_milestone_id,
           amount, total_amount, currency, status,
           submitted_at, paid_at, expected_payment_date, invoice_file_url, created_at,
+          request_number, notes, urgency, accountant_notes,
           project_advisor:project_advisors!payment_requests_project_advisor_id_fkey (
             id, advisor_id,
             advisors!fk_project_advisors_advisor ( id, company_name )
@@ -82,29 +88,56 @@ export function useAccountantData() {
 
       if (reqErr) throw reqErr;
 
-      const mapped: AccountantRequest[] = (requests || []).map((r: any) => ({
-        id: r.id,
-        project_id: r.project_id,
-        project_name: projectMap.get(r.project_id) || '',
-        project_advisor_id: r.project_advisor_id,
-        advisor_company_name: r.project_advisor?.advisors?.company_name || null,
-        payment_milestone_id: r.payment_milestone_id,
-        milestone_name: r.payment_milestone?.name || null,
-        milestone_due_date: r.payment_milestone?.due_date || null,
-        amount: r.amount,
-        total_amount: r.total_amount,
-        currency: r.currency,
-        status: r.status,
-        submitted_at: r.submitted_at,
-        paid_at: r.paid_at,
-        expected_payment_date: r.expected_payment_date,
-        invoice_file_url: r.invoice_file_url || null,
-        created_at: r.created_at,
-      }));
+      // 3. Fetch advisor specialties via rfp_invites
+      const specialtyMap = new Map<string, string>();
+      try {
+        const { data: invites } = await supabase
+          .from('rfp_invites')
+          .select('advisor_id, advisor_type, rfps!inner(project_id)')
+          .in('rfps.project_id', projectIds);
+
+        if (invites) {
+          for (const inv of invites as any[]) {
+            if (inv.advisor_id && inv.advisor_type) {
+              specialtyMap.set(inv.advisor_id, inv.advisor_type);
+            }
+          }
+        }
+      } catch {
+        // Non-critical — specialty just shows '—'
+      }
+
+      const mapped: AccountantRequest[] = (requests || []).map((r: any) => {
+        const advisorId = r.project_advisor?.advisor_id;
+        return {
+          id: r.id,
+          project_id: r.project_id,
+          project_name: projectMap.get(r.project_id) || '',
+          project_advisor_id: r.project_advisor_id,
+          advisor_company_name: r.project_advisor?.advisors?.company_name || null,
+          payment_milestone_id: r.payment_milestone_id,
+          milestone_name: r.payment_milestone?.name || null,
+          milestone_due_date: r.payment_milestone?.due_date || null,
+          amount: r.amount,
+          total_amount: r.total_amount,
+          currency: r.currency,
+          status: r.status,
+          submitted_at: r.submitted_at,
+          paid_at: r.paid_at,
+          expected_payment_date: r.expected_payment_date,
+          invoice_file_url: r.invoice_file_url || null,
+          created_at: r.created_at,
+          request_number: r.request_number || null,
+          notes: r.notes || null,
+          urgency: r.urgency || 'normal',
+          accountant_notes: r.accountant_notes || null,
+          specialty: advisorId ? (specialtyMap.get(advisorId) || null) : null,
+        };
+      });
 
       setAllRequests(mapped);
 
-      // 3. Compute vendor summaries
+      // 4. Compute vendor summaries
       const currentYear = new Date().getFullYear();
       const vendorMap = new Map<string, VendorSummary>();
 
@@ -203,12 +236,51 @@ export function useAccountantData() {
     }
   };
 
+  const updateUrgency = async (requestId: string, urgency: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_requests')
+        .update({ urgency } as any)
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setAllRequests(prev =>
+        prev.map(r => r.id === requestId ? { ...r, urgency } : r)
+      );
+    } catch (error) {
+      console.error('[useAccountantData] Error updating urgency:', error);
+      toast({ title: 'שגיאה', description: 'לא ניתן לעדכן דחיפות', variant: 'destructive' });
+    }
+  };
+
+  const updateAccountantNotes = async (requestId: string, notes: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_requests')
+        .update({ accountant_notes: notes } as any)
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setAllRequests(prev =>
+        prev.map(r => r.id === requestId ? { ...r, accountant_notes: notes } : r)
+      );
+      toast({ title: 'נשמר', description: 'ההערה נשמרה בהצלחה' });
+    } catch (error) {
+      console.error('[useAccountantData] Error updating notes:', error);
+      toast({ title: 'שגיאה', description: 'לא ניתן לשמור הערה', variant: 'destructive' });
+    }
+  };
+
   return {
     allRequests,
     vendorSummaries,
     loading,
     updateExpectedDate,
     updateRequestStatus,
+    updateUrgency,
+    updateAccountantNotes,
     refetch: fetchData,
   };
 }

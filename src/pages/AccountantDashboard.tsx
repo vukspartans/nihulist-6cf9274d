@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical, Download } from 'lucide-react';
+import { ArrowRight, FileText, Users, BarChart3, CheckCircle, Filter, RotateCcw, Paperclip, FlaskConical, Download, CalendarIcon, Save } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -12,7 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAccountantData, AccountantRequest } from '@/hooks/useAccountantData';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +39,7 @@ async function openFileUrl(filePath: string) {
 }
 
 function FileCell({ url }: { url: string | null }) {
-  if (!url) return <span />;
+  if (!url) return <span className="text-muted-foreground">—</span>;
   return (
     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openFileUrl(url)}>
       <Paperclip className="w-4 h-4 text-muted-foreground hover:text-primary" />
@@ -44,12 +47,131 @@ function FileCell({ url }: { url: string | null }) {
   );
 }
 
+// ── Date Picker Helper ─────────────────────────────────────────────
+function DatePickerField({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const date = value ? new Date(value + 'T00:00:00') : undefined;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            'h-8 text-sm justify-start font-normal',
+            !value && 'text-muted-foreground',
+            className
+          )}
+        >
+          <CalendarIcon className="w-3.5 h-3.5 ml-1 flex-shrink-0" />
+          {date ? format(date, 'dd/MM/yyyy') : <span>{placeholder}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0 pointer-events-auto" align="end" dir="ltr">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : '')}
+          initialFocus
+          className="p-3 pointer-events-auto"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ── Urgency Badge/Selector ──────────────────────────────────────────
+const URGENCY_OPTIONS = [
+  { value: 'normal', label: 'רגילה', color: 'bg-muted text-muted-foreground' },
+  { value: 'medium', label: 'בינונית', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+  { value: 'urgent', label: 'דחופה', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+  { value: 'immediate', label: 'מיידית', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+] as const;
+
+function UrgencySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const current = URGENCY_OPTIONS.find(o => o.value === value) || URGENCY_OPTIONS[0];
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-7 text-xs w-[90px] p-1">
+        <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', current.color)}>
+          {current.label}
+        </span>
+      </SelectTrigger>
+      <SelectContent dir="rtl">
+        {URGENCY_OPTIONS.map(o => (
+          <SelectItem key={o.value} value={o.value}>
+            <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', o.color)}>{o.label}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ── Inline Accountant Notes ──────────────────────────────────────────
+function AccountantNotesCell({ value, onSave }: { value: string | null; onSave: (v: string) => void }) {
+  const [text, setText] = useState(value || '');
+  const [dirty, setDirty] = useState(false);
+
+  const handleChange = (v: string) => {
+    setText(v);
+    setDirty(v !== (value || ''));
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        className="h-7 text-xs min-w-[100px]"
+        placeholder="הוסף הערה..."
+        value={text}
+        onChange={e => handleChange(e.target.value)}
+        dir="rtl"
+      />
+      {dirty && (
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { onSave(text); setDirty(false); }}>
+          <Save className="w-3.5 h-3.5 text-primary" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// Specialty label translation helper
+const SPECIALTY_LABELS: Record<string, string> = {
+  architect: 'אדריכל',
+  structural_engineer: 'מהנדס קונסטרוקציה',
+  mep_engineer: 'מהנדס מערכות',
+  project_manager: 'מנהל פרויקט',
+  surveyor: 'מודד',
+  safety_consultant: 'יועץ בטיחות',
+  environmental_consultant: 'יועץ סביבה',
+  traffic_consultant: 'יועץ תנועה',
+  landscape_architect: 'אדריכל נוף',
+  interior_designer: 'מעצב פנים',
+  accessibility_consultant: 'יועץ נגישות',
+  fire_safety_consultant: 'יועץ כיבוי אש',
+  acoustics_consultant: 'יועץ אקוסטיקה',
+  energy_consultant: 'יועץ אנרגיה',
+  geotechnical_engineer: 'מהנדס גיאוטכני',
+  real_estate_appraiser: 'שמאי מקרקעין',
+  lawyer: 'עורך דין',
+  tax_consultant: 'יועץ מס',
+  accountant: 'רואה חשבון',
+};
+
 // ── Tab 1: Liabilities ──────────────────────────────────────────────
 
 interface LiabilityFilters {
   project: string;
   advisor: string;
-  status: string;
   submittedFrom: string;
   submittedTo: string;
   expectedFrom: string;
@@ -60,7 +182,7 @@ interface LiabilityFilters {
 }
 
 const emptyFilters: LiabilityFilters = {
-  project: '', advisor: '', status: '',
+  project: '', advisor: '',
   submittedFrom: '', submittedTo: '',
   expectedFrom: '', expectedTo: '',
   amountMin: '', amountMax: '',
@@ -72,12 +194,16 @@ function LiabilitiesTab({
   onUpdateDate,
   onMarkPaid,
   onAdvance,
+  onUpdateUrgency,
+  onUpdateNotes,
   getNextStep,
 }: {
   requests: AccountantRequest[];
   onUpdateDate: (id: string, date: string | null) => void;
   onMarkPaid: (id: string, paidDate?: string) => void;
   onAdvance: (id: string, statusCode: string) => void;
+  onUpdateUrgency: (id: string, urgency: string) => void;
+  onUpdateNotes: (id: string, notes: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
 }) {
   const PENDING_STATUSES = ['submitted', 'in_accounting', 'professionally_approved'];
@@ -97,10 +223,6 @@ function LiabilitiesTab({
     [...new Set(requests.map(r => r.advisor_company_name).filter(Boolean) as string[])].sort(),
     [requests]
   );
-  const statusOptions = useMemo(() =>
-    [...new Set(requests.map(r => r.status))].sort(),
-    [requests]
-  );
 
   const filtered = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -118,7 +240,6 @@ function LiabilitiesTab({
     // Advanced filters
     if (filters.project) list = list.filter(r => r.project_name === filters.project);
     if (filters.advisor) list = list.filter(r => r.advisor_company_name === filters.advisor);
-    if (filters.status) list = list.filter(r => r.status === filters.status);
     if (filters.submittedFrom) list = list.filter(r => r.submitted_at && r.submitted_at >= filters.submittedFrom);
     if (filters.submittedTo) list = list.filter(r => r.submitted_at && r.submitted_at <= filters.submittedTo + 'T23:59:59');
     if (filters.expectedFrom) list = list.filter(r => r.expected_payment_date && r.expected_payment_date >= filters.expectedFrom);
@@ -138,15 +259,20 @@ function LiabilitiesTab({
   const paidCount = requests.filter(r => r.status === 'paid').length;
 
   const exportCSV = useCallback(() => {
-    const header = ['פרויקט', 'יועץ', 'אבן דרך', 'סטטוס', 'סכום', 'תאריך הגשה', 'תשלום צפוי'];
+    const header = ['פרויקט', 'שם היועץ', 'תחום', 'תאריך הגשה', 'מס׳ חשבון', 'סכום ללא מע״מ', 'אבן דרך', 'הערות היועץ', 'סטטוס', 'דחיפות', 'הערות חשבונאי'];
+    const urgencyLabels: Record<string, string> = { normal: 'רגילה', medium: 'בינונית', urgent: 'דחופה', immediate: 'מיידית' };
     const rows = filtered.map(r => [
       r.project_name,
       r.advisor_company_name || '',
-      r.milestone_name || '',
-      r.status,
-      String(r.total_amount || r.amount),
+      r.specialty ? (SPECIALTY_LABELS[r.specialty] || r.specialty) : '',
       r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('he-IL') : '',
-      r.expected_payment_date || '',
+      r.request_number || '',
+      String(r.amount),
+      r.milestone_name || '',
+      r.notes || '',
+      r.status,
+      urgencyLabels[r.urgency] || r.urgency,
+      r.accountant_notes || '',
     ]);
     const bom = '\uFEFF';
     const csv = bom + [header, ...rows].map(row => row.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -169,28 +295,16 @@ function LiabilitiesTab({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('pending')}
-          >
+          <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('pending')}>
             ממתין לאישור ({pendingCount})
           </Button>
-          <Button
-            variant={filter === 'approved' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('approved')}
-          >
+          <Button variant={filter === 'approved' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('approved')}>
             מאושר ({approvedCount})
           </Button>
-          <Button
-            variant={filter === 'paid' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('paid')}
-          >
+          <Button variant={filter === 'paid' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('paid')}>
             שולם ({paidCount})
           </Button>
         </div>
@@ -210,14 +324,14 @@ function LiabilitiesTab({
           </Button>
         </div>
       </div>
+
       {filter === 'pending' && filtered.length > 0 && (
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            className="w-36 text-sm"
+          <DatePickerField
             value={bulkDate}
-            onChange={e => setBulkDate(e.target.value)}
+            onChange={setBulkDate}
             placeholder="תאריך אחיד"
+            className="w-[140px]"
           />
           <Button size="sm" variant="outline" onClick={handleBulkDateApply} disabled={!bulkDate}>
             החל על הכל
@@ -227,36 +341,36 @@ function LiabilitiesTab({
 
       {/* Advanced Filters */}
       {filtersOpen && (
-        <div className="border rounded-md p-3">
+        <div className="border rounded-md p-3" dir="rtl">
           <div className="flex flex-wrap items-end gap-2">
             <Select value={filters.project} onValueChange={v => setFilters(p => ({ ...p, project: v === '__all__' ? '' : v }))}>
               <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="פרויקט" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 <SelectItem value="__all__">הכל</SelectItem>
                 {projectOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.advisor} onValueChange={v => setFilters(p => ({ ...p, advisor: v === '__all__' ? '' : v }))}>
               <SelectTrigger className="h-8 text-sm w-[140px]"><SelectValue placeholder="יועץ" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 <SelectItem value="__all__">הכל</SelectItem>
                 {advisorOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
-              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="סכום מ-" value={filters.amountMin} onChange={e => setFilters(p => ({ ...p, amountMin: e.target.value }))} />
+              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="סכום מ-" value={filters.amountMin} onChange={e => setFilters(p => ({ ...p, amountMin: e.target.value }))} dir="rtl" />
               <span className="text-xs text-muted-foreground">–</span>
-              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="עד" value={filters.amountMax} onChange={e => setFilters(p => ({ ...p, amountMax: e.target.value }))} />
+              <Input type="number" className="h-8 text-sm w-[80px]" placeholder="עד" value={filters.amountMax} onChange={e => setFilters(p => ({ ...p, amountMax: e.target.value }))} dir="rtl" />
             </div>
             <div className="flex items-center gap-1">
-              <Input type="date" className="h-8 text-sm w-[120px]" title="הגשה מ-" value={filters.submittedFrom} onChange={e => setFilters(p => ({ ...p, submittedFrom: e.target.value }))} />
+              <DatePickerField value={filters.submittedFrom} onChange={v => setFilters(p => ({ ...p, submittedFrom: v }))} placeholder="הגשה מ-" className="w-[130px]" />
               <span className="text-xs text-muted-foreground">–</span>
-              <Input type="date" className="h-8 text-sm w-[120px]" title="הגשה עד" value={filters.submittedTo} onChange={e => setFilters(p => ({ ...p, submittedTo: e.target.value }))} />
+              <DatePickerField value={filters.submittedTo} onChange={v => setFilters(p => ({ ...p, submittedTo: v }))} placeholder="הגשה עד" className="w-[130px]" />
             </div>
             <div className="flex items-center gap-1">
-              <Input type="date" className="h-8 text-sm w-[120px]" title="תשלום צפוי מ-" value={filters.expectedFrom} onChange={e => setFilters(p => ({ ...p, expectedFrom: e.target.value }))} />
+              <DatePickerField value={filters.expectedFrom} onChange={v => setFilters(p => ({ ...p, expectedFrom: v }))} placeholder="צפוי מ-" className="w-[130px]" />
               <span className="text-xs text-muted-foreground">–</span>
-              <Input type="date" className="h-8 text-sm w-[120px]" title="תשלום צפוי עד" value={filters.expectedTo} onChange={e => setFilters(p => ({ ...p, expectedTo: e.target.value }))} />
+              <DatePickerField value={filters.expectedTo} onChange={v => setFilters(p => ({ ...p, expectedTo: v }))} placeholder="צפוי עד" className="w-[130px]" />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox
@@ -278,24 +392,29 @@ function LiabilitiesTab({
 
       <Card>
         <div className="overflow-x-auto">
-          <Table dir="rtl" className="min-w-[800px]">
+          <Table dir="rtl" className="min-w-[1400px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="text-right">פרויקט</TableHead>
-                <TableHead className="text-right">יועץ</TableHead>
+                <TableHead className="text-right">שם היועץ</TableHead>
+                <TableHead className="text-right">תחום</TableHead>
+                <TableHead className="text-right">תאריך ההגשה</TableHead>
+                <TableHead className="text-right">מס׳ חשבון</TableHead>
+                <TableHead className="text-right">סכום ללא מע״מ</TableHead>
                 <TableHead className="text-right">אבן דרך</TableHead>
+                <TableHead className="text-right">הערות היועץ</TableHead>
+                <TableHead className="text-right">ניתוח AI</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
-                <TableHead className="text-right">סכום</TableHead>
-                <TableHead className="text-right">תאריך הגשה</TableHead>
-                <TableHead className="text-right">תשלום צפוי</TableHead>
-                <TableHead className="text-right w-10">קובץ</TableHead>
+                <TableHead className="text-right w-10">קבצים</TableHead>
+                <TableHead className="text-right">דחיפות</TableHead>
+                <TableHead className="text-right">הוסף הערות</TableHead>
                 <TableHead className="text-right">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                     אין בקשות תשלום בקטגוריה זו
                   </TableCell>
                 </TableRow>
@@ -306,30 +425,31 @@ function LiabilitiesTab({
 
                   return (
                     <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.project_name}</TableCell>
-                      <TableCell>{req.advisor_company_name || '—'}</TableCell>
-                      <TableCell>{req.milestone_name || '—'}</TableCell>
-                      <TableCell><PaymentStatusBadge status={req.status} /></TableCell>
-                      <TableCell>{formatCurrency(req.total_amount || req.amount)}</TableCell>
-                      <TableCell>{formatDate(req.submitted_at)}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="date"
-                          className="w-36 text-sm"
-                          value={req.expected_payment_date || ''}
-                          onChange={e => onUpdateDate(req.id, e.target.value || null)}
-                        />
+                      <TableCell className="font-medium text-right">{req.project_name}</TableCell>
+                      <TableCell className="text-right">{req.advisor_company_name || '—'}</TableCell>
+                      <TableCell className="text-right text-xs">{req.specialty ? (SPECIALTY_LABELS[req.specialty] || req.specialty) : '—'}</TableCell>
+                      <TableCell className="text-right">{formatDate(req.submitted_at)}</TableCell>
+                      <TableCell className="text-right">{req.request_number || '—'}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(req.amount)}</TableCell>
+                      <TableCell className="text-right">{req.milestone_name || '—'}</TableCell>
+                      <TableCell className="text-right text-xs max-w-[150px] truncate" title={req.notes || undefined}>{req.notes || '—'}</TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">—</TableCell>
+                      <TableCell className="text-right"><PaymentStatusBadge status={req.status} /></TableCell>
+                      <TableCell className="text-right"><FileCell url={req.invoice_file_url} /></TableCell>
+                      <TableCell className="text-right">
+                        <UrgencySelect value={req.urgency} onChange={(v) => onUpdateUrgency(req.id, v)} />
                       </TableCell>
-                      <TableCell><FileCell url={req.invoice_file_url} /></TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
+                        <AccountantNotesCell value={req.accountant_notes} onSave={(v) => onUpdateNotes(req.id, v)} />
+                      </TableCell>
+                      <TableCell className="text-right">
                         {canMarkPaid ? (
                           <div className="flex items-center gap-1">
-                            <Input
-                              type="date"
-                              className="w-32 text-xs"
+                            <DatePickerField
                               value={paidDateInputs[req.id] || ''}
-                              onChange={e => setPaidDateInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
-                              placeholder="תאריך תשלום"
+                              onChange={v => setPaidDateInputs(prev => ({ ...prev, [req.id]: v }))}
+                              placeholder="תאריך"
+                              className="w-[110px]"
                             />
                             <Button
                               size="sm"
@@ -341,11 +461,7 @@ function LiabilitiesTab({
                             </Button>
                           </div>
                         ) : next ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onAdvance(req.id, next.code)}
-                          >
+                          <Button size="sm" variant="outline" onClick={() => onAdvance(req.id, next.code)}>
                             <CheckCircle className="w-3.5 h-3.5 ml-1" />
                             {next.name}
                           </Button>
@@ -370,7 +486,7 @@ function VendorConcentrationTab({
   vendorSummaries: ReturnType<typeof useAccountantData>['vendorSummaries'];
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" dir="rtl">
       {vendorSummaries.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -386,59 +502,53 @@ function VendorConcentrationTab({
           </CardContent>
         </Card>
       ) : (
-        vendorSummaries.map(v => (
-          <Collapsible key={v.advisorId}>
-            <Card>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{v.companyName}</CardTitle>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span>שולם (שנה נוכחית): {formatCurrency(v.totalPaidYTD)}</span>
-                      <Badge variant={v.totalOutstanding > 0 ? 'destructive' : 'secondary'}>
-                        יתרת חוב: {formatCurrency(v.totalOutstanding)}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <Table dir="rtl">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">פרויקט</TableHead>
-                        <TableHead className="text-right">אבן דרך</TableHead>
-                        <TableHead className="text-right">סטטוס</TableHead>
-                        <TableHead className="text-right">סכום</TableHead>
-                        <TableHead className="text-right">תאריך</TableHead>
-                        <TableHead className="text-right w-10">קובץ</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {v.requests.map(req => (
-                        <TableRow key={req.id}>
-                          <TableCell>{req.project_name}</TableCell>
-                          <TableCell>{req.milestone_name || '—'}</TableCell>
-                          <TableCell><PaymentStatusBadge status={req.status} /></TableCell>
-                          <TableCell>{formatCurrency(req.total_amount || req.amount)}</TableCell>
-                          <TableCell>{formatDate(req.submitted_at || req.created_at)}</TableCell>
-                          <TableCell><FileCell url={req.invoice_file_url} /></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+        vendorSummaries.map(vendor => (
+          <Card key={vendor.advisorId}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">{vendor.companyName}</CardTitle>
+                <div className="flex gap-3 text-sm">
+                  <span>שולם השנה: <strong>{formatCurrency(vendor.totalPaidYTD)}</strong></span>
+                  <span className={vendor.totalOutstanding > 0 ? 'text-destructive' : ''}>
+                    יתרת חוב: <strong>{formatCurrency(vendor.totalOutstanding)}</strong>
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table dir="rtl">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">פרויקט</TableHead>
+                    <TableHead className="text-right">אבן דרך</TableHead>
+                    <TableHead className="text-right">סכום</TableHead>
+                    <TableHead className="text-right">סטטוס</TableHead>
+                    <TableHead className="text-right">תאריך הגשה</TableHead>
+                    <TableHead className="text-right w-10">קובץ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendor.requests.map(req => (
+                    <TableRow key={req.id}>
+                      <TableCell className="text-right">{req.project_name}</TableCell>
+                      <TableCell className="text-right">{req.milestone_name || '—'}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(req.total_amount || req.amount)}</TableCell>
+                      <TableCell className="text-right"><PaymentStatusBadge status={req.status} /></TableCell>
+                      <TableCell className="text-right">{formatDate(req.submitted_at)}</TableCell>
+                      <TableCell className="text-right"><FileCell url={req.invoice_file_url} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         ))
       )}
     </div>
   );
 }
 
-// ── Tab 3: Manager Summary (per-project) ─────────────────────────────
+// ── Tab 3: Manager Summary ───────────────────────────────────────────
 interface ProjectSummary {
   projectId: string;
   projectName: string;
@@ -452,9 +562,9 @@ interface ProjectSummary {
 
 function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
   const projectSummaries = useMemo(() => {
+    const map = new Map<string, ProjectSummary>();
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const map = new Map<string, ProjectSummary>();
 
     requests.forEach(req => {
       if (!map.has(req.project_id)) {
@@ -472,29 +582,29 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
       const s = map.get(req.project_id)!;
       s.totalRequests++;
       const amt = req.total_amount || req.amount;
-
       if (req.status === 'paid') {
         s.totalPaid += amt;
       } else if (req.status !== 'rejected') {
         s.openRequests++;
         s.totalOutstanding += amt;
-        const epd = req.expected_payment_date;
-        if (epd && epd.substring(0, 7) === currentMonth) {
+        const dateStr = req.expected_payment_date || req.milestone_due_date;
+        if (dateStr && dateStr.substring(0, 7) === currentMonth) {
           s.currentMonthForecast += amt;
         }
       }
     });
 
-    // Count distinct advisors per project
-    const advisorSets = new Map<string, Set<string>>();
+    // Count unique advisors per project
+    const advisorsByProject = new Map<string, Set<string>>();
     requests.forEach(req => {
-      if (!req.project_advisor_id) return;
-      if (!advisorSets.has(req.project_id)) advisorSets.set(req.project_id, new Set());
-      advisorSets.get(req.project_id)!.add(req.project_advisor_id);
+      if (req.project_advisor_id) {
+        if (!advisorsByProject.has(req.project_id)) advisorsByProject.set(req.project_id, new Set());
+        advisorsByProject.get(req.project_id)!.add(req.project_advisor_id);
+      }
     });
-    advisorSets.forEach((set, pid) => {
-      const s = map.get(pid);
-      if (s) s.advisorCount = set.size;
+    advisorsByProject.forEach((advisors, projectId) => {
+      const s = map.get(projectId);
+      if (s) s.advisorCount = advisors.size;
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalOutstanding - a.totalOutstanding);
@@ -512,7 +622,6 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
     { advisorCount: 0, totalRequests: 0, openRequests: 0, totalPaid: 0, totalOutstanding: 0, currentMonthForecast: 0 }
   ), [projectSummaries]);
 
-  // Keep the existing 6-month chart data
   const chartData = useMemo(() => {
     const now = new Date();
     const months: string[] = [];
@@ -539,8 +648,7 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
   }, [requests]);
 
   return (
-    <div className="space-y-4">
-      {/* Per-project summary table */}
+    <div className="space-y-4" dir="rtl">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">סיכום לפי פרויקט</CardTitle>
@@ -578,30 +686,29 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
                   <>
                     {projectSummaries.map(s => (
                       <TableRow key={s.projectId}>
-                        <TableCell className="font-medium">{s.projectName}</TableCell>
-                        <TableCell>{s.advisorCount}</TableCell>
-                        <TableCell>{s.totalRequests}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium text-right">{s.projectName}</TableCell>
+                        <TableCell className="text-right">{s.advisorCount}</TableCell>
+                        <TableCell className="text-right">{s.totalRequests}</TableCell>
+                        <TableCell className="text-right">
                           {s.openRequests > 0 ? (
                             <Badge variant="secondary">{s.openRequests}</Badge>
                           ) : '0'}
                         </TableCell>
-                        <TableCell>{formatCurrency(s.totalPaid)}</TableCell>
-                        <TableCell className={s.totalOutstanding > 0 ? 'text-destructive font-medium' : ''}>
+                        <TableCell className="text-right">{formatCurrency(s.totalPaid)}</TableCell>
+                        <TableCell className={cn('text-right', s.totalOutstanding > 0 && 'text-destructive font-medium')}>
                           {formatCurrency(s.totalOutstanding)}
                         </TableCell>
-                        <TableCell>{formatCurrency(s.currentMonthForecast)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(s.currentMonthForecast)}</TableCell>
                       </TableRow>
                     ))}
-                    {/* Totals row */}
                     <TableRow className="bg-muted/50 font-bold border-t-2">
-                      <TableCell>סה"כ</TableCell>
-                      <TableCell>{totals.advisorCount}</TableCell>
-                      <TableCell>{totals.totalRequests}</TableCell>
-                      <TableCell>{totals.openRequests}</TableCell>
-                      <TableCell>{formatCurrency(totals.totalPaid)}</TableCell>
-                      <TableCell className="text-destructive">{formatCurrency(totals.totalOutstanding)}</TableCell>
-                      <TableCell>{formatCurrency(totals.currentMonthForecast)}</TableCell>
+                      <TableCell className="text-right">סה"כ</TableCell>
+                      <TableCell className="text-right">{totals.advisorCount}</TableCell>
+                      <TableCell className="text-right">{totals.totalRequests}</TableCell>
+                      <TableCell className="text-right">{totals.openRequests}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(totals.totalPaid)}</TableCell>
+                      <TableCell className="text-destructive text-right">{formatCurrency(totals.totalOutstanding)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(totals.currentMonthForecast)}</TableCell>
                     </TableRow>
                   </>
                 )}
@@ -611,7 +718,6 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
         </CardContent>
       </Card>
 
-      {/* Existing 6-month forecast chart */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
@@ -642,7 +748,7 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
 // ── Main Dashboard ───────────────────────────────────────────────────
 export default function AccountantDashboard() {
   const navigate = useNavigate();
-  const { allRequests, vendorSummaries, loading, updateExpectedDate, updateRequestStatus } = useAccountantData();
+  const { allRequests, vendorSummaries, loading, updateExpectedDate, updateRequestStatus, updateUrgency, updateAccountantNotes } = useAccountantData();
   const { getNextStep, isLoading: approvalChainLoading } = useApprovalChain();
 
   const handleMarkPaid = (requestId: string, paidDate?: string) => {
@@ -732,6 +838,8 @@ export default function AccountantDashboard() {
               onUpdateDate={updateExpectedDate}
               onMarkPaid={handleMarkPaid}
               onAdvance={(id, code) => updateRequestStatus(id, code)}
+              onUpdateUrgency={updateUrgency}
+              onUpdateNotes={updateAccountantNotes}
               getNextStep={getNextStep}
             />
           </TabsContent>

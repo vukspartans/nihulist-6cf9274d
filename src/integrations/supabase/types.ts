@@ -1425,6 +1425,7 @@ export type Database = {
       }
       payment_requests: {
         Row: {
+          accountant_notes: string | null
           amount: number
           approved_at: string | null
           approved_by: string | null
@@ -1460,10 +1461,12 @@ export type Database = {
           submitted_by: string | null
           total_amount: number | null
           updated_at: string
+          urgency: string
           vat_amount: number | null
           vat_percent: number | null
         }
         Insert: {
+          accountant_notes?: string | null
           amount: number
           approved_at?: string | null
           approved_by?: string | null
@@ -1499,10 +1502,12 @@ export type Database = {
           submitted_by?: string | null
           total_amount?: number | null
           updated_at?: string
+          urgency?: string
           vat_amount?: number | null
           vat_percent?: number | null
         }
         Update: {
+          accountant_notes?: string | null
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
@@ -1538,6 +1543,7 @@ export type Database = {
           submitted_by?: string | null
           total_amount?: number | null
           updated_at?: string
+          urgency?: string
           vat_amount?: number | null
           vat_percent?: number | null
         }
