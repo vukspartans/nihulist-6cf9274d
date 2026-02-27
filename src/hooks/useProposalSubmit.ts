@@ -229,7 +229,11 @@ export const useProposalSubmit = () => {
         price: data.price,
         timeline_days: data.timelineDays,
         scope_text: data.scopeText,
-        conditions_json: data.conditions as any,
+        conditions_json: {
+          ...data.conditions,
+          ...(data.paymentTermType && { payment_term_type: data.paymentTermType }),
+          ...(data.paymentTermsComment && { payment_terms_comment: data.paymentTermsComment }),
+        } as any,
         files: data.uploadedFiles as any,
         declaration_text: data.declarationText,
         signature_blob: data.signature.png,
