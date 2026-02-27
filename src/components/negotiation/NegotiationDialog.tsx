@@ -351,7 +351,26 @@ export const NegotiationDialog = ({
     return total;
   };
 
+  // Compute milestone validity for UI and submit guard
+  const computeMilestoneTotal = (): number => {
+    if (milestoneAdjustments.length === 0 || milestones.length === 0) return 100;
+    return milestones.reduce((sum, m) => {
+      const milestoneId = m.id || m.name;
+      const adj = milestoneAdjustments.find(a => a.milestone_id === milestoneId);
+      return sum + (adj ? adj.target_percentage : m.percentage);
+    }, 0);
+  };
+
+  const milestoneTotal = computeMilestoneTotal();
+  const isMilestoneInvalid = milestoneAdjustments.length > 0 && Math.abs(milestoneTotal - 100) > 0.01;
+
   const handleSubmit = async () => {
+    // Validate milestone percentages
+    if (isMilestoneInvalid) {
+      toast.error(`סה"כ אחוזי אבני הדרך חייב להיות 100%. כרגע: ${milestoneTotal.toFixed(1)}%`);
+      return;
+    }
+
     // Version creation is now handled by the edge function (bypasses RLS)
     const versionId = latestVersion?.id || null;
 
@@ -943,7 +962,7 @@ export const NegotiationDialog = ({
             </Tabs>
 
             <DialogFooter className="shrink-0 gap-2 px-6 py-4 border-t bg-background flex-row-reverse sm:flex-row">
-              <Button onClick={handleSubmit} disabled={loading || uploading}>
+              <Button onClick={handleSubmit} disabled={loading || uploading || isMilestoneInvalid}>
                 {loading ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin me-2" />
