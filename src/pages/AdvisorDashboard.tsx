@@ -655,21 +655,9 @@ const AdvisorDashboard = () => {
   const handleDeclineConfirm = async (reason: string, note?: string) => {
     if (!selectedInviteToDecline) return;
     
-    // Map Hebrew reason to database enum
-    const reasonMap: Record<string, string> = {
-      'לא רלוונטי למומחיות שלי': 'outside_expertise',
-      'עומס עבודה גבוה': 'no_capacity',
-      'מיקום הפרויקט רחוק מדי': 'other',
-      'תקציב נמוך מדי': 'budget_mismatch',
-      'לוח זמנים לא מתאים': 'timeline_conflict',
-      'אחר': 'other'
-    };
-    
-    const dbReason = reasonMap[reason] || 'other';
-    
     const result = await declineRFP(
       selectedInviteToDecline, 
-      dbReason as any, 
+      reason as any, 
       note
     );
     

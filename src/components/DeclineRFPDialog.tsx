@@ -21,12 +21,12 @@ interface DeclineRFPDialogProps {
 }
 
 const DECLINE_REASONS = [
-  'לא רלוונטי למומחיות שלי',
-  'עומס עבודה גבוה',
-  'מיקום הפרויקט רחוק מדי',
-  'תקציב נמוך מדי',
-  'לוח זמנים לא מתאים',
-  'אחר'
+  { label: 'לא רלוונטי למומחיות שלי', value: 'outside_expertise' },
+  { label: 'עומס עבודה גבוה', value: 'no_capacity' },
+  { label: 'מיקום הפרויקט רחוק מדי', value: 'other' },
+  { label: 'תקציב נמוך מדי', value: 'budget_mismatch' },
+  { label: 'לוח זמנים לא מתאים', value: 'timeline_conflict' },
+  { label: 'אחר', value: 'other' },
 ];
 
 export function DeclineRFPDialog({
@@ -100,10 +100,10 @@ export function DeclineRFPDialog({
             <Label>סיבת הדחייה *</Label>
             <RadioGroup value={reason} onValueChange={setReason}>
               {DECLINE_REASONS.map((r) => (
-                <div key={r} className="flex items-center gap-2 flex-row-reverse">
-                  <RadioGroupItem value={r} id={r} />
-                  <Label htmlFor={r} className="font-normal cursor-pointer py-2">
-                    {r}
+                <div key={r.value + r.label} className="flex items-center gap-2 flex-row-reverse">
+                  <RadioGroupItem value={r.value} id={r.label} />
+                  <Label htmlFor={r.label} className="font-normal cursor-pointer py-2">
+                    {r.label}
                   </Label>
                 </div>
               ))}
