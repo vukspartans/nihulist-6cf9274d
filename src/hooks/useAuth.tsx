@@ -172,12 +172,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
         
-        // Skip loading states when SIGNED_IN is triggered for the same user (tab return scenario)
+        // Skip full reload if same user is already fully loaded (covers SIGNED_IN, INITIAL_SESSION, etc.)
         // This prevents full component tree unmount when returning to tab
-        if (event === 'SIGNED_IN' && 
-            session?.user?.id === currentUserIdRef.current && 
-            currentUserIdRef.current !== null) {
-          console.log('[useAuth] Same user SIGNED_IN (tab return), skipping reload');
+        if (session?.user?.id === currentUserIdRef.current && 
+            currentUserIdRef.current !== null &&
+            !profileLoading && !rolesLoading) {
+          console.log('[useAuth] Same user already loaded, skipping reload for event:', event);
           setSession(session);
           setUser(session?.user ?? null);
           return;
@@ -222,6 +222,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('[useAuth] Initial session check:', !!session);
+      currentUserIdRef.current = session?.user?.id ?? null;
       setSession(session);
       setUser(session?.user ?? null);
       
