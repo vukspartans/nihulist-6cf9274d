@@ -228,14 +228,23 @@ serve(async (req) => {
           }
         }
 
+        // Sanitize Unicode dashes/special chars that corrupt during renderAsync
+        const sanitize = (s: string) => s
+          .replace(/\u2013/g, '-')  // en-dash → hyphen
+          .replace(/\u2014/g, '-')  // em-dash → hyphen
+          .replace(/\u2015/g, '-')  // horizontal bar → hyphen
+          .replace(/\u2010/g, '-')  // hyphen char → ASCII hyphen
+          .replace(/\u2011/g, '-')  // non-breaking hyphen → ASCII hyphen
+          .replace(/\u2012/g, '-'); // figure dash → ASCII hyphen
+
         // Render email template
         const html = await renderAsync(
           React.createElement(RFPInvitationEmail, {
-            advisorName,
-            companyName,
-            projectName: project.name,
-            projectType: project.type,
-            projectLocation: project.location,
+            advisorName: sanitize(advisorName),
+            companyName: sanitize(companyName),
+            projectName: sanitize(project.name),
+            projectType: sanitize(project.type),
+            projectLocation: sanitize(project.location),
             deadlineDate,
             senderOrganizationName,
             requestTitle: invite.request_title || undefined,
