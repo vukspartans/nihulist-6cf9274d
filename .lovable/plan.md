@@ -1,45 +1,42 @@
 
 
-# Bug Fix: Original price not shown in V1 of negotiation timeline
+# Bug Fix: Prevent milestone percentages exceeding 100% in negotiation
 
 ## Problem
+The entrepreneur can set milestone percentages that total more than 100% (e.g., 135% as shown in screenshot) when creating a negotiation request. The `MilestoneNegotiationTable` displays a warning but nothing prevents submission.
 
-In the "Sent RFPs" tab, the negotiation timeline shows the **current** (post-negotiation) price for all versions, including V1 "הצעה מקורית". This happens because `originalPrice` is read from `proposals.price`, which gets updated after each negotiation round.
+## Changes
 
-In the screenshot: V1 and V2 both show ₪70,004 — the price after negotiation — instead of V1 showing the original submission price.
+### 1. `src/components/negotiation/NegotiationDialog.tsx` — Add validation in `handleSubmit`
 
-## Root Cause
-
-**File: `src/hooks/useRFPInvitesWithDetails.ts`**
-
-- Line 219: `originalPrice = matchedProposal?.price` reads from `proposals.price`, which is the **latest** price (updated by `submit_negotiation_response`).
-- Line 148: This `originalPrice` is then used as the V1 step price in `buildNegotiationSteps`.
-- The actual original price is stored in `proposal_versions` where `version_number = 1`.
-
-## Fix
-
-**File: `src/hooks/useRFPInvitesWithDetails.ts`** (2 changes)
-
-1. **In `buildNegotiationSteps`** (~line 142-148): Look up the V1 version price from `propVersions` and use it for the original offer step instead of the passed `originalPrice`:
+Before calling `createNegotiationSession` (~line 386), add a check:
 
 ```typescript
-// Get V1 price from versions if available (proposals.price gets updated after negotiations)
-const v1Version = propVersions.find(v => v.version_number === 1);
-const v1Price = v1Version?.price ?? originalPrice;
-
-steps.push({
-  ...
-  price: v1Price,  // was: originalPrice
-  ...
-});
+// Validate milestone percentages sum to 100% if any adjustments were made
+if (milestoneAdjustments.length > 0) {
+  // Calculate effective total: adjusted milestones use target_percentage, others keep original
+  const milestoneTotal = milestones.reduce((sum, m) => {
+    const milestoneId = m.id || m.name;
+    const adj = milestoneAdjustments.find(a => a.milestone_id === milestoneId);
+    return sum + (adj ? adj.target_percentage : m.percentage);
+  }, 0);
+  
+  if (Math.abs(milestoneTotal - 100) > 0.01) {
+    toast({
+      title: "שגיאה באבני דרך",
+      description: `סה"כ אחוזי אבני הדרך חייב להיות 100%. כרגע: ${milestoneTotal.toFixed(1)}%`,
+      variant: "destructive",
+    });
+    return;
+  }
+}
 ```
 
-2. **Update `originalPrice` on the invite** (~line 280): Also use the V1 version price for the invite-level `originalPrice` field so the card header shows the correct original price:
+### 2. `src/components/negotiation/NegotiationDialog.tsx` — Disable submit button when invalid
 
-```typescript
-const v1Price = propVersions.find(v => v.version_number === 1)?.price;
-originalPrice: v1Price ?? originalPrice,
-```
+Add a computed `isMilestoneInvalid` flag and use it to disable the submit button alongside the existing `loading || uploading` condition.
 
-This ensures V1 shows the true original submission price while V2+ show their respective version prices (already correct from `proposal_versions`).
+### 3. `supabase/functions/send-negotiation-request/index.ts` — Server-side validation
+
+Add a server-side check for milestone_adjustments total before creating the session, returning a 400 error if percentages exceed 100%.
 
