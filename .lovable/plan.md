@@ -1,43 +1,35 @@
 
-# Fix: Tab Switch Resets Entrepreneur Wizard State
 
-## Root Cause
-When switching tabs/minimizing, Supabase sometimes fires auth events that bypass the "same user skip" guard (e.g. `INITIAL_SESSION` or edge-case `SIGNED_IN` where `currentUserIdRef` is null). This sets `profileLoading=true` + `rolesLoading=true` → `loading=true` → `ProtectedRoute` unmounts the entire page tree → `RFPWizard.currentStep` resets to `1`.
+# Fix Financial Center CSV Export for Excel/Google Sheets Compatibility
 
-## Fix (single file: `src/hooks/useAuth.tsx`)
+## Current Issues Found
 
-### Change 1: Skip reload for ALL non-signout events when user is already loaded
-In the `onAuthStateChange` handler (lines 161-219), add an early return for **any** event where:
-- The session user ID matches the current ref
-- Profile and roles are already loaded (not in a loading state)
+1. **Status column exports raw codes** (`prepared`, `submitted`, `paid`) instead of Hebrew labels — the table UI shows translated names via `PaymentStatusBadge`, but the export just dumps `r.status`
+2. **Missing important columns**: `total_amount` (with VAT), `expected_payment_date`, `currency`, `vat_percent` — all available in `AccountantRequest` but not exported
+3. **Amount column is unformatted** — just `String(r.amount)`, no thousands separator. Excel can handle raw numbers, but for readability a plain number (no currency symbol) is better so Excel treats it as numeric
+4. **File extension `.csv`** is correct — BOM + UTF-8 CSV is the standard approach for Hebrew in Excel/Google Sheets. No need to switch to `.xlsx`.
 
-This covers `INITIAL_SESSION`, edge-case `SIGNED_IN`, and any other events that shouldn't trigger a full reload.
+## Plan
 
-```ts
-// After TOKEN_REFRESHED check (line 173), add:
-// Skip full reload if same user is already fully loaded
-if (session?.user?.id === currentUserIdRef.current && 
-    currentUserIdRef.current !== null &&
-    !profileLoading && !rolesLoading) {
-  console.log('[useAuth] Same user already loaded, skipping reload for event:', event);
-  setSession(session);
-  setUser(session?.user ?? null);
-  return;
-}
-```
+### Single file: `src/pages/AccountantDashboard.tsx`, lines 261-286
 
-This replaces the narrower `SIGNED_IN`-only check at lines 177-184 with a broader guard that covers all event types.
+**1. Translate status codes to Hebrew labels**
+- The component already has access to `approvalChain.statuses` (from `useApprovalChain`) which contains `code` → `name` mappings
+- However, inside `LiabilitiesTab` the approval chain is passed as a prop. Need to check if it's available — it is, via the `statuses` array passed through the component
+- Build a lookup: `const statusLabel = (code: string) => statuses.find(s => s.code === code)?.name || code;`
+- Use `statusLabel(r.status)` instead of raw `r.status`
 
-### Change 2: Set `currentUserIdRef` during initial session load
-At line 226 (inside `getSession().then()`), set the ref immediately so it's available for any subsequent auth events:
+**2. Add missing columns to the export**
+- Add: `סכום כולל מע״מ` (`total_amount`), `תאריך תשלום צפוי` (`expected_payment_date`), `אחוז מע״מ` (`vat_percent`)
+- Update header array and row mapping accordingly
 
-```ts
-currentUserIdRef.current = session?.user?.id ?? null;
-```
+**3. Keep amounts as plain numbers**
+- Export `r.amount` and `r.total_amount` as plain numbers (no currency symbol) so Excel recognizes them as numeric cells for SUM/formulas
+- Add a `מטבע` column with `r.currency`
 
-This prevents the race where a tab-return event arrives before the ref is populated from the initial load.
+**4. Ensure the export uses the filtered view**
+- Already correct — `filtered` is used, which respects the active status group + filters
 
-## Why This Fixes the Bug
-- No more unnecessary `loading=true` flashes on tab return
-- `ProtectedRoute` won't unmount children
-- `RFPWizard`, `RequestEditorDialog`, `ProposalApprovalDialog` etc. all preserve their local state
+### Updated export columns (13 columns):
+`פרויקט | שם היועץ | תחום | תאריך הגשה | מס׳ חשבון | סכום ללא מע״מ | אחוז מע״מ | סכום כולל מע״מ | מטבע | אבן דרך | הערות היועץ | סטטוס | דחיפות | תאריך תשלום צפוי | הערות חשבונאי`
+
