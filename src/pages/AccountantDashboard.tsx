@@ -197,6 +197,7 @@ function LiabilitiesTab({
   onUpdateUrgency,
   onUpdateNotes,
   getNextStep,
+  statuses,
 }: {
   requests: AccountantRequest[];
   onUpdateDate: (id: string, date: string | null) => void;
@@ -205,6 +206,7 @@ function LiabilitiesTab({
   onUpdateUrgency: (id: string, urgency: string) => void;
   onUpdateNotes: (id: string, notes: string) => void;
   getNextStep: ReturnType<typeof useApprovalChain>['getNextStep'];
+  statuses: { code: string; name: string }[];
 }) {
   const PENDING_STATUSES = ['submitted', 'in_accounting', 'professionally_approved'];
   const APPROVED_STATUSES = ['budget_approved', 'awaiting_payment'];
@@ -258,8 +260,15 @@ function LiabilitiesTab({
   const approvedCount = requests.filter(r => APPROVED_STATUSES.includes(r.status)).length;
   const paidCount = requests.filter(r => r.status === 'paid').length;
 
+  const statusLabel = useCallback((code: string) => statuses.find(s => s.code === code)?.name || code, [statuses]);
+
   const exportCSV = useCallback(() => {
-    const header = ['פרויקט', 'שם היועץ', 'תחום', 'תאריך הגשה', 'מס׳ חשבון', 'סכום ללא מע״מ', 'אבן דרך', 'הערות היועץ', 'סטטוס', 'דחיפות', 'הערות חשבונאי'];
+    const header = [
+      'פרויקט', 'שם היועץ', 'תחום', 'תאריך הגשה', 'מס׳ חשבון',
+      'סכום ללא מע״מ', 'אחוז מע״מ', 'סכום כולל מע״מ', 'מטבע',
+      'אבן דרך', 'הערות היועץ', 'סטטוס', 'דחיפות',
+      'תאריך תשלום צפוי', 'הערות חשבונאי',
+    ];
     const urgencyLabels: Record<string, string> = { normal: 'רגילה', medium: 'בינונית', urgent: 'דחופה', immediate: 'מיידית' };
     const rows = filtered.map(r => [
       r.project_name,
@@ -268,10 +277,14 @@ function LiabilitiesTab({
       r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('he-IL') : '',
       r.request_number || '',
       String(r.amount),
+      r.vat_percent != null ? String(r.vat_percent) : '',
+      r.total_amount != null ? String(r.total_amount) : '',
+      r.currency || 'ILS',
       r.milestone_name || '',
       r.notes || '',
-      r.status,
+      statusLabel(r.status),
       urgencyLabels[r.urgency] || r.urgency,
+      r.expected_payment_date ? new Date(r.expected_payment_date).toLocaleDateString('he-IL') : '',
       r.accountant_notes || '',
     ]);
     const bom = '\uFEFF';
@@ -283,7 +296,7 @@ function LiabilitiesTab({
     a.download = `התחייבויות_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [filtered]);
+  }, [filtered, statusLabel]);
 
   const handleBulkDateApply = () => {
     if (!bulkDate) return;
@@ -749,7 +762,7 @@ function ManagerSummaryTab({ requests }: { requests: AccountantRequest[] }) {
 export default function AccountantDashboard() {
   const navigate = useNavigate();
   const { allRequests, vendorSummaries, loading, updateExpectedDate, updateRequestStatus, updateUrgency, updateAccountantNotes } = useAccountantData();
-  const { getNextStep, isLoading: approvalChainLoading } = useApprovalChain();
+  const { getNextStep, statuses, isLoading: approvalChainLoading } = useApprovalChain();
 
   const handleMarkPaid = (requestId: string, paidDate?: string) => {
     const additionalData = paidDate ? { paid_at: new Date(paidDate).toISOString() } : undefined;
@@ -841,6 +854,7 @@ export default function AccountantDashboard() {
               onUpdateUrgency={updateUrgency}
               onUpdateNotes={updateAccountantNotes}
               getNextStep={getNextStep}
+              statuses={statuses}
             />
           </TabsContent>
 

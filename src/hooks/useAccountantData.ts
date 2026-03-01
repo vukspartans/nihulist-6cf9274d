@@ -14,6 +14,7 @@ export interface AccountantRequest {
   milestone_due_date: string | null;
   amount: number;
   total_amount: number | null;
+  vat_percent: number | null;
   currency: string;
   status: string;
   submitted_at: string | null;
@@ -71,7 +72,7 @@ export function useAccountantData() {
         .from('payment_requests')
         .select(`
           id, project_id, project_advisor_id, payment_milestone_id,
-          amount, total_amount, currency, status,
+          amount, total_amount, vat_percent, currency, status,
           submitted_at, paid_at, expected_payment_date, invoice_file_url, created_at,
           request_number, notes, urgency, accountant_notes,
           project_advisor:project_advisors!payment_requests_project_advisor_id_fkey (
@@ -120,6 +121,7 @@ export function useAccountantData() {
           milestone_due_date: r.payment_milestone?.due_date || null,
           amount: r.amount,
           total_amount: r.total_amount,
+          vat_percent: r.vat_percent ?? null,
           currency: r.currency,
           status: r.status,
           submitted_at: r.submitted_at,
