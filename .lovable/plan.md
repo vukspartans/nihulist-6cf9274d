@@ -1,35 +1,48 @@
 
 
-# Fix Negotiation Request Edge Function Errors
+# Fix Outdated CORS Headers Across All Edge Functions
 
-## Issues Found
-
-### 1. CORS Headers Mismatch (likely root cause)
-The `send-negotiation-request` edge function uses an outdated CORS header set:
+## Problem
+18 edge functions (plus the shared `_shared/cron-auth.ts`) use the outdated CORS header:
 ```
-"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+"authorization, x-client-info, apikey, content-type"
 ```
-The Supabase JS SDK v2.55.0 sends additional headers (`x-supabase-client-platform`, `x-supabase-client-platform-version`, `x-supabase-client-runtime`, `x-supabase-client-runtime-version`). When the browser sends a preflight OPTIONS request with these headers and the server doesn't allow them, the browser blocks the actual POST — resulting in a "non-2xx status code" error on the client.
+Only `send-negotiation-request` and `send-negotiation-response` were already fixed. The outdated headers will cause silent preflight failures when the Supabase JS SDK v2.55.0 sends platform metadata headers.
 
-### 2. 409 Conflict on Duplicate Negotiations
-Several proposals already have active `awaiting_response` sessions. If the entrepreneur tries to send another negotiation on the same proposal, the function returns 409. The client-side hook handles this, but if CORS fails first, the user never sees the proper error message.
+## Files to Update (19 total)
 
-## Plan
-
-### Step 1: Update CORS headers in `send-negotiation-request`
-**File: `supabase/functions/send-negotiation-request/index.ts`** (line 10)
-
-Change the `Access-Control-Allow-Headers` to include the full set:
+All need `Access-Control-Allow-Headers` changed to:
 ```
-"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version"
+"authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version"
 ```
 
-### Step 2: Update CORS headers in `send-negotiation-response`
-**File: `supabase/functions/send-negotiation-response/index.ts`** — same CORS fix.
+| # | File | Line |
+|---|------|------|
+| 1 | `_shared/cron-auth.ts` | 19 |
+| 2 | `analyze-project-file/index.ts` | 9 |
+| 3 | `analyze-proposal/index.ts` | 8 |
+| 4 | `analyze-proposal-file/index.ts` | 9 |
+| 5 | `bulk-create-advisors/index.ts` | 9 |
+| 6 | `evaluate-proposals-batch/index.ts` | 13 |
+| 7 | `extract-proposal-text/index.ts` | 6 |
+| 8 | `extract-rfp-content/index.ts` | 7 |
+| 9 | `get-advisors-data/index.ts` | 6 |
+| 10 | `manage-users/index.ts` | 9 |
+| 11 | `notify-proposal-approved/index.ts` | 12 |
+| 12 | `notify-proposal-rejected/index.ts` | 12 |
+| 13 | `notify-proposal-resubmitted/index.ts` | 12 |
+| 14 | `notify-proposal-submitted/index.ts` | 12 |
+| 15 | `notify-rfp-declined/index.ts` | 16 |
+| 16 | `reject-proposal/index.ts` | 10 |
+| 17 | `send-rfp-email/index.ts` | 12 |
+| 18 | `sync-user-emails/index.ts` | 6 |
+| 19 | `system-health-check/index.ts` | 5 |
+| 20 | `update-advisors-data/index.ts` | 6 |
 
-### Step 3: Deploy both functions and verify
-Deploy the updated edge functions and test by invoking the endpoint.
+## Already Fixed (skip)
+- `send-negotiation-request/index.ts`
+- `send-negotiation-response/index.ts`
 
-## Technical Detail
-The Supabase JS client v2.55.0 sends platform metadata headers on every request. If the CORS preflight doesn't explicitly allow these headers, browsers reject the request entirely. This is a silent failure — the function never even executes, but the client sees a generic "non-2xx" error.
+## Approach
+Single-line replacement in each file — change only the `Access-Control-Allow-Headers` value. Then deploy all updated functions.
 
