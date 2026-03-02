@@ -473,7 +473,6 @@ serve(async (req) => {
 
       console.log('Updating email for user:', userId, 'to:', newEmail);
 
-      // Update auth.users email
       const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         email: newEmail,
         email_confirm: true,
@@ -484,7 +483,6 @@ serve(async (req) => {
         throw authUpdateError;
       }
 
-      // Update profiles table
       const { error: profileUpdateError } = await supabaseAdmin
         .from('profiles')
         .update({ email: newEmail })
@@ -498,15 +496,133 @@ serve(async (req) => {
       console.log('Email updated successfully');
 
       return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Email updated to ${newEmail}`,
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
+        JSON.stringify({ success: true, message: `Email updated to ${newEmail}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
+
+    } else if (action === 'update_profile') {
+      const { userId, name, email, phone } = requestData;
+
+      if (!userId) {
+        throw new Error('Missing userId');
+      }
+
+      console.log('Updating profile for user:', userId);
+
+      // Build profile update object with only provided fields
+      const profileUpdate: Record<string, any> = {};
+      if (name !== undefined) profileUpdate.name = name;
+      if (phone !== undefined) profileUpdate.phone = phone;
+      if (email !== undefined) profileUpdate.email = email;
+
+      // If email changed, sync to auth.users
+      if (email) {
+        const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          email,
+          email_confirm: true,
+        });
+
+        if (authEmailError) {
+          console.error('Auth email update error:', authEmailError);
+          throw authEmailError;
+        }
+      }
+
+      // Update profiles table
+      if (Object.keys(profileUpdate).length > 0) {
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .update(profileUpdate)
+          .eq('user_id', userId);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          throw profileError;
+        }
+      }
+
+      console.log('Profile updated successfully');
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Profile updated successfully' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+
+    } else if (action === 'reset_password') {
+      const { userId } = requestData;
+
+      if (!userId) {
+        throw new Error('Missing userId');
+      }
+
+      console.log('Resetting password for user:', userId);
+
+      // Get user email from auth
+      const { data: targetUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+      if (getUserError || !targetUser?.user?.email) {
+        console.error('Get user error:', getUserError);
+        throw new Error('User not found or has no email');
+      }
+
+      const targetEmail = targetUser.user.email;
+
+      // Generate recovery link
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: targetEmail,
+        options: {
+          redirectTo: 'https://billding.ai/auth?type=recovery',
+        },
+      });
+
+      if (linkError) {
+        console.error('Generate link error:', linkError);
+        throw linkError;
+      }
+
+      // Send reset email via Resend
+      const resetLink = linkData?.properties?.action_link;
+
+      try {
+        await resend.emails.send({
+          from: 'Billding <onboarding@billding.ai>',
+          to: [targetEmail],
+          subject: 'איפוס סיסמה - Billding',
+          html: `
+            <!DOCTYPE html>
+            <html dir="rtl" lang="he">
+            <head><meta charset="UTF-8"></head>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; direction: rtl;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px;">
+                <h2 style="color: #333; text-align: center;">איפוס סיסמה</h2>
+                <p style="color: #666;">שלום,</p>
+                <p style="color: #666;">התקבלה בקשה לאיפוס הסיסמה שלך במערכת Billding.</p>
+                <p style="text-align: center; margin: 30px 0;">
+                  <a href="${resetLink}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    איפוס סיסמה
+                  </a>
+                </p>
+                <p style="color: #999; font-size: 14px;">אם לא ביקשת לאפס את הסיסמה, ניתן להתעלם מהודעה זו.</p>
+                <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                  Billding - מערכת ניהול פרויקטים והצעות מחיר
+                </p>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+        console.log('Reset password email sent to:', targetEmail);
+      } catch (emailError) {
+        console.error('Failed to send reset email:', emailError);
+        throw new Error('Failed to send reset email');
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: `Password reset email sent to ${targetEmail}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+
     } else {
       throw new Error('Invalid action');
     }
