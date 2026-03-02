@@ -464,6 +464,49 @@ serve(async (req) => {
           status: 200 
         }
       );
+    } else if (action === 'update_email') {
+      const { userId, newEmail } = requestData;
+
+      if (!userId || !newEmail) {
+        throw new Error('Missing userId or newEmail');
+      }
+
+      console.log('Updating email for user:', userId, 'to:', newEmail);
+
+      // Update auth.users email
+      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: newEmail,
+        email_confirm: true,
+      });
+
+      if (authUpdateError) {
+        console.error('Auth email update error:', authUpdateError);
+        throw authUpdateError;
+      }
+
+      // Update profiles table
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('user_id', userId);
+
+      if (profileUpdateError) {
+        console.error('Profile email update error:', profileUpdateError);
+        throw profileUpdateError;
+      }
+
+      console.log('Email updated successfully');
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Email updated to ${newEmail}`,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } else {
       throw new Error('Invalid action');
     }
