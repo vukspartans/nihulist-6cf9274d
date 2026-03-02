@@ -1,60 +1,35 @@
 
 
-# Enhanced Admin User Management — Three-Dot Menu with Edit, Reset Password, and More
+# Fix Negotiation Request Edge Function Errors
 
-## Current State
-The Users Management page has inline buttons for "Manage Roles" and "Delete" per row. There is no way to edit a user's name, email, phone, or send a password reset from the admin panel. The edge function `manage-users` supports `create`, `delete`, and `update_email` actions but lacks `update_profile` and `reset_password`.
+## Issues Found
+
+### 1. CORS Headers Mismatch (likely root cause)
+The `send-negotiation-request` edge function uses an outdated CORS header set:
+```
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+```
+The Supabase JS SDK v2.55.0 sends additional headers (`x-supabase-client-platform`, `x-supabase-client-platform-version`, `x-supabase-client-runtime`, `x-supabase-client-runtime-version`). When the browser sends a preflight OPTIONS request with these headers and the server doesn't allow them, the browser blocks the actual POST — resulting in a "non-2xx status code" error on the client.
+
+### 2. 409 Conflict on Duplicate Negotiations
+Several proposals already have active `awaiting_response` sessions. If the entrepreneur tries to send another negotiation on the same proposal, the function returns 409. The client-side hook handles this, but if CORS fails first, the user never sees the proper error message.
 
 ## Plan
 
-### 1. Add new actions to `manage-users` edge function
-**File: `supabase/functions/manage-users/index.ts`**
+### Step 1: Update CORS headers in `send-negotiation-request`
+**File: `supabase/functions/send-negotiation-request/index.ts`** (line 10)
 
-Add two new action branches:
+Change the `Access-Control-Allow-Headers` to include the full set:
+```
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version"
+```
 
-- **`update_profile`**: Accepts `userId`, `name`, `email`, `phone`. Updates `profiles` table fields. If email changed, also calls `supabaseAdmin.auth.admin.updateUserById` to sync auth email (reuses existing `update_email` logic).
-- **`reset_password`**: Accepts `userId`. Looks up the user's email via `supabaseAdmin.auth.admin.getUserById`, then calls `supabaseAdmin.auth.admin.generateLink({ type: 'recovery', email })` to generate a password reset link. Sends the reset link via Resend email to the user.
+### Step 2: Update CORS headers in `send-negotiation-response`
+**File: `supabase/functions/send-negotiation-response/index.ts`** — same CORS fix.
 
-### 2. Replace inline buttons with a DropdownMenu (three-dot menu)
-**File: `src/pages/admin/UsersManagement.tsx`**
+### Step 3: Deploy both functions and verify
+Deploy the updated edge functions and test by invoking the endpoint.
 
-Replace the actions column's inline buttons with a `DropdownMenu` triggered by a `MoreHorizontal` icon button. Menu items:
-
-- **עריכת פרטים** (Edit Details) — opens an Edit User dialog
-- **נהל הרשאות** (Manage Roles) — opens existing role dialog
-- **שלח איפוס סיסמה** (Send Password Reset) — triggers reset with confirmation
-- **מחק משתמש** (Delete User) — existing delete with confirmation via `AlertDialog`
-
-### 3. Add Edit User dialog
-**File: `src/pages/admin/UsersManagement.tsx`**
-
-New dialog with fields: Name, Email, Phone. Pre-populated from `selectedUser`. On save, calls `manage-users` with `action: 'update_profile'`. All operations go through the edge function (server-side) — no direct client-side profile updates, keeping the admin auth check enforced.
-
-### 4. Add Reset Password mutation
-**File: `src/pages/admin/UsersManagement.tsx`**
-
-New mutation that calls `manage-users` with `action: 'reset_password'` and `userId`. Shows a confirmation toast before sending, and success/error toast after.
-
-### 5. Add Hebrew translations
-**File: `src/constants/adminTranslations.ts`**
-
-Add to the `users` section:
-- `editUser: "עריכת משתמש"`
-- `editUserDesc: "עדכון פרטי המשתמש"`
-- `resetPassword: "שלח איפוס סיסמה"`
-- `resetPasswordConfirm: "האם לשלוח קישור לאיפוס סיסמה?"`
-- `resetPasswordSent: "קישור לאיפוס סיסמה נשלח בהצלחה"`
-- `resetPasswordFailed: "שליחת איפוס סיסמה נכשלה"`
-- `profileUpdated: "פרטי המשתמש עודכנו בהצלחה"`
-- `profileUpdateFailed: "עדכון פרטי המשתמש נכשל"`
-- `moreActions: "פעולות נוספות"`
-
-### 6. Search improvement
-Update the search query to also search by email: `query.or('name.ilike.%${search}%,email.ilike.%${search}%')`.
-
-### Security Notes
-- All mutations go through the `manage-users` edge function which verifies admin role server-side
-- Password reset sends a link to the user's email — admin never sees or sets the new password
-- Email updates sync both `auth.users` and `profiles` atomically
-- Audit logging via `logAdminAction` for all operations
+## Technical Detail
+The Supabase JS client v2.55.0 sends platform metadata headers on every request. If the CORS preflight doesn't explicitly allow these headers, browsers reject the request entirely. This is a silent failure — the function never even executes, but the client sees a generic "non-2xx" error.
 
