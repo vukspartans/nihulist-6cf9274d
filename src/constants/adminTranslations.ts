@@ -320,6 +320,22 @@ export const adminTranslations = {
     userDeleted: "משתמש נמחק בהצלחה",
     cannotDeleteSelf: "לא ניתן למחוק את עצמך",
     deleteFailed: "מחיקה נכשלה",
+
+    // Edit User
+    editUser: "עריכת משתמש",
+    editUserDesc: "עדכון פרטי המשתמש",
+    profileUpdated: "פרטי המשתמש עודכנו בהצלחה",
+    profileUpdateFailed: "עדכון פרטי המשתמש נכשל",
+
+    // Reset Password
+    resetPassword: "שלח איפוס סיסמה",
+    resetPasswordConfirm: "האם לשלוח קישור לאיפוס סיסמה למשתמש זה?",
+    resetPasswordSent: "קישור לאיפוס סיסמה נשלח בהצלחה",
+    resetPasswordFailed: "שליחת איפוס סיסמה נכשלה",
+
+    // More actions
+    moreActions: "פעולות נוספות",
+    editDetails: "עריכת פרטים",
   },
 
   // Audit Log
