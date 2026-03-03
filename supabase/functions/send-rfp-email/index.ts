@@ -42,6 +42,41 @@ async function getTeamMemberEmails(
     .map((member: any) => member.email);
 }
 
+// Sanitize Unicode characters that corrupt during renderAsync
+const sanitize = (s: string): string => s
+  .replace(/\u2013/g, '-')   // en-dash → hyphen
+  .replace(/\u2014/g, '-')   // em-dash → hyphen
+  .replace(/\u2015/g, '-')   // horizontal bar → hyphen
+  .replace(/\u2010/g, '-')   // hyphen char → ASCII hyphen
+  .replace(/\u2011/g, '-')   // non-breaking hyphen → ASCII hyphen
+  .replace(/\u2012/g, '-')   // figure dash → ASCII hyphen
+  .replace(/\u2018/g, "'")   // left single quote
+  .replace(/\u2019/g, "'")   // right single quote
+  .replace(/\u201C/g, '"')   // left double quote
+  .replace(/\u201D/g, '"')   // right double quote
+  .replace(/\u00A0/g, ' ')   // non-breaking space → regular space
+  .replace(/\u200E/g, '')    // LTR mark — remove
+  .replace(/\u200F/g, '')    // RTL mark — remove
+  .replace(/\u200B/g, '')    // zero-width space — remove
+  .replace(/\u200C/g, '')    // zero-width non-joiner — remove
+  .replace(/\u200D/g, '')    // zero-width joiner — remove
+  .replace(/\uFEFF/g, '');   // BOM — remove
+
+// Format Hebrew date manually to avoid Deno's toLocaleDateString Unicode issues
+function formatHebrewDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const months = [
+    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+  ];
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${day} ${month} ${year} בשעה ${hours}:${minutes}`;
+}
+
 interface RFPInvite {
   id: string
   rfp_id: string
@@ -204,14 +239,8 @@ serve(async (req) => {
         
         console.log(`[send-rfp-email] Processing advisor: ${companyName}, name: ${advisorName}, email: ${invite.email}`)
 
-        // Format deadline
-        const deadlineDate = new Date(invite.deadline_at).toLocaleDateString('he-IL', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
+        // Format deadline using manual Hebrew formatting (avoids Deno Unicode issues)
+        const deadlineDate = formatHebrewDate(invite.deadline_at)
 
         // Build login URL with context
         const loginUrl = `https://billding.ai/auth?type=advisor&mode=login&rfp=${rfp_id}`
@@ -228,16 +257,17 @@ serve(async (req) => {
           }
         }
 
-        // Sanitize Unicode dashes/special chars that corrupt during renderAsync
-        const sanitize = (s: string) => s
-          .replace(/\u2013/g, '-')  // en-dash → hyphen
-          .replace(/\u2014/g, '-')  // em-dash → hyphen
-          .replace(/\u2015/g, '-')  // horizontal bar → hyphen
-          .replace(/\u2010/g, '-')  // hyphen char → ASCII hyphen
-          .replace(/\u2011/g, '-')  // non-breaking hyphen → ASCII hyphen
-          .replace(/\u2012/g, '-'); // figure dash → ASCII hyphen
+        // Safety net: replace {{שם_המשרד}} placeholder in request_content and request_title
+        let requestTitle = invite.request_title || undefined
+        let requestContent = invite.request_content || undefined
+        if (requestTitle) {
+          requestTitle = requestTitle.replace(/\{\{שם_המשרד\}\}/g, companyName)
+        }
+        if (requestContent) {
+          requestContent = requestContent.replace(/\{\{שם_המשרד\}\}/g, companyName)
+        }
 
-        // Render email template
+        // Render email template — sanitize ALL dynamic strings
         const html = await renderAsync(
           React.createElement(RFPInvitationEmail, {
             advisorName: sanitize(advisorName),
@@ -245,10 +275,10 @@ serve(async (req) => {
             projectName: sanitize(project.name),
             projectType: sanitize(project.type),
             projectLocation: sanitize(project.location),
-            deadlineDate,
-            senderOrganizationName,
-            requestTitle: invite.request_title || undefined,
-            requestContent: invite.request_content || undefined,
+            deadlineDate: sanitize(deadlineDate),
+            senderOrganizationName: sanitize(senderOrganizationName),
+            requestTitle: requestTitle ? sanitize(requestTitle) : undefined,
+            requestContent: requestContent ? sanitize(requestContent) : undefined,
             requestFiles: requestFiles || undefined,
             loginUrl,
           })
