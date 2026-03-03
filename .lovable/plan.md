@@ -1,75 +1,68 @@
 
 
-# Platform Sanity Check — Results
+# Bug Fixes: RFP Email & Advisor View Issues
 
-After auditing the codebase across auth, routing, edge functions, hooks, error handling, and general structure, the platform is in solid shape following the recent fixes. Here are the remaining findings:
+## Issues Identified
 
-## Findings
+### 1. `{{שם_המשרד}}` placeholder not replaced (Critical)
+**Root cause:** Two separate flows, two separate bugs:
 
-### 1. Verbose Console Logs in Production Components (Moderate — Code Hygiene)
+**A. In `request_content` (DB → RFPDetails page):** The DB function `send_rfp_invitations_to_advisors` replaces `{{שם_המשרד}}` only in `personalized_body_html`, but stores `request_content` **as-is** without replacement (line 273 of the latest migration). When the advisor opens RFPDetails, they see the raw placeholder.
 
-`AdminRoute.tsx` and `RoleBasedRoute.tsx` have unconditional `console.log` statements that fire on every render. These leak internal state (user IDs, roles) into the browser console in production.
+**B. In the email template:** The `send-rfp-email` edge function passes `invite.request_content` (which still has the placeholder) directly to the email template at line 251. Neither the edge function nor the template replaces `{{שם_המשרד}}`.
 
-**Fix:** Wrap in `import.meta.env.DEV` guards or remove entirely. These are route guards — they render frequently.
+**Fix:**
+- **DB function:** Add a replacement step: `request_content := replace(request_content, '{{שם_המשרד}}', COALESCE(advisor_rec.company_name, advisor_rec.name))` before inserting the invite. This requires a new migration to `CREATE OR REPLACE` the function.
+- **Edge function (`send-rfp-email`):** Also replace `{{שם_המשרד}}` with `companyName` in `request_content` and `request_title` before passing to the email template, as a safety net.
 
-**Files:** `AdminRoute.tsx` (lines 13, 24, 29, 34), `RoleBasedRoute.tsx` (line 20)
+### 2. Question marks (Unicode corruption) in email
+**Root cause:** The sanitize function only handles dashes (`\u2010-\u2015`). The `deadlineDate` from `toLocaleDateString('he-IL')` outputs Hebrew text containing the word "בשעה" which likely includes non-ASCII chars. More importantly, `senderOrganizationName`, `requestTitle`, and `requestContent` are **not sanitized at all** before being passed to `renderAsync`.
 
-### 2. `passwordRecoveryPending` Not Cleared in Non-Admin Auth Flow (Low — Stale State)
+In the screenshot, the `�` chars appear in the deadline row — `10 במרץ 2026 ב�עה 10:59` — the word "בשעה" is corrupted.
 
-`AuthEventRouter` in `App.tsx` sets `localStorage.setItem('passwordRecoveryPending', 'true')` for non-admin recovery. `AdminLogin.tsx` clears it, but `Auth.tsx` never references or clears this flag. If a non-admin user goes through password recovery, the flag persists forever.
+**Fix:**
+- Sanitize `deadlineDate` and `senderOrganizationName` through the same sanitize function.
+- Extend the sanitize function to also handle smart quotes (`\u2018-\u201D`) and the Hebrew "בשעה" rendering issue — the `toLocaleDateString` in Deno may produce problematic Unicode. Switch to manual date formatting that avoids the issue, or sanitize the output.
+- Apply sanitize to `requestTitle` and `requestContent` as well.
 
-**Fix:** Add `localStorage.removeItem('passwordRecoveryPending')` in `Auth.tsx` after successful password reset (near where `isPasswordReset` is handled).
+### 3. "לא הוגדרו פרטי שירותים" / "לא הוגדרו תנאי תשלום"
+**Root cause:** When the entrepreneur sends an RFP through the wizard without opening the RequestEditorDialog for a specific advisor type, the `enrichedRequestDataByType` (line 292 in RFPWizard.tsx) only sets `serviceDetailsMode: 'free_text'` with **no** service scope items, fee items, or payment terms. The `saveAdvisorTypeData` function then has nothing to save — resulting in empty services/fees/payment tabs for the advisor.
 
-### 3. Unused `UserRole` Interface in `useAuth.tsx` (Low — Dead Code)
+This is actually **expected behavior** if the entrepreneur didn't configure these details. However, the question is whether the entrepreneur *did* configure them via the RequestEditorDialog. If so, we need to trace why that data wasn't saved.
 
-The `UserRole` interface (lines 21-27) is defined but never used anywhere. It should be removed for cleanliness.
+**Fix:** This may be data-specific to this RFP. Need to verify whether the entrepreneur actually configured service details. For now, no code change needed — the empty state is correct if data wasn't entered. But I'll verify with logs.
 
-**Fix:** Delete the interface.
+### 4. Missing attached files
+**Root cause:** Similar to #3 — if files were attached in the RequestEditorDialog, they should flow through `requestAttachments` → `requestFiles` → DB `request_files` column → `send-rfp-email` → email template. Need to check if files were actually uploaded for this specific RFP or if there's a data flow gap.
 
-### 4. `process.env.NODE_ENV` Usage in Vite Project (Low — Correctness)
+The email template does render files if they exist (lines 91-100 in `rfp-invitation.tsx`). If files don't appear, either they weren't uploaded by the entrepreneur, or the `request_files` column is null/empty for this invite.
 
-`ErrorBoundary.tsx` and `errorHandling.ts` use `process.env.NODE_ENV` which works in Vite but is not the canonical approach. The Vite-standard way is `import.meta.env.DEV` / `import.meta.env.PROD`.
+**Fix:** Check the DB for this specific invite. No code change needed unless we find a bug in the flow.
 
-**Fix:** Replace with `import.meta.env.DEV` / `import.meta.env.PROD`.
+### 5. Old logo in email
+**Root cause:** `layout.tsx` line 28 references `https://aazakceyruefejeyhkbk.supabase.co/storage/v1/object/public/email-assets/billding-logo.png`. This file in the storage bucket is the old logo and needs to be replaced with the current one.
 
-### 5. Blank Line / Import Formatting in `App.tsx` (Low — Style)
-
-Line 43-44 has a double blank line between import groups. Minor formatting inconsistency.
-
-**Fix:** Remove extra blank line.
-
-### 6. `RFPTemplatesManagement` Has No Route (Low — Dead Page)
-
-The page file exists at `src/pages/admin/RFPTemplatesManagement.tsx` but has no route in `App.tsx`. It's unreachable. Either it was replaced by the fee templates hierarchy pages, or the route was accidentally removed.
-
-**Fix:** Either add a route (`/heyadmin/rfp-templates`) or delete the file if it's superseded.
+**Fix:** Upload the new logo to the `email-assets` bucket, or update the URL in `layout.tsx` to point to the correct file.
 
 ---
 
-## Already Verified as Correct
-
-- `AuthContext` defaults to `null` with proper throw — correct
-- `ProtectedRoute` shows spinner during grace period — correct
-- `get-advisors-data` has JWT verification — correct
-- `manage-users` has FK cleanup for advisor deletion — correct
-- CORS headers consistent across all edge functions — correct
-- `useAuth` defers Supabase calls via `setTimeout(0)` to avoid deadlock — correct
-- Token refresh skips full reload — correct
-- Same-user detection prevents unnecessary unmount — correct
-- Error boundary with Hebrew fallback UI — correct
-- Role hierarchy and navigation centralized — correct
-- Supabase client config with `persistSession` and `autoRefreshToken` — correct
-
 ## Plan
 
-| # | Fix | Files |
-|---|-----|-------|
-| 1 | Guard production console.logs behind `import.meta.env.DEV` | `AdminRoute.tsx`, `RoleBasedRoute.tsx` |
-| 2 | Clear `passwordRecoveryPending` after password reset in `Auth.tsx` | `Auth.tsx` |
-| 3 | Remove unused `UserRole` interface | `useAuth.tsx` |
-| 4 | Replace `process.env.NODE_ENV` with `import.meta.env` | `ErrorBoundary.tsx`, `errorHandling.ts` |
-| 5 | Remove extra blank line in imports | `App.tsx` |
-| 6 | Remove unreachable `RFPTemplatesManagement.tsx` or add route | `App.tsx` or delete file |
+### Step 1: Fix `{{שם_המשרד}}` replacement — DB migration
+Create a new migration that recreates `send_rfp_invitations_to_advisors` with `request_content` placeholder replacement before insert.
 
-All are low-impact, zero-risk cleanups. No database or edge function changes needed.
+### Step 2: Fix `{{שם_המשרד}}` replacement — Edge function safety net
+In `send-rfp-email/index.ts`, replace `{{שם_המשרד}}` with `companyName` in `invite.request_content` and `invite.request_title` before passing to the template.
+
+### Step 3: Fix Unicode corruption in email
+Extend the sanitize function and apply it to ALL string props passed to `renderAsync`: `deadlineDate`, `senderOrganizationName`, `requestTitle`, `requestContent`. Also handle smart quotes.
+
+### Step 4: Update email logo
+Update the logo URL in `layout.tsx` (and the hardcoded migration SQL templates) to point to the new logo. Upload new logo to `email-assets` bucket.
+
+### Step 5: Deploy updated edge function
+Deploy `send-rfp-email` after fixes.
+
+### Note on services/files
+These appear to be data-specific (the entrepreneur may not have configured services/payment/files for this RFP). No code bug identified — the empty states are correct if data wasn't provided.
 
