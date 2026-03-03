@@ -38,17 +38,7 @@ interface AuthContextType {
   hasRole: (role: AppRole) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  profile: null,
-  roles: [],
-  primaryRole: null,
-  loading: true,
-  signOut: async () => {},
-  isAdmin: false,
-  hasRole: () => false,
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

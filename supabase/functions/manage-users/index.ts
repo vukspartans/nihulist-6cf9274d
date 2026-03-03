@@ -395,6 +395,73 @@ serve(async (req) => {
           console.error('Failed deleting advisor team members:', teamDeleteError);
           throw new Error('Failed deleting advisor team members');
         }
+
+        // 1d. Payment requests linked to advisor's project_advisors
+        // First get project_advisor IDs for this advisor
+        const { data: projectAdvisorRows } = await supabaseAdmin
+          .from('project_advisors')
+          .select('id')
+          .eq('advisor_id', advisorId);
+
+        const projectAdvisorIds = (projectAdvisorRows ?? []).map((pa: { id: string }) => pa.id);
+
+        if (projectAdvisorIds.length > 0) {
+          // Delete signatures referencing payment_requests for these project_advisors
+          const { data: paymentRequestRows } = await supabaseAdmin
+            .from('payment_requests')
+            .select('id')
+            .in('project_advisor_id', projectAdvisorIds);
+
+          const paymentRequestIds = (paymentRequestRows ?? []).map((pr: { id: string }) => pr.id);
+
+          if (paymentRequestIds.length > 0) {
+            await supabaseAdmin
+              .from('signatures')
+              .delete()
+              .in('entity_id', paymentRequestIds);
+
+            const { error: payReqDeleteError } = await supabaseAdmin
+              .from('payment_requests')
+              .delete()
+              .in('project_advisor_id', projectAdvisorIds);
+            if (payReqDeleteError) {
+              console.error('Failed deleting payment requests:', payReqDeleteError);
+              throw new Error('Failed deleting payment requests');
+            }
+          }
+
+          // Delete payment milestones linked to project_advisors
+          const { error: milestonesDeleteError } = await supabaseAdmin
+            .from('payment_milestones')
+            .delete()
+            .in('project_advisor_id', projectAdvisorIds);
+          if (milestonesDeleteError) {
+            console.error('Failed deleting payment milestones:', milestonesDeleteError);
+            throw new Error('Failed deleting payment milestones');
+          }
+        }
+
+        // 1e. Unassign project_tasks (preserve history, set to NULL)
+        console.log('Unassigning project tasks for advisor:', advisorId);
+        const { error: tasksUnassignError } = await supabaseAdmin
+          .from('project_tasks')
+          .update({ assigned_advisor_id: null })
+          .eq('assigned_advisor_id', advisorId);
+        if (tasksUnassignError) {
+          console.error('Failed unassigning project tasks:', tasksUnassignError);
+          throw new Error('Failed unassigning project tasks');
+        }
+
+        // 1f. Delete project_advisors records
+        console.log('Deleting project_advisors for advisor:', advisorId);
+        const { error: projAdvisorDeleteError } = await supabaseAdmin
+          .from('project_advisors')
+          .delete()
+          .eq('advisor_id', advisorId);
+        if (projAdvisorDeleteError) {
+          console.error('Failed deleting project_advisors:', projAdvisorDeleteError);
+          throw new Error('Failed deleting project_advisors');
+        }
       }
 
       // 2. Company memberships

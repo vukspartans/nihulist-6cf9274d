@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +20,34 @@ serve(async (req) => {
   }
 
   try {
+    // Verify the caller is authenticated
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const anonClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Auth verification failed:', claimsError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Authenticated user:', claimsData.claims.sub);
+
+    // Use service role to access private storage
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -27,7 +55,6 @@ serve(async (req) => {
 
     console.log('Fetching advisors data from storage...');
 
-    // Fetch from private storage bucket
     const { data, error } = await supabaseClient.storage
       .from('json')
       .download('advisors_projects_full.json');
@@ -41,7 +68,6 @@ serve(async (req) => {
       throw new Error('No data received from storage');
     }
 
-    // Convert blob to text and parse JSON
     const text = await data.text();
     const jsonData: AdvisorsData = JSON.parse(text);
 
@@ -56,7 +82,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        // Fallback data structure
         required_categories: [],
         projects: []
       }), 
