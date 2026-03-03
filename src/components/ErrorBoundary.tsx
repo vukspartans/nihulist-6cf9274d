@@ -43,7 +43,7 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     // Log to monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // TODO: Send to error tracking service (e.g., Sentry)
     }
   }
@@ -78,7 +78,7 @@ class ErrorBoundary extends Component<Props, State> {
                   משהו השתבש בטעינת הדף. אנא נסה לרענן את הדף.
                 </p>
                 
-                {process.env.NODE_ENV === 'development' && this.state.error && (
+                {import.meta.env.DEV && this.state.error && (
                   <details className="mt-4 text-xs bg-muted p-2 rounded">
                     <summary className="cursor-pointer font-semibold">
                       פרטי שגיאה (למפתחים)

@@ -18,13 +18,6 @@ interface UserProfile {
   requires_password_change: boolean | null;
 }
 
-interface UserRole {
-  id: string;
-  user_id: string;
-  role: AppRole;
-  created_at: string;
-  created_by: string | null;
-}
 
 interface AuthContextType {
   user: User | null;

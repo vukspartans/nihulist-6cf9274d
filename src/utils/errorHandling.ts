@@ -37,7 +37,7 @@ export const handleError = (
     (typeof error === 'string' ? error : 'שגיאה לא ידועה');
 
   // Log to console in development
-  if (logToConsole && process.env.NODE_ENV === 'development') {
+  if (logToConsole && import.meta.env.DEV) {
     console.error(`[${action}] Error:`, {
       message: errorMessage,
       userId,

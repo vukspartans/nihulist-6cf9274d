@@ -10,7 +10,7 @@ interface AdminRouteProps {
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user, loading, isAdmin, primaryRole } = useAuth();
 
-  console.log('AdminRoute - user:', user?.id, 'loading:', loading, 'isAdmin:', isAdmin);
+  if (import.meta.env.DEV) console.log('AdminRoute - user:', user?.id, 'loading:', loading, 'isAdmin:', isAdmin);
 
   if (loading) {
     return (
@@ -21,17 +21,17 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!user) {
-    console.log('AdminRoute - No user, redirecting to login');
+    if (import.meta.env.DEV) console.log('AdminRoute - No user, redirecting to login');
     return <Navigate to="/heyadmin/login" replace />;
   }
 
   if (!isAdmin) {
-    console.log('AdminRoute - User is not admin, redirecting to role-based login');
+    if (import.meta.env.DEV) console.log('AdminRoute - User is not admin, redirecting to role-based login');
     const loginRoute = getLoginRouteForRole(primaryRole);
     return <Navigate to={loginRoute} replace />;
   }
 
-  console.log('AdminRoute - User is admin, rendering children');
+  if (import.meta.env.DEV) console.log('AdminRoute - User is admin, rendering children');
   return <>{children}</>;
 };
 
