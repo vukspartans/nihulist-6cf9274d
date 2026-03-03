@@ -1,64 +1,75 @@
 
 
-# Critical Platform Stability & Performance Fixes
+# Platform Sanity Check — Results
 
-## 1. User Deletion Missing FK Cleanup (Critical — causes 500 errors)
+After auditing the codebase across auth, routing, edge functions, hooks, error handling, and general structure, the platform is in solid shape following the recent fixes. Here are the remaining findings:
 
-**Problem:** `manage-users` delete action does not clean up `project_advisors` or `project_tasks` rows referencing the advisor. Deleting an advisor who has been assigned to a project will fail with FK constraint violations.
+## Findings
 
-**Fix:** In `supabase/functions/manage-users/index.ts`, add cleanup steps after the rfp_invites deletion (line ~386) and before the advisor record deletion (line ~423):
-- Delete `project_advisors` rows where `advisor_id = advisorId`
-- Unassign `project_tasks` where `assigned_advisor_id = advisorId` (SET to NULL rather than delete, to preserve task history)
-- Delete `payment_requests` where `advisor_id = advisorId` (after deleting child signatures)
-- Delete `payment_milestones` linked to the advisor's project_advisors
+### 1. Verbose Console Logs in Production Components (Moderate — Code Hygiene)
 
-## 2. `get-advisors-data` Unauthenticated Access (Critical — security)
+`AdminRoute.tsx` and `RoleBasedRoute.tsx` have unconditional `console.log` statements that fire on every render. These leak internal state (user IDs, roles) into the browser console in production.
 
-**Problem:** `verify_jwt = false` in config.toml and zero auth checks in code. Anyone can call this endpoint and retrieve the full advisor matrix from private storage using the service role key.
+**Fix:** Wrap in `import.meta.env.DEV` guards or remove entirely. These are route guards — they render frequently.
 
-**Fix:** Add JWT verification inside the function code:
-- Extract Bearer token from Authorization header
-- Verify user via `supabase.auth.getUser(token)`
-- Return 401 if not authenticated
-- This keeps `verify_jwt = false` (per project standard) but enforces auth in code
+**Files:** `AdminRoute.tsx` (lines 13, 24, 29, 34), `RoleBasedRoute.tsx` (line 20)
 
-## 3. Outdated Import Versions in Edge Functions (Moderate — runtime stability)
+### 2. `passwordRecoveryPending` Not Cleared in Non-Admin Auth Flow (Low — Stale State)
 
-**Problem:** `get-advisors-data` and `update-advisors-data` use `std@0.168.0` and `supabase-js@2.50.0` instead of project standards (`std@0.190.0`, `supabase-js@2.55.0`).
+`AuthEventRouter` in `App.tsx` sets `localStorage.setItem('passwordRecoveryPending', 'true')` for non-admin recovery. `AdminLogin.tsx` clears it, but `Auth.tsx` never references or clears this flag. If a non-admin user goes through password recovery, the flag persists forever.
 
-**Fix:** Update imports in both files to match standards.
+**Fix:** Add `localStorage.removeItem('passwordRecoveryPending')` in `Auth.tsx` after successful password reset (near where `isPasswordReset` is handled).
 
-## 4. `ProtectedRoute` Flash of Content (Moderate — UX)
+### 3. Unused `UserRole` Interface in `useAuth.tsx` (Low — Dead Code)
 
-**Problem:** When `loading` is false but `user` is null, children render for 1 second before redirect. This exposes authenticated UI (including `ToSAcceptanceModal`) to unauthenticated visitors and may trigger unnecessary API calls.
+The `UserRole` interface (lines 21-27) is defined but never used anywhere. It should be removed for cleanliness.
 
-**Fix:** During the 1-second wait period, show the loading spinner instead of rendering children. Change the component to only render children when `user` is confirmed present:
+**Fix:** Delete the interface.
 
-```tsx
-if (loading || (!user && !shouldRedirect)) {
-  return <LoadingSpinner />;
-}
-if (!user && shouldRedirect) {
-  return <Navigate to="/auth" replace />;
-}
-return <>{children}</>;
-```
+### 4. `process.env.NODE_ENV` Usage in Vite Project (Low — Correctness)
 
-## 5. `useAuth` Context Default Never Null (Low — developer safety)
+`ErrorBoundary.tsx` and `errorHandling.ts` use `process.env.NODE_ENV` which works in Vite but is not the canonical approach. The Vite-standard way is `import.meta.env.DEV` / `import.meta.env.PROD`.
 
-**Problem:** `AuthContext` has a default object value, so `if (!context)` in `useAuth` never throws. Using `useAuth` outside `AuthProvider` silently returns empty/false values.
+**Fix:** Replace with `import.meta.env.DEV` / `import.meta.env.PROD`.
 
-**Fix:** Set default context to `null` and check for null:
-```tsx
-const AuthContext = createContext<AuthContextType | null>(null);
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
-};
-```
+### 5. Blank Line / Import Formatting in `App.tsx` (Low — Style)
 
-## Deployment
+Line 43-44 has a double blank line between import groups. Minor formatting inconsistency.
 
-After all code changes, deploy the 2 updated edge functions (`get-advisors-data`, `update-advisors-data`, `manage-users`).
+**Fix:** Remove extra blank line.
+
+### 6. `RFPTemplatesManagement` Has No Route (Low — Dead Page)
+
+The page file exists at `src/pages/admin/RFPTemplatesManagement.tsx` but has no route in `App.tsx`. It's unreachable. Either it was replaced by the fee templates hierarchy pages, or the route was accidentally removed.
+
+**Fix:** Either add a route (`/heyadmin/rfp-templates`) or delete the file if it's superseded.
+
+---
+
+## Already Verified as Correct
+
+- `AuthContext` defaults to `null` with proper throw — correct
+- `ProtectedRoute` shows spinner during grace period — correct
+- `get-advisors-data` has JWT verification — correct
+- `manage-users` has FK cleanup for advisor deletion — correct
+- CORS headers consistent across all edge functions — correct
+- `useAuth` defers Supabase calls via `setTimeout(0)` to avoid deadlock — correct
+- Token refresh skips full reload — correct
+- Same-user detection prevents unnecessary unmount — correct
+- Error boundary with Hebrew fallback UI — correct
+- Role hierarchy and navigation centralized — correct
+- Supabase client config with `persistSession` and `autoRefreshToken` — correct
+
+## Plan
+
+| # | Fix | Files |
+|---|-----|-------|
+| 1 | Guard production console.logs behind `import.meta.env.DEV` | `AdminRoute.tsx`, `RoleBasedRoute.tsx` |
+| 2 | Clear `passwordRecoveryPending` after password reset in `Auth.tsx` | `Auth.tsx` |
+| 3 | Remove unused `UserRole` interface | `useAuth.tsx` |
+| 4 | Replace `process.env.NODE_ENV` with `import.meta.env` | `ErrorBoundary.tsx`, `errorHandling.ts` |
+| 5 | Remove extra blank line in imports | `App.tsx` |
+| 6 | Remove unreachable `RFPTemplatesManagement.tsx` or add route | `App.tsx` or delete file |
+
+All are low-impact, zero-risk cleanups. No database or edge function changes needed.
 
