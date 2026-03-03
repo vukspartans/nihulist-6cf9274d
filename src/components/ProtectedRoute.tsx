@@ -24,7 +24,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [loading, user]);
 
-  if (loading) {
+  // Show spinner while loading OR during the 1-second grace period before redirect
+  if (loading || (!user && !shouldRedirect)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <div className="text-center">
