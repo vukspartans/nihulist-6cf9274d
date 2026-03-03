@@ -17,13 +17,15 @@ interface RoleBasedRouteProps {
 const RoleBasedRoute = ({ children, allowedRoles, redirectTo }: RoleBasedRouteProps) => {
   const { primaryRole, loading, roles } = useAuth();
 
-  console.log('[RoleBasedRoute]', {
-    primaryRole,
-    allowedRoles,
-    roles,
-    loading,
-    isAllowed: primaryRole && allowedRoles.includes(primaryRole)
-  });
+  if (import.meta.env.DEV) {
+    console.log('[RoleBasedRoute]', {
+      primaryRole,
+      allowedRoles,
+      roles,
+      loading,
+      isAllowed: primaryRole && allowedRoles.includes(primaryRole)
+    });
+  }
 
   if (loading) {
     return (

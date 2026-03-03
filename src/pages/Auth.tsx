@@ -450,7 +450,8 @@ const Auth = () => {
         description: "הסיסמה שלכם הוחלפה בהצלחה",
       });
 
-      // Reset states and redirect to login
+      // Reset states and clear recovery flag
+      localStorage.removeItem('passwordRecoveryPending');
       setIsPasswordReset(false);
       setNewPassword("");
       navigate("/auth");
