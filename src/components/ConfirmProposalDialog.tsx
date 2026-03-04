@@ -103,7 +103,7 @@ export function ConfirmProposalDialog({
         timelineDays: parsedTimelineDays,
         feeItems: feeLineItems.map(item => ({
           description: item.description,
-          unit: item.unit || 'פאושלי',
+          unit: getFeeUnitLabel(item.unit || '') || 'פאושלי',
           quantity: item.quantity || 1,
           unitPrice: item.unit_price || item.total,
           total: item.total,

@@ -108,6 +108,9 @@ interface ProposalData {
   consultant_request_files?: UploadedFile[];
   services_notes?: string;
   rfp_invite_id?: string;
+  advisors?: {
+    logo_url?: string | null;
+  };
 }
 
 export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: AdvisorProposalViewDialogProps) {
@@ -180,7 +183,8 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
           fee_line_items, selected_services, milestone_adjustments,
           consultant_request_notes, consultant_request_files, services_notes,
           rfp_invite_id,
-          projects!proposals_project_id_fkey (id, name, type, location)
+          projects!proposals_project_id_fkey (id, name, type, location),
+          advisors!proposals_advisor_id_fkey (logo_url)
         `)
         .eq('id', proposalId)
         .single();
@@ -449,6 +453,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
 
       const pdfData: ProposalPDFData = {
         projectName: proposal.projects?.name || 'פרויקט',
+        companyLogoUrl: proposal.advisors?.logo_url || undefined,
         price: proposal.price,
         timelineDays: proposal.timeline_days,
         submittedAt: proposal.submitted_at,
