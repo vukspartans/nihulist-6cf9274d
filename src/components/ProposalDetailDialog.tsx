@@ -764,7 +764,26 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                             </div>
                           )}
                         </div>
-                        {advisorInfo.logo_url && <img src={advisorInfo.logo_url} alt="" className="w-12 h-12 rounded-lg object-cover border flex-shrink-0" />}
+                        {advisorInfo.logo_url && (
+                          <img 
+                            src={advisorInfo.logo_url} 
+                            alt="" 
+                            className="w-12 h-12 rounded-lg object-cover border flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        )}
+                        <div 
+                          className="w-12 h-12 rounded-lg bg-primary/10 items-center justify-center border flex-shrink-0"
+                          style={{ display: advisorInfo.logo_url ? 'none' : 'flex' }}
+                        >
+                          <span className="text-sm font-bold text-primary">
+                            {(advisorInfo.company_name || '?').charAt(0)}
+                          </span>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
