@@ -1,27 +1,61 @@
 
 
-# Extend Deadline Button — Bug Fixes
+# Redesign Proposal PDF Print Layout
 
-## Bug 1: All invites get the same deadline (data corruption risk)
+## Overview
+Complete overhaul of `generateProposalPDF.ts` to produce a professional, structured Hebrew price quote document matching the specification provided.
 
-The dialog computes the new deadline from `currentDeadline` (the **earliest** deadline in the group). But different invites within the same group may have different deadlines (e.g., if one was extended before). The current update sets ALL matching invites to `earliest + extension`, which could **move later deadlines backward**.
+## Changes — Single File: `src/utils/generateProposalPDF.ts`
 
-**Fix:** Instead of setting a single computed deadline, extend each invite's own deadline by the chosen hours. This requires switching from a single `.update()` to per-invite updates, or using an RPC/raw SQL approach. The simplest fix: change the Supabase update to add the extension relative to each row's current `deadline_at` rather than a hardcoded value. Since Supabase JS doesn't support column-relative updates, use a small RPC or update each invite individually.
+### 1. Data Interface Updates
+- Add fields to `ProposalPDFData`: `advisorId` (ת.ז./ח.פ.), `advisorPhone`, `advisorEmail`, `advisorCompany`, `status` (draft/approved), `version`, `companyLogoUrl`, `startDate`
+- These are optional — callers pass what they have; the PDF gracefully omits missing sections
 
-Pragmatic approach: fetch all matching invite IDs + their current deadlines first, then batch-update each with its own new deadline.
+### 2. New HTML Structure (RTL, Hebrew font)
+Replace the entire HTML template with:
 
-## Bug 2: Button only visible when deadline < 24 hours away
+**Font:** Google Fonts `Assistant` (clean Hebrew sans-serif), loaded via `@import`
 
-Already discussed — the button should always be available when there are active (non-terminal) invites with a deadline. The 24-hour restriction is confusing and prevents legitimate use.
+**Header:**
+- Company logo placeholder (top-right, uses `companyLogoUrl` or stamp image)
+- Title: `הצעת מחיר - {projectName}`
+- Date line formatted as `DD/MM/YYYY`
+- Status/version badge: `סטטוס: טיוטה` or `גרסה שאושרה`
 
-**Fix:** Change `isGroupDeadlineCritical` to simply check if the group has any active invite with a future deadline (remove the 24h threshold). Rename it to something like `canExtendDeadline`.
+**Consultant Details Section** (`פרטי היועץ`):
+- Bordered card with name, ID, phone, email — displayed in a 2-column grid
 
-## Plan
+**Scope of Work Section** (`היקף העבודה ופירוט שירותים`):
+- Renders `scopeText` as rich text
+- Lists `selectedServices` as bullet items
+- Includes `servicesNotes` and `consultantNotes`
 
-| # | Fix | File |
-|---|-----|------|
-| 1 | Always show button when group has active invites with a future deadline | `SentRFPsTab.tsx` — rename + relax `isGroupDeadlineCritical` |
-| 2 | Extend each invite relative to its own deadline | `ExtendDeadlineDialog.tsx` — fetch invite deadlines, update per-invite |
+**Pricing Tables:**
+- **Table 1 — Main Services**: Columns: `#`, `תיאור`, `כמות`, `יחידה`, `מחיר יחידה`, `סה״כ`. Alternating row colors (`#f9fafb` / `#fff`)
+- **Table 2 — Optional Services**: Same structure, clearly labeled
+- **Summary block**: `סה״כ לפני מע״מ`, `מע״מ (18%)` (calculated), `סה״כ כולל מע״מ` — prominent styling
 
-Both changes are in frontend only, no migration needed.
+### 3. Payment Milestones Table
+- 3 columns: `שלב`, `אחוז (%)`, `סכום`
+- Proper borders and header row
+
+### 4. Terms & Footer
+- **Payment Terms**: Bold, prominent section with `תנאי תשלום` value
+- **Quote Validity**: `הצעה תקפה ל-{N} יום`
+- **Execution Timeline**: `תאריך התחלה` / `סיום משוער` formatted as DD/MM/YYYY
+- **Assumptions/Exclusions**: Rendered if present
+
+### 5. Signature Area
+- Two side-by-side boxes: `חתימת היועץ` (with signature/stamp images) and `חתימת הלקוח` (empty placeholder with line)
+
+### 6. Footer
+- `מסמך זה הופק באופן אוטומטי ע"י מערכת BillDing`
+
+### 7. Print Styling
+- `@media print` rules: proper page margins, page-break-inside avoidance on tables, color-adjust
+- Alternating row colors on all tables
+- All text RTL-aligned, table borders solid
+
+### Callers
+No changes needed to `ConfirmProposalDialog.tsx` or `ProposalDetailDialog.tsx` — all new fields are optional. Existing data flows through unchanged; the visual output simply improves.
 
