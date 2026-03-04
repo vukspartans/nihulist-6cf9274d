@@ -22,6 +22,8 @@ import {
   FileImage, FileSpreadsheet, File, FolderDown, Banknote, CreditCard, Coins, MessageSquare,
   ClipboardList, Package, Plus
 } from 'lucide-react';
+import { ExportPDFButton } from '@/components/ui/ExportPDFButton';
+import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
 
 // Reusable section header component
 const SectionHeader = ({ icon: Icon, children, className = "" }: { 
@@ -118,6 +120,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [negotiationSessionId, setNegotiationSessionId] = useState<string | null>(null);
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [rfpServiceData, setRfpServiceData] = useState<{
     mode: string | null;
     text: string | null;
@@ -426,6 +429,63 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
   const statusConfig = getStatusConfig(proposal.status);
   const StatusIcon = statusConfig.icon;
 
+  const handleExportPDF = async () => {
+    if (!proposal) return;
+    setPdfLoading(true);
+    try {
+      const resolvedServices = (proposal.selected_services || []).map((s: any) => {
+        if (typeof s === 'string') return serviceNames[s] || s;
+        if (s?.task_name) return s.task_name;
+        return String(s);
+      });
+
+      const milestones = (proposal.milestone_adjustments || []).map(m => ({
+        description: m.description,
+        percentage: m.consultant_percentage ?? m.entrepreneur_percentage ?? 0,
+      }));
+      if (milestones.length === 0 && proposal.conditions_json?.milestones) {
+        milestones.push(...proposal.conditions_json.milestones);
+      }
+
+      const pdfData: ProposalPDFData = {
+        projectName: proposal.projects?.name || 'פרויקט',
+        price: proposal.price,
+        timelineDays: proposal.timeline_days,
+        submittedAt: proposal.submitted_at,
+        currency: proposal.currency || 'ILS',
+        scopeText: proposal.scope_text,
+        consultantNotes: proposal.consultant_request_notes,
+        selectedServices: resolvedServices.length > 0 ? resolvedServices : undefined,
+        servicesNotes: proposal.services_notes,
+        signaturePng: proposal.signature_blob || undefined,
+        conditions: {
+          payment_terms: proposal.conditions_json?.payment_terms,
+          payment_term_type: proposal.conditions_json?.payment_term_type,
+          assumptions: proposal.conditions_json?.assumptions,
+          exclusions: proposal.conditions_json?.exclusions,
+          validity_days: proposal.conditions_json?.validity_days,
+        },
+        feeItems: (proposal.fee_line_items || []).map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unit: item.unit,
+          unitPrice: item.unit_price,
+          total: item.total,
+          isOptional: item.is_optional,
+        })),
+        milestones: milestones.length > 0 ? milestones : undefined,
+        status: proposal.status === 'accepted' ? 'approved' : 'draft',
+      };
+
+      await generateProposalPDF(pdfData);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast({ title: 'שגיאה בייצוא PDF', variant: 'destructive' });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   // File rendering component
   const renderFileItem = (file: UploadedFile, idx: number) => {
     const FileIcon = getFileIcon(file.name);
@@ -474,10 +534,13 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
               <DialogTitle className="text-sm font-bold text-right truncate">
                 {proposal.projects?.name || 'פרויקט'}
               </DialogTitle>
-              <Badge variant={statusConfig.variant} className="gap-1 text-xs shrink-0">
-                <StatusIcon className="w-3 h-3" />
-                {statusConfig.label}
-              </Badge>
+              <div className="flex items-center gap-2 shrink-0">
+                <ExportPDFButton onClick={handleExportPDF} loading={pdfLoading} />
+                <Badge variant={statusConfig.variant} className="gap-1 text-xs">
+                  <StatusIcon className="w-3 h-3" />
+                  {statusConfig.label}
+                </Badge>
+              </div>
             </div>
             {proposal.projects && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
