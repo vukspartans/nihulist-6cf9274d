@@ -40,8 +40,11 @@ import {
   ListChecks,
   Clock,
   XCircle,
+  Briefcase,
+  CreditCard,
 } from "lucide-react";
 import { getFeeUnitLabel } from "@/constants/rfpUnits";
+import { getPaymentTermLabel } from "@/constants/paymentTerms";
 import type { NegotiationSessionWithDetails, JsonLineItemAdjustment, FeeLineItem } from "@/types/negotiation";
 
 interface EntrepreneurNegotiationViewProps {
@@ -393,6 +396,95 @@ export const EntrepreneurNegotiationView = ({
                   </div>
                 </TabsContent>
 
+                  {/* Proposal Details - Scope, Payment Terms, Services */}
+                  {session.proposal && (
+                    <>
+                      {/* Scope of Work */}
+                      {session.proposal.scope_text && (
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <Briefcase className="w-4 h-4 text-primary" />
+                              היקף עבודה
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm whitespace-pre-wrap text-right">{session.proposal.scope_text}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Payment Terms */}
+                      {session.proposal.conditions_json && (
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <CreditCard className="w-4 h-4 text-primary" />
+                              תנאי תשלום
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {(session.proposal.conditions_json as any)?.payment_term_type && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">תנאי תשלום:</span>
+                                <Badge variant="outline">{getPaymentTermLabel((session.proposal.conditions_json as any).payment_term_type)}</Badge>
+                              </div>
+                            )}
+                            {(session.proposal.conditions_json as any)?.validity_days && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">תוקף הצעה:</span>
+                                <span>{(session.proposal.conditions_json as any).validity_days} ימים</span>
+                              </div>
+                            )}
+                            {(session.proposal.conditions_json as any)?.assumptions && (
+                              <div className="mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">הנחות יסוד:</p>
+                                <p className="text-sm bg-muted/50 p-2 rounded">{(session.proposal.conditions_json as any).assumptions}</p>
+                              </div>
+                            )}
+                            {(session.proposal.conditions_json as any)?.exclusions && (
+                              <div className="mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">החרגות:</p>
+                                <p className="text-sm bg-muted/50 p-2 rounded">{(session.proposal.conditions_json as any).exclusions}</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Consultant Notes */}
+                      {session.proposal.consultant_request_notes && (
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <MessageSquare className="w-4 h-4 text-primary" />
+                              הערות היועץ
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm whitespace-pre-wrap text-right">{session.proposal.consultant_request_notes}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Timeline */}
+                      {session.proposal.timeline_days && (
+                        <Card>
+                          <CardContent className="p-3 flex items-center gap-3">
+                            <Clock className="w-4 h-4 text-primary flex-shrink-0" />
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">לוח זמנים: </span>
+                              <span className="font-medium">
+                                {session.proposal.timeline_days >= 30
+                                  ? `${Math.round(session.proposal.timeline_days / 30)} חודשים (${session.proposal.timeline_days} ימים)`
+                                  : `${session.proposal.timeline_days} ימים`}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  )}
                 {/* Items Tab */}
                 <TabsContent value="items" className="p-4 m-0">
                   <Card>
