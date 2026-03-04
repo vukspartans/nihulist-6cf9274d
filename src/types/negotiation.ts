@@ -223,6 +223,13 @@ export interface NegotiationSessionWithDetails extends NegotiationSession {
     fee_line_items?: FeeLineItem[];
     milestone_adjustments?: ProposalMilestone[];
     rfp_invite_id?: string | null;
+    scope_text?: string | null;
+    selected_services?: unknown[];
+    services_notes?: string | null;
+    consultant_request_notes?: string | null;
+    conditions_json?: Record<string, unknown> | null;
+    timeline_days?: number | null;
+    currency?: string | null;
   };
   project?: {
     id: string;
