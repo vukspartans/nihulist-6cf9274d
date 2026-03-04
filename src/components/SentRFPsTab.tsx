@@ -57,12 +57,11 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
     return activeDeadlines.reduce((earliest, d) => d < earliest ? d : earliest);
   };
 
-  // Helper: check if group deadline is critical (< 24h)
-  const isGroupDeadlineCritical = (group: AdvisorTypeGroup): boolean => {
-    const deadline = getGroupEarliestDeadline(group);
-    if (!deadline) return false;
-    const remaining = new Date(deadline).getTime() - Date.now();
-    return remaining > 0 && remaining < 24 * 60 * 60 * 1000;
+  // Helper: check if group has active invites with a future deadline (can extend)
+  const canExtendDeadline = (group: AdvisorTypeGroup): boolean => {
+    return group.invites.some(
+      i => !['submitted', 'declined', 'expired'].includes(i.status) && i.deadlineAt && new Date(i.deadlineAt).getTime() > Date.now()
+    );
   };
 
   // Helper: get unique RFP IDs for a group
@@ -414,7 +413,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
               {/* Action buttons row */}
               <div className="mb-3 flex justify-between items-center">
                 {/* Extend deadline button - visible when deadline < 24h */}
-                {isGroupDeadlineCritical(group) && (
+                {canExtendDeadline(group) && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -425,7 +424,7 @@ export const SentRFPsTab = ({ projectId }: SentRFPsTabProps) => {
                     הארכת מועד
                   </Button>
                 )}
-                {!isGroupDeadlineCritical(group) && <div />}
+                {!canExtendDeadline(group) && <div />}
                 
                 {/* Comparison button for this group - show when 2+ proposals */}
                 {group.proposalsCount >= 2 && (
