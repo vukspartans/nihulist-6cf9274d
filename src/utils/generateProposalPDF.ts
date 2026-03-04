@@ -4,6 +4,7 @@
  */
 
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
+import { getFeeUnitLabel } from '@/constants/rfpUnits';
 
 export interface FeeLineItem {
   description: string;
@@ -192,7 +193,7 @@ function buildFeeTable(items: FeeLineItem[], title: string, currency: string): s
         <td class="col-num">${idx + 1}</td>
         <td>${desc}</td>
         <td class="col-center">${item.quantity || 1}</td>
-        <td class="col-center">${item.unit || 'יחידה'}</td>
+        <td class="col-center">${getFeeUnitLabel(item.unit || '') || 'יחידה'}</td>
         <td class="col-price">${item.unitPrice ? fmtCurrency(item.unitPrice, currency) : '-'}</td>
         <td class="col-price col-bold">${fmtCurrency(itemTotal, currency)}</td>
       </tr>`;
