@@ -242,8 +242,21 @@ export const SelectedAdvisorsTab = ({ projectId, onNavigateToProposals }: Select
                       src={item.advisor.logo_url}
                       alt={item.advisor.company_name}
                       className="w-16 h-16 rounded-lg object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
                     />
                   )}
+                  <div 
+                    className="w-16 h-16 rounded-lg bg-primary/10 items-center justify-center border"
+                    style={{ display: item.advisor.logo_url ? 'none' : 'flex' }}
+                  >
+                    <span className="text-lg font-bold text-primary">
+                      {(item.advisor.company_name || '?').charAt(0)}
+                    </span>
+                  </div>
                   <div>
                     <h4 className="font-semibold text-lg mb-1">
                       {item.advisor.company_name}

@@ -820,17 +820,24 @@ export const ProposalComparisonDialog = ({
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {/* Advisor Logo */}
                                 <div className="flex-shrink-0">
-                                  {proposal.advisor?.logo_url ? (
+                                  {proposal.advisor?.logo_url && (
                                     <img 
                                       src={proposal.advisor.logo_url} 
                                       alt={proposal.advisor.company_name || ''} 
                                       className="w-10 h-10 rounded-lg object-cover border"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (fallback) fallback.style.display = 'flex';
+                                      }}
                                     />
-                                  ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center border">
-                                      <Building2 className="w-5 h-5 text-muted-foreground" />
-                                    </div>
                                   )}
+                                  <div 
+                                    className="w-10 h-10 rounded-lg bg-muted items-center justify-center border"
+                                    style={{ display: proposal.advisor?.logo_url ? 'none' : 'flex' }}
+                                  >
+                                    <Building2 className="w-5 h-5 text-muted-foreground" />
+                                  </div>
                                 </div>
                                 
                                 <div className="flex flex-col gap-0.5 min-w-0">

@@ -284,19 +284,26 @@ export const ProposalComparisonTable = ({
                       {/* Supplier */}
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {proposal.advisors?.logo_url ? (
+                          {proposal.advisors?.logo_url && (
                             <img 
                               src={proposal.advisors.logo_url}
                               alt=""
                               className="w-8 h-8 rounded-full object-cover border"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
                             />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border">
-                              <span className="text-xs font-bold text-primary">
-                                {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-                              </span>
-                            </div>
                           )}
+                          <div 
+                            className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+                            style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+                          >
+                            <span className="text-xs font-bold text-primary">
+                              {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+                            </span>
+                          </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="font-medium text-sm truncate max-w-[150px]">
@@ -458,19 +465,26 @@ export const ProposalComparisonTable = ({
                   {/* Header Row */}
                   <div className="flex items-start justify-between gap-2 mb-2" onClick={() => onViewProposal(proposal)}>
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {proposal.advisors?.logo_url ? (
+                      {proposal.advisors?.logo_url && (
                         <img 
                           src={proposal.advisors.logo_url}
                           alt=""
                           className="w-10 h-10 rounded-lg object-cover border flex-shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
                         />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border flex-shrink-0">
-                          <span className="text-sm font-bold text-primary">
-                            {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-                          </span>
-                        </div>
                       )}
+                      <div 
+                        className="w-10 h-10 rounded-lg bg-primary/10 items-center justify-center border flex-shrink-0"
+                        style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+                      >
+                        <span className="text-sm font-bold text-primary">
+                          {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+                        </span>
+                      </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-sm truncate">
                           {proposal.advisors?.company_name || proposal.supplier_name}
