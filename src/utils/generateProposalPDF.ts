@@ -1,5 +1,6 @@
 /**
- * Generates a PDF of a proposal using browser print functionality
+ * Generates a professional Hebrew price quote PDF using browser print functionality.
+ * Redesigned layout with company branding, VAT calculations, and dual signature areas.
  */
 
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
@@ -19,15 +20,15 @@ export interface ProposalPDFData {
   advisorName?: string;
   supplierName?: string;
   projectName: string;
-  advisorType?: string;           // Advisor specialty (e.g., "יועץ תנועה")
+  advisorType?: string;
   price: number;
   timelineDays: number;
   submittedAt: string;
-  currency?: string;              // Currency code (default: ILS)
+  currency?: string;
   scopeText?: string;
-  consultantNotes?: string;       // Notes from consultant
-  selectedServices?: string[];    // Services selected by consultant
-  servicesNotes?: string;         // Service-specific notes
+  consultantNotes?: string;
+  selectedServices?: string[];
+  servicesNotes?: string;
   conditions?: {
     payment_terms?: string;
     payment_term_type?: string;
@@ -42,425 +43,494 @@ export interface ProposalPDFData {
   }>;
   signaturePng?: string;
   stampImage?: string;
+  // New fields (all optional — callers pass what they have)
+  advisorId?: string;        // ת.ז. / ח.פ.
+  advisorPhone?: string;
+  advisorEmail?: string;
+  advisorCompany?: string;
+  status?: 'draft' | 'approved' | string;
+  version?: number;
+  companyLogoUrl?: string;
+  startDate?: string;        // ISO date string
 }
 
-export async function generateProposalPDF(data: ProposalPDFData): Promise<void> {
-  const currencyCode = data.currency || 'ILS';
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+// ── helpers ──────────────────────────────────────────────────────────
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('he-IL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+const VAT_RATE = 0.18;
 
-  // Calculate estimated completion date
+function fmtCurrency(amount: number, code: string): string {
+  return new Intl.NumberFormat('he-IL', {
+    style: 'currency',
+    currency: code,
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
+function fmtDateDDMMYYYY(dateString: string): string {
+  const d = new Date(dateString);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function getItemTotal(item: FeeLineItem): number {
+  if (item.total !== undefined && item.total !== null && !isNaN(item.total) && item.total > 0) {
+    return item.total;
+  }
+  const base = (item.unitPrice || 0) * (item.quantity || 1);
+  if (item.chargeType && item.chargeType !== 'one_time' && item.duration && item.duration > 0) {
+    return base * item.duration;
+  }
+  return base;
+}
+
+function chargeTypeLabel(ct?: string): string {
+  const m: Record<string, string> = {
+    one_time: 'חד פעמי',
+    monthly: 'חודשי',
+    hourly: 'לשעה',
+    per_visit: 'לביקור',
+    per_unit: 'ליחידה',
+  };
+  return ct ? m[ct] || ct : '';
+}
+
+// ── section builders ─────────────────────────────────────────────────
+
+function buildHeader(data: ProposalPDFData): string {
+  const displayName = data.supplierName || data.advisorName || '';
+  const dateStr = fmtDateDDMMYYYY(data.submittedAt);
+
+  const logoHtml = data.companyLogoUrl
+    ? `<img src="${data.companyLogoUrl}" alt="לוגו" class="logo" />`
+    : data.stampImage
+      ? `<img src="${data.stampImage}" alt="לוגו" class="logo" />`
+      : `<div class="logo-placeholder">לוגו</div>`;
+
+  let statusBadge = '';
+  if (data.status === 'approved') {
+    statusBadge = `<span class="badge badge-approved">גרסה שאושרה${data.version ? ` (v${data.version})` : ''}</span>`;
+  } else if (data.status) {
+    statusBadge = `<span class="badge badge-draft">סטטוס: טיוטה${data.version ? ` (v${data.version})` : ''}</span>`;
+  }
+
+  return `
+    <div class="header">
+      <div class="header-top">
+        <div class="header-logo">${logoHtml}</div>
+        <div class="header-title">
+          <h1>הצעת מחיר</h1>
+          <p class="project-name">${data.projectName}</p>
+          ${data.advisorType ? `<p class="advisor-type">${data.advisorType}</p>` : ''}
+        </div>
+      </div>
+      <div class="header-meta">
+        <span class="date">תאריך: ${dateStr}</span>
+        ${statusBadge}
+      </div>
+      ${displayName ? `<p class="submitted-by">הוגש ע״י: ${displayName}${data.advisorCompany ? ` | ${data.advisorCompany}` : ''}</p>` : ''}
+    </div>`;
+}
+
+function buildConsultantDetails(data: ProposalPDFData): string {
+  const name = data.supplierName || data.advisorName;
+  if (!name && !data.advisorId && !data.advisorPhone && !data.advisorEmail) return '';
+
+  const rows: string[] = [];
+  if (name) rows.push(`<div class="detail-item"><span class="detail-label">שם:</span><span>${name}</span></div>`);
+  if (data.advisorCompany) rows.push(`<div class="detail-item"><span class="detail-label">חברה:</span><span>${data.advisorCompany}</span></div>`);
+  if (data.advisorId) rows.push(`<div class="detail-item"><span class="detail-label">ת.ז./ח.פ.:</span><span>${data.advisorId}</span></div>`);
+  if (data.advisorPhone) rows.push(`<div class="detail-item"><span class="detail-label">טלפון:</span><span dir="ltr">${data.advisorPhone}</span></div>`);
+  if (data.advisorEmail) rows.push(`<div class="detail-item"><span class="detail-label">דוא״ל:</span><span dir="ltr">${data.advisorEmail}</span></div>`);
+
+  return `
+    <div class="section">
+      <h2 class="section-title">פרטי היועץ</h2>
+      <div class="details-grid">${rows.join('')}</div>
+    </div>`;
+}
+
+function buildScopeOfWork(data: ProposalPDFData): string {
+  if (!data.scopeText && (!data.selectedServices || data.selectedServices.length === 0) && !data.consultantNotes) return '';
+
+  let inner = '';
+  if (data.scopeText) {
+    inner += `<div class="scope-text">${data.scopeText}</div>`;
+  }
+  if (data.selectedServices && data.selectedServices.length > 0) {
+    inner += `<h3 class="subsection-title">שירותים נבחרים</h3>
+      <ul class="services-list">${data.selectedServices.map(s => `<li>${s}</li>`).join('')}</ul>`;
+    if (data.servicesNotes) {
+      inner += `<p class="note-text">${data.servicesNotes}</p>`;
+    }
+  }
+  if (data.consultantNotes) {
+    inner += `<h3 class="subsection-title">הערות היועץ</h3><div class="consultant-notes">${data.consultantNotes}</div>`;
+  }
+
+  return `
+    <div class="section">
+      <h2 class="section-title">היקף העבודה ופירוט שירותים</h2>
+      ${inner}
+    </div>`;
+}
+
+function buildFeeTable(items: FeeLineItem[], title: string, currency: string): string {
+  if (items.length === 0) return '';
+  const total = items.reduce((s, i) => s + getItemTotal(i), 0);
+
+  const rows = items.map((item, idx) => {
+    const isRecurring = item.chargeType && item.chargeType !== 'one_time' && item.duration;
+    const itemTotal = getItemTotal(item);
+    let desc = item.description;
+    if (isRecurring && item.unitPrice) {
+      desc += `<br/><span class="recurring-detail">${fmtCurrency(item.unitPrice, currency)}/${chargeTypeLabel(item.chargeType)} × ${item.duration}</span>`;
+    }
+    return `
+      <tr class="${idx % 2 === 0 ? 'row-even' : 'row-odd'}">
+        <td class="col-num">${idx + 1}</td>
+        <td>${desc}</td>
+        <td class="col-center">${item.quantity || 1}</td>
+        <td class="col-center">${item.unit || 'יחידה'}</td>
+        <td class="col-price">${item.unitPrice ? fmtCurrency(item.unitPrice, currency) : '-'}</td>
+        <td class="col-price col-bold">${fmtCurrency(itemTotal, currency)}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <h3 class="table-title">${title}</h3>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-num">#</th>
+          <th>תיאור</th>
+          <th class="col-center" style="width:60px">כמות</th>
+          <th class="col-center" style="width:80px">יחידה</th>
+          <th class="col-price" style="width:110px">מחיר יחידה</th>
+          <th class="col-price" style="width:110px">סה״כ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr class="subtotal-row">
+          <td colspan="5" class="subtotal-label">סה״כ ${title}</td>
+          <td class="col-price col-bold">${fmtCurrency(total, currency)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+function buildPricingSection(data: ProposalPDFData, currency: string): string {
+  if (!data.feeItems || data.feeItems.length === 0) return '';
+
+  const mandatory = data.feeItems.filter(i => !i.isOptional);
+  const optional = data.feeItems.filter(i => i.isOptional);
+  const mandatoryTotal = mandatory.reduce((s, i) => s + getItemTotal(i), 0);
+  const optionalTotal = optional.reduce((s, i) => s + getItemTotal(i), 0);
+  const grandBeforeVat = mandatoryTotal + optionalTotal;
+  const vat = Math.round(grandBeforeVat * VAT_RATE);
+  const grandWithVat = grandBeforeVat + vat;
+
+  let html = '<div class="section">';
+  if (mandatory.length) html += buildFeeTable(mandatory, 'פירוט שכר טרחה', currency);
+  if (optional.length) html += buildFeeTable(optional, 'פריטים אופציונליים', currency);
+
+  html += `
+    <div class="vat-summary">
+      <div class="vat-row"><span>סה״כ לפני מע״מ</span><span>${fmtCurrency(grandBeforeVat, currency)}</span></div>
+      <div class="vat-row"><span>מע״מ (${Math.round(VAT_RATE * 100)}%)</span><span>${fmtCurrency(vat, currency)}</span></div>
+      <div class="vat-row vat-total"><span>סה״כ כולל מע״מ</span><span>${fmtCurrency(grandWithVat, currency)}</span></div>
+    </div>
+    <p class="validity-note">* כל המחירים ללא מע״מ אלא אם צוין אחרת | הצעה תקפה ל-${data.conditions?.validity_days || 30} יום</p>
+  </div>`;
+  return html;
+}
+
+function buildMilestones(data: ProposalPDFData, currency: string): string {
+  if (!data.milestones || data.milestones.length === 0) return '';
+
+  const mandatoryTotal = (data.feeItems || []).filter(i => !i.isOptional).reduce((s, i) => s + getItemTotal(i), 0);
+  const base = mandatoryTotal > 0 ? mandatoryTotal : data.price;
+
+  const rows = data.milestones.map((m, idx) => `
+    <tr class="${idx % 2 === 0 ? 'row-even' : 'row-odd'}">
+      <td>${m.description}</td>
+      <td class="col-center">${m.percentage || 0}%</td>
+      <td class="col-price">${fmtCurrency(base * (m.percentage || 0) / 100, currency)}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="section">
+      <h2 class="section-title">אבני דרך לתשלום</h2>
+      <table>
+        <thead><tr><th>שלב</th><th class="col-center" style="width:100px">אחוז (%)</th><th class="col-price" style="width:120px">סכום</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function buildTerms(data: ProposalPDFData, currency: string): string {
+  const c = data.conditions;
   const submissionDate = new Date(data.submittedAt);
-  const completionDate = new Date(submissionDate);
+  const startDate = data.startDate ? new Date(data.startDate) : submissionDate;
+  const completionDate = new Date(startDate);
   completionDate.setDate(completionDate.getDate() + data.timelineDays);
 
-  // Helper to calculate item total safely - includes duration for recurring items
-  const getItemTotal = (item: FeeLineItem): number => {
-    // Use explicit total if available and valid
-    if (item.total !== undefined && item.total !== null && !isNaN(item.total) && item.total > 0) {
-      return item.total;
-    }
-    
-    const basePrice = (item.unitPrice || 0) * (item.quantity || 1);
-    
-    // Apply duration multiplier for recurring charges
-    if (item.chargeType && item.chargeType !== 'one_time' && item.duration && item.duration > 0) {
-      return basePrice * item.duration;
-    }
-    
-    return basePrice;
-  };
+  const paymentTermDisplay = c?.payment_term_type
+    ? getPaymentTermLabel(c.payment_term_type)
+    : c?.payment_terms;
 
-  // Get charge type label for display
-  const getChargeTypeDisplay = (chargeType?: string): string => {
-    const labels: Record<string, string> = {
-      'one_time': 'חד פעמי',
-      'monthly': 'חודשי',
-      'hourly': 'לשעה',
-      'per_visit': 'לביקור',
-      'per_unit': 'ליחידה',
-    };
-    return chargeType ? labels[chargeType] || chargeType : '';
-  };
+  const hasContent = paymentTermDisplay || c?.assumptions || c?.exclusions || c?.validity_days || data.timelineDays;
+  if (!hasContent) return '';
 
-  // Generate fee table rows
-  let feeTableHtml = '';
-  if (data.feeItems && data.feeItems.length > 0) {
-    const mandatoryItems = data.feeItems.filter(item => !item.isOptional);
-    const optionalItems = data.feeItems.filter(item => item.isOptional);
-    
-    const generateRows = (items: FeeLineItem[]) => items.map((item, idx) => {
-      const isRecurring = item.chargeType && item.chargeType !== 'one_time' && item.duration;
-      const itemTotal = getItemTotal(item);
-      
-      // Build description with recurring info
-      let descriptionHtml = item.description;
-      if (isRecurring && item.unitPrice) {
-        descriptionHtml += `<br/><span style="font-size: 11px; color: #6b7280;">
-          ${formatCurrency(item.unitPrice)}/${getChargeTypeDisplay(item.chargeType)} × ${item.duration}
-        </span>`;
-      }
-      
-      return `
-        <tr>
-          <td style="padding: 8px; border: 1px solid #e5e7eb;">${idx + 1}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb;">${descriptionHtml}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'יחידה'}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatCurrency(itemTotal)}</td>
-        </tr>
-      `;
-    }).join('');
+  let inner = '';
+  if (paymentTermDisplay) inner += `<div class="term-row term-highlight"><span class="term-label">תנאי תשלום:</span><span class="term-value">${paymentTermDisplay}</span></div>`;
+  if (c?.validity_days) inner += `<div class="term-row"><span class="term-label">תוקף ההצעה:</span><span class="term-value">${c.validity_days} ימים</span></div>`;
 
-    // Calculate totals
-    const mandatoryTotal = mandatoryItems.reduce((sum, item) => sum + getItemTotal(item), 0);
-    const optionalTotal = optionalItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+  inner += `<div class="term-row"><span class="term-label">תאריך התחלה:</span><span class="term-value">${fmtDateDDMMYYYY(startDate.toISOString())}</span></div>`;
+  inner += `<div class="term-row"><span class="term-label">סיום משוער:</span><span class="term-value">${fmtDateDDMMYYYY(completionDate.toISOString())}</span></div>`;
+  inner += `<div class="term-row"><span class="term-label">זמן ביצוע:</span><span class="term-value">${data.timelineDays} ימים</span></div>`;
 
-    if (mandatoryItems.length > 0) {
-      feeTableHtml += `
-        <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">פירוט שכר טרחה</h3>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-          <thead>
-            <tr style="background-color: #f3f4f6;">
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; width: 40px;">#</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">תיאור</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 60px;">כמות</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 80px;">יחידה</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">מחיר יחידה</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">סה״כ</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${generateRows(mandatoryItems)}
-            <tr style="background-color: #f0fdf4;">
-              <td colspan="5" style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">סה״כ פריטי חובה</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 700; color: #059669;">${formatCurrency(mandatoryTotal)}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-    }
+  if (c?.assumptions) inner += `<div class="term-block"><span class="term-label">הנחות יסוד:</span><p>${c.assumptions}</p></div>`;
+  if (c?.exclusions) inner += `<div class="term-block"><span class="term-label">לא כולל:</span><p>${c.exclusions}</p></div>`;
 
-    if (optionalItems.length > 0) {
-      feeTableHtml += `
-        <h4 style="margin-top: 16px; margin-bottom: 8px; color: #6b7280;">פריטים אופציונליים</h4>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-          <thead>
-            <tr style="background-color: #f3f4f6;">
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; width: 40px;">#</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">תיאור</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 60px;">כמות</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 80px;">יחידה</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">מחיר יחידה</th>
-              <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 100px;">סה״כ</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${generateRows(optionalItems)}
-            <tr style="background-color: #f8fafc;">
-              <td colspan="5" style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">סה״כ אופציונלי</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600; color: #64748b;">${formatCurrency(optionalTotal)}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-    }
+  return `
+    <div class="section">
+      <h2 class="section-title">תנאים ולוחות זמנים</h2>
+      <div class="terms-card">${inner}</div>
+    </div>`;
+}
 
-    // Grand total
-    if (mandatoryItems.length > 0 || optionalItems.length > 0) {
-      const grandTotal = mandatoryTotal + optionalTotal;
-      feeTableHtml += `
-        <div style="margin-top: 12px; padding: 12px; background-color: #eff6ff; border-radius: 8px; text-align: left;">
-          <span style="font-weight: bold; font-size: 16px;">סה״כ כללי: ${formatCurrency(grandTotal)}</span>
+function buildSignature(data: ProposalPDFData): string {
+  return `
+    <div class="signature-section">
+      <div class="sig-box">
+        <h3>חתימת היועץ</h3>
+        <div class="sig-content">
+          ${data.signaturePng ? `<img src="${data.signaturePng}" alt="חתימה" class="sig-img" />` : '<div class="sig-line"></div>'}
+          ${data.stampImage ? `<img src="${data.stampImage}" alt="חותמת" class="stamp-img" />` : ''}
         </div>
-      `;
-    }
-
-    feeTableHtml += `<p style="font-size: 11px; color: #6b7280; text-align: right; margin-top: 8px;">* כל המחירים ללא מע"מ | הצעה תקפה ל-${data.conditions?.validity_days || 30} יום</p>`;
-  }
-
-  // Generate milestones table
-  let milestonesHtml = '';
-  if (data.milestones && data.milestones.length > 0) {
-    // Calculate base amount for milestones (mandatory items or total price)
-    const mandatoryTotal = (data.feeItems || [])
-      .filter(item => !item.isOptional)
-      .reduce((sum, item) => sum + getItemTotal(item), 0);
-    const baseAmount = mandatoryTotal > 0 ? mandatoryTotal : data.price;
-    
-    milestonesHtml = `
-      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">אבני דרך לתשלום</h3>
-      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-        <thead>
-          <tr style="background-color: #f3f4f6;">
-            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">שלב</th>
-            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; width: 100px;">אחוז</th>
-            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; width: 120px;">סכום</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.milestones.map(m => `
-            <tr>
-              <td style="padding: 8px; border: 1px solid #e5e7eb;">${m.description}</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${m.percentage || 0}%</td>
-              <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">${formatCurrency(baseAmount * (m.percentage || 0) / 100)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  }
-
-  // Generate consultant notes section
-  let consultantNotesHtml = '';
-  if (data.consultantNotes) {
-    consultantNotesHtml = `
-      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">הערות היועץ</h3>
-      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px; white-space: pre-wrap; border-right: 3px solid #3b82f6;">
-        ${data.consultantNotes}
+        <p class="sig-label">${data.supplierName || data.advisorName || 'שם היועץ'}</p>
       </div>
-    `;
-  }
-
-  // Generate selected services section
-  let servicesHtml = '';
-  if (data.selectedServices && data.selectedServices.length > 0) {
-    servicesHtml = `
-      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">שירותים נבחרים</h3>
-      <ul style="padding-right: 20px; font-size: 14px; margin: 0;">
-        ${data.selectedServices.map(service => `<li style="margin-bottom: 4px;">${service}</li>`).join('')}
-      </ul>
-      ${data.servicesNotes ? `<p style="margin-top: 8px; font-size: 13px; color: #6b7280;">${data.servicesNotes}</p>` : ''}
-    `;
-  }
-
-  // Generate conditions section
-  let conditionsHtml = '';
-  if (data.conditions) {
-    const { payment_terms, payment_term_type, assumptions, exclusions, validity_days } = data.conditions;
-    // Prefer payment_term_type (structured) over payment_terms (free text)
-    const paymentTermDisplay = payment_term_type 
-      ? getPaymentTermLabel(payment_term_type)
-      : payment_terms;
-    
-    if (paymentTermDisplay || assumptions || exclusions || validity_days) {
-      conditionsHtml = `
-        <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">תנאים</h3>
-        <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px;">
-          ${paymentTermDisplay ? `<p style="margin-bottom: 8px;"><strong>תנאי תשלום:</strong> ${paymentTermDisplay}</p>` : ''}
-          ${assumptions ? `<p style="margin-bottom: 8px;"><strong>הנחות יסוד:</strong> ${assumptions}</p>` : ''}
-          ${exclusions ? `<p style="margin-bottom: 8px;"><strong>לא כולל:</strong> ${exclusions}</p>` : ''}
-          ${validity_days ? `<p style="margin-bottom: 8px;"><strong>תוקף ההצעה:</strong> ${validity_days} ימים</p>` : ''}
-        </div>
-      `;
-    }
-  }
-
-  // Generate signature section
-  let signatureHtml = '';
-  if (data.signaturePng || data.stampImage) {
-    signatureHtml = `
-      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-        <h3 style="margin-bottom: 16px; color: #374151;">חתימה</h3>
-        <div style="display: flex; gap: 24px; align-items: flex-end;">
-          ${data.signaturePng ? `
-            <div style="text-align: center;">
-              <img src="${data.signaturePng}" alt="חתימה" style="max-height: 80px; max-width: 200px; border-bottom: 1px solid #374151;" />
-              <p style="margin-top: 4px; font-size: 12px; color: #6b7280;">חתימה</p>
-            </div>
-          ` : ''}
-          ${data.stampImage ? `
-            <div style="text-align: center;">
-              <img src="${data.stampImage}" alt="חותמת" style="max-height: 80px; max-width: 100px;" />
-              <p style="margin-top: 4px; font-size: 12px; color: #6b7280;">חותמת</p>
-            </div>
-          ` : ''}
-        </div>
+      <div class="sig-box">
+        <h3>חתימת הלקוח</h3>
+        <div class="sig-content"><div class="sig-line"></div></div>
+        <p class="sig-label">שם הלקוח</p>
       </div>
-    `;
-  }
+    </div>`;
+}
 
-  const html = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="he">
-    <head>
-      <meta charset="UTF-8">
-      <title>הצעת מחיר - ${data.projectName}</title>
-      <style>
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-        body {
-          font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-          margin: 0;
-          padding: 40px;
-          color: #1f2937;
-          line-height: 1.6;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 32px;
-          padding-bottom: 24px;
-          border-bottom: 2px solid #3b82f6;
-        }
-        .header h1 {
-          color: #1e40af;
-          margin-bottom: 8px;
-        }
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-        .info-box {
-          background-color: #f3f4f6;
-          padding: 16px;
-          border-radius: 8px;
-        }
-        .info-label {
-          font-size: 12px;
-          color: #6b7280;
-          margin-bottom: 4px;
-        }
-        .info-value {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-        .scope-section {
-          margin-top: 24px;
-        }
-        .scope-section h3 {
-          color: #374151;
-          margin-bottom: 12px;
-        }
-        .scope-content {
-          background-color: #f9fafb;
-          padding: 16px;
-          border-radius: 8px;
-          white-space: pre-wrap;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>הצעת מחיר</h1>
-        <p style="font-size: 18px; color: #4b5563;">${data.projectName}</p>
-        ${data.advisorType ? `<p style="font-size: 14px; color: #6b7280;">${data.advisorType}</p>` : ''}
-        <p style="font-size: 14px; color: #6b7280;">${data.supplierName || data.advisorName || ''}</p>
-      </div>
+// ── main CSS ─────────────────────────────────────────────────────────
 
-      <div class="info-grid">
-        <div class="info-box">
-          <div class="info-label">מחיר מוצע</div>
-          <div class="info-value" style="color: #059669;">${formatCurrency(data.price)}</div>
-        </div>
-        <div class="info-box">
-          <div class="info-label">זמן ביצוע</div>
-          <div class="info-value">${data.timelineDays} ימים</div>
-        </div>
-        <div class="info-box">
-          <div class="info-label">תאריך הגשה</div>
-          <div class="info-value">${formatDate(data.submittedAt)}</div>
-        </div>
-        <div class="info-box">
-          <div class="info-label">תאריך סיום משוער</div>
-          <div class="info-value">${formatDate(completionDate.toISOString())}</div>
-        </div>
-      </div>
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap');
 
-      ${data.scopeText ? `
-        <div class="scope-section">
-          <h3>היקף העבודה</h3>
-          <div class="scope-content">${data.scopeText}</div>
-        </div>
-      ` : ''}
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 15mm 12mm; }
+  .section, table, .signature-section { page-break-inside: avoid; }
+}
 
-      ${feeTableHtml}
-      ${milestonesHtml}
-      ${consultantNotesHtml}
-      ${servicesHtml}
-      ${conditionsHtml}
-      ${signatureHtml}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-      <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #9ca3af;">
-        מסמך זה הופק באופן אוטומטי • ${new Date().toLocaleDateString('he-IL')}
-      </div>
-    </body>
-    </html>
-  `;
+body {
+  font-family: 'Assistant', 'Segoe UI', Tahoma, Arial, sans-serif;
+  color: #1f2937;
+  line-height: 1.7;
+  direction: rtl;
+  padding: 32px 40px;
+  font-size: 14px;
+  background: #fff;
+}
 
-  // Open print dialog
+/* ── Header ───────────── */
+.header {
+  border-bottom: 3px solid #1e40af;
+  padding-bottom: 20px;
+  margin-bottom: 28px;
+}
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.header-title { flex: 1; }
+.header-title h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e3a5f;
+  margin-bottom: 4px;
+}
+.project-name { font-size: 18px; color: #374151; font-weight: 600; }
+.advisor-type { font-size: 14px; color: #6b7280; }
+.header-logo { flex-shrink: 0; }
+.logo { max-height: 70px; max-width: 140px; object-fit: contain; }
+.logo-placeholder {
+  width: 90px; height: 60px;
+  border: 2px dashed #d1d5db; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #9ca3af;
+}
+.header-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px; font-size: 13px; color: #6b7280;
+}
+.badge {
+  font-size: 12px; padding: 3px 12px; border-radius: 12px; font-weight: 600;
+}
+.badge-draft { background: #fef3c7; color: #92400e; }
+.badge-approved { background: #d1fae5; color: #065f46; }
+.submitted-by { font-size: 13px; color: #6b7280; margin-top: 6px; }
+
+/* ── Sections ─────────── */
+.section { margin-bottom: 24px; }
+.section-title {
+  font-size: 17px; font-weight: 700; color: #1e3a5f;
+  border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 14px;
+}
+.subsection-title { font-size: 14px; font-weight: 700; color: #374151; margin: 12px 0 6px; }
+
+/* Consultant details */
+.details-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px 24px; padding: 14px 16px;
+  border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;
+}
+.detail-item { display: flex; gap: 8px; font-size: 14px; }
+.detail-label { font-weight: 600; color: #374151; white-space: nowrap; }
+
+/* Scope */
+.scope-text { white-space: pre-wrap; font-size: 14px; margin-bottom: 12px; }
+.services-list { padding-right: 20px; margin: 0 0 8px; }
+.services-list li { margin-bottom: 3px; }
+.note-text { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+.consultant-notes {
+  background: #f9fafb; padding: 12px 14px; border-radius: 8px;
+  border-right: 3px solid #3b82f6; white-space: pre-wrap; font-size: 14px;
+}
+
+/* ── Tables ────────────── */
+.table-title { font-size: 15px; font-weight: 700; color: #374151; margin: 18px 0 8px; }
+table {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px;
+}
+th {
+  background: #1e3a5f; color: #fff; padding: 8px 10px;
+  text-align: right; font-weight: 600; font-size: 13px;
+}
+td { padding: 7px 10px; border: 1px solid #e5e7eb; }
+.row-even { background: #fff; }
+.row-odd { background: #f9fafb; }
+.col-num { width: 36px; text-align: center; }
+.col-center { text-align: center; }
+.col-price { text-align: left; }
+.col-bold { font-weight: 700; }
+.subtotal-row { background: #f0f4f8; }
+.subtotal-label { text-align: right; font-weight: 700; }
+.recurring-detail { font-size: 11px; color: #6b7280; }
+
+/* VAT summary */
+.vat-summary {
+  margin-top: 14px; border: 2px solid #1e3a5f; border-radius: 8px;
+  overflow: hidden;
+}
+.vat-row {
+  display: flex; justify-content: space-between; padding: 8px 16px;
+  font-size: 14px; border-bottom: 1px solid #e5e7eb;
+}
+.vat-row:last-child { border-bottom: none; }
+.vat-total {
+  background: #1e3a5f; color: #fff; font-weight: 800; font-size: 16px;
+}
+.validity-note { font-size: 11px; color: #6b7280; margin-top: 8px; }
+
+/* Terms */
+.terms-card {
+  border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; background: #f9fafb;
+}
+.term-row {
+  display: flex; gap: 8px; margin-bottom: 6px; font-size: 14px;
+}
+.term-highlight { font-weight: 700; font-size: 15px; color: #1e3a5f; margin-bottom: 10px; }
+.term-label { font-weight: 600; color: #374151; white-space: nowrap; }
+.term-value { color: #1f2937; }
+.term-block { margin-top: 10px; font-size: 14px; }
+.term-block p { margin-top: 4px; white-space: pre-wrap; }
+
+/* Signatures */
+.signature-section {
+  display: flex; gap: 32px; margin-top: 36px; padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+.sig-box {
+  flex: 1; text-align: center;
+}
+.sig-box h3 { font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; }
+.sig-content { min-height: 70px; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+.sig-img { max-height: 70px; max-width: 180px; }
+.stamp-img { max-height: 60px; max-width: 90px; }
+.sig-line { width: 80%; border-bottom: 1px solid #374151; height: 1px; margin-bottom: 4px; }
+.sig-label { font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+/* Footer */
+.doc-footer {
+  margin-top: 40px; text-align: center; font-size: 11px; color: #9ca3af;
+  border-top: 1px solid #e5e7eb; padding-top: 12px;
+}
+`;
+
+// ── main export ──────────────────────────────────────────────────────
+
+export async function generateProposalPDF(data: ProposalPDFData): Promise<void> {
+  const currency = data.currency || 'ILS';
+
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>הצעת מחיר - ${data.projectName}</title>
+  <style>${CSS}</style>
+</head>
+<body>
+  ${buildHeader(data)}
+  ${buildConsultantDetails(data)}
+  ${buildScopeOfWork(data)}
+  ${buildPricingSection(data, currency)}
+  ${buildMilestones(data, currency)}
+  ${buildTerms(data, currency)}
+  ${buildSignature(data)}
+  <div class="doc-footer">מסמך זה הופק באופן אוטומטי ע״י מערכת BillDing • ${fmtDateDDMMYYYY(new Date().toISOString())}</div>
+</body>
+</html>`;
+
   const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    
-    // Wait for images to load before printing
-    const images = printWindow.document.querySelectorAll('img');
-    let loadedCount = 0;
-    const totalImages = images.length;
+  if (!printWindow) return;
 
-    const triggerPrint = () => {
-      printWindow.focus();
-      printWindow.print();
-    };
+  printWindow.document.write(html);
+  printWindow.document.close();
 
-    if (totalImages === 0) {
-      // No images, print immediately after load
-      printWindow.onload = triggerPrint;
-    } else {
-      // Wait for all images to load
-      let checkComplete = false;
-      
-      images.forEach(img => {
-        if (img.complete) {
-          loadedCount++;
-          if (loadedCount === totalImages && !checkComplete) {
-            checkComplete = true;
-            triggerPrint();
-          }
-        } else {
-          img.onload = () => {
-            loadedCount++;
-            if (loadedCount === totalImages && !checkComplete) {
-              checkComplete = true;
-              triggerPrint();
-            }
-          };
-          img.onerror = () => {
-            loadedCount++;
-            if (loadedCount === totalImages && !checkComplete) {
-              checkComplete = true;
-              triggerPrint();
-            }
-          };
-        }
-      });
+  const images = printWindow.document.querySelectorAll('img');
+  let loaded = 0;
+  const total = images.length;
+  let triggered = false;
 
-      // Fallback timeout in case images take too long
-      setTimeout(() => {
-        if (!checkComplete) {
-          checkComplete = true;
-          triggerPrint();
-        }
-      }, 3000);
-    }
+  const triggerPrint = () => {
+    if (triggered) return;
+    triggered = true;
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  if (total === 0) {
+    printWindow.onload = triggerPrint;
+  } else {
+    const check = () => { loaded++; if (loaded >= total) triggerPrint(); };
+    images.forEach(img => {
+      if (img.complete) check();
+      else { img.onload = check; img.onerror = check; }
+    });
+    setTimeout(triggerPrint, 3000);
   }
 }
