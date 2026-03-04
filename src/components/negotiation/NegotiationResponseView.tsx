@@ -87,6 +87,7 @@ export const NegotiationResponseView = ({
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showAcceptTargetConfirm, setShowAcceptTargetConfirm] = useState(false);
   const [negotiationFiles, setNegotiationFiles] = useState<NegotiationFile[]>([]);
   const [embeddedFiles, setEmbeddedFiles] = useState<NegotiationFile[]>([]);
   const [declineReason, setDeclineReason] = useState("");
@@ -1668,7 +1669,14 @@ export const NegotiationResponseView = ({
                     קבל מחיר יעד
                   </Button>
                   <Button 
-                    onClick={() => setShowSubmitDialog(true)} 
+                    onClick={() => {
+                      // If advisor didn't change anything (new total matches target), warn them
+                      if (newTotal === targetTotal) {
+                        setShowAcceptTargetConfirm(true);
+                      } else {
+                        setShowSubmitDialog(true);
+                      }
+                    }} 
                     disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
                     className="bg-primary"
                   >
@@ -1749,6 +1757,59 @@ export const NegotiationResponseView = ({
             >
               <Check className="h-4 w-4 me-2" />
               אשר והתחייב
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* No-Change Confirmation: advisor accepted entrepreneur's target as-is */}
+      <AlertDialog open={showAcceptTargetConfirm} onOpenChange={setShowAcceptTargetConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              אישור הגשת הצעה מעודכנת
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right space-y-3">
+              <p>לתשומת ליבך, לא בוצע שינוי בהצעה.</p>
+              <p>האם ברצונך לקבל את מחיר היעד שקבע היזם?</p>
+              <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר מקורי:</span>
+                  <span className="font-medium">{formatCurrency(originalTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר חדש:</span>
+                  <span className="font-bold text-lg text-primary">{formatCurrency(targetTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">שינוי:</span>
+                  <span className={`font-medium ${originalTotal > targetTotal ? 'text-green-600' : ''}`}>
+                    {originalTotal > 0 ? `-${Math.round(((originalTotal - targetTotal) / originalTotal) * 100)}%` : '0%'}
+                  </span>
+                </div>
+              </div>
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong>שים לב:</strong> זוהי הצעה מחייבת בהתאם לתנאי השימוש של המערכת. 
+                  לאחר ההגשה, היזם יקבל הודעה וההצעה תהיה זמינה לאישור. לא ניתן לבטל הגשה.
+                </AlertDescription>
+              </Alert>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowAcceptTargetConfirm(false);
+                handleAcceptTarget();
+              }}
+              disabled={loading}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-4 w-4 me-2" />
+              אשר והגש הצעה
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
