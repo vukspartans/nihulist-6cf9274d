@@ -1,28 +1,43 @@
 
 
-# Fix PDF Export: Logo, Service Names, and Hebrew Units
+# Audit: PDF Export Consistency Across All Endpoints
 
-## Problems Identified
+## Findings
 
-1. **Logo not showing**: `handleExportPDF` in `ProposalDetailDialog.tsx` (line 427) never passes `companyLogoUrl` to the PDF generator. The advisor's `logo_url` is available via `proposal.advisors?.logo_url` but is not mapped.
+There are **4 PDF export endpoints** in the codebase. After the recent fixes, here is the status:
 
-2. **Services showing as UUID strings**: Line 437 maps `selected_services` as `typeof s === 'string' ? s : s.name`. When services are stored as UUID strings (which they are per the database schema), the raw UUID is passed through. The component already resolves names into the `serviceNames` state (lines 269-292), but the PDF export does not use this lookup.
+| Endpoint | File | Logo | Services | Units (Hebrew) | Issues |
+|----------|------|------|----------|-----------------|--------|
+| **Entrepreneur viewing proposal** | `ProposalDetailDialog.tsx` | Fixed | Fixed | Fixed | None |
+| **Advisor viewing own proposal** | `AdvisorProposalViewDialog.tsx` | Not passed | Fixed | Fixed | Missing `companyLogoUrl` |
+| **Pre-submit confirmation** | `ConfirmProposalDialog.tsx` | Not passed | N/A (not shown) | **RAW English** | Units still raw (`item.unit` not through `getFeeUnitLabel`) |
+| **Comparison table** | `ProposalComparisonDialog.tsx` → `exportProposals.ts` | N/A (summary table) | N/A | N/A | Different format — this is a comparison summary, not a single proposal. No unit/service issues. |
 
-3. **Units in English**: Line 443 passes `unit: item.unit` raw (e.g. `"lump_sum"`, `"sqm"`). The PDF generator (`generateProposalPDF.ts` line 164) renders `item.unit || 'יחידה'` verbatim. It needs to go through `getFeeUnitLabel()` to translate to Hebrew (e.g. `"קומפ'"`, `"מ"ר"`).
+## Remaining Issues to Fix
 
-## Plan
+### 1. `ConfirmProposalDialog.tsx` — Units in English (line 106)
 
-### File 1: `src/components/ProposalDetailDialog.tsx` — Fix `handleExportPDF`
+Currently passes `unit: item.unit || 'פאושלי'` — this sends raw English codes like `"lump_sum"`, `"sqm"` to the PDF. Needs `getFeeUnitLabel()`.
 
-- **Logo**: Add `companyLogoUrl: advisorInfo?.logo_url || undefined` to the PDF data object.
-- **Services**: Replace the raw map with `serviceNames` lookup: `selectedServices: selectedServices.map(s => { const id = typeof s === 'string' ? s : s.id; return serviceNames[id] || (typeof s === 'string' ? s : s.name || s.description) || id; }).filter(Boolean)`.
-- **Units**: Change `unit: item.unit` to `unit: getFeeUnitLabel(item.unit || '')` so English codes are translated to Hebrew before being sent to the PDF.
+**Fix**: Change line 106 from:
+```
+unit: item.unit || 'פאושלי',
+```
+to:
+```
+unit: getFeeUnitLabel(item.unit || '') || 'פאושלי',
+```
 
-### File 2: `src/utils/generateProposalPDF.ts` — Defensive Hebrew fallback for units
+Import `getFeeUnitLabel` from `@/constants/rfpUnits` (already imported but only `getChargeTypeLabel`, `getDurationUnitLabel`, `isRecurringChargeType` — need to add `getFeeUnitLabel`).
 
-- In the fee table row builder (around line 164), change `item.unit || 'יחידה'` to use `getFeeUnitLabel` as a fallback, ensuring that even if English codes slip through, they get translated. Import `getFeeUnitLabel` from `@/constants/rfpUnits`.
+### 2. `AdvisorProposalViewDialog.tsx` — Missing logo
 
-### File 3: `src/components/AdvisorProposalViewDialog.tsx` — Same fixes for advisor PDF export
+The advisor's own logo URL is not passed as `companyLogoUrl`. The proposal object has `proposal.advisors?.logo_url` available (from the joined query). Need to add `companyLogoUrl: proposal.advisors?.logo_url || undefined` to the PDF data.
 
-Apply the same three fixes (logo, service names, unit translation) to the advisor's PDF export handler to keep both views consistent.
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/ConfirmProposalDialog.tsx` | Add `getFeeUnitLabel` to imports, apply to unit mapping |
+| `src/components/AdvisorProposalViewDialog.tsx` | Add `companyLogoUrl` to PDF data |
 
