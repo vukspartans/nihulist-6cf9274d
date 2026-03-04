@@ -1,20 +1,55 @@
 
 
-# Add PDF Export to Advisor Proposal View Dialog
+# Preserve & Display Critical Proposal Data in Negotiation Views
 
-## What
-Add an "ייצוא PDF" button inside the `AdvisorProposalViewDialog` (the "צפייה בהצעה שהגשתי" dialog) so advisors can print/export their submitted proposal in the same professional format defined in `generateProposalPDF.ts`.
+## Problem
+When a vendor or entrepreneur views a negotiation request/response, critical proposal information is lost or hidden. The `fetchNegotiationWithDetails` hook only fetches a subset of proposal fields (`id, price, supplier_name, current_version, advisor_id, fee_line_items, milestone_adjustments, rfp_invite_id`), omitting:
 
-## Where
-Place the `ExportPDFButton` in the dialog header area (line ~473), next to the status badge, so it's always visible regardless of which tab is active.
+- **Scope of work** (`scope_text`)
+- **Selected services** (`selected_services`, `services_notes`)
+- **Payment terms & conditions** (`conditions_json` — payment_term_type, validity_days, assumptions, exclusions)
+- **Consultant notes** (`consultant_request_notes`)
+- **Timeline** (`timeline_days`)
+- **Currency** (`currency`)
 
-## Changes — Single File: `src/components/AdvisorProposalViewDialog.tsx`
+Both `NegotiationResponseView` (advisor) and `EntrepreneurNegotiationView` (entrepreneur) rely on this data but never receive it.
 
-1. **Import** `ExportPDFButton` from `@/components/ui/ExportPDFButton` and `generateProposalPDF` + `ProposalPDFData` from `@/utils/generateProposalPDF`
-2. **Add state** `pdfLoading` for the button loading state
-3. **Add handler** `handleExportPDF` that maps the dialog's `proposal` data to `ProposalPDFData` and calls `generateProposalPDF`:
-   - Maps `fee_line_items` to the PDF's `feeItems` format (snake_case → camelCase)
-   - Maps `milestone_adjustments` or `conditions_json.milestones` to `milestones`
-   - Passes `selectedServices` (resolved via `serviceNames`), `scopeText`, `consultantNotes`, `signaturePng`, `conditions`, `currency`, etc.
-4. **Render** `<ExportPDFButton>` in the header row, between the title and the status badge
+## Plan
+
+### 1. Expand proposal query in `useNegotiation.ts` (`fetchNegotiationWithDetails`)
+
+Add missing fields to the proposal select:
+
+```
+scope_text, selected_services, services_notes, consultant_request_notes, 
+conditions_json, timeline_days, currency
+```
+
+Update the `NegotiationSessionWithDetails` type in `types/negotiation.ts` to include these fields in the `proposal` sub-type.
+
+### 2. Add "Proposal Details" section to `NegotiationResponseView.tsx` (Advisor side)
+
+In the **Overview** tab, after the price comparison card and message, add:
+
+- **Scope of work** card — shows `session.proposal.scope_text` if present
+- **Payment terms** card — renders `conditions_json.payment_term_type` label (using `getPaymentTermLabel`), validity days, and assumptions/exclusions
+- **Timeline** info — shows `timeline_days` formatted as months/days
+
+### 3. Add "Proposal Details" section to `EntrepreneurNegotiationView.tsx` (Entrepreneur side)
+
+In the **Overview** tab, add:
+
+- **Scope of work** card
+- **Payment terms** card
+- **Services** list (resolved from `selected_services`)
+- **Consultant notes** if present
+
+### 4. Files Changed
+
+| File | Change |
+|------|--------|
+| `src/types/negotiation.ts` | Add `scope_text`, `selected_services`, `services_notes`, `consultant_request_notes`, `conditions_json`, `timeline_days`, `currency` to `NegotiationSessionWithDetails.proposal` |
+| `src/hooks/useNegotiation.ts` | Expand proposal select query + map new fields |
+| `src/components/negotiation/NegotiationResponseView.tsx` | Add scope, payment terms, timeline cards in overview tab |
+| `src/components/negotiation/EntrepreneurNegotiationView.tsx` | Add scope, payment terms, services cards in overview tab |
 
