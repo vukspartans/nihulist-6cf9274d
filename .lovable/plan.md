@@ -1,43 +1,60 @@
 
 
-# Audit: PDF Export Consistency Across All Endpoints
+# Fix Broken Logo Images with Fallback
 
-## Findings
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-There are **4 PDF export endpoints** in the codebase. After the recent fixes, here is the status:
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-| Endpoint | File | Logo | Services | Units (Hebrew) | Issues |
-|----------|------|------|----------|-----------------|--------|
-| **Entrepreneur viewing proposal** | `ProposalDetailDialog.tsx` | Fixed | Fixed | Fixed | None |
-| **Advisor viewing own proposal** | `AdvisorProposalViewDialog.tsx` | Not passed | Fixed | Fixed | Missing `companyLogoUrl` |
-| **Pre-submit confirmation** | `ConfirmProposalDialog.tsx` | Not passed | N/A (not shown) | **RAW English** | Units still raw (`item.unit` not through `getFeeUnitLabel`) |
-| **Comparison table** | `ProposalComparisonDialog.tsx` → `exportProposals.ts` | N/A (summary table) | N/A | N/A | Different format — this is a comparison summary, not a single proposal. No unit/service issues. |
+## Changes
 
-## Remaining Issues to Fix
+### `src/components/ProposalComparisonTable.tsx`
 
-### 1. `ConfirmProposalDialog.tsx` — Units in English (line 106)
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-Currently passes `unit: item.unit || 'פאושלי'` — this sends raw English codes like `"lump_sum"`, `"sqm"` to the PDF. Needs `getFeeUnitLabel()`.
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
 
-**Fix**: Change line 106 from:
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
 ```
-unit: item.unit || 'פאושלי',
-```
-to:
-```
-unit: getFeeUnitLabel(item.unit || '') || 'פאושלי',
-```
 
-Import `getFeeUnitLabel` from `@/constants/rfpUnits` (already imported but only `getChargeTypeLabel`, `getDurationUnitLabel`, `isRecurringChargeType` — need to add `getFeeUnitLabel`).
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-### 2. `AdvisorProposalViewDialog.tsx` — Missing logo
+### Other components to audit for the same pattern
 
-The advisor's own logo URL is not passed as `companyLogoUrl`. The proposal object has `proposal.advisors?.logo_url` available (from the joined query). Need to add `companyLogoUrl: proposal.advisors?.logo_url || undefined` to the PDF data.
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### Files Changed
+All need the same `onError` fallback treatment.
 
 | File | Change |
 |------|--------|
-| `src/components/ConfirmProposalDialog.tsx` | Add `getFeeUnitLabel` to imports, apply to unit mapping |
-| `src/components/AdvisorProposalViewDialog.tsx` | Add `companyLogoUrl` to PDF data |
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
