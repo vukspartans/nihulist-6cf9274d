@@ -1236,16 +1236,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
             </TabsContent>
 
             {/* Tab: Services Selection */}
