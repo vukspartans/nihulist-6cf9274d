@@ -201,7 +201,7 @@ export const ProposalApprovalDialog = ({
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             {step === 'review' 
-              ? 'סקור את פרטי ההצעה ובחר פריטים אופציונליים' 
+              ? 'סקור את פרטי ההצעה לפני אישור' 
               : 'חתום דיגיטלית לאישור סופי'}
           </DialogDescription>
         </DialogHeader>
