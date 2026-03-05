@@ -280,9 +280,15 @@ export const NegotiationResponseView = ({
           .eq("project_id", proposal.project_id);
 
         if (projectFilesData && projectFilesData.length > 0) {
-          const additionalFiles: ProjectFile[] = projectFilesData.map((f) => ({
+          // Generate signed URLs in parallel so consultants can access files
+          const signedUrls = await Promise.all(
+            projectFilesData.map(f =>
+              supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600)
+            )
+          );
+          const additionalFiles: ProjectFile[] = projectFilesData.map((f, i) => ({
             name: f.file_name,
-            url: f.file_url,
+            url: signedUrls[i]?.data?.signedUrl || f.file_url,
             size: f.size_mb ? f.size_mb * 1024 * 1024 : undefined,
             type: f.file_type,
           }));
