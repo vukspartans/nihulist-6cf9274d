@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare, Check, Banknote } from 'lucide-react';
+import { CheckCircle, FileSignature, ChevronDown, ChevronUp, MessageSquare, Check, Banknote, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -80,7 +80,7 @@ export const ProposalApprovalDialog = ({
   const [signature, setSignature] = useState<SignatureData | null>(null);
   const [authorizationAccepted, setAuthorizationAccepted] = useState(false);
   const [step, setStep] = useState<'review' | 'signature'>('review');
-  const [selectedOptionalItems, setSelectedOptionalItems] = useState<Set<number>>(new Set());
+  
   const [notesOpen, setNotesOpen] = useState(false);
   const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
   
@@ -109,11 +109,10 @@ export const ProposalApprovalDialog = ({
   const mandatoryTotal = mandatoryItems.reduce((sum, item) => 
     sum + (item.total || (item.unit_price || 0) * (item.quantity || 1)), 0);
   
-  const selectedOptionalTotal = optionalItems
-    .filter((_, idx) => selectedOptionalItems.has(idx))
+  const optionalTotal = optionalItems
     .reduce((sum, item) => sum + (item.total || (item.unit_price || 0) * (item.quantity || 1)), 0);
 
-  const grandTotal = mandatoryTotal + selectedOptionalTotal;
+  const grandTotal = mandatoryTotal;
 
   const formatCurrency = (amount: number) => {
     const formatted = new Intl.NumberFormat('he-IL', {
@@ -164,7 +163,6 @@ export const ProposalApprovalDialog = ({
       setSignature(null);
       setAuthorizationAccepted(false);
       setStep('review');
-      setSelectedOptionalItems(new Set());
       setNotesOpen(false);
     }
   };
@@ -175,15 +173,6 @@ export const ProposalApprovalDialog = ({
     }
   };
 
-  const toggleOptionalItem = (idx: number) => {
-    const newSet = new Set(selectedOptionalItems);
-    if (newSet.has(idx)) {
-      newSet.delete(idx);
-    } else {
-      newSet.add(idx);
-    }
-    setSelectedOptionalItems(newSet);
-  };
 
   // Reset state when dialog closes
   const handleOpenChange = (isOpen: boolean) => {
@@ -192,7 +181,7 @@ export const ProposalApprovalDialog = ({
       setSignature(null);
       setAuthorizationAccepted(false);
       setStep('review');
-      setSelectedOptionalItems(new Set());
+      
       setNotesOpen(false);
     }
     onOpenChange(isOpen);
@@ -211,7 +200,7 @@ export const ProposalApprovalDialog = ({
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             {step === 'review' 
-              ? 'סקור את פרטי ההצעה ובחר פריטים אופציונליים' 
+              ? 'סקור את פרטי ההצעה לפני אישור' 
               : 'חתום דיגיטלית לאישור סופי'}
           </DialogDescription>
         </DialogHeader>
@@ -261,11 +250,6 @@ export const ProposalApprovalDialog = ({
                       <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
                         {formatCurrency(grandTotal)}
                       </p>
-                      {selectedOptionalItems.size > 0 && (
-                        <p className="text-[10px] text-green-600/70 dark:text-green-400/70">
-                          +{selectedOptionalItems.size} אופציונלי
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -314,68 +298,51 @@ export const ProposalApprovalDialog = ({
                   </div>
                 )}
 
-                {/* Optional Items - Interactive Selection */}
+                {/* Optional Items - Price List Reference */}
                 {optionalItems.length > 0 && (
                   <div className="space-y-2" dir="rtl">
-                    <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
-                      פריטים נוספים לבחירה
-                      <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">
-                        (סמן פריטים להוספה לסכום הסופי)
-                      </span>
+                    <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                      מחירון שירותים אופציונליים
                     </h4>
-                    <div className="border rounded-lg overflow-hidden bg-blue-50/30 dark:bg-blue-950/20">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      פריטים אלו הם מחירון לשירותים נוספים. מימוש בהתאם להסכם.
+                    </p>
+                    <div className="border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden bg-blue-50/30 dark:bg-blue-950/20">
                       <div className="divide-y divide-blue-100 dark:divide-blue-900">
                         {optionalItems.map((item, idx) => {
-                          const isSelected = selectedOptionalItems.has(idx);
                           const itemTotal = item.total || (item.unit_price || 0) * (item.quantity || 1);
                           return (
                             <div
                               key={idx}
-                              className={cn(
-                                "flex items-center gap-2 sm:gap-3 p-3 sm:p-4 cursor-pointer transition-all",
-                                isSelected 
-                                  ? "bg-blue-100/70 dark:bg-blue-900/30" 
-                                  : "hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                              )}
+                              className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3"
                               dir="rtl"
-                              onClick={() => toggleOptionalItem(idx)}
                             >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleOptionalItem(idx)}
-                                className="shrink-0 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                              />
                               <div className="flex-1 min-w-0">
-                                <p className={cn("text-xs sm:text-sm line-clamp-2", isSelected && "font-medium")}>
+                                <p className="text-xs sm:text-sm line-clamp-2 text-muted-foreground">
                                   {item.description}
                                 </p>
                                 {item.quantity && item.quantity > 1 && (
-                                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground/70 mt-0.5">
                                     כמות: {item.quantity}
                                   </p>
                                 )}
                               </div>
-                              <span className={cn(
-                                "text-xs sm:text-sm font-medium shrink-0 tabular-nums",
-                                isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
-                              )}>
-                                +{formatCurrency(itemTotal)}
+                              <span className="text-xs sm:text-sm font-medium shrink-0 tabular-nums text-muted-foreground">
+                                {formatCurrency(itemTotal)}
                               </span>
                             </div>
                           );
                         })}
                       </div>
-                      {selectedOptionalItems.size > 0 && (
-                        <div className="p-2 sm:p-3 bg-blue-100/60 dark:bg-blue-900/40 border-t border-blue-200 dark:border-blue-800 flex justify-between items-center" dir="rtl">
-                          <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300">
-                            סה"כ אופציונלי נבחר:
-                          </span>
-                          <span className="font-bold text-blue-700 dark:text-blue-300 tabular-nums text-sm sm:text-base">
-                            +{formatCurrency(selectedOptionalTotal)}
-                          </span>
-                        </div>
-                      )}
+                      <div className="p-2 sm:p-3 bg-blue-50/50 dark:bg-blue-950/30 border-t border-blue-200 dark:border-blue-800 flex justify-between items-center" dir="rtl">
+                        <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300">
+                          סה״כ מחירון אופציונלי:
+                        </span>
+                        <span className="font-medium text-blue-700 dark:text-blue-300 tabular-nums text-sm sm:text-base">
+                          {formatCurrency(optionalTotal)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -399,21 +366,15 @@ export const ProposalApprovalDialog = ({
                     <span>פריטי חובה:</span>
                     <span className="tabular-nums">{formatCurrency(mandatoryTotal)}</span>
                   </div>
-                  {selectedOptionalItems.size > 0 && (
-                    <div className="flex justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                      <span>פריטים אופציונליים ({selectedOptionalItems.size}):</span>
-                      <span className="tabular-nums">+{formatCurrency(selectedOptionalTotal)}</span>
-                    </div>
-                  )}
                   <Separator />
                   <div className="flex justify-between font-bold text-sm sm:text-base">
-                    <span>סה"כ:</span>
+                    <span>סה"כ לתשלום:</span>
                     <span className="text-green-600 dark:text-green-400 tabular-nums">
                       {formatCurrency(grandTotal)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground text-right mt-2">
-                    * כל המחירים ללא מע"מ
+                    * כל המחירים ללא מע"מ | פריטים אופציונליים בהתאם להסכם
                   </p>
                 </div>
 

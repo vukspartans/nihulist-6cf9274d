@@ -1,39 +1,60 @@
 
 
-# Fix: Remove Optional Item Checkboxes from Proposal Approval Dialog
+# Fix Broken Logo Images with Fallback
 
 ## Problem
-The approval dialog currently lets the entrepreneur check/uncheck optional fee items, toggling them into the grand total. This is **wrong behavior** — optional items are a **price list reference**, not a selection menu. If the entrepreneur later chooses to use an optional service, they pay according to the agreed contract rate. The approval dialog should simply **display** optional items as informational, not as selectable checkboxes.
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-The user's annotation: "אין צורך לסמן פריטים אופציונליים, פריטים אופציונליים הם סוג של מחירון שאם היזם בוחר לממש הוא ממשש בהתאם להסכם" (No need to check optional items — they're a price list; if the entrepreneur chooses to use them, they pay per the agreement).
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
 ## Changes
 
-**File: `src/components/ProposalApprovalDialog.tsx`**
+### `src/components/ProposalComparisonTable.tsx`
 
-1. **Remove `selectedOptionalItems` state** and `toggleOptionalItem` function — no longer needed.
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-2. **Remove checkbox interaction from optional items list** — replace the clickable rows with checkboxes with static display rows (similar style to mandatory items but with blue/info styling to distinguish them).
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
 
-3. **Remove optional total from grand total calculation** — `grandTotal` should equal `mandatoryTotal` only. Optional items are displayed for reference with a note like "מחירון לשירותים אופציונליים — בהתאם להסכם" (Price list for optional services — per agreement).
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
 
-4. **Update dialog description** — change "סקור את פרטי ההצעה ובחר פריטים אופציונליים" → "סקור את פרטי ההצעה לפני אישור" (Review proposal details before approval).
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
+```
 
-5. **Update the optional items section header** — add an explanatory note: "פריטים אלו הם מחירון לשירותים נוספים. מימוש בהתאם להסכם." (These items are a price list for additional services. Usage per agreement.)
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-6. **Clean up reset logic** — remove `setSelectedOptionalItems(new Set())` from the `useEffect` resets.
+### Other components to audit for the same pattern
 
-### Summary of removals
-- `selectedOptionalItems` state
-- `toggleOptionalItem` function  
-- `Checkbox` components inside optional items
-- `selectedOptionalTotal` calculation
-- `onClick` handlers on optional item rows
-- Optional total added to `grandTotal`
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### What stays
-- Optional items are still **displayed** in the blue-styled section
-- Their individual prices are shown for reference
-- A subtotal line shows "סה״כ פריטים אופציונליים (מחירון)" for transparency
-- The grand total only includes mandatory items
+All need the same `onError` fallback treatment.
+
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
