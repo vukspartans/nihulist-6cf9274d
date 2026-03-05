@@ -7,7 +7,6 @@ export const FEE_UNITS = [
   { value: 'hourly', label: 'ש"ע' },
   { value: 'per_consultant', label: 'לי"ע' },
   { value: 'per_floor', label: 'לקומה' },
-  { value: 'percentage', label: '%' },
 ] as const;
 
 export const CHARGE_TYPES = [

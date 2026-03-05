@@ -23,7 +23,6 @@ const UNIT_LABELS: Record<FeeUnit, string> = {
   hourly: 'ש"ע',
   per_consultant: "לי\"ע",
   per_floor: 'לקומה',
-  percentage: '%',
 };
 
 const CHARGE_TYPE_LABELS: Record<ChargeType, string> = {
