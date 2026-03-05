@@ -1727,44 +1727,67 @@ export const NegotiationResponseView = ({
 
           {/* Actions */}
           {canRespond && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-3 justify-end">
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => setShowDeclineDialog(true)} 
-                    disabled={loading || declining}
-                  >
-                    <XCircle className="h-4 w-4 me-2" />
-                    דחה בקשה
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowAcceptDialog(true)} 
-                    disabled={loading || declining}
-                    className="border-green-300 text-green-700 hover:bg-green-50"
-                  >
-                    <Check className="h-4 w-4 me-2" />
-                    קבל מחיר יעד
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      // If advisor didn't change anything (new total matches target), warn them
-                      if (newTotal === targetTotal) {
-                        setShowAcceptTargetConfirm(true);
-                      } else {
-                        setShowSubmitDialog(true);
-                      }
-                    }} 
-                    disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
-                    className="bg-primary"
-                  >
-                    <Send className="h-4 w-4 me-2" />
-                    הגש הצעת מחיר מעודכנת
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              {/* Quick Accept - Separated prominently */}
+              <Card className="border-green-200 bg-green-50/50">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-green-800 flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5" />
+                        קבלת בקשת היזם
+                      </h3>
+                      <p className="text-sm text-green-700">
+                        אישור כל השינויים המבוקשים — סה״כ {formatCurrency(targetTotal)}
+                        {calculateReductionPercent() > 0 && (
+                          <span className="text-green-600 me-1">
+                            ({calculateReductionPercent()}%- הפחתה)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowAcceptDialog(true)}
+                      disabled={loading || declining}
+                      className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
+                    >
+                      <Check className="h-4 w-4 me-2" />
+                      קבל בקשת יזם
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Counter-offer / Decline actions */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => setShowDeclineDialog(true)} 
+                      disabled={loading || declining}
+                    >
+                      <XCircle className="h-4 w-4 me-2" />
+                      דחה בקשה
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (newTotal === targetTotal) {
+                          setShowAcceptTargetConfirm(true);
+                        } else {
+                          setShowSubmitDialog(true);
+                        }
+                      }} 
+                      disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
+                      className="bg-primary"
+                    >
+                      <Send className="h-4 w-4 me-2" />
+                      הגש הצעת מחיר מעודכנת
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
       </Tabs>
