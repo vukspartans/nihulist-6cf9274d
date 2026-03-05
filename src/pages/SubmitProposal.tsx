@@ -1330,16 +1330,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('signature')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך לחתימה
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
             </TabsContent>
 
             {/* Tab 5: Signature */}
