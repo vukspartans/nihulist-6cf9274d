@@ -437,6 +437,44 @@ const SubmitProposal = () => {
     entrepreneurData?.service_details_text;
   const hasRequestContent = entrepreneurData?.request_content || (entrepreneurData?.request_files?.length || 0) > 0;
 
+  // Tab ordering for sticky navigation
+  const getTabOrder = useCallback(() => {
+    const tabs = ['request', 'fees'];
+    if (hasServiceScope) tabs.push('services');
+    if (hasPaymentTerms) tabs.push('milestones');
+    tabs.push('files', 'signature');
+    return tabs;
+  }, [hasServiceScope, hasPaymentTerms]);
+
+  const getPrevTab = useCallback(() => {
+    const tabs = getTabOrder();
+    const idx = tabs.indexOf(activeTab);
+    return idx > 0 ? tabs[idx - 1] : tabs[0];
+  }, [activeTab, getTabOrder]);
+
+  const getNextTab = useCallback(() => {
+    const tabs = getTabOrder();
+    const idx = tabs.indexOf(activeTab);
+    return idx < tabs.length - 1 ? tabs[idx + 1] : tabs[tabs.length - 1];
+  }, [activeTab, getTabOrder]);
+
+  const getNextTabLabel = useCallback(() => {
+    const next = getNextTab();
+    const labels: Record<string, string> = {
+      fees: 'המשך לשכר טרחה',
+      services: 'המשך לשירותים',
+      milestones: 'המשך לאבני דרך',
+      files: 'המשך לקבצים',
+      signature: 'המשך לחתימה',
+    };
+    return labels[next] || 'המשך';
+  }, [getNextTab]);
+
+  // Scroll to top on tab change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
   const steps = [
     { id: 1, title: 'פרטי הבקשה', completed: true },
     { id: 2, title: 'שכר טרחה', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!price },
@@ -1166,12 +1204,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-start">
-                    <Button type="button" onClick={() => setActiveTab('fees')} className="gap-2">
-                      <ArrowLeft className="h-4 w-4" />
-                      המשך לשכר טרחה
-                    </Button>
-              </div>
             </TabsContent>
 
             {/* Tab 2: Fees */}
@@ -1242,16 +1274,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab(hasServiceScope ? 'services' : hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך {hasServiceScope ? 'לשירותים' : hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('request')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
             </TabsContent>
 
             {/* Tab: Services Selection */}
@@ -1281,16 +1303,6 @@ const SubmitProposal = () => {
                   </CardContent>
                 </Card>
 
-                <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="gap-2">
-                    <ArrowRight className="h-4 w-4" />
-                    חזרה
-                  </Button>
-                </div>
               </TabsContent>
             )}
 
@@ -1330,16 +1342,6 @@ const SubmitProposal = () => {
                   </CardContent>
                 </Card>
 
-                <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab('files')} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    המשך לקבצים
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab(hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                    <ArrowRight className="h-4 w-4" />
-                    חזרה
-                  </Button>
-                </div>
               </TabsContent>
             )}
 
@@ -1366,16 +1368,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between">
-                <Button type="button" onClick={() => setActiveTab('signature')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  המשך לחתימה
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : hasServiceScope ? 'services' : 'fees')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-              </div>
             </TabsContent>
 
             {/* Tab 5: Signature */}
@@ -1444,27 +1436,43 @@ const SubmitProposal = () => {
                 </AlertDescription>
               </Alert>
 
-              <div className="flex justify-between items-center">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('files')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="gap-2 shadow-lg hover:shadow-xl transition-all h-12 text-base font-bold" 
-                  disabled={submitting}
-                >
-                  <Send className="h-5 w-5" />
-                  {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
-                </Button>
-              </div>
-              
-              {/* Footer info */}
-              <p className="text-xs text-muted-foreground text-center">
-                סה"כ להגשה: ₪{parseFloat(price || '0').toLocaleString('he-IL')} (ללא מע"מ)
-              </p>
             </TabsContent>
+
+            {/* Sticky bottom navigation bar */}
+            <div className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border p-4 -mx-4 mt-6 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex justify-between items-center max-w-5xl mx-auto px-4">
+                {activeTab !== 'request' ? (
+                  <Button type="button" variant="outline" onClick={() => setActiveTab(getPrevTab())} className="gap-2">
+                    <ArrowRight className="h-4 w-4" />
+                    חזרה
+                  </Button>
+                ) : <div />}
+
+                <div className="flex items-center gap-4">
+                  {activeTab === 'signature' && (
+                    <p className="text-xs text-muted-foreground hidden sm:block">
+                      סה"כ: ₪{parseFloat(price || '0').toLocaleString('he-IL')} (ללא מע"מ)
+                    </p>
+                  )}
+                  {activeTab === 'signature' ? (
+                    <Button 
+                      type="submit" 
+                      size="lg" 
+                      className="gap-2 shadow-lg hover:shadow-xl transition-all h-12 text-base font-bold" 
+                      disabled={submitting}
+                    >
+                      <Send className="h-5 w-5" />
+                      {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
+                    </Button>
+                  ) : (
+                    <Button type="button" onClick={() => setActiveTab(getNextTab())} className="gap-2">
+                      {getNextTabLabel()}
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </Tabs>
         </form>
 

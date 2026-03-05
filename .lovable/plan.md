@@ -1,56 +1,60 @@
 
 
-# Fix: Sticky Bottom Navigation in Proposal Submission
+# Fix Broken Logo Images with Fallback
 
 ## Problem
-On the SubmitProposal page, each tab's "next/back" navigation buttons are placed at the very bottom of the tab content. When a tab has long content (e.g., the fee table with many rows), the user must scroll all the way down just to proceed to the next step. The user correctly notes: "התנהגותית לא נכון לרדת עד לתחתית הדף כדי להתקדם" (behaviorally, it's wrong to require scrolling to the bottom to proceed).
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
 ## Solution
-Add a **sticky bottom navigation bar** that stays fixed at the bottom of the viewport, containing the back/next buttons for the current tab. This replaces the per-tab inline navigation buttons.
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-### Changes
+## Changes
 
-**File: `src/pages/SubmitProposal.tsx`**
+### `src/components/ProposalComparisonTable.tsx`
 
-1. **Remove the 6 inline navigation `<div>` blocks** at the bottom of each `TabsContent` (lines ~1169-1174, ~1245-1253, ~1284-1292, ~1333-1341, ~1369-1377, ~1447-1461).
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-2. **Add a sticky bottom bar outside the Tabs component** (but inside the form), rendered as:
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+
 ```tsx
-<div className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4 mt-6">
-  <div className="flex justify-between items-center max-w-5xl mx-auto">
-    {/* Back button — hidden on first tab */}
-    {activeTab !== 'request' && (
-      <Button type="button" variant="outline" onClick={() => setActiveTab(getPrevTab())} className="gap-2">
-        <ArrowRight className="h-4 w-4" />
-        חזרה
-      </Button>
-    )}
-    <div className="flex-1" />
-    {/* Next or Submit button */}
-    {activeTab === 'signature' ? (
-      <Button type="submit" size="lg" className="gap-2 font-bold" disabled={submitting}>
-        <Send className="h-5 w-5" />
-        {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
-      </Button>
-    ) : (
-      <Button type="button" onClick={() => setActiveTab(getNextTab())} className="gap-2">
-        <ArrowLeft className="h-4 w-4" />
-        {getNextTabLabel()}
-      </Button>
-    )}
-  </div>
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
 </div>
 ```
 
-3. **Add helper functions** `getPrevTab()`, `getNextTab()`, and `getNextTabLabel()` that compute the correct tab based on `activeTab` and the conditional tabs (`hasServiceScope`, `hasPaymentTerms`). These replace the duplicated inline logic currently spread across 6 tab footers.
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-4. **Keep the submit footer info** (total price line at ~1464) inside the sticky bar when on the signature tab.
+### Other components to audit for the same pattern
 
-5. **Scroll to top on tab change**: Add a `useEffect` on `activeTab` that scrolls the container to the top, so users don't land mid-page when navigating between tabs.
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### Result
-- Navigation buttons are always visible without scrolling
-- Consistent behavior across all tabs
-- Submit button is prominent and accessible on the final tab
-- Removes ~60 lines of duplicated inline navigation code
+All need the same `onError` fallback treatment.
+
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
