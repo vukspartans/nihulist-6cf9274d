@@ -1,60 +1,37 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Negotiate Button Still Available After Counter-Offer Received
 
 ## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+When an advisor responds to a negotiation (proposal becomes `resubmitted`), the `has_active_negotiation` flag is set to `false` by the database function. In the **ProposalComparisonDialog**, the negotiate button's disabled state only checks `has_active_negotiation`, so it becomes clickable again immediately — allowing the entrepreneur to start another negotiation without first reviewing the advisor's counter-offer.
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+The **ProposalDetailDialog** handles this correctly by checking for `responded` sessions, but the comparison dialog does not.
 
-## Changes
+## Fix
 
-### `src/components/ProposalComparisonTable.tsx`
-
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
-
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+### `src/components/ProposalComparisonDialog.tsx` (line ~980)
+Disable the negotiate button when the proposal status is `resubmitted` (meaning there's an unreviewed counter-offer). The entrepreneur must open the proposal detail view to review the counter-offer first, where they can choose to accept, reject, or continue negotiating.
 
 ```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+// Before:
+disabled={actionLoading || proposal.has_active_negotiation}
+
+// After:
+disabled={actionLoading || proposal.has_active_negotiation || proposal.status === 'resubmitted'}
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+Also update the tooltip to explain why it's disabled when status is `resubmitted`:
 
-### Other components to audit for the same pattern
+```tsx
+<TooltipContent>
+  {proposal.status === 'resubmitted' ? 'יש הצעה נגדית לצפייה' : 'בקש הצעה מחודשת'}
+</TooltipContent>
+```
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
-
-All need the same `onError` fallback treatment.
-
+### Files to change
 | File | Change |
 |------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+| `src/components/ProposalComparisonDialog.tsx` | Add `status === 'resubmitted'` check to negotiate button disabled condition + update tooltip |
+
+This is a 2-line change. The entrepreneur can still negotiate again — they just need to open the proposal detail first, review the counter-offer, and choose "continue negotiation" from there.
 
