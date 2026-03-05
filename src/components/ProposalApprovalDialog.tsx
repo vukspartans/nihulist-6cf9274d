@@ -81,7 +81,7 @@ export const ProposalApprovalDialog = ({
   const [signature, setSignature] = useState<SignatureData | null>(null);
   const [authorizationAccepted, setAuthorizationAccepted] = useState(false);
   const [step, setStep] = useState<'review' | 'signature'>('review');
-  const [selectedOptionalItems, setSelectedOptionalItems] = useState<Set<number>>(new Set());
+  
   const [notesOpen, setNotesOpen] = useState(false);
   const [showBlinkAnimation, setShowBlinkAnimation] = useState(false);
   
