@@ -1265,16 +1265,6 @@ const SubmitProposal = () => {
                   </CardContent>
                 </Card>
 
-                <div className="flex justify-between">
-                  <Button type="button" onClick={() => setActiveTab(hasPaymentTerms ? 'milestones' : 'files')} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    המשך {hasPaymentTerms ? 'לאבני דרך' : 'לקבצים'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab('fees')} className="gap-2">
-                    <ArrowRight className="h-4 w-4" />
-                    חזרה
-                  </Button>
-                </div>
               </TabsContent>
             )}
 
