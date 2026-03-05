@@ -1,43 +1,60 @@
 
 
-# Fix: Negotiation Action Buttons UX (Advisor Side)
+# Fix Broken Logo Images with Fallback
 
 ## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-On the advisor's negotiation response view, there are 3 action buttons in one row:
-- **דחה בקשה** (Decline) — red
-- **קבל מחיר יעד** (Accept target price) — green outline  
-- **הגש הצעת מחיר מעודכנת** (Submit updated offer) — blue
-
-The issues (from the screenshot notes):
-1. "קבל מחיר יעד" should be renamed to **"קבל בקשת יזם"** (Accept entrepreneur's request) — clearer intent
-2. It should be **visually separated** from the other two buttons — currently all 3 are grouped together which is confusing since "accept target" and "submit counter-offer" are fundamentally different actions
-3. After clicking accept, the confirmation dialog should show a **proper summary** of what the advisor is agreeing to (line items, totals, percentage change) so the advisor fully understands the commitment
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
 ## Changes
 
-**File: `src/components/negotiation/NegotiationResponseView.tsx`**
+### `src/components/ProposalComparisonTable.tsx`
 
-### 1. Rename button
-Change "קבל מחיר יעד" → "קבל בקשת יזם"
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-### 2. Separate the accept button visually
-Split the 3-button row into two sections:
-- **Top**: A prominent card/banner with "קבל בקשת יזם" — this is the "quick accept" path, shown with a green background, price summary inline, making it clear this accepts everything the entrepreneur asked for
-- **Bottom**: The existing row with "דחה בקשה" and "הגש הצעת מחיר מעודכנת" — these are the "negotiate further" options
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
 
-### 3. Improve the confirmation dialog (`showAcceptDialog`)
-Currently shows just the target total and a warning. Enhance to include:
-- Original price vs. target price comparison
-- List of changed items (count of modified, removed items)
-- Percentage reduction
-- Clear statement: "אתה מאשר את כל השינויים שביקש היזם" (You are approving all changes the entrepreneur requested)
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
 
-Also update the entrepreneur-side dialog label: in `EntrepreneurNegotiationView.tsx`, rename "קבל הצעה נגדית" to be consistent.
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
+```
 
-### Files
+Apply the same pattern at both locations (lines 287-299 and 461-473).
+
+### Other components to audit for the same pattern
+
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
+
+All need the same `onError` fallback treatment.
+
 | File | Change |
 |------|--------|
-| `src/components/negotiation/NegotiationResponseView.tsx` | Rename button, separate layout, enhance confirmation dialog |
-| `src/components/negotiation/EntrepreneurNegotiationView.tsx` | Minor label consistency |
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
