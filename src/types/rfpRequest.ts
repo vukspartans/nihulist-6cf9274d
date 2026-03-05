@@ -6,8 +6,7 @@ export type FeeUnit =
   | 'unit'        // יח"ד
   | 'hourly'      // ש"ע
   | 'per_consultant' // לי"ע
-  | 'per_floor'   // לקומה
-  | 'percentage'; // %
+  | 'per_floor';   // לקומה
 
 export type ChargeType = 
   | 'one_time'    // חד פעמי
