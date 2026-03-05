@@ -174,15 +174,6 @@ export const ProposalApprovalDialog = ({
     }
   };
 
-  const toggleOptionalItem = (idx: number) => {
-    const newSet = new Set(selectedOptionalItems);
-    if (newSet.has(idx)) {
-      newSet.delete(idx);
-    } else {
-      newSet.add(idx);
-    }
-    setSelectedOptionalItems(newSet);
-  };
 
   // Reset state when dialog closes
   const handleOpenChange = (isOpen: boolean) => {
