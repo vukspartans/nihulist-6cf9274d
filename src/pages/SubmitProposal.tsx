@@ -1166,12 +1166,6 @@ const SubmitProposal = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-start">
-                    <Button type="button" onClick={() => setActiveTab('fees')} className="gap-2">
-                      <ArrowLeft className="h-4 w-4" />
-                      המשך לשכר טרחה
-                    </Button>
-              </div>
             </TabsContent>
 
             {/* Tab 2: Fees */}
