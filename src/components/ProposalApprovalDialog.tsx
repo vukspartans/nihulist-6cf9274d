@@ -110,11 +110,10 @@ export const ProposalApprovalDialog = ({
   const mandatoryTotal = mandatoryItems.reduce((sum, item) => 
     sum + (item.total || (item.unit_price || 0) * (item.quantity || 1)), 0);
   
-  const selectedOptionalTotal = optionalItems
-    .filter((_, idx) => selectedOptionalItems.has(idx))
+  const optionalTotal = optionalItems
     .reduce((sum, item) => sum + (item.total || (item.unit_price || 0) * (item.quantity || 1)), 0);
 
-  const grandTotal = mandatoryTotal + selectedOptionalTotal;
+  const grandTotal = mandatoryTotal;
 
   const formatCurrency = (amount: number) => {
     const formatted = new Intl.NumberFormat('he-IL', {
