@@ -95,11 +95,16 @@ export const useNegotiationSession = (sessionId: string) => {
         allFiles.push(...parsedFiles);
       }
 
-      // Add project files
+      // Add project files with signed URLs so consultants can access them
       if (projectFilesResult.data?.length) {
-        const additionalFiles: ProjectFile[] = projectFilesResult.data.map((f) => ({
+        const signedUrls = await Promise.all(
+          projectFilesResult.data.map(f =>
+            supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600)
+          )
+        );
+        const additionalFiles: ProjectFile[] = projectFilesResult.data.map((f, i) => ({
           name: f.file_name,
-          url: f.file_url,
+          url: signedUrls[i]?.data?.signedUrl || f.file_url,
           size: f.size_mb ? f.size_mb * 1024 * 1024 : undefined,
           type: f.file_type,
         }));
