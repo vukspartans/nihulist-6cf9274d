@@ -1,60 +1,24 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Remove Percentage (%) Unit from Fee Item Inputs
 
 ## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+The `%` (percentage) unit is still available as a selectable option when consultants add fee items during proposal submission. Per project rules, **vendors must submit fixed currency amounts (₪) only** — percentage-based pricing is not allowed.
+
+The percentage unit appears in the consultant's unit dropdown (in `ConsultantFeeTable.tsx` line 387) because it's still defined in three places.
 
 ## Changes
 
-### `src/components/ProposalComparisonTable.tsx`
+### 1. `src/constants/rfpUnits.ts` — Remove from `FEE_UNITS` array
+Remove `{ value: 'percentage', label: '%' }` from line 10.
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+### 2. `src/types/rfpRequest.ts` — Remove from `FeeUnit` type
+Remove `| 'percentage'` from line 10.
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 3. `src/components/proposal/ConsultantFeeTable.tsx` — Remove from `UNIT_LABELS`
+Remove `percentage: '%'` from line 26.
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
-
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
-
-Apply the same pattern at both locations (lines 287-299 and 461-473).
-
-### Other components to audit for the same pattern
-
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
-
-All need the same `onError` fallback treatment.
-
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+### Legacy handling
+Existing records with `unit: 'percentage'` will still render correctly because `getFeeUnitLabel` falls back to showing the raw value, and display code uses `UNIT_LABELS[item.unit] || item.unit`. No data migration needed.
 
