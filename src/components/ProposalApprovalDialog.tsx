@@ -3,11 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Info } from 'lucide-react';
 import { SignatureCanvas, SignatureData } from '@/components/SignatureCanvas';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, FileSignature, Plus, ChevronDown, ChevronUp, MessageSquare, Check, Banknote } from 'lucide-react';
+import { CheckCircle, FileSignature, ChevronDown, ChevronUp, MessageSquare, Check, Banknote, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
