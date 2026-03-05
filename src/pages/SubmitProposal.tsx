@@ -437,6 +437,44 @@ const SubmitProposal = () => {
     entrepreneurData?.service_details_text;
   const hasRequestContent = entrepreneurData?.request_content || (entrepreneurData?.request_files?.length || 0) > 0;
 
+  // Tab ordering for sticky navigation
+  const getTabOrder = useCallback(() => {
+    const tabs = ['request', 'fees'];
+    if (hasServiceScope) tabs.push('services');
+    if (hasPaymentTerms) tabs.push('milestones');
+    tabs.push('files', 'signature');
+    return tabs;
+  }, [hasServiceScope, hasPaymentTerms]);
+
+  const getPrevTab = useCallback(() => {
+    const tabs = getTabOrder();
+    const idx = tabs.indexOf(activeTab);
+    return idx > 0 ? tabs[idx - 1] : tabs[0];
+  }, [activeTab, getTabOrder]);
+
+  const getNextTab = useCallback(() => {
+    const tabs = getTabOrder();
+    const idx = tabs.indexOf(activeTab);
+    return idx < tabs.length - 1 ? tabs[idx + 1] : tabs[tabs.length - 1];
+  }, [activeTab, getTabOrder]);
+
+  const getNextTabLabel = useCallback(() => {
+    const next = getNextTab();
+    const labels: Record<string, string> = {
+      fees: 'המשך לשכר טרחה',
+      services: 'המשך לשירותים',
+      milestones: 'המשך לאבני דרך',
+      files: 'המשך לקבצים',
+      signature: 'המשך לחתימה',
+    };
+    return labels[next] || 'המשך';
+  }, [getNextTab]);
+
+  // Scroll to top on tab change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
   const steps = [
     { id: 1, title: 'פרטי הבקשה', completed: true },
     { id: 2, title: 'שכר טרחה', completed: hasFeeItems ? Object.keys(consultantPrices).length > 0 : !!price },
