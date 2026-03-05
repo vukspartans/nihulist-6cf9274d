@@ -367,21 +367,15 @@ export const ProposalApprovalDialog = ({
                     <span>פריטי חובה:</span>
                     <span className="tabular-nums">{formatCurrency(mandatoryTotal)}</span>
                   </div>
-                  {selectedOptionalItems.size > 0 && (
-                    <div className="flex justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                      <span>פריטים אופציונליים ({selectedOptionalItems.size}):</span>
-                      <span className="tabular-nums">+{formatCurrency(selectedOptionalTotal)}</span>
-                    </div>
-                  )}
                   <Separator />
                   <div className="flex justify-between font-bold text-sm sm:text-base">
-                    <span>סה"כ:</span>
+                    <span>סה"כ לתשלום:</span>
                     <span className="text-green-600 dark:text-green-400 tabular-nums">
                       {formatCurrency(grandTotal)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground text-right mt-2">
-                    * כל המחירים ללא מע"מ
+                    * כל המחירים ללא מע"מ | פריטים אופציונליים בהתאם להסכם
                   </p>
                 </div>
 
