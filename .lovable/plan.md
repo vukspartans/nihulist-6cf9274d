@@ -1,60 +1,70 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Consultants Cannot View Project Files in Negotiation Flow
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Root Cause
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+This is **not an RLS issue**. The database and storage policies already grant advisors/consultants access:
+- `project_files` table: "Advisors can view project files for invited projects" policy exists and works
+- `project-files` storage bucket: "Invited advisors can read project files" policy exists and works
 
-## Changes
+The actual bug is in **how file URLs are constructed** in the negotiation views. The `project_files.file_url` column stores a **storage path** (e.g., `projectId/filename.pdf`), not a full URL. The negotiation code passes this raw path as the `url` property. When a user clicks to view/download, the code checks `file.url.includes("supabase")` — which is `false` for storage paths — and falls back to `window.open("projectId/filename.pdf")`, which is a relative URL and results in a 404 or blank page.
 
-### `src/components/ProposalComparisonTable.tsx`
+The `ProjectFilesManager` component (used by project owners) handles this correctly by explicitly calling `supabase.storage.from('project-files').createSignedUrl(path, ...)`. The negotiation views do not.
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+## Fix
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+### 1. `src/components/negotiation/NegotiationResponseView.tsx`
+In the `loadProjectFiles` function (~line 277-290), after fetching `project_files` data, generate **signed URLs** from the `project-files` bucket instead of passing raw storage paths:
 
 ```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+// Before (broken):
+url: f.file_url,  // "projectId/filename.pdf" — not a valid URL
+
+// After (fixed):
+// Create signed URLs for all project files in parallel
+const signedUrls = await Promise.all(
+  projectFilesData.map(f => 
+    supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600)
+  )
+);
+// Map with resolved signed URLs
+const additionalFiles = projectFilesData.map((f, i) => ({
+  name: f.file_name,
+  url: signedUrls[i]?.data?.signedUrl || f.file_url,
+  size: f.size_mb ? f.size_mb * 1024 * 1024 : undefined,
+  type: f.file_type,
+}));
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+### 2. `src/hooks/useNegotiationSession.ts`
+Same fix in `loadProjectFiles` (~line 88-94) — generate signed URLs for `project_files` entries:
 
-### Other components to audit for the same pattern
+```tsx
+// Create signed URLs in parallel
+const signedUrls = await Promise.all(
+  projectFilesResult.data.map(f =>
+    supabase.storage.from('project-files').createSignedUrl(f.file_url, 3600)
+  )
+);
+const additionalFiles = projectFilesResult.data.map((f, i) => ({
+  name: f.file_name,
+  url: signedUrls[i]?.data?.signedUrl || f.file_url,
+  ...
+}));
+```
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+### 3. Simplify view/download handlers in `NegotiationResponseView.tsx`
+The `handleViewFile` and `handleDownloadFile` functions (~lines 298-346) currently have a fallback regex pattern to detect Supabase URLs. With signed URLs now being generated upfront, these handlers become simpler — they just open/download the URL directly. However, we should keep the existing logic as a safety net for `rfp_invites.request_files` which may still contain full Supabase URLs.
 
-All need the same `onError` fallback treatment.
-
+### Files to Change
 | File | Change |
 |------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+| `src/components/negotiation/NegotiationResponseView.tsx` | Generate signed URLs for project_files entries |
+| `src/hooks/useNegotiationSession.ts` | Generate signed URLs for project_files entries |
+
+### Result
+- Consultants/advisors will be able to view and download project files during negotiation
+- No RLS or security changes needed — existing policies already grant access
+- Signed URLs are generated in parallel (no N+1 performance issue)
 
