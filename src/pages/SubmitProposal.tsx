@@ -1398,27 +1398,43 @@ const SubmitProposal = () => {
                 </AlertDescription>
               </Alert>
 
-              <div className="flex justify-between items-center">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('files')} className="gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  חזרה
-                </Button>
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="gap-2 shadow-lg hover:shadow-xl transition-all h-12 text-base font-bold" 
-                  disabled={submitting}
-                >
-                  <Send className="h-5 w-5" />
-                  {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
-                </Button>
-              </div>
-              
-              {/* Footer info */}
-              <p className="text-xs text-muted-foreground text-center">
-                סה"כ להגשה: ₪{parseFloat(price || '0').toLocaleString('he-IL')} (ללא מע"מ)
-              </p>
             </TabsContent>
+
+            {/* Sticky bottom navigation bar */}
+            <div className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border p-4 -mx-4 mt-6 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex justify-between items-center max-w-5xl mx-auto px-4">
+                {activeTab !== 'request' ? (
+                  <Button type="button" variant="outline" onClick={() => setActiveTab(getPrevTab())} className="gap-2">
+                    <ArrowRight className="h-4 w-4" />
+                    חזרה
+                  </Button>
+                ) : <div />}
+
+                <div className="flex items-center gap-4">
+                  {activeTab === 'signature' && (
+                    <p className="text-xs text-muted-foreground hidden sm:block">
+                      סה"כ: ₪{parseFloat(price || '0').toLocaleString('he-IL')} (ללא מע"מ)
+                    </p>
+                  )}
+                  {activeTab === 'signature' ? (
+                    <Button 
+                      type="submit" 
+                      size="lg" 
+                      className="gap-2 shadow-lg hover:shadow-xl transition-all h-12 text-base font-bold" 
+                      disabled={submitting}
+                    >
+                      <Send className="h-5 w-5" />
+                      {submitting ? "שולח..." : "הגש הצעת מחיר רשמית"}
+                    </Button>
+                  ) : (
+                    <Button type="button" onClick={() => setActiveTab(getNextTab())} className="gap-2">
+                      {getNextTabLabel()}
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </Tabs>
         </form>
 
