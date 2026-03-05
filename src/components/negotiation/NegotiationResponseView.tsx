@@ -1820,25 +1820,40 @@ export const NegotiationResponseView = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Accept Target Price Confirmation Dialog */}
+      {/* Accept Entrepreneur Request Confirmation Dialog */}
       <AlertDialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              אישור קבלת מחיר יעד
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              אישור קבלת בקשת היזם
             </AlertDialogTitle>
             <AlertDialogDescription className="text-right space-y-3">
-              <p>
-                אתה עומד לאשר את מחיר היעד שהוצע על ידי היזם:
+              <p className="font-medium">
+                אתה מאשר את כל השינויים שביקש היזם:
               </p>
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-center">
-                <p className="text-sm text-muted-foreground">מחיר יעד מבוקש</p>
-                <p className="text-2xl font-bold text-amber-700">{formatCurrency(targetTotal)}</p>
+              <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר מקורי:</span>
+                  <span className="font-medium">{formatCurrency(originalTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">מחיר מבוקש (יעד היזם):</span>
+                  <span className="font-bold text-lg text-amber-700">{formatCurrency(targetTotal)}</span>
+                </div>
                 {calculateReductionPercent() > 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    (הפחתה של {calculateReductionPercent()}% מהמחיר המקורי)
-                  </p>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-sm text-muted-foreground">הפחתה:</span>
+                    <span className="font-medium text-green-600">
+                      {calculateReductionPercent()}%- ({formatCurrency(originalTotal - targetTotal)})
+                    </span>
+                  </div>
+                )}
+                {jsonAdjustments.length > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">פריטים ששונו:</span>
+                    <span className="font-medium">{jsonAdjustments.length} מתוך {feeLineItems.length}</span>
+                  </div>
                 )}
               </div>
               <Alert className="border-amber-200 bg-amber-50">
