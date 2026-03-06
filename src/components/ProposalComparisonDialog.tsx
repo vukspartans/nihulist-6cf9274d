@@ -977,13 +977,13 @@ export const ProposalComparisonDialog = ({
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => handleNegotiationClick(proposal)}
-                                        disabled={actionLoading || proposal.has_active_negotiation || proposal.status === 'resubmitted'}
+                                        disabled={actionLoading || proposal.has_active_negotiation}
                                         className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                       >
                                         <MessageSquare className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>{proposal.status === 'resubmitted' ? 'יש הצעה נגדית לצפייה' : 'בקש הצעה מחודשת'}</TooltipContent>
+                                    <TooltipContent>בקש הצעה מחודשת</TooltipContent>
                                   </Tooltip>
                                   <Tooltip>
                                     <TooltipTrigger asChild>

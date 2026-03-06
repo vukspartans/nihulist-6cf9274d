@@ -682,7 +682,7 @@ export const EntrepreneurNegotiationView = ({
                     {onAccept && (
                       <Button onClick={onAccept} className="bg-green-600 hover:bg-green-700">
                         <CheckCircle className="w-4 h-4 me-1" />
-                        קבל הצעת יועץ
+                        קבל הצעה נגדית
                       </Button>
                     )}
                   </>
