@@ -255,6 +255,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      resetPostHog();
       setUser(null);
       setSession(null);
       setProfile(null);
