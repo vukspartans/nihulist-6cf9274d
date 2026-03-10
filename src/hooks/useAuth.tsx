@@ -270,6 +270,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const hasRole = (role: AppRole) => roles.includes(role);
   const primaryRole = getPrimaryRole(roles);
 
+  // Identify user in PostHog when profile and roles are loaded
+  useEffect(() => {
+    if (!loading && user && profile) {
+      identifyUser(user.id, {
+        email: user.email,
+        name: profile.name,
+        role: profile.role,
+        roles,
+      });
+      trackEvent('user_logged_in', { user_id: user.id, role: profile.role });
+    }
+  }, [loading, user?.id, profile?.role]);
+
   const value = {
     user,
     session,
