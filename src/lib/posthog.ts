@@ -8,6 +8,14 @@ let initialized = false;
 export function initPostHog() {
   try {
     if (initialized) return;
+
+    // Only track in production on billding.ai
+    const isProduction = import.meta.env.PROD && window.location.hostname === 'billding.ai';
+    if (!isProduction) {
+      console.log('[PostHog] Skipped — not production');
+      return;
+    }
+
     posthog.init(POSTHOG_API_KEY, {
       api_host: POSTHOG_HOST,
       capture_pageview: true,
