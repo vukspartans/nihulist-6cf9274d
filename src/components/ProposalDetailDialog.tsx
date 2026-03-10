@@ -22,6 +22,7 @@ import {
 } from '@/constants/rfpUnits';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
+import { trackEvent } from '@/lib/posthog';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
