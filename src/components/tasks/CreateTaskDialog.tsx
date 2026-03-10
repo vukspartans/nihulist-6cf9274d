@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackEvent } from '@/lib/posthog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
       });
 
       if (result) {
+        trackEvent('task_created', { task_id: result?.id });
         setFormData({
           name: '',
           description: '',

@@ -10,6 +10,7 @@ import { handleError } from '@/utils/errorHandling';
 import { PROPOSAL_VALIDATION, FILE_LIMITS } from '@/utils/constants';
 import { sanitizeText } from '@/utils/inputSanitization';
 import { validateSubmissionToken, validatePrice, validateTimeline, validateSignature, validateFileUploads, checkRateLimit } from '@/utils/securityValidation';
+import { trackEvent } from '@/lib/posthog';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 type ActivityLogInsert = Database['public']['Tables']['activity_log']['Insert'];
@@ -444,6 +445,8 @@ export const useProposalSubmit = () => {
         title: 'הצעת המחיר נשלחה בהצלחה',
         description: 'היזם יקבל התראה ויבחן את הצעתך',
       });
+
+      trackEvent('proposal_submitted', { proposal_id: proposal.id, rfp_id: data.rfpId, project_id: data.projectId });
 
       // Invalidate caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });

@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getPrimaryRole } from '@/lib/roleNavigation';
 import type { AppRole } from '@/lib/roleNavigation';
+import { identifyUser, resetPostHog, trackEvent } from '@/lib/posthog';
 
 interface UserProfile {
   id: string;
@@ -254,6 +255,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      resetPostHog();
       setUser(null);
       setSession(null);
       setProfile(null);
@@ -267,6 +269,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const isAdmin = roles.includes('admin');
   const hasRole = (role: AppRole) => roles.includes(role);
   const primaryRole = getPrimaryRole(roles);
+
+  // Identify user in PostHog when profile and roles are loaded
+  useEffect(() => {
+    if (!loading && user && profile) {
+      identifyUser(user.id, {
+        email: user.email,
+        name: profile.name,
+        role: profile.role,
+        roles,
+      });
+      trackEvent('user_logged_in', { user_id: user.id, role: profile.role });
+    }
+  }, [loading, user?.id, profile?.role]);
 
   const value = {
     user,

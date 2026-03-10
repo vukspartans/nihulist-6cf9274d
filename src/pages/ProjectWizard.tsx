@@ -21,6 +21,7 @@ import { sanitizeFileName } from '@/utils/fileUtils';
 import { useMunicipalities } from '@/hooks/useMunicipalities';
 import { useTemplateResolver } from '@/hooks/useTemplateResolver';
 import { useBulkTaskCreation } from '@/hooks/useBulkTaskCreation';
+import { trackEvent } from '@/lib/posthog';
 
 interface FormData {
   address: string;
@@ -208,6 +209,8 @@ export const ProjectWizard = () => {
         .single();
 
       if (error) throw error;
+
+      trackEvent('project_created', { project_id: project.id, project_type: formData.projectType });
 
       console.log('[ProjectWizard] Post-project creation check:', {
         projectId: project.id,

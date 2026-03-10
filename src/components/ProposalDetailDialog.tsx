@@ -22,6 +22,7 @@ import {
 } from '@/constants/rfpUnits';
 import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
+import { trackEvent } from '@/lib/posthog';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
@@ -505,6 +506,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   const generateAiAnalysis = async (forceRefresh: boolean = false) => {
     setIsGeneratingAi(true);
+    trackEvent('ai_analysis_started', { proposal_id: proposal.id, project_id: projectId, type: forceRefresh ? 'refresh' : 'initial' });
     try {
       const { data, error } = await supabase.functions.invoke('analyze-proposal', { body: { proposalId: proposal.id, projectId, forceRefresh } });
       if (error) throw error;
