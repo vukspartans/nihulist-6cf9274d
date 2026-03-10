@@ -506,6 +506,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   const generateAiAnalysis = async (forceRefresh: boolean = false) => {
     setIsGeneratingAi(true);
+    trackEvent('ai_analysis_started', { proposal_id: proposal.id, project_id: projectId, type: forceRefresh ? 'refresh' : 'initial' });
     try {
       const { data, error } = await supabase.functions.invoke('analyze-proposal', { body: { proposalId: proposal.id, projectId, forceRefresh } });
       if (error) throw error;

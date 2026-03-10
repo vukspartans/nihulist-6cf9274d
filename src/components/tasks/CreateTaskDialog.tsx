@@ -51,6 +51,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSubmit, projectAdvisors
       });
 
       if (result) {
+        trackEvent('task_created', { task_id: result?.id });
         setFormData({
           name: '',
           description: '',

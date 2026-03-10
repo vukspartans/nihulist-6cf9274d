@@ -210,6 +210,8 @@ export const ProjectWizard = () => {
 
       if (error) throw error;
 
+      trackEvent('project_created', { project_id: project.id, project_type: formData.projectType });
+
       console.log('[ProjectWizard] Post-project creation check:', {
         projectId: project.id,
         filesWillBeUploaded: filesWithMetadata.length

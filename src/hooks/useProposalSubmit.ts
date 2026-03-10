@@ -446,6 +446,8 @@ export const useProposalSubmit = () => {
         description: 'היזם יקבל התראה ויבחן את הצעתך',
       });
 
+      trackEvent('proposal_submitted', { proposal_id: proposal.id, rfp_id: data.rfpId, project_id: data.projectId });
+
       // Invalidate caches
       queryClient.invalidateQueries({ queryKey: ['proposals', data.projectId] });
       queryClient.invalidateQueries({ queryKey: ['rfp-invites', data.advisorId] });

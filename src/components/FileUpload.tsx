@@ -142,6 +142,8 @@ export function FileUpload({
         title: 'הקבצים הועלו בהצלחה',
         description: `${uploadedFiles.length} קבצים הועלו`,
       });
+
+      trackEvent('file_uploaded', { file_count: uploadedFiles.length });
     } catch (err) {
       console.error('Upload error:', err);
       setError('שגיאה בהעלאת הקבצים');
