@@ -1,60 +1,80 @@
 
 
-# Fix Broken Logo Images with Fallback
+# PostHog Analytics Integration
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Overview
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+Integrate PostHog product analytics with a clean, centralized tracking layer. The PostHog API key is a publishable client-side key, so it can be stored directly in the codebase (no secrets needed).
 
-## Changes
+## Files to Create/Edit
 
-### `src/components/ProposalComparisonTable.tsx`
+### 1. Install `posthog-js` package
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+Add `posthog-js` dependency.
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 2. Create `src/lib/posthog.ts` — Core analytics module
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+- Initialize PostHog with the API key and host
+- `capture_pageview: true`, `autocapture: true`
+- `session_recording: { maskAllInputs: true }`
+- Export helper functions:
+  - `initPostHog()` — called once at app startup
+  - `identifyUser(userId, properties)` — called on login
+  - `trackEvent(eventName, properties)` — safe wrapper with try/catch
+  - `resetPostHog()` — called on logout
+- All tracking calls wrapped in try/catch so failures never break the app
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+### 3. Edit `src/main.tsx` — Initialize PostHog
+
+Call `initPostHog()` before `createRoot()`.
+
+### 4. Edit `src/hooks/useAuth.tsx` — Identify user and track login
+
+- On successful auth (when profile + roles are loaded): call `identifyUser(user.id, { email, role, name })`
+- On `signOut`: call `resetPostHog()`
+- Track `user_logged_in` event on SIGNED_IN auth event
+
+### 5. Edit `src/pages/ProjectWizard.tsx` — Track `project_created`
+
+After successful project insert (~line 208), add:
+```ts
+trackEvent('project_created', { project_id: project.id, project_type: formData.projectType })
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+### 6. Edit `src/pages/SubmitProposal.tsx` — Track `proposal_submitted`
 
-### Other components to audit for the same pattern
+After successful proposal submission, add `trackEvent('proposal_submitted', { rfp_id, proposal_id })`.
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+### 7. Edit `src/components/tasks/CreateTaskDialog.tsx` — Track `task_created`
 
-All need the same `onError` fallback treatment.
+After successful task creation, add `trackEvent('task_created', { project_id, task_id })`.
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+### 8. Edit `src/components/FileUpload.tsx` — Track `file_uploaded`
+
+After successful file upload, add `trackEvent('file_uploaded', { project_id })`.
+
+### 9. Track `ai_analysis_started`
+
+In the component that triggers AI analysis (likely in `ProposalDetailDialog.tsx` or wherever `analyze-proposal` edge function is called), add the tracking event.
+
+### 10. Create `docs/ANALYTICS.md` — Documentation
+
+Short README section covering:
+- How PostHog is initialized
+- How to add new events (import `trackEvent`, call with event name + properties)
+- Naming conventions: `snake_case`, noun_verb pattern
+- Privacy: inputs masked, no passwords/payment data sent
+
+## Privacy & Safety
+
+- `maskAllInputs: true` in session recording config
+- All `trackEvent` calls wrapped in try/catch
+- No passwords, payment details, or sensitive PII sent as event properties
+- PostHog autocapture respects `data-ph-no-capture` attributes if needed later
+
+## Key Decisions
+
+- PostHog API key stored as a constant in `src/lib/posthog.ts` (it's a publishable key)
+- No backend/server-side PostHog needed at this stage — all tracking is client-side
+- Events include `user_id` and relevant object IDs but no sensitive data
 
