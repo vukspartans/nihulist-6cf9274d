@@ -10,6 +10,7 @@ import { handleError } from '@/utils/errorHandling';
 import { PROPOSAL_VALIDATION, FILE_LIMITS } from '@/utils/constants';
 import { sanitizeText } from '@/utils/inputSanitization';
 import { validateSubmissionToken, validatePrice, validateTimeline, validateSignature, validateFileUploads, checkRateLimit } from '@/utils/securityValidation';
+import { trackEvent } from '@/lib/posthog';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 type ActivityLogInsert = Database['public']['Tables']['activity_log']['Insert'];
