@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getPrimaryRole } from '@/lib/roleNavigation';
 import type { AppRole } from '@/lib/roleNavigation';
+import { identifyUser, resetPostHog, trackEvent } from '@/lib/posthog';
 
 interface UserProfile {
   id: string;
