@@ -21,6 +21,7 @@ import { sanitizeFileName } from '@/utils/fileUtils';
 import { useMunicipalities } from '@/hooks/useMunicipalities';
 import { useTemplateResolver } from '@/hooks/useTemplateResolver';
 import { useBulkTaskCreation } from '@/hooks/useBulkTaskCreation';
+import { trackEvent } from '@/lib/posthog';
 
 interface FormData {
   address: string;
