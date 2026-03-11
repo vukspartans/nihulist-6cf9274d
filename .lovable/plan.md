@@ -1,60 +1,35 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Entrepreneur Sees Stale Proposal Prices After Negotiation
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Root Causes Found
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+### Bug 1: Stale `selectedProposal` state (PRIMARY CAUSE)
+In `ProjectDetail.tsx`, when the entrepreneur opens a proposal, `selectedProposal` is set as a snapshot of the proposal object. Even when `fetchProposals()` runs (via `onStatusChange`), the `proposals` array updates but `selectedProposal` remains the old object. The dialog shows stale prices.
+
+### Bug 2: No realtime refetch of proposals
+`ProjectDetail.tsx` only fetches proposals on mount (`useEffect` with `[id]`). If the consultant responds while the entrepreneur has the page open, the entrepreneur sees old data until a manual refresh.
+
+### Bug 3: Version column mismatch
+`ProposalDetailDialog` fetches `line_items` from `proposal_versions` (line 143), but the DB function `submit_negotiation_response` writes negotiated line items to the `fee_line_items` column. Historical version views show empty line items.
 
 ## Changes
 
-### `src/components/ProposalComparisonTable.tsx`
+### 1. `src/pages/ProjectDetail.tsx` — Fix stale selectedProposal + add realtime
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+- **Derive selectedProposal from proposals array** instead of holding a separate stale copy. Use `selectedProposalId` state and compute the proposal object from the latest `proposals` array.
+- **Add Supabase realtime subscription** on the `proposals` table filtered by `project_id` to auto-refetch when the consultant submits a negotiation response.
+- When `onStatusChange` triggers `fetchProposals()`, the derived `selectedProposal` automatically gets the latest data.
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 2. `src/components/ProposalDetailDialog.tsx` — Fix version column mismatch
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+- Line 143: Change `.select('price, scope_text, line_items')` to `.select('price, scope_text, line_items, fee_line_items')`.
+- In the version parsing logic (~lines 150-161), prefer `fee_line_items` over `line_items` when both exist (the DB function writes to `fee_line_items`).
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
+### 3. `src/components/ProposalDetailDialog.tsx` — Re-fetch proposal data on dialog open
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+- When the dialog opens, fetch the latest proposal data directly from `proposals` table to ensure the dialog always shows current values, not a potentially stale snapshot passed as props.
 
-### Other components to audit for the same pattern
-
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
-
-All need the same `onError` fallback treatment.
-
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+## No database changes needed
+The `submit_negotiation_response` function already correctly updates both `proposals.fee_line_items` and `proposals.price`. The issue is purely frontend data freshness.
 
