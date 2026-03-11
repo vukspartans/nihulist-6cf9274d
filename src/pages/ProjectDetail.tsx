@@ -71,7 +71,7 @@ export const ProjectDetail = () => {
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('proposals');
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const [pendingPhaseName, setPendingPhaseName] = useState<string>('');
