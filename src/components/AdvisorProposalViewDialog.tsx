@@ -952,7 +952,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
                         <div>
                           <SectionHeader icon={CreditCard}>תנאי תשלום</SectionHeader>
                           <p className="text-xs text-right mt-1">
-                            {conditions.payment_terms || conditions.payment_term_type}
+                            {conditions.payment_terms || getPaymentTermLabel(conditions.payment_term_type)}
                           </p>
                         </div>
                       )}

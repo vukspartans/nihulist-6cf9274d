@@ -98,6 +98,7 @@ export const NegotiationResponseView = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [advisorUploadedFiles, setAdvisorUploadedFiles] = useState<UploadedFile[]>([]);
   const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
+  const [originalRfpPaymentTermType, setOriginalRfpPaymentTermType] = useState<string | null>(null);
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);

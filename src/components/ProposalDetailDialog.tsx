@@ -1134,12 +1134,35 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                   <SectionHeader icon={Banknote} className="text-xs">תנאי תשלום</SectionHeader>
                   <Card>
                     <CardContent className="p-3 text-right space-y-2">
-                      {entrepreneurPaymentTerms?.payment_term_type && (
-                        <p className="text-xs">
-                          <span className="font-medium">תנאי תשלום: </span>
-                          {getPaymentTermLabel(entrepreneurPaymentTerms.payment_term_type)}
-                        </p>
-                      )}
+                      {(() => {
+                        const consultantTermType = (proposal.conditions_json as any)?.payment_term_type;
+                        const entrepreneurTermType = entrepreneurPaymentTerms?.payment_term_type;
+                        const displayTermType = consultantTermType || entrepreneurTermType;
+                        const termsChanged = consultantTermType && entrepreneurTermType && consultantTermType !== entrepreneurTermType;
+
+                        return (
+                          <>
+                            {displayTermType && (
+                              <div className="space-y-1">
+                                <p className="text-xs">
+                                  <span className="font-medium">תנאי תשלום: </span>
+                                  {getPaymentTermLabel(displayTermType)}
+                                </p>
+                                {termsChanged && (
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                                      עודכן ע״י היועץ
+                                    </Badge>
+                                    <span className="text-[10px] text-muted-foreground line-through">
+                                      {getPaymentTermLabel(entrepreneurTermType)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       {entrepreneurPaymentTerms?.advance_percent && entrepreneurPaymentTerms.advance_percent > 0 && (
                         <p className="text-xs">
                           <span className="font-medium">מקדמה: </span>
@@ -1155,7 +1178,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
                       {conditions.payment_terms && (
                         <p className="text-xs whitespace-pre-wrap">{conditions.payment_terms}</p>
                       )}
-                      {!entrepreneurPaymentTerms && !conditions.payment_terms && (
+                      {!entrepreneurPaymentTerms && !conditions.payment_terms && !(proposal.conditions_json as any)?.payment_term_type && (
                         <span className="text-muted-foreground text-xs">לא צוינו תנאי תשלום</span>
                       )}
                     </CardContent>
