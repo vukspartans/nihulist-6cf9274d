@@ -1,60 +1,45 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Payment Terms Visibility for Entrepreneur
 
 ## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+When a consultant changes payment terms (e.g., from "שוטף + 30" to "שוטף + 15"), the entrepreneur never sees this change because:
+
+1. **ProposalDetailDialog** only displays the entrepreneur's original RFP payment terms (`entrepreneurPaymentTerms` from `rfp_invites`), ignoring the consultant's `conditions_json.payment_term_type`.
+2. **No change indicator** exists to highlight when a consultant selected different payment terms.
+3. **EntrepreneurNegotiationView** reads from `session.proposal.conditions_json` correctly, but also lacks any change indicator vs. the original RFP terms.
+4. **AdvisorProposalViewDialog** shows the raw `payment_term_type` value (e.g., "net_15") instead of using `getPaymentTermLabel()` for human-readable display.
 
 ## Changes
 
-### `src/components/ProposalComparisonTable.tsx`
+### 1. `src/components/ProposalDetailDialog.tsx` — Show consultant's payment terms with change indicator
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+In the "תנאי תשלום" (Payment Terms) section (~line 1132-1163):
+- Display the **consultant's** `conditions_json.payment_term_type` using `getPaymentTermLabel()` as the primary value
+- If it differs from `entrepreneurPaymentTerms.payment_term_type`, show a highlighted change badge: "עודכן ע״י היועץ" (Updated by consultant) with the original value shown for comparison
+- Keep the entrepreneur's terms as reference context
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 2. `src/components/negotiation/EntrepreneurNegotiationView.tsx` — Add change indicator
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+In the payment terms card (~line 417-451):
+- Fetch the original RFP payment terms (from `rfp_invites` via `proposal.rfp_invite_id`)
+- Compare with `session.proposal.conditions_json.payment_term_type`
+- If different, add a visible alert/badge: "תנאי התשלום עודכנו ע״י היועץ" with before/after values
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
+### 3. `src/components/AdvisorProposalViewDialog.tsx` — Fix display formatting
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+At ~line 954, replace raw value display with `getPaymentTermLabel()` call so the advisor also sees human-readable labels.
 
-### Other components to audit for the same pattern
+### 4. `src/components/negotiation/NegotiationResponseView.tsx` — Add change indicator for consultant view
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+In the overview tab payment terms section (~line 924-959), fetch original RFP terms and show comparison if changed.
 
-All need the same `onError` fallback treatment.
+## No database changes needed
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+The consultant's `payment_term_type` is already persisted in `proposals.conditions_json` during submission. The `submit_negotiation_response` DB function preserves `conditions_json` when creating new versions. The issue is purely a UI display problem.
+
+## Summary
+
+Four files modified to ensure the consultant's payment terms are visible to the entrepreneur with clear change indicators when they differ from the original RFP terms.
 
