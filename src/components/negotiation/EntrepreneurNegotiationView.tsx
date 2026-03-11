@@ -83,6 +83,7 @@ export const EntrepreneurNegotiationView = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [advisorFiles, setAdvisorFiles] = useState<AdvisorResponseFile[]>([]);
   const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
+  const [originalRfpPaymentTermType, setOriginalRfpPaymentTermType] = useState<string | null>(null);
 
   const { fetchNegotiationWithDetails } = useNegotiation();
 
@@ -107,6 +108,18 @@ export const EntrepreneurNegotiationView = ({
       }
       if (filesData.advisor_milestone_responses) {
         setMilestoneResponses(filesData.advisor_milestone_responses);
+      }
+    }
+
+    // Fetch original RFP payment terms for comparison
+    if (data?.proposal?.rfp_invite_id) {
+      const { data: inviteData } = await supabase
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', data.proposal.rfp_invite_id)
+        .maybeSingle();
+      if (inviteData?.payment_terms) {
+        setOriginalRfpPaymentTermType((inviteData.payment_terms as any)?.payment_term_type || null);
       }
     }
 
