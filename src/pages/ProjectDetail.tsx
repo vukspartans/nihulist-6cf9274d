@@ -630,7 +630,7 @@ export const ProjectDetail = () => {
           onOpenChange={(open) => {
             setDetailDialogOpen(open);
             if (!open) {
-              setSelectedProposal(null);
+              setSelectedProposalId(null);
             }
           }}
           proposal={selectedProposal}
@@ -638,7 +638,7 @@ export const ProjectDetail = () => {
           projectName={project.name || project.location}
           onStatusChange={() => {
             fetchProposals();
-            setSelectedProposal(null);
+            setSelectedProposalId(null);
           }}
         />
       )}
