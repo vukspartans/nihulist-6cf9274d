@@ -71,7 +71,7 @@ export const ProjectDetail = () => {
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('proposals');
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const [pendingPhaseName, setPendingPhaseName] = useState<string>('');
@@ -233,6 +233,28 @@ export const ProjectDetail = () => {
     }
   }, [id]);
 
+  // Realtime subscription: auto-refetch proposals when consultant responds
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`project_proposals_${id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'proposals',
+        filter: `project_id=eq.${id}`,
+      }, () => {
+        fetchProposals();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
+  // Derive selectedProposal from proposals array to avoid stale state
+  const selectedProposal = selectedProposalId
+    ? proposals.find(p => p.id === selectedProposalId) || null
+    : null;
+
 
   const handlePhaseChange = async (newPhase: string) => {
     try {
@@ -316,7 +338,7 @@ export const ProjectDetail = () => {
   };
 
   const handleViewProposal = (proposal: any) => {
-    setSelectedProposal(proposal);
+    setSelectedProposalId(proposal.id);
     setDetailDialogOpen(true);
   };
 
@@ -608,7 +630,7 @@ export const ProjectDetail = () => {
           onOpenChange={(open) => {
             setDetailDialogOpen(open);
             if (!open) {
-              setSelectedProposal(null);
+              setSelectedProposalId(null);
             }
           }}
           proposal={selectedProposal}
@@ -616,7 +638,7 @@ export const ProjectDetail = () => {
           projectName={project.name || project.location}
           onStatusChange={() => {
             fetchProposals();
-            setSelectedProposal(null);
+            setSelectedProposalId(null);
           }}
         />
       )}

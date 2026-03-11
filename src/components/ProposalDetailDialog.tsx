@@ -141,19 +141,20 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         // Fetch version data from proposal_versions
         const { data: versionRecord } = await supabase
           .from('proposal_versions')
-          .select('price, scope_text, line_items')
+          .select('price, scope_text, line_items, fee_line_items')
           .eq('proposal_id', proposal.id)
           .eq('version_number', viewVersion)
           .maybeSingle();
         
         if (versionRecord) {
-          // Parse line_items from the version
+          // Parse line_items from the version — prefer fee_line_items (used by negotiation responses)
           let parsedLineItems: FeeLineItem[] = [];
-          if (versionRecord.line_items) {
+          const rawItems = versionRecord.fee_line_items || versionRecord.line_items;
+          if (rawItems) {
             try {
-              const items = typeof versionRecord.line_items === 'string' 
-                ? JSON.parse(versionRecord.line_items) 
-                : versionRecord.line_items;
+              const items = typeof rawItems === 'string' 
+                ? JSON.parse(rawItems) 
+                : rawItems;
               parsedLineItems = Array.isArray(items) ? items : [];
             } catch {
               parsedLineItems = [];
