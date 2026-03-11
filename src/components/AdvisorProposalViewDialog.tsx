@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNegotiation } from '@/hooks/useNegotiation';
 import { getFeeUnitLabel } from '@/constants/rfpUnits';
+import { getPaymentTermLabel } from '@/constants/paymentTerms';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
