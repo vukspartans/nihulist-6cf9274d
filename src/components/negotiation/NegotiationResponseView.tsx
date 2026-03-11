@@ -111,6 +111,18 @@ export const NegotiationResponseView = ({
     setLoadingSession(true);
     const data = await fetchNegotiationWithDetails(sessionId);
     setSession(data);
+
+    // Fetch original RFP payment terms for comparison
+    if (data?.proposal?.rfp_invite_id) {
+      const { data: inviteData } = await supabase
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', data.proposal.rfp_invite_id)
+        .maybeSingle();
+      if (inviteData?.payment_terms) {
+        setOriginalRfpPaymentTermType((inviteData.payment_terms as any)?.payment_term_type || null);
+      }
+    }
     
     // Initialize line items - include ALL items with proper defaults
     if (data && data.proposal?.fee_line_items) {
