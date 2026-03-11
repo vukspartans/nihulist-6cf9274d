@@ -98,6 +98,7 @@ export const NegotiationResponseView = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [advisorUploadedFiles, setAdvisorUploadedFiles] = useState<UploadedFile[]>([]);
   const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
+  const [originalRfpPaymentTermType, setOriginalRfpPaymentTermType] = useState<string | null>(null);
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
   const { comments, commentTypeLabels, commentTypeIcons } = useNegotiationComments(sessionId);
@@ -110,6 +111,18 @@ export const NegotiationResponseView = ({
     setLoadingSession(true);
     const data = await fetchNegotiationWithDetails(sessionId);
     setSession(data);
+
+    // Fetch original RFP payment terms for comparison
+    if (data?.proposal?.rfp_invite_id) {
+      const { data: inviteData } = await supabase
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', data.proposal.rfp_invite_id)
+        .maybeSingle();
+      if (inviteData?.payment_terms) {
+        setOriginalRfpPaymentTermType((inviteData.payment_terms as any)?.payment_term_type || null);
+      }
+    }
     
     // Initialize line items - include ALL items with proper defaults
     if (data && data.proposal?.fee_line_items) {
@@ -931,12 +944,32 @@ export const NegotiationResponseView = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {(session.proposal.conditions_json as any)?.payment_term_type && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">תנאי תשלום:</span>
-                        <Badge variant="outline">{getPaymentTermLabel((session.proposal.conditions_json as any).payment_term_type)}</Badge>
-                      </div>
-                    )}
+                    {(() => {
+                      const consultantTermType = (session.proposal!.conditions_json as any)?.payment_term_type;
+                      const termsChanged = consultantTermType && originalRfpPaymentTermType && consultantTermType !== originalRfpPaymentTermType;
+                      return (
+                        <>
+                          {consultantTermType && (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">תנאי תשלום:</span>
+                                <Badge variant="outline">{getPaymentTermLabel(consultantTermType)}</Badge>
+                              </div>
+                              {termsChanged && (
+                                <div className="flex items-center gap-1.5 justify-end flex-wrap text-xs">
+                                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                                    שונה מהבקשה המקורית
+                                  </Badge>
+                                  <span className="text-muted-foreground">
+                                    במקור: <span className="line-through">{getPaymentTermLabel(originalRfpPaymentTermType)}</span>
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                     {(session.proposal.conditions_json as any)?.validity_days && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">תוקף הצעה:</span>

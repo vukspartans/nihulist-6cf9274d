@@ -83,6 +83,7 @@ export const EntrepreneurNegotiationView = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [advisorFiles, setAdvisorFiles] = useState<AdvisorResponseFile[]>([]);
   const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
+  const [originalRfpPaymentTermType, setOriginalRfpPaymentTermType] = useState<string | null>(null);
 
   const { fetchNegotiationWithDetails } = useNegotiation();
 
@@ -107,6 +108,18 @@ export const EntrepreneurNegotiationView = ({
       }
       if (filesData.advisor_milestone_responses) {
         setMilestoneResponses(filesData.advisor_milestone_responses);
+      }
+    }
+
+    // Fetch original RFP payment terms for comparison
+    if (data?.proposal?.rfp_invite_id) {
+      const { data: inviteData } = await supabase
+        .from('rfp_invites')
+        .select('payment_terms')
+        .eq('id', data.proposal.rfp_invite_id)
+        .maybeSingle();
+      if (inviteData?.payment_terms) {
+        setOriginalRfpPaymentTermType((inviteData.payment_terms as any)?.payment_term_type || null);
       }
     }
 
@@ -424,12 +437,32 @@ export const EntrepreneurNegotiationView = ({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-2">
-                            {(session.proposal.conditions_json as any)?.payment_term_type && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">תנאי תשלום:</span>
-                                <Badge variant="outline">{getPaymentTermLabel((session.proposal.conditions_json as any).payment_term_type)}</Badge>
-                              </div>
-                            )}
+                            {(() => {
+                              const consultantTermType = (session.proposal!.conditions_json as any)?.payment_term_type;
+                              const termsChanged = consultantTermType && originalRfpPaymentTermType && consultantTermType !== originalRfpPaymentTermType;
+                              return (
+                                <>
+                                  {consultantTermType && (
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">תנאי תשלום:</span>
+                                        <Badge variant="outline">{getPaymentTermLabel(consultantTermType)}</Badge>
+                                      </div>
+                                      {termsChanged && (
+                                        <div className="flex items-center gap-1.5 justify-end flex-wrap text-xs">
+                                          <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                                            עודכן ע״י היועץ
+                                          </Badge>
+                                          <span className="text-muted-foreground">
+                                            במקור: <span className="line-through">{getPaymentTermLabel(originalRfpPaymentTermType)}</span>
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             {(session.proposal.conditions_json as any)?.validity_days && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">תוקף הצעה:</span>
