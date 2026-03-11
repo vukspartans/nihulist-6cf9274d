@@ -338,7 +338,7 @@ export const ProjectDetail = () => {
   };
 
   const handleViewProposal = (proposal: any) => {
-    setSelectedProposal(proposal);
+    setSelectedProposalId(proposal.id);
     setDetailDialogOpen(true);
   };
 
