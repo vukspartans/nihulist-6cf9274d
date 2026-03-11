@@ -233,6 +233,28 @@ export const ProjectDetail = () => {
     }
   }, [id]);
 
+  // Realtime subscription: auto-refetch proposals when consultant responds
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`project_proposals_${id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'proposals',
+        filter: `project_id=eq.${id}`,
+      }, () => {
+        fetchProposals();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
+  // Derive selectedProposal from proposals array to avoid stale state
+  const selectedProposal = selectedProposalId
+    ? proposals.find(p => p.id === selectedProposalId) || null
+    : null;
+
 
   const handlePhaseChange = async (newPhase: string) => {
     try {
