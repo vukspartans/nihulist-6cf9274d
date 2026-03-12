@@ -446,7 +446,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
         feeItems: feeLineItems.map((item) => ({
           description: item.description || item.name || '',
           quantity: item.quantity,
-          unit: getFeeUnitLabel(item.unit || ''),
+          unit: item.unit || '',
           unitPrice: item.unit_price,
           total: getItemTotal(item),
           isOptional: item.is_optional,

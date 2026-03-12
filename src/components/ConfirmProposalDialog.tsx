@@ -60,6 +60,9 @@ interface ConfirmProposalDialogProps {
     validity_days?: number;
   };
   scopeText?: string;
+  selectedServices?: string[];
+  consultantNotes?: string;
+  servicesNotes?: string;
 }
 
 const formatAmount = (amount: number) => {
