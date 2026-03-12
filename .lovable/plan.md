@@ -1,60 +1,72 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Hebrew Character Encoding in RFP Email Template
 
 ## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+Hebrew hyphens and special characters render as `?` in RFP invitation emails. The root cause is twofold:
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+1. **Missing `<meta charset>` in email head**: The `EmailLayout` uses `<Head />` from react-email which *should* auto-inject `charset=UTF-8`, but some email clients ignore this. An explicit `<meta>` tag ensures reliability.
+
+2. **Incomplete sanitize function**: The `sanitize()` in `send-rfp-email/index.ts` handles general Unicode dashes (U+2010–U+2015) but misses **Hebrew-specific punctuation** that commonly appears in project names and types:
+   - `U+05BE` — Hebrew maqaf (־) — the native Hebrew hyphen, used in terms like `פינוי־בינוי`
+   - `U+05F3` — Hebrew geresh (׳)
+   - `U+05F4` — Hebrew gershayim (״) — used in `תמ״א`
+   - `U+FB1D–U+FB4F` — Hebrew presentation forms that some databases store
+
+3. **Unsanitized email subject**: The `subject` field on `resend.emails.send()` passes `project.name` raw without sanitization, so any special characters in the project name corrupt the subject line.
+
+4. **Missing `headers` on Resend call**: Resend accepts a `headers` option where we can explicitly set `Content-Type` charset to guarantee UTF-8.
 
 ## Changes
 
-### `src/components/ProposalComparisonTable.tsx`
+### File 1: `supabase/functions/_shared/email-templates/layout.tsx`
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
-
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+Add explicit charset meta tag inside `<Head>`:
 
 ```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+<Head>
+  <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+</Head>
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+### File 2: `supabase/functions/send-rfp-email/index.ts`
 
-### Other components to audit for the same pattern
+**2a. Expand `sanitize` to handle Hebrew-specific characters** (lines 46-63):
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+Add these replacements:
+```typescript
+.replace(/\u05BE/g, '-')    // Hebrew maqaf ־ → ASCII hyphen
+.replace(/\u05F3/g, "'")    // Hebrew geresh ׳ → apostrophe  
+.replace(/\u05F4/g, '"')    // Hebrew gershayim ״ → double quote
+```
 
-All need the same `onError` fallback treatment.
+**2b. Sanitize the email subject** (line 305):
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+```typescript
+subject: sanitize(`הזמנה להגשת הצעת מחיר: ${project.name}`),
+```
+
+**2c. Add explicit UTF-8 headers to Resend call** (line 302-312):
+
+Add `headers` to the `resend.emails.send()` options:
+```typescript
+headers: {
+  'Content-Type': 'text/html; charset=UTF-8',
+},
+```
+
+### File 3: Other email edge functions (consistency pass)
+
+Apply the same Hebrew-character sanitize expansions to the sanitize functions in:
+- `supabase/functions/notify-proposal-rejected/index.ts` (line ~100)
+- `supabase/functions/notify-proposal-resubmitted/index.ts` (line ~120)
+- `supabase/functions/send-negotiation-request/index.ts` (if it has a sanitize function)
+- `supabase/functions/send-negotiation-response/index.ts` (if it has a sanitize function)
+
+Each gets the 3 additional `.replace()` lines for U+05BE, U+05F3, U+05F4, and the subject line sanitization.
+
+## Summary
+- 1 layout file: add explicit charset meta
+- 1 primary edge function: expand sanitize, sanitize subject, add headers
+- ~4 other edge functions: same sanitize expansion for consistency
 
