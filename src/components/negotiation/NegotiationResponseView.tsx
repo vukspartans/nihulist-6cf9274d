@@ -469,6 +469,7 @@ export const NegotiationResponseView = ({
   }, [feeLineItems, updatedLineItems, targetTotal]);
 
   const handlePriceChange = useCallback((lineItemId: string, price: number) => {
+    setHasManualEdits(true);
     setUpdatedLineItems((prev) => {
       const existing = prev.find(item => item.line_item_id === lineItemId);
       if (existing) {
