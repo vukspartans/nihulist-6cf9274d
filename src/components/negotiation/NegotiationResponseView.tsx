@@ -110,6 +110,7 @@ export const NegotiationResponseView = ({
 
   const loadSession = async () => {
     setLoadingSession(true);
+    setHasManualEdits(false);
     const data = await fetchNegotiationWithDetails(sessionId);
     setSession(data);
 
