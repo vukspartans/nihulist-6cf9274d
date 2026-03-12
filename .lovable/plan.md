@@ -1,60 +1,75 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Payment Milestones Validation and UI in NegotiationResponseView
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Problem Summary
+The advisor-side milestone response table (`NegotiationResponseView.tsx`) allows percentages to exceed 100%, has inconsistent validation, lacks proper visual cues (delta arrows, gold highlighting, remaining % indicator), and the footer row doesn't turn fully red when invalid.
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+The entrepreneur-side table (`MilestoneNegotiationTable.tsx`) also needs a "remaining %" indicator and the footer row styling improvement.
 
 ## Changes
 
-### `src/components/ProposalComparisonTable.tsx`
+### File 1: `src/components/negotiation/NegotiationResponseView.tsx`
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
-
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
-
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+**1a. Fix validation tolerance** (line 604)
+Change strict `=== 100` to tolerance-based check matching the NegotiationDialog pattern:
+```typescript
+const isMilestoneResponseValid = Math.abs(milestoneResponseTotal - 100) < 0.01;
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+**1b. Add "Remaining %" counter below table** (after line 1425)
+Add a real-time indicator showing remaining percentage when total is not 100%:
+```tsx
+{canRespond && milestoneResponseTotal !== 100 && (
+  <div className="text-sm font-medium text-center py-2">
+    נותרו: <span className={milestoneResponseTotal > 100 ? "text-destructive" : "text-amber-600"}>
+      {(100 - milestoneResponseTotal).toFixed(1)}%
+    </span>
+  </div>
+)}
+```
 
-### Other components to audit for the same pattern
+**1c. Make entire footer row red when invalid** (line 1386)
+Update the footer `<TableRow>` to have a red background when invalid:
+```tsx
+<TableRow className={cn("font-bold", !isMilestoneResponseValid && milestoneResponses.length > 0 && "bg-red-50")}>
+```
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+**1d. Gold/yellow background for "Requested" column header and cells**
+- Line 1301-1305: Add `bg-amber-50` to the "יזם (מבוקש)" `<TableHead>`
+- Line 1331: Add `bg-amber-50/30` to the entrepreneur percentage `<TableCell>`
 
-All need the same `onError` fallback treatment.
+**1e. Ensure delta column uses correct arrows** — Already correct (lines 1340-1350 have green `ArrowUp` for increases, red `ArrowDown` for decreases). No change needed.
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+**1f. Add `cn` import** — Already imported at line level via `@/lib/utils`. Confirmed.
+
+### File 2: `src/components/negotiation/MilestoneNegotiationTable.tsx`
+
+**2a. Add "Remaining %" indicator** (after line 158, inside the alert section)
+Show remaining percentage when adjustments exist and total is not 100%:
+```tsx
+{adjustments.length > 0 && !isValidTotal && (
+  <div className="text-sm font-medium text-center py-1">
+    נותרו: <span className={totals.targetTotal > 100 ? "text-destructive" : "text-amber-600"}>
+      {(100 - totals.targetTotal).toFixed(1)}%
+    </span>
+  </div>
+)}
+```
+
+**2b. Make entire footer row red when invalid** (line 252)
+```tsx
+<TableRow className={cn("bg-muted/30", !isValidTotal && adjustments.length > 0 && "bg-red-50")}>
+```
+
+**2c. Add delta/change column** between "אחוז יעד" and "סכום יעד"
+Add a new `<TableHead>` for "שינוי" and corresponding cells showing green up-arrow or red down-arrow when selected and percentage differs from original.
+
+## What is NOT changed
+- Badge rendering at top of view — this requires understanding the specific "Notion reference" layout. The current view already renders status badges. If a specific layout is needed, the user should provide the reference.
+- Input masking to prevent >100% — instead of hard-blocking input (which creates UX confusion with multi-field edits), we use the "Remaining %" counter + red footer + disabled submit button approach, which is the standard pattern already used in `NegotiationDialog.tsx`.
+
+## Files modified: 2
+- `src/components/negotiation/NegotiationResponseView.tsx` — validation fix, gold styling, remaining % counter, red footer
+- `src/components/negotiation/MilestoneNegotiationTable.tsx` — remaining % counter, red footer, delta column
 
