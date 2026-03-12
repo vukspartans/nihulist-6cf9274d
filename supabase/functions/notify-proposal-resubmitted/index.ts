@@ -143,8 +143,9 @@ serve(async (req) => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Billding <notifications@billding.ai>',
       to: [recipientEmail],
-      subject: `הצעה נגדית התקבלה לפרויקט ${project.name}`,
+      subject: sanitize(`הצעה נגדית התקבלה לפרויקט ${project.name}`),
       html,
+      headers: { 'Content-Type': 'text/html; charset=UTF-8' },
     });
 
     if (emailError) {

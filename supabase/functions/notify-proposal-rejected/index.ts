@@ -139,8 +139,9 @@ serve(async (req) => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Billding <notifications@billding.ai>',
       to: allRecipients,
-      subject: `עדכון לגבי הצעתך - ${project.name}`,
+      subject: sanitize(`עדכון לגבי הצעתך - ${project.name}`),
       html,
+      headers: { 'Content-Type': 'text/html; charset=UTF-8' },
     });
 
     if (emailError) {

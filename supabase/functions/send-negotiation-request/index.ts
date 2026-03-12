@@ -438,8 +438,9 @@ serve(async (req) => {
         await resend.emails.send({
           from: "Billding <notifications@billding.ai>",
           to: advisorEmail,
-          subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+          subject: sanitize(`בקשה לעדכון הצעת מחיר - ${project.name}`),
           html: emailHtml,
+          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Request] Email sent to:", advisorEmail);

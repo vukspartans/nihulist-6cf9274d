@@ -305,8 +305,11 @@ serve(async (req) => {
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'Billding <noreply@billding.ai>',
           to: allRecipients,
-          subject: `הזמנה להגשת הצעת מחיר: ${project.name}`,
+          subject: sanitize(`הזמנה להגשת הצעת מחיר: ${project.name}`),
           html,
+          headers: {
+            'Content-Type': 'text/html; charset=UTF-8',
+          },
           tags: [
             { name: 'type', value: 'rfp_invitation' },
             { name: 'rfp_id', value: rfp_id },

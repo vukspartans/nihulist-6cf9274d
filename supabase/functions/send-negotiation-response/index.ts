@@ -243,8 +243,9 @@ serve(async (req) => {
         await resend.emails.send({
           from: "Billding <notifications@billding.ai>",
           to: entrepreneurProfile.email,
-          subject: `הצעה מעודכנת התקבלה - ${projectData.name}`,
+          subject: sanitize(`הצעה מעודכנת התקבלה - ${projectData.name}`),
           html: emailHtml,
+          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);
