@@ -416,7 +416,10 @@ serve(async (req) => {
         const sanitize = (s: string) => s
           .replace(/[\u2010-\u2015]/g, '-')
           .replace(/[\u2018\u2019]/g, "'")
-          .replace(/[\u201C\u201D]/g, '"');
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/\u05BE/g, '-')
+          .replace(/\u05F3/g, "'")
+          .replace(/\u05F4/g, '"');
 
         const emailHtml = await renderAsync(
           React.createElement(NegotiationRequestEmail, {
@@ -435,8 +438,9 @@ serve(async (req) => {
         await resend.emails.send({
           from: "Billding <notifications@billding.ai>",
           to: advisorEmail,
-          subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+          subject: sanitize(`בקשה לעדכון הצעת מחיר - ${project.name}`),
           html: emailHtml,
+          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Request] Email sent to:", advisorEmail);

@@ -19,7 +19,9 @@ interface EmailLayoutProps {
 
 export const EmailLayout = ({ preview, children, footer }: EmailLayoutProps) => (
   <Html dir="rtl" lang="he">
-    <Head />
+    <Head>
+      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+    </Head>
     <Preview>{preview}</Preview>
     <Body style={main}>
       <Container style={container}>

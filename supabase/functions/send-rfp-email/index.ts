@@ -60,7 +60,10 @@ const sanitize = (s: string): string => s
   .replace(/\u200B/g, '')    // zero-width space — remove
   .replace(/\u200C/g, '')    // zero-width non-joiner — remove
   .replace(/\u200D/g, '')    // zero-width joiner — remove
-  .replace(/\uFEFF/g, '');   // BOM — remove
+  .replace(/\uFEFF/g, '')    // BOM — remove
+  .replace(/\u05BE/g, '-')   // Hebrew maqaf ־ → ASCII hyphen
+  .replace(/\u05F3/g, "'")   // Hebrew geresh ׳ → apostrophe
+  .replace(/\u05F4/g, '"');  // Hebrew gershayim ״ → double quote
 
 // Format Hebrew date manually to avoid Deno's toLocaleDateString Unicode issues
 function formatHebrewDate(dateStr: string): string {
@@ -302,8 +305,11 @@ serve(async (req) => {
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'Billding <noreply@billding.ai>',
           to: allRecipients,
-          subject: `הזמנה להגשת הצעת מחיר: ${project.name}`,
+          subject: sanitize(`הזמנה להגשת הצעת מחיר: ${project.name}`),
           html,
+          headers: {
+            'Content-Type': 'text/html; charset=UTF-8',
+          },
           tags: [
             { name: 'type', value: 'rfp_invitation' },
             { name: 'rfp_id', value: rfp_id },
