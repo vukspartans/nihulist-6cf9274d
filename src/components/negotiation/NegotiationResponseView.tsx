@@ -601,7 +601,7 @@ export const NegotiationResponseView = ({
     return milestoneResponses.reduce((sum, m) => sum + m.advisorResponsePercentage, 0);
   }, [milestoneResponses]);
 
-  const isMilestoneResponseValid = milestoneResponseTotal === 100;
+  const isMilestoneResponseValid = Math.abs(milestoneResponseTotal - 100) < 0.01;
 
   const handleDecline = async () => {
     setDeclining(true);
