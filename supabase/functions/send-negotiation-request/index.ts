@@ -416,7 +416,10 @@ serve(async (req) => {
         const sanitize = (s: string) => s
           .replace(/[\u2010-\u2015]/g, '-')
           .replace(/[\u2018\u2019]/g, "'")
-          .replace(/[\u201C\u201D]/g, '"');
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/\u05BE/g, '-')
+          .replace(/\u05F3/g, "'")
+          .replace(/\u05F4/g, '"');
 
         const emailHtml = await renderAsync(
           React.createElement(NegotiationRequestEmail, {
