@@ -1480,7 +1480,10 @@ const SubmitProposal = () => {
           scopeText={servicesNotes || scopeText}
           projectName={rfpDetails?.projects?.name}
           advisorName={advisorProfile?.company_name}
-          selectedServices={selectedServices}
+          selectedServices={selectedServices.map(id => {
+            const item = entrepreneurData?.service_scope_items?.find(s => s.id === id);
+            return item?.task_name || id;
+          })}
           consultantNotes={consultantRequestNotes}
           servicesNotes={servicesNotes}
           feeLineItems={[
