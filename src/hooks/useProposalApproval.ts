@@ -184,56 +184,17 @@ export const useProposalApproval = () => {
    */
   const rejectProposal = async (proposalId: string, projectId: string, reason?: string) => {
     setLoading(true);
-    console.log(`[Rejection] Updating proposal ${proposalId} status to 'rejected'`);
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('משתמש לא מחובר');
+    console.log(`[Rejection] Invoking reject-proposal edge function for ${proposalId}`);
 
-      // Update proposal status to 'rejected'
-      const { error } = await supabase
-        .from('proposals')
-        .update({ 
-          status: 'rejected' as ProposalStatus,
-          terms: reason ? `סיבת דחייה: ${reason}` : null,
-        })
-        .eq('id', proposalId);
+    try {
+      const { error } = await supabase.functions.invoke('reject-proposal', {
+        body: { proposal_id: proposalId, rejection_reason: reason },
+      });
 
       if (error) throw error;
 
-      // Log activity
-      await supabase.from('activity_log').insert({
-        actor_id: user.id,
-        actor_type: 'entrepreneur',
-        action: 'proposal_rejected',
-        entity_type: 'proposal',
-        entity_id: proposalId,
-        project_id: projectId,
-        meta: { reason },
-      });
-
       queryClient.invalidateQueries({ queryKey: ['proposals', projectId] });
-
-      // Send email notification to advisor (non-blocking)
-      console.log('[Rejection] Sending email notification for proposal:', proposalId);
-      supabase.functions
-        .invoke('notify-proposal-rejected', {
-          body: {
-            proposal_id: proposalId,
-            rejection_reason: reason,
-            test_mode: false,
-          },
-        })
-        .then(({ data: emailData, error: emailError }) => {
-          if (emailError) {
-            console.error('[Rejection] Email notification failed:', emailError);
-          } else {
-            console.log('[Rejection] Email notification sent:', emailData);
-          }
-        })
-        .catch((err) => {
-          console.error('[Rejection] Email notification error:', err);
-        });
+      queryClient.invalidateQueries({ queryKey: ['project-advisors', projectId] });
 
       toast({
         title: 'הצעה נדחתה',
@@ -243,7 +204,7 @@ export const useProposalApproval = () => {
       return { success: true };
     } catch (error: any) {
       console.error('[Rejection] Error:', error);
-      
+
       handleError(error, {
         action: 'reject_proposal',
         metadata: { proposalId, projectId },
