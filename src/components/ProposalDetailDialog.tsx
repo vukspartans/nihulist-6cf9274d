@@ -131,7 +131,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
       }
       
       // If viewing current version, use proposal data directly
-      if (viewVersion === (proposal.current_version || 1)) {
+      if (proposal.current_version && viewVersion === proposal.current_version) {
         setVersionData(null);
         return;
       }
