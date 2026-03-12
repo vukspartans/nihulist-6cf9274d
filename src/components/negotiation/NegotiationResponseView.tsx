@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -601,7 +602,7 @@ export const NegotiationResponseView = ({
     return milestoneResponses.reduce((sum, m) => sum + m.advisorResponsePercentage, 0);
   }, [milestoneResponses]);
 
-  const isMilestoneResponseValid = milestoneResponseTotal === 100;
+  const isMilestoneResponseValid = Math.abs(milestoneResponseTotal - 100) < 0.01;
 
   const handleDecline = async () => {
     setDeclining(true);
@@ -1298,7 +1299,7 @@ export const NegotiationResponseView = ({
                               יועץ (מקורי)
                             </div>
                           </TableHead>
-                          <TableHead className="text-center font-semibold">
+                          <TableHead className="text-center font-semibold bg-amber-50">
                             <div className="flex items-center justify-center gap-1">
                               <Building2 className="h-4 w-4" />
                               יזם (מבוקש)
@@ -1328,7 +1329,7 @@ export const NegotiationResponseView = ({
                               <TableCell className="text-center">
                                 <Badge variant="secondary">{milestone.originalPercentage}%</Badge>
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="text-center bg-amber-50/30">
                                 <Badge 
                                   variant="outline" 
                                   className={hasChange ? "border-amber-400 text-amber-700 bg-amber-100" : ""}
@@ -1383,7 +1384,7 @@ export const NegotiationResponseView = ({
                         })}
                       </TableBody>
                       <TableFooter>
-                        <TableRow className="font-bold">
+                        <TableRow className={cn("font-bold", !isMilestoneResponseValid && milestoneResponses.length > 0 && "bg-red-50")}>
                           <TableCell className="text-right">סה״כ</TableCell>
                           <TableCell className="text-center">
                             {milestoneResponses.reduce((sum, m) => sum + m.originalPercentage, 0)}%
@@ -1417,12 +1418,19 @@ export const NegotiationResponseView = ({
                   
                   {/* Validation Alert */}
                   {canRespond && !isMilestoneResponseValid && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {milestoneResponseTotal}%
-                      </AlertDescription>
-                    </Alert>
+                    <>
+                      <div className="text-sm font-medium text-center py-2">
+                        נותרו: <span className={milestoneResponseTotal > 100 ? "text-destructive" : "text-amber-600"}>
+                          {(100 - milestoneResponseTotal).toFixed(1)}%
+                        </span>
+                      </div>
+                      <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {milestoneResponseTotal}%
+                        </AlertDescription>
+                      </Alert>
+                    </>
                   )}
                 </div>
               ) : session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (

@@ -150,12 +150,19 @@ export const MilestoneNegotiationTable = ({
   return (
     <div className={cn("space-y-4", className)} dir="rtl">
       {!isValidTotal && adjustments.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {totals.targetTotal.toFixed(1)}%
-          </AlertDescription>
-        </Alert>
+        <>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {totals.targetTotal.toFixed(1)}%
+            </AlertDescription>
+          </Alert>
+          <div className="text-sm font-medium text-center py-1">
+            נותרו: <span className={totals.targetTotal > 100 ? "text-destructive" : "text-amber-600"}>
+              {(100 - totals.targetTotal).toFixed(1)}%
+            </span>
+          </div>
+        </>
       )}
 
       <div className="border rounded-lg overflow-x-auto">
@@ -167,6 +174,7 @@ export const MilestoneNegotiationTable = ({
               <TableHead className="text-center w-24">אחוז מקורי</TableHead>
               <TableHead className="text-start w-28">סכום מקורי</TableHead>
               <TableHead className="text-center w-24">אחוז יעד</TableHead>
+              <TableHead className="text-center w-20">שינוי</TableHead>
               <TableHead className="text-start w-28">סכום יעד</TableHead>
               <TableHead className="min-w-[120px] text-start">הערות</TableHead>
             </TableRow>
@@ -221,6 +229,25 @@ export const MilestoneNegotiationTable = ({
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-center">
+                    {isSelected && targetPercentage !== milestone.percentage ? (
+                      <div className="flex items-center justify-center gap-1">
+                        {targetPercentage > milestone.percentage ? (
+                          <span className="text-green-600 flex items-center gap-0.5">
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                            +{(targetPercentage - milestone.percentage).toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-red-600 flex items-center gap-0.5">
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                            {(targetPercentage - milestone.percentage).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-start">
                     {isSelected ? (
                       <span className={cn(
@@ -249,7 +276,7 @@ export const MilestoneNegotiationTable = ({
             })}
           </TableBody>
           <TableFooter>
-            <TableRow className="bg-muted/30">
+            <TableRow className={cn("bg-muted/30", !isValidTotal && adjustments.length > 0 && "bg-red-50")}>
               <TableCell colSpan={2} className="text-start font-medium">
                 סה"כ
               </TableCell>
@@ -265,10 +292,11 @@ export const MilestoneNegotiationTable = ({
               )}>
                 {adjustments.length > 0 ? `${totals.targetTotal}%` : "-"}
               </TableCell>
+              <TableCell></TableCell>
               <TableCell className="text-start font-bold text-amber-600">
                 {adjustments.length > 0 ? formatCurrency(targetTotal) : "-"}
               </TableCell>
-              <TableCell />
+              <TableCell></TableCell>
             </TableRow>
           </TableFooter>
         </Table>
