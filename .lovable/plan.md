@@ -1,60 +1,31 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: "Confirm Updated Offer" Popup Triggered Without Manual Changes
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Root Cause
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+In `NegotiationResponseView.tsx`, when the advisor opens a negotiation request, `updatedLineItems` is initialized with the **entrepreneur's target prices** (lines 139-159). This means:
 
-## Changes
+1. `newTotal` immediately equals `targetTotal` (since all items default to target prices)
+2. When the advisor clicks "Submit Updated Offer" **without touching anything**, the check at line 1786 (`newTotal === targetTotal`) triggers the `showAcceptTargetConfirm` dialog
+3. This dialog shows "original price → target price" with a percentage reduction (e.g., -9%), making it look like the advisor made a change
 
-### `src/components/ProposalComparisonTable.tsx`
+The advisor sees a "price change warning" for a change they didn't make — the system pre-filled the target prices and then warned about them.
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+## Fix
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+Track whether the advisor has manually edited any prices. If no manual edits were made and they click submit, treat it as a direct acceptance of the target prices — skip the confusing "confirm change" popup and submit directly.
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+### Changes in `src/components/negotiation/NegotiationResponseView.tsx`
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
+1. **Add a `hasManualEdits` state** (boolean, default `false`) that flips to `true` when `handlePriceChange` is called by user interaction (not initialization).
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+2. **Update the submit button logic** (line 1784-1790):
+   - If `!hasManualEdits && newTotal === targetTotal` → submit directly via `handleAcceptTarget()` (no popup)
+   - If `hasManualEdits && newTotal === targetTotal` → show `showAcceptTargetConfirm` (advisor manually set prices back to target)
+   - If `newTotal !== targetTotal` → show `showSubmitDialog` (as before)
 
-### Other components to audit for the same pattern
+3. **Mark manual edits**: In `handlePriceChange` (line 470), set `hasManualEdits = true`. The initialization in `loadSession` (line 159) does NOT set this flag since it's pre-filling defaults.
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
-
-All need the same `onError` fallback treatment.
-
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+This is a single-file change with minimal risk — only the submit button branching logic changes.
 
