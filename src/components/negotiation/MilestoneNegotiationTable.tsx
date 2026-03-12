@@ -229,6 +229,25 @@ export const MilestoneNegotiationTable = ({
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-center">
+                    {isSelected && targetPercentage !== milestone.percentage ? (
+                      <div className="flex items-center justify-center gap-1">
+                        {targetPercentage > milestone.percentage ? (
+                          <span className="text-green-600 flex items-center gap-0.5">
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                            +{(targetPercentage - milestone.percentage).toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-red-600 flex items-center gap-0.5">
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                            {(targetPercentage - milestone.percentage).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-start">
                     {isSelected ? (
                       <span className={cn(
