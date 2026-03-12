@@ -98,6 +98,7 @@ export const NegotiationResponseView = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [advisorUploadedFiles, setAdvisorUploadedFiles] = useState<UploadedFile[]>([]);
   const [milestoneResponses, setMilestoneResponses] = useState<MilestoneResponse[]>([]);
+  const [hasManualEdits, setHasManualEdits] = useState(false);
   const [originalRfpPaymentTermType, setOriginalRfpPaymentTermType] = useState<string | null>(null);
 
   const { fetchNegotiationWithDetails, respondToNegotiation, cancelNegotiation, loading } = useNegotiation();
@@ -468,6 +469,7 @@ export const NegotiationResponseView = ({
   }, [feeLineItems, updatedLineItems, targetTotal]);
 
   const handlePriceChange = useCallback((lineItemId: string, price: number) => {
+    setHasManualEdits(true);
     setUpdatedLineItems((prev) => {
       const existing = prev.find(item => item.line_item_id === lineItemId);
       if (existing) {
@@ -1782,13 +1784,16 @@ export const NegotiationResponseView = ({
                   </Button>
                   <Button 
                     onClick={() => {
-                      // If advisor didn't change anything (new total matches target), warn them
-                      if (newTotal === targetTotal) {
+                      if (!hasManualEdits && newTotal === targetTotal) {
+                        // No manual edits and price matches target — accept directly without confusing popup
+                        handleAcceptTarget();
+                      } else if (newTotal === targetTotal) {
+                        // Advisor manually set prices back to target — confirm intent
                         setShowAcceptTargetConfirm(true);
                       } else {
                         setShowSubmitDialog(true);
                       }
-                    }} 
+                    }}
                     disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
                     className="bg-primary"
                   >
