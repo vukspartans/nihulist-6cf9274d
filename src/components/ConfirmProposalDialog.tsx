@@ -83,6 +83,9 @@ export function ConfirmProposalDialog({
   advisorName = 'יועץ',
   conditions,
   scopeText,
+  selectedServices,
+  consultantNotes,
+  servicesNotes,
 }: ConfirmProposalDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
