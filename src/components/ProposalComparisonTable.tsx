@@ -55,6 +55,7 @@ interface Proposal {
     advisor_type?: string;
     request_title?: string;
     deadline_at?: string;
+    payment_terms?: Record<string, any>;
   };
 }
 
