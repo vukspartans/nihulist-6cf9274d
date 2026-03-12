@@ -276,7 +276,7 @@ export const MilestoneNegotiationTable = ({
             })}
           </TableBody>
           <TableFooter>
-            <TableRow className="bg-muted/30">
+            <TableRow className={cn("bg-muted/30", !isValidTotal && adjustments.length > 0 && "bg-red-50")}>
               <TableCell colSpan={2} className="text-start font-medium">
                 סה"כ
               </TableCell>

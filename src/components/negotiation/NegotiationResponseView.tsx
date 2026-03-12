@@ -1417,12 +1417,19 @@ export const NegotiationResponseView = ({
                   
                   {/* Validation Alert */}
                   {canRespond && !isMilestoneResponseValid && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {milestoneResponseTotal}%
-                      </AlertDescription>
-                    </Alert>
+                    <>
+                      <div className="text-sm font-medium text-center py-2">
+                        נותרו: <span className={milestoneResponseTotal > 100 ? "text-destructive" : "text-amber-600"}>
+                          {(100 - milestoneResponseTotal).toFixed(1)}%
+                        </span>
+                      </div>
+                      <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {milestoneResponseTotal}%
+                        </AlertDescription>
+                      </Alert>
+                    </>
                   )}
                 </div>
               ) : session.proposal?.milestone_adjustments && session.proposal.milestone_adjustments.length > 0 ? (
