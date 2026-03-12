@@ -1328,7 +1328,7 @@ export const NegotiationResponseView = ({
                               <TableCell className="text-center">
                                 <Badge variant="secondary">{milestone.originalPercentage}%</Badge>
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="text-center bg-amber-50/30">
                                 <Badge 
                                   variant="outline" 
                                   className={hasChange ? "border-amber-400 text-amber-700 bg-amber-100" : ""}
