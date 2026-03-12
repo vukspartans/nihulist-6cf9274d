@@ -107,9 +107,13 @@ export function ConfirmProposalDialog({
         submittedAt: new Date().toISOString(),
         price: parseFloat(price) || 0,
         timelineDays: parsedTimelineDays,
+        scopeText: scopeText,
+        consultantNotes: consultantNotes,
+        selectedServices: selectedServices,
+        servicesNotes: servicesNotes,
         feeItems: feeLineItems.map(item => ({
           description: item.description,
-          unit: getFeeUnitLabel(item.unit || '') || 'פאושלי',
+          unit: item.unit || '',
           quantity: item.quantity || 1,
           unitPrice: item.unit_price || item.total,
           total: item.total,
@@ -122,7 +126,6 @@ export function ConfirmProposalDialog({
           percentage: m.percentage,
         })),
         conditions: conditions,
-        scopeText: scopeText,
       };
       
       await generateProposalPDF(pdfData);
