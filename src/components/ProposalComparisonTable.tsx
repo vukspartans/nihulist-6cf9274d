@@ -55,6 +55,7 @@ interface Proposal {
     advisor_type?: string;
     request_title?: string;
     deadline_at?: string;
+    payment_terms?: Record<string, any>;
   };
 }
 
@@ -365,7 +366,7 @@ export const ProposalComparisonTable = ({
                       {/* Payment Terms */}
                       <TableCell>
                         <span className="text-sm">
-                          {getPaymentTermLabel(proposal.conditions_json?.payment_term_type)}
+                          {getPaymentTermLabel(proposal.conditions_json?.payment_term_type || proposal.rfp_invite?.payment_terms?.payment_term_type)}
                         </span>
                       </TableCell>
 
