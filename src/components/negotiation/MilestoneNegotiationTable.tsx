@@ -295,7 +295,7 @@ export const MilestoneNegotiationTable = ({
               <TableCell className="text-start font-bold text-amber-600">
                 {adjustments.length > 0 ? formatCurrency(targetTotal) : "-"}
               </TableCell>
-              <TableCell />
+              <TableCell></TableCell>
             </TableRow>
           </TableFooter>
         </Table>
