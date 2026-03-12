@@ -150,12 +150,19 @@ export const MilestoneNegotiationTable = ({
   return (
     <div className={cn("space-y-4", className)} dir="rtl">
       {!isValidTotal && adjustments.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {totals.targetTotal.toFixed(1)}%
-          </AlertDescription>
-        </Alert>
+        <>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              סה״כ אחוזי אבני הדרך חייב להיות 100%. כרגע: {totals.targetTotal.toFixed(1)}%
+            </AlertDescription>
+          </Alert>
+          <div className="text-sm font-medium text-center py-1">
+            נותרו: <span className={totals.targetTotal > 100 ? "text-destructive" : "text-amber-600"}>
+              {(100 - totals.targetTotal).toFixed(1)}%
+            </span>
+          </div>
+        </>
       )}
 
       <div className="border rounded-lg overflow-x-auto">
