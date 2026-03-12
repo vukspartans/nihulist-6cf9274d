@@ -1784,13 +1784,16 @@ export const NegotiationResponseView = ({
                   </Button>
                   <Button 
                     onClick={() => {
-                      // If advisor didn't change anything (new total matches target), warn them
-                      if (newTotal === targetTotal) {
+                      if (!hasManualEdits && newTotal === targetTotal) {
+                        // No manual edits and price matches target — accept directly without confusing popup
+                        handleAcceptTarget();
+                      } else if (newTotal === targetTotal) {
+                        // Advisor manually set prices back to target — confirm intent
                         setShowAcceptTargetConfirm(true);
                       } else {
                         setShowSubmitDialog(true);
                       }
-                    }} 
+                    }}
                     disabled={loading || declining || (milestoneResponses.length > 0 && !isMilestoneResponseValid)}
                     className="bg-primary"
                   >
