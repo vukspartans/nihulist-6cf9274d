@@ -1,60 +1,51 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: Historical Version Showing Current Price Instead of Original
 
 ## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+When viewing a historical version (e.g., V1) of a proposal in the ProposalDetailDialog, the current/latest price is displayed instead of the original price from that point in time.
 
-## Changes
+## Root Cause
 
-### `src/components/ProposalComparisonTable.tsx`
+In `src/components/ProposalDetailDialog.tsx`, lines 133-136:
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
-
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
-
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+```typescript
+if (viewVersion === (proposal.current_version || 1)) {
+  setVersionData(null);
+  return;
+}
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+The `|| 1` fallback is the bug. When `proposal.current_version` is `null` or `undefined` (common for legacy proposals or those where the column wasn't updated after negotiation), this expression evaluates to `1`. So when viewing V1, the code thinks "V1 is the current version" and skips fetching version data, falling back to `proposal.price` — which is the **mutable, latest** price.
 
-### Other components to audit for the same pattern
+## Fix
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+**File: `src/components/ProposalDetailDialog.tsx`**
 
-All need the same `onError` fallback treatment.
+**Change 1** — Fix the "skip fetch" condition (line 134):
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+```typescript
+// Before:
+if (viewVersion === (proposal.current_version || 1)) {
+
+// After:
+if (proposal.current_version && viewVersion === proposal.current_version) {
+```
+
+This ensures version data is always fetched from `proposal_versions` unless we **know** the requested version matches the current one. If `current_version` is null/undefined, we never skip — we always fetch.
+
+**Change 2** — Fix the matching `isViewingHistoricalVersion` check (line 123):
+
+```typescript
+// Before:
+const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== (proposal.current_version || 1);
+
+// After:
+const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== proposal.current_version;
+```
+
+This makes the yellow "You are viewing a historical version" banner consistent with the data fetch logic: if `current_version` is null, any specified `viewVersion` is treated as historical.
+
+Two lines changed, one file.
 
