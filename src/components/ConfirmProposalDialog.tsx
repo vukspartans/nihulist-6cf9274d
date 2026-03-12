@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateProposalPDF, type ProposalPDFData } from '@/utils/generateProposalPDF';
 import { useToast } from '@/hooks/use-toast';
 import { 
+  getFeeUnitLabel, 
   getChargeTypeLabel, 
   getDurationUnitLabel, 
   isRecurringChargeType 
