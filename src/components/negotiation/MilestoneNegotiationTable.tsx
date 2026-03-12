@@ -174,6 +174,7 @@ export const MilestoneNegotiationTable = ({
               <TableHead className="text-center w-24">אחוז מקורי</TableHead>
               <TableHead className="text-start w-28">סכום מקורי</TableHead>
               <TableHead className="text-center w-24">אחוז יעד</TableHead>
+              <TableHead className="text-center w-20">שינוי</TableHead>
               <TableHead className="text-start w-28">סכום יעד</TableHead>
               <TableHead className="min-w-[120px] text-start">הערות</TableHead>
             </TableRow>
