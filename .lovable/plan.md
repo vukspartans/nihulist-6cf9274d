@@ -1,60 +1,47 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix Proposal PDF Generation Issues
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Issues Found
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+### 1. Double Unit Translation (Incorrect Units)
+**Root cause**: Both `ProposalDetailDialog` (line 449) and `AdvisorProposalViewDialog` (line 477) call `getFeeUnitLabel(item.unit)` before passing to PDF. Then `buildFeeTable` in `generateProposalPDF.ts` (line 196) calls `getFeeUnitLabel()` *again*. The already-translated Hebrew label (e.g., "מ״ר") doesn't match any value key, so it falls back to the raw string or 'יחידה'.
 
-## Changes
+**Fix**: Remove `getFeeUnitLabel()` from `buildFeeTable` (line 196) — the callers already translate. Alternatively, pass raw unit codes and let the PDF do the translation. The cleaner approach: pass raw codes, let `generateProposalPDF.ts` handle all formatting.
 
-### `src/components/ProposalComparisonTable.tsx`
+### 2. Missing Project Name in Pre-Submit PDF
+**Root cause**: `SubmitProposal.tsx` renders `ConfirmProposalDialog` without passing `projectName` or `advisorName`. They default to 'פרויקט' and 'יועץ'.
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+**Fix**: Pass `rfpDetails.projects.name` as `projectName` and `advisorProfile.company_name` as `advisorName` from `SubmitProposal.tsx`.
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 3. Missing Services/Scope in Pre-Submit PDF
+**Root cause**: `ConfirmProposalDialog` doesn't receive or forward `selectedServices`, `consultantNotes`, or `servicesNotes` to the PDF generator.
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+**Fix**: Add these props to `ConfirmProposalDialog` and pass them from `SubmitProposal.tsx`. Forward them to `generateProposalPDF()`.
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
+### 4. Missing Advisor Details in Entrepreneur PDF
+**Root cause**: `ProposalDetailDialog.handleExportPDF` doesn't pass `advisorCompany`, `advisorPhone`, `advisorEmail` even though `advisorInfo` is available.
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+**Fix**: Pass advisor details from `advisorInfo` and `proposal.advisors` to the PDF call.
 
-### Other components to audit for the same pattern
+## Files to Change
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+### `src/utils/generateProposalPDF.ts`
+- Line 196: Remove the `getFeeUnitLabel()` call in `buildFeeTable` — display the `item.unit` value directly (callers already translate it).
 
-All need the same `onError` fallback treatment.
+### `src/pages/SubmitProposal.tsx`
+- Pass `projectName={rfpDetails?.projects?.name}` and `advisorName={advisorProfile?.company_name}` to `ConfirmProposalDialog`.
+- Pass `selectedServices`, `consultantNotes`/`servicesNotes` and `scopeText` data.
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+### `src/components/ConfirmProposalDialog.tsx`
+- Add optional props: `selectedServices`, `consultantNotes`, `servicesNotes`.
+- Forward these to `generateProposalPDF()` call.
+
+### `src/components/ProposalDetailDialog.tsx`
+- In `handleExportPDF`, pass `advisorCompany`, `advisorPhone`, `advisorEmail` from `advisorInfo`/`proposal.advisors`.
+
+### `src/components/AdvisorProposalViewDialog.tsx`
+- Pass raw `item.unit` instead of `getFeeUnitLabel(item.unit)` to align with the fix in `generateProposalPDF.ts`. Re-add `getFeeUnitLabel` call inside `buildFeeTable`.
+
+**Correction on approach**: To avoid breaking any caller, the cleanest fix is: keep `getFeeUnitLabel()` in `buildFeeTable` but have callers pass raw unit codes. Update all three callers (ProposalDetailDialog, AdvisorProposalViewDialog, ConfirmProposalDialog) to pass `unit: item.unit` (raw code) instead of `unit: getFeeUnitLabel(item.unit)`.
 
