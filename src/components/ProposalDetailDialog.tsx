@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { NegotiationDialog, EntrepreneurNegotiationView } from '@/components/negotiation';
+import { useNegotiation } from '@/hooks/useNegotiation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
