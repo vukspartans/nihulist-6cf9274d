@@ -1478,20 +1478,29 @@ const SubmitProposal = () => {
           hasSignature={!!signature}
           conditions={conditions}
           scopeText={servicesNotes || scopeText}
+          projectName={rfpDetails?.projects?.name}
+          advisorName={advisorProfile?.company_name}
+          selectedServices={selectedServices}
+          consultantNotes={consultantRequestNotes}
+          servicesNotes={servicesNotes}
           feeLineItems={[
             ...(entrepreneurData?.fee_items || []).map(item => ({
               description: item.description,
               quantity: item.quantity || 1,
+              unit: item.unit || '',
               unit_price: consultantPrices[item.id] || 0,
               total: (consultantPrices[item.id] || 0) * (item.quantity || 1),
               is_optional: item.is_optional,
+              charge_type: item.charge_type,
             })),
             ...additionalFeeItems.map(item => ({
               description: item.description,
               quantity: item.quantity || 1,
+              unit: item.unit || '',
               unit_price: item.consultant_unit_price || 0,
               total: (item.consultant_unit_price || 0) * (item.quantity || 1),
               is_optional: item.is_optional,
+              charge_type: item.charge_type,
             }))
           ]}
           milestones={consultantMilestones.map(m => ({

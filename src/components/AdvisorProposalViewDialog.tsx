@@ -474,7 +474,7 @@ export function AdvisorProposalViewDialog({ open, onOpenChange, proposalId }: Ad
         feeItems: (proposal.fee_line_items || []).map(item => ({
           description: item.description,
           quantity: item.quantity,
-          unit: getFeeUnitLabel(item.unit || ''),
+          unit: item.unit || '',
           unitPrice: item.unit_price,
           total: item.total,
           isOptional: item.is_optional,
