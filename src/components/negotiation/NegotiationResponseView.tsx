@@ -1298,7 +1298,7 @@ export const NegotiationResponseView = ({
                               יועץ (מקורי)
                             </div>
                           </TableHead>
-                          <TableHead className="text-center font-semibold">
+                          <TableHead className="text-center font-semibold bg-amber-50">
                             <div className="flex items-center justify-center gap-1">
                               <Building2 className="h-4 w-4" />
                               יזם (מבוקש)
