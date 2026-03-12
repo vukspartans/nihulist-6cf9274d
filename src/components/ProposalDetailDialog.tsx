@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ProposalApprovalDialog } from '@/components/ProposalApprovalDialog';
 import { AIAnalysisDisplay } from '@/components/AIAnalysisDisplay';
 import { NegotiationDialog, EntrepreneurNegotiationView } from '@/components/negotiation';
+import { useNegotiation } from '@/hooks/useNegotiation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProposalPDF } from '@/utils/generateProposalPDF';
@@ -467,13 +468,17 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
     }
   };
 
+  const { rejectProposal: rejectViaEdgeFunction } = useNegotiation();
+
   const handleReject = async () => {
-    const reason = prompt("נא להזין סיבת דחייה:"); if (!reason) return;
-    try {
-      await supabase.from('proposals').update({ status: 'rejected' }).eq('id', proposal.id);
-      await supabase.functions.invoke('notify-proposal-rejected', { body: { proposalId: proposal.id, reason } });
-      toast({ title: "ההצעה נדחתה" }); onStatusChange?.(); onSuccess?.(); onOpenChange(false);
-    } catch { toast({ title: "שגיאה", variant: "destructive" }); }
+    const reason = prompt("נא להזין סיבת דחייה:");
+    if (!reason) return;
+    const success = await rejectViaEdgeFunction(proposal.id, reason);
+    if (success) {
+      onStatusChange?.();
+      onSuccess?.();
+      onOpenChange(false);
+    }
   };
 
   // Accept the updated counter-offer after negotiation

@@ -1,98 +1,60 @@
 
 
-# Fix: Proposal Rejection Flow — Multiple Issues
+# Fix Broken Logo Images with Fallback
 
-## Investigation Summary
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-I audited all three rejection paths in the codebase. There is no literal `is_rejected: true` boolean-to-enum mismatch, but there are **three distinct bugs** across the rejection flows that cause failures and data inconsistency.
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-## Bugs Found
+## Changes
 
-### Bug 1: `ProposalDetailDialog.handleReject` — Wrong notification payload field names (line 474)
+### `src/components/ProposalComparisonTable.tsx`
 
-```typescript
-// CURRENT (broken):
-await supabase.functions.invoke('notify-proposal-rejected', { 
-  body: { proposalId: proposal.id, reason } 
-});
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-// The edge function expects:
-//   proposal_id  (not proposalId)
-//   rejection_reason  (not reason)
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
 ```
 
-The notification function receives `proposal_id: undefined`, fails to find the proposal, and errors. Additionally, this handler does a raw `.update({ status: 'rejected' })` without calling `reject_proposal_with_cleanup`, so **active negotiations are never cancelled**.
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-### Bug 2: `useProposalApproval.rejectProposal` — Skips negotiation cleanup
+### Other components to audit for the same pattern
 
-This hook does a direct `proposals.update()` instead of calling the `reject_proposal_with_cleanup` RPC. Active negotiation sessions remain in `open`/`awaiting_response` state, and `has_active_negotiation` stays `true`.
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### Bug 3: Inconsistent rejection paths
+All need the same `onError` fallback treatment.
 
-Three different functions reject proposals using three different mechanisms:
-1. `ProposalDetailDialog.handleReject` → direct `.update()` + broken notification
-2. `useProposalApproval.rejectProposal` → direct `.update()` + correct notification but no cleanup  
-3. `useNegotiation.rejectProposal` → edge function `reject-proposal` → RPC with cleanup ✓
-
-Only path 3 is correct.
-
-## Fix
-
-**Consolidate all rejection to use the `reject-proposal` edge function**, which properly:
-- Validates ownership
-- Updates status via `reject_proposal_with_cleanup` RPC
-- Cancels active negotiations
-- Sets `has_active_negotiation = false`
-- Sends email notifications
-
-### File 1: `src/components/ProposalDetailDialog.tsx` (line 470-477)
-
-Replace the inline `handleReject` with a call to `useNegotiation().rejectProposal`:
-
-- Import `useNegotiation` hook
-- Replace the inline try/catch with:
-  ```typescript
-  const handleReject = async () => {
-    const reason = prompt("נא להזין סיבת דחייה:");
-    if (!reason) return;
-    const success = await rejectWithNotification(proposal.id, reason);
-    if (success) {
-      onStatusChange?.();
-      onSuccess?.();
-      onOpenChange(false);
-    }
-  };
-  ```
-- Add query invalidation after success
-
-### File 2: `src/hooks/useProposalApproval.ts` (lines 185-256)
-
-Replace the direct `.update()` + separate notification call with a single edge function invocation:
-
-```typescript
-const rejectProposal = async (proposalId: string, projectId: string, reason?: string) => {
-  setLoading(true);
-  try {
-    const { error } = await supabase.functions.invoke('reject-proposal', {
-      body: { proposal_id: proposalId, rejection_reason: reason },
-    });
-    if (error) throw error;
-
-    queryClient.invalidateQueries({ queryKey: ['proposals', projectId] });
-    toast({ title: 'הצעה נדחתה', description: 'היועץ יקבל הודעה על כך' });
-    return { success: true };
-  } catch (error: any) {
-    handleError(error, { action: 'reject_proposal', metadata: { proposalId, projectId } });
-    return { success: false };
-  } finally {
-    setLoading(false);
-  }
-};
-```
-
-This removes ~40 lines of duplicated logic (direct update, activity log insert, separate notification call) and replaces with 15 lines using the edge function that already handles all of it.
-
-## Files Modified: 2
-- `src/components/ProposalDetailDialog.tsx` — use `useNegotiation` hook for rejection
-- `src/hooks/useProposalApproval.ts` — delegate to `reject-proposal` edge function
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
