@@ -120,7 +120,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [loadingVersion, setLoadingVersion] = useState(false);
 
   // Determine if we're viewing a historical version
-  const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== (proposal.current_version || 1);
+  const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== proposal.current_version;
 
   // Load version-specific data when viewVersion changes
   useEffect(() => {
