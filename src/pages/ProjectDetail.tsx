@@ -176,7 +176,8 @@ export const ProjectDetail = () => {
           rfp_invite:rfp_invite_id (
             advisor_type,
             request_title,
-            deadline_at
+            deadline_at,
+            payment_terms
           )
         `)
         .eq('project_id', id)

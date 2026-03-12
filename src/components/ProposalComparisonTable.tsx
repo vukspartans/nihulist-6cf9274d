@@ -366,7 +366,7 @@ export const ProposalComparisonTable = ({
                       {/* Payment Terms */}
                       <TableCell>
                         <span className="text-sm">
-                          {getPaymentTermLabel(proposal.conditions_json?.payment_term_type)}
+                          {getPaymentTermLabel(proposal.conditions_json?.payment_term_type || proposal.rfp_invite?.payment_terms?.payment_term_type)}
                         </span>
                       </TableCell>
 
