@@ -1383,7 +1383,7 @@ export const NegotiationResponseView = ({
                         })}
                       </TableBody>
                       <TableFooter>
-                        <TableRow className="font-bold">
+                        <TableRow className={cn("font-bold", !isMilestoneResponseValid && milestoneResponses.length > 0 && "bg-red-50")}>
                           <TableCell className="text-right">סה״כ</TableCell>
                           <TableCell className="text-center">
                             {milestoneResponses.reduce((sum, m) => sum + m.originalPercentage, 0)}%
