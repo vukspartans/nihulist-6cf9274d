@@ -441,7 +441,6 @@ serve(async (req) => {
           to: advisorEmail,
           subject: sanitize(`בקשה לעדכון הצעת מחיר - ${project.name}`),
           html: emailHtml,
-          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Request] Email sent to:", advisorEmail);
