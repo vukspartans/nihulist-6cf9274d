@@ -51,6 +51,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const profileLoadingRef = React.useRef(true);
+  const rolesLoadingRef = React.useRef(true);
   const [profileLoading, _setProfileLoading] = useState(true);
   const [rolesLoading, _setRolesLoading] = useState(true);
 
