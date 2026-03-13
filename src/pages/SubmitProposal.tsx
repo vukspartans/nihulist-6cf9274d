@@ -33,6 +33,7 @@ import { differenceInDays } from 'date-fns';
 import { PROPOSAL_VALIDATION } from '@/utils/constants';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RFPFeeItem, PaymentTerms, ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest';
+import { trackEvent } from '@/lib/posthog';
 
 // Lazy load heavy components
 const SignatureCanvas = lazy(() => import('@/components/SignatureCanvas').then(module => ({
