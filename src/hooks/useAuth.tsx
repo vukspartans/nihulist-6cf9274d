@@ -51,8 +51,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [rolesLoading, setRolesLoading] = useState(true);
+  const [profileLoading, setProfileLoadingState] = useState(true);
+  const [rolesLoading, setRolesLoadingState] = useState(true);
 
   // Fetch user profile and roles
   const fetchProfile = async (userId: string, userEmail?: string) => {
