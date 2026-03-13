@@ -257,6 +257,7 @@ const RFPDetails = () => {
             .is('opened_at', null);
         }
       }
+      trackEvent('rfp_opened', { rfp_id, invite_id });
     } catch (error) {
       console.warn('Error marking RFP as opened (non-critical):', error);
     }

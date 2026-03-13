@@ -147,6 +147,11 @@ export const useRFP = () => {
                 });
               } else {
                 console.log('[useRFP] Emails sent successfully:', emailData);
+                trackEvent('rfp_sent_to_advisors', {
+                  rfp_id: result.result_rfp_id,
+                  advisor_count: result.result_invites_sent,
+                  project_id: projectId,
+                });
               }
             });
 

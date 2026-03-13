@@ -82,6 +82,10 @@ export const useProposalApproval = () => {
 
       console.log('[Approval] Atomic approval successful:', result);
 
+      trackEvent('advisor_selected', { proposal_id: data.proposalId, project_id: data.projectId, advisor_id: data.advisorId });
+      trackEvent('advisor_selected_for_project', { proposal_id: data.proposalId, project_id: data.projectId, advisor_id: data.advisorId });
+      trackEvent('agreement_signed', { proposal_id: data.proposalId, project_id: data.projectId });
+
       toast({
         title: 'הצעה אושרה בהצלחה',
         description: 'היועץ נוסף לפרויקט',

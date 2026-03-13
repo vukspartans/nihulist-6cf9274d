@@ -79,6 +79,7 @@ const SubmitProposal = () => {
   const { user, primaryRole } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const proposalStartedRef = useRef(false);
   
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);

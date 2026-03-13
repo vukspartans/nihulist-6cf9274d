@@ -299,6 +299,11 @@ const Auth = () => {
         // Show email confirmation message
         setEmailSent(true);
         setUserEmail(formData.email);
+
+        trackEvent(formData.role === 'advisor' ? 'advisor_signed_up' : 'developer_signed_up', {
+          role: formData.role,
+          email: formData.email,
+        });
         
         toast({
           title: "ההרשמה הושלמה בהצלחה!",

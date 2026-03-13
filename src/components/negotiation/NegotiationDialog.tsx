@@ -427,6 +427,10 @@ export const NegotiationDialog = ({
     }
 
     if (result) {
+      trackEvent('negotiation_started', {
+        proposal_id: proposal.id,
+        project_id: proposal.project_id,
+      });
       onOpenChange(false);
       onSuccess?.();
     }

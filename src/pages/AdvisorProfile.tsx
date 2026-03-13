@@ -150,6 +150,11 @@ const AdvisorProfile = () => {
         if (error) throw error;
       }
 
+      trackEvent('advisor_profile_completed', {
+        advisor_id: profile.id || undefined,
+        company_name: profile.company_name,
+      });
+
       toast({
         title: "הפרופיל נשמר בהצלחה",
         description: "הפרטים שלך עודכנו במערכת",

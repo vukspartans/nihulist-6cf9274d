@@ -139,6 +139,11 @@ export const ProposalComparisonDialog = ({
     if (open && proposalIds.length > 0) {
       fetchProposals();
       fetchProjectName();
+      trackEvent('proposals_comparison_opened', {
+        project_id: projectId,
+        proposal_count: proposalIds.length,
+        advisor_type: advisorType,
+      });
     }
   }, [open, proposalIds, projectId]);
 

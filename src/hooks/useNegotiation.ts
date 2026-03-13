@@ -98,6 +98,10 @@ export const useNegotiation = () => {
         description: "ההצעה המעודכנת נשלחה ליזם. תקבל עדכון כשיגיב להצעה.",
       });
 
+      trackEvent('negotiation_submitted', {
+        session_id: data.session_id,
+      });
+
       return result as NegotiationResponseOutput;
     } catch (error: any) {
       console.error("[useNegotiation] respondToNegotiation error:", error);
