@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleError } from '@/utils/errorHandling';
 import { DEADLINES } from '@/utils/constants';
 import { ServiceScopeItem, RFPFeeItem, PaymentTerms, ServiceDetailsMode } from '@/types/rfpRequest';
+import { trackEvent } from '@/lib/posthog';
 
 interface RFPResult {
   result_rfp_id: string;
