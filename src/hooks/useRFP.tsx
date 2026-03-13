@@ -96,6 +96,14 @@ export const useRFP = () => {
       if (error) throw error;
 
       const result = data?.[0] as RFPResult;
+
+      if (result) {
+        trackEvent('rfp_created', {
+          rfp_id: result.result_rfp_id,
+          invites_sent: result.result_invites_sent,
+          project_id: projectId,
+        });
+      }
       
       console.log('[useRFP] RFP Result:', {
         rfpId: result?.result_rfp_id,
