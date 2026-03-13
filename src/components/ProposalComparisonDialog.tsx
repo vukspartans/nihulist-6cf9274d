@@ -18,6 +18,7 @@ import { VersionBadge, RejectProposalDialog, NegotiationDialog, BulkNegotiationD
 import { useNegotiation } from '@/hooks/useNegotiation';
 import { useLineItems } from '@/hooks/useLineItems';
 import { WhyRecommendedPanel } from './WhyRecommendedPanel';
+import { trackEvent } from '@/lib/posthog';
 
 interface FeeLineItem {
   item_id?: string;
