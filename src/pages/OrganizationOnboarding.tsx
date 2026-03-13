@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,8 +70,15 @@ const OrganizationOnboarding = () => {
     }
   }, [profile, organizationName]);
 
+  // Track whether this component instance already completed/skipped onboarding
+  const completedRef = useRef(false);
+
   // Redirect if already onboarded or not entrepreneur
   useEffect(() => {
+    // If we just completed in this session, don't redirect back to onboarding
+    if (completedRef.current) return;
+    if (sessionStorage.getItem('onboarding_just_completed') === 'true') return;
+
     if (!authLoading && !orgLoading) {
       if (!user) {
         navigate('/auth');
@@ -195,6 +202,8 @@ const OrganizationOnboarding = () => {
       }
 
       if (success) {
+        completedRef.current = true;
+        sessionStorage.setItem('onboarding_just_completed', 'true');
         toast({
           title: 'נשמר',
           description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
@@ -257,6 +266,7 @@ const OrganizationOnboarding = () => {
       }
 
       if (success) {
+        completedRef.current = true;
         // Clear skip flag on successful completion
         localStorage.removeItem('onboarding_skipped');
         // Mark as just completed to prevent redirect loop

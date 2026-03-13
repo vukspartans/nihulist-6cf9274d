@@ -1,50 +1,60 @@
 
 
-# Fix: Infinite Loop in Profile Setup / Organization Onboarding
+# Fix Broken Logo Images with Fallback
 
-## Root Cause
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-After completing onboarding, `createOrganization` calls the `create_organization_for_user` RPC which:
-1. Creates a company record
-2. Updates `profiles.organization_id` to link the user to the new company
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-However, `useAuth` never re-fetches the profile after this happens. So when the user navigates to `/profile` (line 273 of OrganizationOnboarding), `useOrganization` re-initializes with the **stale** `profile` from `useAuth` which still has `organization_id = null`. This means:
+## Changes
 
-- `fetchOrganization` sees no `organization_id` → sets `organization = null`
-- If the user then navigates to Dashboard, `needsOnboarding()` returns `true` (no organization)
-- Dashboard redirects back to `/organization/onboarding`
-- The onboarding page's redirect guard (line 84) checks `organization?.onboarding_completed_at` — but `organization` is null due to stale profile
+### `src/components/ProposalComparisonTable.tsx`
 
-The `sessionStorage.setItem('onboarding_just_completed', 'true')` partially mitigates this, but only for `needsOnboarding()` — not for the onboarding page's own redirect logic.
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-## Fix — 2 files
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
 
-### 1. `src/hooks/useOrganization.ts`
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
 
-After `createOrganization` succeeds, the organization is set in local state but `fetchOrganization` will override it on next run because the stale profile still has no `organization_id`. 
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
+```
 
-**Change**: Make `fetchOrganization` also check `organization` state (if already set) as a fallback when `profile.organization_id` is null. Additionally, after creating an org, store the org ID so subsequent fetches use it.
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-Add a `manualOrgId` ref that gets set on successful creation. In `fetchOrganization`, use `manualOrgId.current ?? profile.organization_id`.
+### Other components to audit for the same pattern
 
-### 2. `src/pages/OrganizationOnboarding.tsx`
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-The redirect guard at line 74-88 runs on every render, including right after completion when `organization` is being updated asynchronously. The `sessionStorage` flag set in `handleComplete` is checked by `needsOnboarding()` in Dashboard but **not** by the onboarding page's own redirect guard.
+All need the same `onError` fallback treatment.
 
-**Change**: Add a local `isCompleted` state flag that gets set in `handleComplete`/`handleSkip` before navigation. The redirect guard should also check this flag and the `sessionStorage` flag to prevent re-entering the form.
-
-### Detailed Changes
-
-**`src/hooks/useOrganization.ts`**:
-- Add `useRef` for `createdOrgId` to persist the org ID after RPC creation
-- In `fetchOrganization`: use `createdOrgId.current || (profile as any).organization_id` so re-fetches after creation still find the org
-- In `createOrganization`: set `createdOrgId.current = orgData.id` after successful RPC
-
-**`src/pages/OrganizationOnboarding.tsx`**:
-- Add a local `completed` ref/state set to `true` in `handleComplete` and `handleSkip` before navigation
-- In the redirect `useEffect` (line 74-88): also check `sessionStorage.getItem('onboarding_just_completed')` and the local flag to skip redirecting back to onboarding
-
-## Files Modified: 2
-- `src/hooks/useOrganization.ts`
-- `src/pages/OrganizationOnboarding.tsx`
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
