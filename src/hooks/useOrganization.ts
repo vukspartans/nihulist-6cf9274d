@@ -141,6 +141,7 @@ export function useOrganization() {
       }
 
       const orgData = data as unknown as Organization;
+      createdOrgIdRef.current = orgData.id;
       setOrganization(orgData);
       return orgData;
     } catch (err) {

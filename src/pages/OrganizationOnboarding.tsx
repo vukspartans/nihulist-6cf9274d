@@ -266,6 +266,7 @@ const OrganizationOnboarding = () => {
       }
 
       if (success) {
+        completedRef.current = true;
         // Clear skip flag on successful completion
         localStorage.removeItem('onboarding_skipped');
         // Mark as just completed to prevent redirect loop
