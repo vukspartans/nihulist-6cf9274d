@@ -19,6 +19,7 @@ import { TermsAndConditions } from "@/components/TermsAndConditions";
 import { getPrimaryRole, getDashboardRouteForRole, type AppRole } from '@/lib/roleNavigation';
 import { useAuth } from '@/hooks/useAuth';
 import { PRODUCTION_URL } from '@/utils/urls';
+import { trackEvent } from '@/lib/posthog';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
