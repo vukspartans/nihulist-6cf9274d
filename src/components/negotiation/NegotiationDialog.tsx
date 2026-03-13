@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
+import { trackEvent } from '@/lib/posthog';
 import { toast } from "sonner";
 
 interface NegotiationDialogProps {
@@ -426,6 +427,10 @@ export const NegotiationDialog = ({
     }
 
     if (result) {
+      trackEvent('negotiation_started', {
+        proposal_id: proposal.id,
+        project_id: proposal.project_id,
+      });
       onOpenChange(false);
       onSuccess?.();
     }

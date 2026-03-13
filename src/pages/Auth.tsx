@@ -19,6 +19,7 @@ import { TermsAndConditions } from "@/components/TermsAndConditions";
 import { getPrimaryRole, getDashboardRouteForRole, type AppRole } from '@/lib/roleNavigation';
 import { useAuth } from '@/hooks/useAuth';
 import { PRODUCTION_URL } from '@/utils/urls';
+import { trackEvent } from '@/lib/posthog';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -298,6 +299,11 @@ const Auth = () => {
         // Show email confirmation message
         setEmailSent(true);
         setUserEmail(formData.email);
+
+        trackEvent(formData.role === 'advisor' ? 'advisor_signed_up' : 'developer_signed_up', {
+          role: formData.role,
+          email: formData.email,
+        });
         
         toast({
           title: "ההרשמה הושלמה בהצלחה!",

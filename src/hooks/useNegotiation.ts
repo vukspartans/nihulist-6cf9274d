@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from '@/lib/posthog';
 import type {
   NegotiationRequestInput,
   NegotiationResponseInput,
@@ -31,6 +32,12 @@ export const useNegotiation = () => {
       toast({
         title: "✓ בקשת העדכון נשלחה בהצלחה",
         description: `הבקשה נשלחה ל${supplierName}. תקבל עדכון כשיגיב להצעה.`,
+      });
+
+      trackEvent('negotiation_created', {
+        session_id: (result as NegotiationRequestOutput)?.session_id,
+        proposal_id: data.proposal_id,
+        project_id: data.project_id,
       });
 
       return result as NegotiationRequestOutput;
@@ -89,6 +96,10 @@ export const useNegotiation = () => {
       toast({
         title: "✓ הצעה מעודכנת נשלחה בהצלחה",
         description: "ההצעה המעודכנת נשלחה ליזם. תקבל עדכון כשיגיב להצעה.",
+      });
+
+      trackEvent('negotiation_submitted', {
+        session_id: data.session_id,
       });
 
       return result as NegotiationResponseOutput;

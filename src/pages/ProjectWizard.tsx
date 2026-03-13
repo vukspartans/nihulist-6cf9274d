@@ -212,6 +212,15 @@ export const ProjectWizard = () => {
 
       trackEvent('project_created', { project_id: project.id, project_type: formData.projectType });
 
+      // Check if this is the user's first project
+      const { count } = await supabase
+        .from('projects')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_id', user.id);
+      if (count === 1) {
+        trackEvent('first_project_created', { project_id: project.id, project_type: formData.projectType });
+      }
+
       console.log('[ProjectWizard] Post-project creation check:', {
         projectId: project.id,
         filesWillBeUploaded: filesWithMetadata.length

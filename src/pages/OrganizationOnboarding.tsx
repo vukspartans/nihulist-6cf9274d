@@ -14,6 +14,7 @@ import { Building2, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Phone, Glob
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganization, type OrganizationInput } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
+import { trackEvent } from '@/lib/posthog';
 import { 
   ORGANIZATION_ACTIVITY_CATEGORIES, 
   CATEGORY_KEYS,
@@ -260,6 +261,11 @@ const OrganizationOnboarding = () => {
         localStorage.removeItem('onboarding_skipped');
         // Mark as just completed to prevent redirect loop
         sessionStorage.setItem('onboarding_just_completed', 'true');
+
+        trackEvent('developer_profile_completed', {
+          organization_name: organizationName.trim(),
+        });
+
         toast({
           title: 'הארגון נוצר בהצלחה!',
           description: 'ברוכים הבאים לניהוליסט'

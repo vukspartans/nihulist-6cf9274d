@@ -27,6 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import LegalFooter from '@/components/LegalFooter';
 import { AdvisorTasksView } from '@/components/tasks/AdvisorTasksView';
 import { AdvisorPaymentsView } from '@/components/payments/AdvisorPaymentsView';
+import { trackEvent } from '@/lib/posthog';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
@@ -377,6 +378,11 @@ const AdvisorDashboard = () => {
           console.debug('[AdvisorDashboard] ========================================');
           console.debug('[AdvisorDashboard] ✅ FINAL: Merged', mergedInvites.length, 'invites');
           setRfpInvites(mergedInvites as any);
+
+          trackEvent('rfp_received', {
+            invite_count: mergedInvites.length,
+            advisor_id: advisor.id,
+          });
         }
 
         // Fetch submitted proposals with approval data - include rfp_invite_id for proper matching

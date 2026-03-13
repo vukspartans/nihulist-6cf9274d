@@ -33,6 +33,7 @@ import { differenceInDays } from 'date-fns';
 import { PROPOSAL_VALIDATION } from '@/utils/constants';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RFPFeeItem, PaymentTerms, ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest';
+import { trackEvent } from '@/lib/posthog';
 
 // Lazy load heavy components
 const SignatureCanvas = lazy(() => import('@/components/SignatureCanvas').then(module => ({
@@ -78,6 +79,7 @@ const SubmitProposal = () => {
   const { user, primaryRole } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const proposalStartedRef = useRef(false);
   
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
@@ -146,6 +148,14 @@ const SubmitProposal = () => {
     setPrice(rawValue);
     setPriceDisplay(formatPrice(rawValue));
   };
+
+  // Track proposal_started once on mount
+  useEffect(() => {
+    if (!proposalStartedRef.current && rfp_id) {
+      proposalStartedRef.current = true;
+      trackEvent('proposal_started', { rfp_id, invite_id });
+    }
+  }, [rfp_id, invite_id]);
 
   // Auto-calculate timeline from project dates
   useEffect(() => {

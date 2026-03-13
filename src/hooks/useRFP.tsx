@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleError } from '@/utils/errorHandling';
 import { DEADLINES } from '@/utils/constants';
 import { ServiceScopeItem, RFPFeeItem, PaymentTerms, ServiceDetailsMode } from '@/types/rfpRequest';
+import { trackEvent } from '@/lib/posthog';
 
 interface RFPResult {
   result_rfp_id: string;
@@ -95,6 +96,14 @@ export const useRFP = () => {
       if (error) throw error;
 
       const result = data?.[0] as RFPResult;
+
+      if (result) {
+        trackEvent('rfp_created', {
+          rfp_id: result.result_rfp_id,
+          invites_sent: result.result_invites_sent,
+          project_id: projectId,
+        });
+      }
       
       console.log('[useRFP] RFP Result:', {
         rfpId: result?.result_rfp_id,
@@ -138,6 +147,11 @@ export const useRFP = () => {
                 });
               } else {
                 console.log('[useRFP] Emails sent successfully:', emailData);
+                trackEvent('rfp_sent_to_advisors', {
+                  rfp_id: result.result_rfp_id,
+                  advisor_count: result.result_invites_sent,
+                  project_id: projectId,
+                });
               }
             });
 
