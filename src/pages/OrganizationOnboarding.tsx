@@ -202,6 +202,8 @@ const OrganizationOnboarding = () => {
       }
 
       if (success) {
+        completedRef.current = true;
+        sessionStorage.setItem('onboarding_just_completed', 'true');
         toast({
           title: 'נשמר',
           description: 'תוכל להשלים את פרטי הארגון מאוחר יותר מתוך הגדרות הפרופיל'
