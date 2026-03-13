@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from "react-dropzone";
+import { trackEvent } from '@/lib/posthog';
 import { toast } from "sonner";
 
 interface NegotiationDialogProps {
