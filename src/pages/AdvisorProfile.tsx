@@ -21,6 +21,7 @@ import PhoneInput from 'react-phone-number-input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { canonicalizeAdvisor } from '@/lib/canonicalizeAdvisor';
 import { getDashboardRouteForRole } from '@/lib/roleNavigation';
+import { trackEvent } from '@/lib/posthog';
 
 // Activity Regions Options
 const ACTIVITY_REGIONS = [
