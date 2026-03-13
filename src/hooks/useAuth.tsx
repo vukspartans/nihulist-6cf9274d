@@ -146,8 +146,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Keep a ref to current user ID to detect if it's the same user on tab return
   const currentUserIdRef = React.useRef<string | null>(null);
-  const profileLoadingRef = React.useRef(true);
-  const rolesLoadingRef = React.useRef(true);
 
   useEffect(() => {
     // Set up auth state listener FIRST - synchronous to avoid deadlocks
