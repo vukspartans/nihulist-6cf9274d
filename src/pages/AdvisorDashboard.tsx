@@ -27,6 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import LegalFooter from '@/components/LegalFooter';
 import { AdvisorTasksView } from '@/components/tasks/AdvisorTasksView';
 import { AdvisorPaymentsView } from '@/components/payments/AdvisorPaymentsView';
+import { trackEvent } from '@/lib/posthog';
 
 const COVER_OPTIONS = [
   { id: '0', image: '' },
