@@ -57,6 +57,8 @@ export function useOrganization() {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  // Persist org ID after creation so stale profile doesn't cause refetch to miss it
+  const createdOrgIdRef = useRef<string | null>(null);
 
   const fetchOrganization = useCallback(async () => {
     if (!user || !profile) {
@@ -68,8 +70,8 @@ export function useOrganization() {
       setLoading(true);
       setError(null);
 
-      // Check if profile has organization_id
-      const organizationId = (profile as any).organization_id;
+      // Use manually stored org ID (from creation) or profile's organization_id
+      const organizationId = createdOrgIdRef.current || (profile as any).organization_id;
       
       if (!organizationId) {
         setOrganization(null);
