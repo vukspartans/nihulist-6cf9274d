@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import { handleError } from '@/utils/errorHandling';
 import { SignatureData } from '@/components/SignatureCanvas';
+import { trackEvent } from '@/lib/posthog';
 
 type ProposalStatus = Database['public']['Enums']['proposal_status'];
 
