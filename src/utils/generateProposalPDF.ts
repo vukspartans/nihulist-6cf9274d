@@ -328,9 +328,38 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap');
 
 @media print {
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { margin: 15mm 12mm; }
-  .section, table, .signature-section { page-break-inside: avoid; }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 0;
+    font-size: 12px;
+  }
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+
+  .section, table, .signature-section,
+  .vat-summary, .terms-card, .details-grid,
+  .sig-box, .header {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .section-title, .table-title, .subsection-title {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .signature-section {
+    page-break-before: auto;
+    break-before: auto;
+  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
