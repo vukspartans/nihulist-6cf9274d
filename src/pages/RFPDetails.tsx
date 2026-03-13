@@ -18,6 +18,7 @@ import { useDeclineRFP } from '@/hooks/useDeclineRFP';
 import { reportableError, formatSupabaseError } from '@/utils/errorReporting';
 import { AdvisorProposalViewDialog } from '@/components/AdvisorProposalViewDialog';
 import { getPaymentTermLabel, PAYMENT_TERM_LABELS } from '@/constants/paymentTerms';
+import { trackEvent } from '@/lib/posthog';
 import JSZip from 'jszip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
