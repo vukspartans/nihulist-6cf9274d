@@ -414,6 +414,7 @@ serve(async (req) => {
         const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
         const sanitize = (s: string) => s
+          .replace(/[\u200B-\u200F\u2028-\u202F\uFEFF]/g, '')
           .replace(/[\u2010-\u2015]/g, '-')
           .replace(/[\u2018\u2019]/g, "'")
           .replace(/[\u201C\u201D]/g, '"')
