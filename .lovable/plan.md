@@ -1,53 +1,60 @@
 
 
-# Fix: State Loss on Tab Switch / Window Minimize
+# Fix Broken Logo Images with Fallback
 
-## Root Cause
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-The bug is in `src/hooks/useAuth.tsx`, lines 161-163. The `onAuthStateChange` callback is defined inside a `useEffect([], [])` (empty deps), so `profileLoading` and `rolesLoading` are **stale closure values** — they're captured as `true` (their initial state) and never update.
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-When the user switches tabs and returns, Supabase fires a `SIGNED_IN` event. The guard intended to skip reloading for the same user:
+## Changes
 
-```ts
-if (session?.user?.id === currentUserIdRef.current && 
-    currentUserIdRef.current !== null &&
-    !profileLoading && !rolesLoading) {  // ← ALWAYS true in the closure (initial values)
+### `src/components/ProposalComparisonTable.tsx`
+
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
 ```
 
-Since `profileLoading` and `rolesLoading` are captured as `true` from initial render, `!profileLoading` is `false`, so the guard **always fails**. This causes:
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-1. `setProfileLoading(true)` + `setRolesLoading(true)` → `loading = true`
-2. `ProtectedRoute` and `RoleBasedRoute` render the loading spinner
-3. The entire component tree unmounts, destroying all local state
-4. When loading finishes, components re-mount from scratch → user lands on the initial screen
+### Other components to audit for the same pattern
 
-## Fix — 1 file
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### `src/hooks/useAuth.tsx`
+All need the same `onError` fallback treatment.
 
-Replace the stale closure check with **refs** that always reflect the current loading state:
-
-1. Add two refs alongside `currentUserIdRef`:
-   ```ts
-   const profileLoadingRef = React.useRef(true);
-   const rolesLoadingRef = React.useRef(true);
-   ```
-
-2. Keep refs in sync — update them wherever `setProfileLoading` / `setRolesLoading` are called (6 locations each), e.g.:
-   ```ts
-   setProfileLoading(true);
-   profileLoadingRef.current = true;
-   ```
-
-3. Update the guard at line 161-163 to use the refs:
-   ```ts
-   if (session?.user?.id === currentUserIdRef.current && 
-       currentUserIdRef.current !== null &&
-       !profileLoadingRef.current && !rolesLoadingRef.current) {
-   ```
-
-This ensures the "same user already loaded" check works correctly regardless of when the closure was created, preventing unnecessary loading state resets and component tree unmounts on tab switch.
-
-## Files Modified: 1
-- `src/hooks/useAuth.tsx`
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 

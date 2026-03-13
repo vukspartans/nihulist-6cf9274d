@@ -51,8 +51,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [rolesLoading, setRolesLoading] = useState(true);
+  const profileLoadingRef = React.useRef(true);
+  const rolesLoadingRef = React.useRef(true);
+  const [profileLoading, _setProfileLoading] = useState(true);
+  const [rolesLoading, _setRolesLoading] = useState(true);
+
+  const setProfileLoading = (v: boolean) => { profileLoadingRef.current = v; _setProfileLoading(v); };
+  const setRolesLoading = (v: boolean) => { rolesLoadingRef.current = v; _setRolesLoading(v); };
 
   // Fetch user profile and roles
   const fetchProfile = async (userId: string, userEmail?: string) => {
@@ -160,7 +165,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // This prevents full component tree unmount when returning to tab
         if (session?.user?.id === currentUserIdRef.current && 
             currentUserIdRef.current !== null &&
-            !profileLoading && !rolesLoading) {
+            !profileLoadingRef.current && !rolesLoadingRef.current) {
           console.log('[useAuth] Same user already loaded, skipping reload for event:', event);
           setSession(session);
           setUser(session?.user ?? null);
