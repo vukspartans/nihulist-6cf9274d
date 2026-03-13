@@ -220,6 +220,7 @@ serve(async (req) => {
         const proposalUrl = `https://billding.ai/projects/${projectData.id}?tab=proposals&proposal=${(session.proposal as any).id}`;
 
         const sanitize = (s: string) => s
+          .replace(/[\u200B-\u200F\u2028-\u202F\uFEFF]/g, '')
           .replace(/[\u2010-\u2015]/g, '-')
           .replace(/[\u2018\u2019]/g, "'")
           .replace(/[\u201C\u201D]/g, '"')
@@ -245,7 +246,6 @@ serve(async (req) => {
           to: entrepreneurProfile.email,
           subject: sanitize(`הצעה מעודכנת התקבלה - ${projectData.name}`),
           html: emailHtml,
-          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Response] Email sent to:", entrepreneurProfile.email);

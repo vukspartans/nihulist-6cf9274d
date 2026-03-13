@@ -414,6 +414,7 @@ serve(async (req) => {
         const responseUrl = `https://billding.ai/negotiation/${session.id}`;
 
         const sanitize = (s: string) => s
+          .replace(/[\u200B-\u200F\u2028-\u202F\uFEFF]/g, '')
           .replace(/[\u2010-\u2015]/g, '-')
           .replace(/[\u2018\u2019]/g, "'")
           .replace(/[\u201C\u201D]/g, '"')
@@ -440,7 +441,6 @@ serve(async (req) => {
           to: advisorEmail,
           subject: sanitize(`בקשה לעדכון הצעת מחיר - ${project.name}`),
           html: emailHtml,
-          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         });
 
         console.log("[Negotiation Request] Email sent to:", advisorEmail);
@@ -476,7 +476,7 @@ serve(async (req) => {
               await resend.emails.send({
                 from: "Billding <notifications@billding.ai>",
                 to: member.email,
-                subject: `בקשה לעדכון הצעת מחיר - ${project.name}`,
+                subject: sanitize(`בקשה לעדכון הצעת מחיר - ${project.name}`),
                 html: emailHtml,
               });
               console.log("[Negotiation Request] Team email sent to:", member.email);
