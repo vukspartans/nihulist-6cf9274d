@@ -149,6 +149,14 @@ const SubmitProposal = () => {
     setPriceDisplay(formatPrice(rawValue));
   };
 
+  // Track proposal_started once on mount
+  useEffect(() => {
+    if (!proposalStartedRef.current && rfp_id) {
+      proposalStartedRef.current = true;
+      trackEvent('proposal_started', { rfp_id, invite_id });
+    }
+  }, [rfp_id, invite_id]);
+
   // Auto-calculate timeline from project dates
   useEffect(() => {
     if (rfpDetails?.projects?.timeline_end && rfpDetails?.projects?.timeline_start) {
