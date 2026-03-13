@@ -70,8 +70,15 @@ const OrganizationOnboarding = () => {
     }
   }, [profile, organizationName]);
 
+  // Track whether this component instance already completed/skipped onboarding
+  const completedRef = useRef(false);
+
   // Redirect if already onboarded or not entrepreneur
   useEffect(() => {
+    // If we just completed in this session, don't redirect back to onboarding
+    if (completedRef.current) return;
+    if (sessionStorage.getItem('onboarding_just_completed') === 'true') return;
+
     if (!authLoading && !orgLoading) {
       if (!user) {
         navigate('/auth');
