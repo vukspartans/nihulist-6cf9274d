@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // This prevents full component tree unmount when returning to tab
         if (session?.user?.id === currentUserIdRef.current && 
             currentUserIdRef.current !== null &&
-            !profileLoading && !rolesLoading) {
+            !profileLoadingRef.current && !rolesLoadingRef.current) {
           console.log('[useAuth] Same user already loaded, skipping reload for event:', event);
           setSession(session);
           setUser(session?.user ?? null);
