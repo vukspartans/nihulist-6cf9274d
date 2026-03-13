@@ -1,60 +1,76 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Fix: CSS Print Layout for Proposal PDF
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Current State
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+The PDF is generated in `src/utils/generateProposalPDF.ts` using a new browser window with inline HTML/CSS and `window.print()`. The existing `@media print` rules (lines 330-334) are minimal:
 
-## Changes
-
-### `src/components/ProposalComparisonTable.tsx`
-
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
-
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
-
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
-
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
+```css
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 15mm 12mm; }
+  .section, table, .signature-section { page-break-inside: avoid; }
+}
 ```
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+**Problems:**
+1. Only `.section`, `table`, and `.signature-section` have `page-break-inside: avoid` — individual table rows (`tr`), the VAT summary, terms card, and details grid can still split across pages.
+2. No `@page` size declaration for A4.
+3. Body padding (32px 40px) combined with page margins can cause content overflow.
+4. No `break-after`/`break-before` hints for logical page breaks (e.g., before signature section).
+5. The header bottom border and section titles can be orphaned at the bottom of a page.
 
-### Other components to audit for the same pattern
+## Fix — 1 file
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+### `src/utils/generateProposalPDF.ts` — Update the `CSS` constant
 
-All need the same `onError` fallback treatment.
+Replace the `@media print` block (lines 330-334) with comprehensive print rules:
 
-| File | Change |
-|------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+```css
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 0;
+    font-size: 12px;
+  }
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+
+  /* Prevent content splitting */
+  .section, table, .signature-section,
+  .vat-summary, .terms-card, .details-grid,
+  .sig-box, .header {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Keep section titles with their content */
+  .section-title, .table-title, .subsection-title {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Signature section starts on new page if near bottom */
+  .signature-section {
+    page-break-before: auto;
+    break-before: auto;
+  }
+
+  /* Hide nothing in the print window — it's already a clean document */
+}
+```
+
+Also reduce body padding for print by adjusting the base body style to use a print-friendly padding (the `@media print` override above sets `padding: 0` since `@page margin` handles spacing).
+
+## Files Modified: 1
+- `src/utils/generateProposalPDF.ts`
 
