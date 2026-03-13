@@ -51,8 +51,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [profileLoading, setProfileLoadingState] = useState(true);
-  const [rolesLoading, setRolesLoadingState] = useState(true);
+  const [profileLoading, _setProfileLoading] = useState(true);
+  const [rolesLoading, _setRolesLoading] = useState(true);
+
+  const setProfileLoading = (v: boolean) => { profileLoadingRef.current = v; _setProfileLoading(v); };
+  const setRolesLoading = (v: boolean) => { rolesLoadingRef.current = v; _setRolesLoading(v); };
 
   // Fetch user profile and roles
   const fetchProfile = async (userId: string, userEmail?: string) => {
