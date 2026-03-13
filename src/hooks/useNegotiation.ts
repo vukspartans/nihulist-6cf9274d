@@ -34,6 +34,12 @@ export const useNegotiation = () => {
         description: `הבקשה נשלחה ל${supplierName}. תקבל עדכון כשיגיב להצעה.`,
       });
 
+      trackEvent('negotiation_created', {
+        session_id: (result as NegotiationRequestOutput)?.session_id,
+        proposal_id: data.proposal_id,
+        project_id: data.project_id,
+      });
+
       return result as NegotiationRequestOutput;
     } catch (error: any) {
       console.error("[useNegotiation] createNegotiationSession error:", error);
