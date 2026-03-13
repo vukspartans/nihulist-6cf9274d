@@ -6,11 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { FileDown, CheckSquare, Square, ChevronDown, FileText, AlertCircle, Eye, ExternalLink } from 'lucide-react';
+import { CheckSquare, Square, ChevronDown, FileText, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ServiceScopeItem, UploadedFileMetadata } from '@/types/rfpRequest';
-import FilePreviewModal from '@/components/FilePreviewModal';
-import { safeOpenFile, canPreviewFile } from '@/utils/safeFileOpen';
 
 interface ConsultantServicesSelectionProps {
   mode: 'free_text' | 'file' | 'checklist';
@@ -34,77 +32,6 @@ export function ConsultantServicesSelection({
   onNotesChange,
 }: ConsultantServicesSelectionProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['כללי']));
-  const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
-
-  const handleOpenFile = (url: string, name: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    safeOpenFile(url);
-  };
-
-  const handlePreviewFile = (url: string, name: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPreviewFile({ url, name });
-  };
-
-  // Render file item with preview/download options
-  const renderFileItem = (file: { url: string; name: string; description?: string }, key: string) => {
-    const canPreview = canPreviewFile(file.name);
-    return (
-      <div
-        key={key}
-        className="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <FileDown className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{file.name}</p>
-            {file.description && (
-              <p className="text-sm text-muted-foreground truncate">{file.description}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {canPreview && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={(e) => handlePreviewFile(file.url, file.name, e)}
-              className="gap-1"
-            >
-              <Eye className="h-4 w-4" />
-              תצוגה
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={(e) => handleOpenFile(file.url, file.name, e)}
-            className="gap-1"
-          >
-            <ExternalLink className="h-4 w-4" />
-            פתח
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Only show service-related files (not project/request files - those are in Request Details tab)
-  const allFiles = useMemo(() => {
-    const files: Array<{ url: string; name: string; description?: string; source: string }> = [];
-    
-    if (serviceFile) {
-      files.push({ url: serviceFile.url, name: serviceFile.name, source: 'service' });
-    }
-    
-    return files;
-  }, [serviceFile]);
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -145,7 +72,6 @@ export function ConsultantServicesSelection({
   };
 
   const handleDeselectAll = () => {
-    // Keep required (non-optional) items selected
     const requiredIds = serviceItems
       .filter(item => !item.is_optional && item.id)
       .map(item => item.id!);
@@ -300,28 +226,6 @@ export function ConsultantServicesSelection({
             rows={3}
           />
         </div>
-
-        {/* All Related Files Section */}
-        {allFiles.length > 0 && (
-          <Card className="mt-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileDown className="h-4 w-4" />
-                קבצים מצורפים ({allFiles.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {allFiles.map((file, idx) => renderFileItem(file, `checklist-file-${idx}`))}
-            </CardContent>
-          </Card>
-        )}
-
-        <FilePreviewModal
-          open={!!previewFile}
-          onOpenChange={(open) => !open && setPreviewFile(null)}
-          fileUrl={previewFile?.url || null}
-          fileName={previewFile?.name || ''}
-        />
       </div>
     );
   }
@@ -358,22 +262,10 @@ export function ConsultantServicesSelection({
     );
   }
 
-  // For file mode
+  // For file mode — show only notes textarea (files hidden per design)
   if (mode === 'file' && serviceFile) {
     return (
       <div className="space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileDown className="h-4 w-4" />
-              מסמכי השירותים
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {allFiles.map((file, idx) => renderFileItem(file, `file-${idx}`))}
-          </CardContent>
-        </Card>
-
         <div className="space-y-2">
           <Label htmlFor="service-notes">הערות ותגובה (אופציונלי)</Label>
           <Textarea
@@ -384,55 +276,11 @@ export function ConsultantServicesSelection({
             rows={4}
           />
         </div>
-
-        <FilePreviewModal
-          open={!!previewFile}
-          onOpenChange={(open) => !open && setPreviewFile(null)}
-          fileUrl={previewFile?.url || null}
-          fileName={previewFile?.name || ''}
-        />
       </div>
     );
   }
 
-  // Fallback - no service details provided, but still show files if available
-  if (allFiles.length > 0) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileDown className="h-4 w-4" />
-              קבצים מצורפים
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {allFiles.map((file, idx) => renderFileItem(file, `file-${idx}`))}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-2">
-          <Label htmlFor="service-notes">תאר את השירותים שתספק</Label>
-          <Textarea
-            id="service-notes"
-            value={consultantNotes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            placeholder="פרט את השירותים שתספק..."
-            rows={4}
-          />
-        </div>
-
-        <FilePreviewModal
-          open={!!previewFile}
-          onOpenChange={(open) => !open && setPreviewFile(null)}
-          fileUrl={previewFile?.url || null}
-          fileName={previewFile?.name || ''}
-        />
-      </div>
-    );
-  }
-
-  // No files, no service details
+  // Fallback — no service details provided
   return (
     <div className="text-center py-8 text-muted-foreground">
       <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
