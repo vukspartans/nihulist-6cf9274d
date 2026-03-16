@@ -1,39 +1,60 @@
 
 
-# Fix: "New Price" in Negotiation Response Email Shows Previous Round's Price
+# Fix Broken Logo Images with Fallback
 
-## Root Cause
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-In `supabase/functions/send-negotiation-response/index.ts`, the email's `newPrice` is calculated independently on **line 211-213** by summing `consultant_response_price` from the `updated_line_items` input array:
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-```typescript
-const newTotal = updated_line_items && updated_line_items.length > 0
-  ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
-  : session.target_total || (session.proposal as any).price;
+## Changes
+
+### `src/components/ProposalComparisonTable.tsx`
+
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
 ```
 
-This is wrong for two reasons:
-1. When the advisor "accepts" the entrepreneur's target price, the frontend may send `updated_line_items` with the **old prices** (from the current proposal) rather than the target prices — yielding the Round 2 total (₪89,000) instead of the Round 3 target (₪85,000).
-2. The `updated_line_items` array may only contain **changed** items, not all items, making the sum incomplete.
+Apply the same pattern at both locations (lines 287-299 and 461-473).
 
-Meanwhile, the database RPC `submit_negotiation_response` already computes the correct `new_price` by summing the **actual updated fee line items** and returns it in the result object (line 132 of the RPC: `'new_price', v_new_price`). This value is available in `result.new_price` but is never used for the email.
+### Other components to audit for the same pattern
 
-## Fix — 1 file
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
 
-### `supabase/functions/send-negotiation-response/index.ts`
+All need the same `onError` fallback treatment.
 
-**Replace** the manual `newTotal` calculation (lines 210-213) with the authoritative price from the RPC result:
-
-```typescript
-// Use the actual price computed by the database function
-const newTotal = Number(result.new_price) || 
-  (updated_line_items && updated_line_items.length > 0
-    ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
-    : session.target_total || (session.proposal as any).price);
-```
-
-This ensures the email always displays the same price that was persisted to `proposals.price` and `proposal_versions.price` by the RPC. The manual calculation is kept only as a fallback in the unlikely case `result.new_price` is missing.
-
-## Files Modified: 1
-- `supabase/functions/send-negotiation-response/index.ts`
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 

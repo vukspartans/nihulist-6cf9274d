@@ -208,9 +208,11 @@ serve(async (req) => {
       .single();
 
     // Calculate new total - use target_total if no line items provided
-    const newTotal = updated_line_items && updated_line_items.length > 0
-      ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
-      : session.target_total || (session.proposal as any).price;
+    // Use the authoritative price from the database RPC result
+    const newTotal = Number(result.new_price) ||
+      (updated_line_items && updated_line_items.length > 0
+        ? updated_line_items.reduce((sum, item) => sum + item.consultant_response_price, 0)
+        : session.target_total || (session.proposal as any).price);
 
     // Send email to entrepreneur (non-blocking - don't fail request if email fails)
     if (entrepreneurProfile?.email) {
