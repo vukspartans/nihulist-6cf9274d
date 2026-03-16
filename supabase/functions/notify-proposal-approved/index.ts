@@ -160,7 +160,7 @@ serve(async (req) => {
         projectName: sanitize(project.name),
         entrepreneurName: sanitize(entrepreneurProfile?.name || 'היזם'),
         price: proposal.price,
-        timelineDays: proposal.timeline_days,
+        advisorType: sanitize(advisorType),
         entrepreneurNotes: sanitize(entrepreneur_notes || ''),
         projectUrl,
       })

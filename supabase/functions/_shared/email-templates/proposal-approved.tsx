@@ -48,12 +48,12 @@ export const ProposalApprovedEmail = ({
             <td style={valueCell}>{entrepreneurName}</td>
           </tr>
           <tr>
-            <td style={labelCell}>מחיר</td>
-            <td style={valueCell}>{price?.toLocaleString('he-IL')} &#8362;</td>
+            <td style={labelCell}>תחום</td>
+            <td style={valueCell}>{advisorType}</td>
           </tr>
           <tr>
-            <td style={labelCell}>לוח זמנים</td>
-            <td style={valueCell}>{timelineDays} ימים</td>
+            <td style={labelCell}>מחיר</td>
+            <td style={valueCell}>{price?.toLocaleString('he-IL')} &#8362;</td>
           </tr>
         </table>
       </Section>
