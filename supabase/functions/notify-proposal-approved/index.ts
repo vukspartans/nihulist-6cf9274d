@@ -57,9 +57,9 @@ serve(async (req) => {
       .select(`
         id,
         price,
-        timeline_days,
         project_id,
-        advisor_id
+        advisor_id,
+        rfp_invite_id
       `)
       .eq('id', proposal_id)
       .single();
