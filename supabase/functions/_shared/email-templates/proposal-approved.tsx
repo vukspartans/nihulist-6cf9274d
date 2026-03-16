@@ -21,7 +21,7 @@ export const ProposalApprovedEmail = ({
   projectName,
   entrepreneurName,
   price,
-  timelineDays,
+  advisorType,
   entrepreneurNotes,
   projectUrl,
 }: ProposalApprovedEmailProps) => (
