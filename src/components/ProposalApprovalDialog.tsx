@@ -247,11 +247,6 @@ export const ProposalApprovalDialog = ({
                       <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
                         {formatCurrency(grandTotal)}
                       </p>
-                      {selectedOptionalItems.size > 0 && (
-                        <p className="text-[10px] text-green-600/70 dark:text-green-400/70">
-                          +{selectedOptionalItems.size} אופציונלי
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
