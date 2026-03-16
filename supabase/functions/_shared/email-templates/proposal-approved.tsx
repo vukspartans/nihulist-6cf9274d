@@ -11,7 +11,7 @@ interface ProposalApprovedEmailProps {
   projectName: string
   entrepreneurName: string
   price: number
-  timelineDays: number
+  advisorType: string
   entrepreneurNotes: string
   projectUrl: string
 }
