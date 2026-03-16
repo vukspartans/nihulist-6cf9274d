@@ -251,6 +251,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   // Check if there's a responded negotiation for this proposal
   useEffect(() => {
+    // Reset immediately to prevent stale state flash
+    setHasRespondedNegotiation(false);
+    setRespondedSessionId(null);
+
     const checkNegotiationStatus = async () => {
       if (!open || !proposal.id) return;
       
