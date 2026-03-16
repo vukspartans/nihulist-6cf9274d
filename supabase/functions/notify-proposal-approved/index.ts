@@ -57,9 +57,9 @@ serve(async (req) => {
       .select(`
         id,
         price,
-        timeline_days,
         project_id,
-        advisor_id
+        advisor_id,
+        rfp_invite_id
       `)
       .eq('id', proposal_id)
       .single();
@@ -115,7 +115,20 @@ serve(async (req) => {
       throw new Error('Advisor email not found');
     }
 
-    console.log('[Proposal Approved] Data loaded - Proposal:', proposal.id, 'Project:', project.name, 'Advisor:', advisor.company_name);
+    // Fetch advisor_type from rfp_invites
+    let advisorType = 'יועץ';
+    if (proposal.rfp_invite_id) {
+      const { data: invite } = await supabase
+        .from('rfp_invites')
+        .select('advisor_type')
+        .eq('id', proposal.rfp_invite_id)
+        .single();
+      if (invite?.advisor_type) {
+        advisorType = invite.advisor_type;
+      }
+    }
+
+    console.log('[Proposal Approved] Data loaded - Proposal:', proposal.id, 'Project:', project.name, 'Advisor:', advisor.company_name, 'Type:', advisorType);
 
     // Get team member emails
     const teamEmails = await getTeamMemberEmails(supabase, proposal.advisor_id, 'updates');
@@ -147,7 +160,7 @@ serve(async (req) => {
         projectName: sanitize(project.name),
         entrepreneurName: sanitize(entrepreneurProfile?.name || 'היזם'),
         price: proposal.price,
-        timelineDays: proposal.timeline_days,
+        advisorType: sanitize(advisorType),
         entrepreneurNotes: sanitize(entrepreneur_notes || ''),
         projectUrl,
       })
