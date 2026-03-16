@@ -685,7 +685,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               </div>
             )}
             {/* Action buttons - including Negotiation (hidden for historical versions) */}
-            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && !isViewingHistoricalVersion && (
+            {(proposal.status === 'submitted' || proposal.status === 'resubmitted' || proposal.status === 'negotiation_requested') && !isViewingHistoricalVersion && (
               <div className="flex flex-col gap-2 pt-2" dir="rtl">
                 {/* Show special banner for updated counter-offer */}
                 {hasRespondedNegotiation && proposal.status === 'resubmitted' && (
