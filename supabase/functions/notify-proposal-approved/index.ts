@@ -115,7 +115,20 @@ serve(async (req) => {
       throw new Error('Advisor email not found');
     }
 
-    console.log('[Proposal Approved] Data loaded - Proposal:', proposal.id, 'Project:', project.name, 'Advisor:', advisor.company_name);
+    // Fetch advisor_type from rfp_invites
+    let advisorType = 'יועץ';
+    if (proposal.rfp_invite_id) {
+      const { data: invite } = await supabase
+        .from('rfp_invites')
+        .select('advisor_type')
+        .eq('id', proposal.rfp_invite_id)
+        .single();
+      if (invite?.advisor_type) {
+        advisorType = invite.advisor_type;
+      }
+    }
+
+    console.log('[Proposal Approved] Data loaded - Proposal:', proposal.id, 'Project:', project.name, 'Advisor:', advisor.company_name, 'Type:', advisorType);
 
     // Get team member emails
     const teamEmails = await getTeamMemberEmails(supabase, proposal.advisor_id, 'updates');
