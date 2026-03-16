@@ -178,7 +178,7 @@ export const ProposalApprovalDialog = ({
       setSignature(null);
       setAuthorizationAccepted(false);
       setStep('review');
-      setSelectedOptionalItems(new Set());
+      
       setNotesOpen(false);
     }
     onOpenChange(isOpen);
