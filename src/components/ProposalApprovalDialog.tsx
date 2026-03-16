@@ -366,19 +366,8 @@ export const ProposalApprovalDialog = ({
                   </div>
                 </div>
 
-                {/* Price Breakdown Summary */}
+                {/* Price Summary */}
                 <div className="bg-muted/40 rounded-lg p-3 sm:p-4 space-y-2 border" dir="rtl">
-                  <div className="flex justify-between text-xs sm:text-sm">
-                    <span>פריטי חובה:</span>
-                    <span className="tabular-nums">{formatCurrency(mandatoryTotal)}</span>
-                  </div>
-                  {selectedOptionalItems.size > 0 && (
-                    <div className="flex justify-between text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                      <span>פריטים אופציונליים ({selectedOptionalItems.size}):</span>
-                      <span className="tabular-nums">+{formatCurrency(selectedOptionalTotal)}</span>
-                    </div>
-                  )}
-                  <Separator />
                   <div className="flex justify-between font-bold text-sm sm:text-base">
                     <span>סה"כ:</span>
                     <span className="text-green-600 dark:text-green-400 tabular-nums">
