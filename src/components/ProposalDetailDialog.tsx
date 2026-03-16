@@ -121,7 +121,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
   const [loadingVersion, setLoadingVersion] = useState(false);
 
   // Determine if we're viewing a historical version
-  const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== proposal.current_version;
+  const isViewingHistoricalVersion = viewVersion !== undefined && proposal.current_version != null && viewVersion !== proposal.current_version;
 
   // Load version-specific data when viewVersion changes
   useEffect(() => {
@@ -251,6 +251,10 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
 
   // Check if there's a responded negotiation for this proposal
   useEffect(() => {
+    // Reset immediately to prevent stale state flash
+    setHasRespondedNegotiation(false);
+    setRespondedSessionId(null);
+
     const checkNegotiationStatus = async () => {
       if (!open || !proposal.id) return;
       
@@ -681,7 +685,7 @@ export function ProposalDetailDialog({ open, onOpenChange, proposal, projectId, 
               </div>
             )}
             {/* Action buttons - including Negotiation (hidden for historical versions) */}
-            {(proposal.status === 'submitted' || proposal.status === 'resubmitted') && !isViewingHistoricalVersion && (
+            {(proposal.status === 'submitted' || proposal.status === 'resubmitted' || proposal.status === 'negotiation_requested') && !isViewingHistoricalVersion && (
               <div className="flex flex-col gap-2 pt-2" dir="rtl">
                 {/* Show special banner for updated counter-offer */}
                 {hasRespondedNegotiation && proposal.status === 'resubmitted' && (

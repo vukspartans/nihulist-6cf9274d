@@ -1,60 +1,60 @@
 
 
-# Fix: Negotiation Button Not Available on First Load
+# Fix Broken Logo Images with Fallback
 
-## Root Cause Analysis
+## Problem
+The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
 
-After thorough investigation of `ProposalDetailDialog.tsx`, I identified two bugs that can cause the negotiation button to not appear on initial load:
+## Solution
+Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
 
-### Bug 1: `isViewingHistoricalVersion` false positive (line 124)
-```typescript
-const isViewingHistoricalVersion = viewVersion !== undefined && viewVersion !== proposal.current_version;
-```
-When a user opens a proposal via the NegotiationStepsTimeline (which passes a `viewVersion` like `1`), and `proposal.current_version` is `null` or `undefined` from the DB, this evaluates to `1 !== null` → `true`. This hides the entire action buttons section (line 684), including the negotiation button.
+## Changes
 
-After clicking "Accept Offer" and navigating back, the dialog reopens without `viewVersion` (it's reset to `undefined` on close), so `isViewingHistoricalVersion = false` and buttons appear.
+### `src/components/ProposalComparisonTable.tsx`
 
-### Bug 2: Status gate excludes `negotiation_requested` (line 684)
-```typescript
-{(proposal.status === 'submitted' || proposal.status === 'resubmitted') && !isViewingHistoricalVersion && (
-```
-After a negotiation cycle, the proposal status becomes `negotiation_requested`. This status is NOT included in the gate, so all action buttons (including approve, reject, and negotiation) are hidden until the advisor responds and status changes back to `resubmitted`.
+There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
 
-### Bug 3: `hasRespondedNegotiation` stale state risk
-The state isn't explicitly reset when `open` or `proposal.id` changes — it carries over from the async effect of the previous proposal until the new async query completes.
+- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
 
-## Fix — 1 file
+**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
 
-### `src/components/ProposalDetailDialog.tsx`
-
-**Change 1** — Fix `isViewingHistoricalVersion` (line 124):
-```typescript
-const isViewingHistoricalVersion = viewVersion !== undefined 
-  && proposal.current_version != null 
-  && viewVersion !== proposal.current_version;
-```
-If `current_version` is null/undefined, we treat the viewed version as current.
-
-**Change 2** — Add `negotiation_requested` to the status gate (line 684):
-```typescript
-{(proposal.status === 'submitted' || proposal.status === 'resubmitted' || proposal.status === 'negotiation_requested') && !isViewingHistoricalVersion && (
-```
-
-**Change 3** — Reset `hasRespondedNegotiation` immediately when proposal changes (add to useEffect at line 253):
-```typescript
-useEffect(() => {
-  // Reset immediately to prevent stale state flash
-  setHasRespondedNegotiation(false);
-  setRespondedSessionId(null);
-  
-  const checkNegotiationStatus = async () => {
-    if (!open || !proposal.id) return;
-    // ... existing query
-  };
-  checkNegotiationStatus();
-}, [open, proposal.id]);
+```tsx
+{proposal.advisors?.logo_url && (
+  <img 
+    src={proposal.advisors.logo_url}
+    alt=""
+    className="w-8 h-8 rounded-full object-cover border"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+      if (fallback) fallback.style.display = 'flex';
+    }}
+  />
+)}
+<div 
+  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
+  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
+>
+  <span className="text-xs font-bold text-primary">
+    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
+  </span>
+</div>
 ```
 
-## Files Modified: 1
-- `src/components/ProposalDetailDialog.tsx`
+Apply the same pattern at both locations (lines 287-299 and 461-473).
+
+### Other components to audit for the same pattern
+
+Search for other `logo_url` conditional renders without `onError`:
+- `ProposalDetailDialog.tsx` — advisor logo display
+- `AdvisorProposalViewDialog.tsx` — logo in header
+- `SelectedAdvisorsTab.tsx` — advisor cards
+- `ProposalComparisonDialog.tsx` — comparison view
+
+All need the same `onError` fallback treatment.
+
+| File | Change |
+|------|--------|
+| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
+| Other components with `logo_url` rendering | Same `onError` fallback pattern |
 
