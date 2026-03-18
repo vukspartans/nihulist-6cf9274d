@@ -1,60 +1,64 @@
 
 
-# Fix Broken Logo Images with Fallback
+# Plan: Regression Tests for 5 Recent Bugs
 
-## Problem
-The advisor "שי אילון אדריכות עיצוב" has a `logo_url` value stored in the database, but the actual image URL is broken (404, expired, or invalid). The current code uses a ternary: if `logo_url` is truthy, render `<img>`, otherwise render a letter-initial fallback. Since the URL string exists but the image fails to load, a broken image placeholder appears instead of the fallback.
+## Overview
 
-## Solution
-Add `onError` handlers to all `<img>` tags rendering advisor logos so that when an image fails to load, it hides itself and shows the letter-initial fallback instead.
+Create a Vitest + React Testing Library test suite covering 5 bug regressions. The project already has Vitest configured in `vite.config.ts` with jsdom environment and `./src/test/setup.ts` as setup file. We need to create the setup file (missing), add `@testing-library/react` and `@testing-library/jest-dom` as dependencies, and write the tests.
 
-## Changes
+Testing dependencies `@testing-library/react`, `@testing-library/jest-dom`, and `jsdom` are missing from `package.json` and need to be added.
 
-### `src/components/ProposalComparisonTable.tsx`
+## Files to Create/Modify
 
-There are two places rendering advisor logos (desktop table ~line 287, mobile cards ~line 461). For both:
+### 1. `src/test/setup.ts` — Test setup file (referenced by vite config but doesn't exist)
+Standard jsdom setup with `@testing-library/jest-dom` matchers and `matchMedia` mock.
 
-- Wrap the logo in a small component/pattern using state, or more simply: on `onError`, hide the broken `<img>` and replace it with the fallback div. The cleanest approach: use a local state pattern or just set `e.currentTarget.style.display = 'none'` and show the fallback sibling.
+### 2. `tsconfig.app.json` — Add `"vitest/globals"` to types
+Required for global `describe`/`it`/`expect` without imports.
 
-**Simplest approach**: Always render the fallback div, but hide it when the image loads successfully. Render the `<img>` with `onError` that hides itself and shows the fallback:
+### 3. `package.json` — Add testing devDependencies
+- `@testing-library/jest-dom@^6.6.0`
+- `@testing-library/react@^16.0.0`  
+- `jsdom@^20.0.3`
 
-```tsx
-{proposal.advisors?.logo_url && (
-  <img 
-    src={proposal.advisors.logo_url}
-    alt=""
-    className="w-8 h-8 rounded-full object-cover border"
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-      if (fallback) fallback.style.display = 'flex';
-    }}
-  />
-)}
-<div 
-  className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center border"
-  style={{ display: proposal.advisors?.logo_url ? 'none' : 'flex' }}
->
-  <span className="text-xs font-bold text-primary">
-    {(proposal.advisors?.company_name || proposal.supplier_name).charAt(0)}
-  </span>
-</div>
-```
+### 4. `src/test/regression-bugs.test.tsx` — Main test file
 
-Apply the same pattern at both locations (lines 287-299 and 461-473).
+**5 test blocks:**
 
-### Other components to audit for the same pattern
+#### Bug 58: Consultant sees entrepreneur's signature on approved proposals
+- Render `AdvisorProposalViewDialog` (or verify the signature section logic) with mock proposal data where `status: 'accepted'` and `signature_blob` is set.
+- Since `AdvisorProposalViewDialog` fetches data via Supabase (hard to mock in unit tests), we'll test the rendering logic by extracting the signature visibility condition: assert that when `proposal.signature_blob` exists, the signature `<img>` with `alt="חתימה"` renders.
+- Approach: Render a minimal component that mirrors the signature rendering logic from `AdvisorProposalViewDialog` lines 644-670, and assert the image appears.
 
-Search for other `logo_url` conditional renders without `onError`:
-- `ProposalDetailDialog.tsx` — advisor logo display
-- `AdvisorProposalViewDialog.tsx` — logo in header
-- `SelectedAdvisorsTab.tsx` — advisor cards
-- `ProposalComparisonDialog.tsx` — comparison view
+#### Bug 59: Price updates correctly in Round 3
+- Test the `send-negotiation-response` edge function's price calculation logic.
+- Create a Deno edge function test that verifies `result.new_price` is used as `newTotal` (not the manual sum from `updated_line_items`).
+- Alternatively, write a frontend unit test that mocks the negotiation session data with 3 rounds and asserts the displayed price matches the latest round.
 
-All need the same `onError` fallback treatment.
+#### Bug 60: "Counter Offer" / "המשך משא ומתן" button visible after negotiation round
+- Render `EntrepreneurNegotiationView` footer logic: when `!isAwaitingResponse` and `onContinueNegotiation` is provided, the "המשך משא ומתן" button should render.
+- Mock the session data as `status: 'responded'`.
 
-| File | Change |
+#### Bug 61: Proposal approved email has correct payload
+- Deno edge function test for `notify-proposal-approved`: invoke the function with test payload and verify it processes correctly (or unit test the template rendering with `advisorType` prop and without `timelineDays`).
+- Frontend alternative: test that `ProposalApprovedEmail` template renders `תחום` field and does NOT render `לוח זמנים`.
+
+#### Bug 63: Consultant profile doesn't crash
+- Render `AdvisorProfile` page wrapped in necessary providers (router, auth mock) with standard mock data.
+- Assert no error boundary is triggered and the page renders key elements.
+
+## Technical Approach
+
+Since most components rely heavily on Supabase queries and auth context, pure unit rendering will require mocking `@/integrations/supabase/client` and `@/hooks/useAuth`. I'll create a shared mock setup and focused tests that verify the **specific rendering conditions** each bug addresses, rather than full integration tests.
+
+For the email template tests (Bug 61), I'll write a **Deno test** at `supabase/functions/notify-proposal-approved/index_test.ts` that validates the template rendering.
+
+## Files Summary
+| File | Action |
 |------|--------|
-| `src/components/ProposalComparisonTable.tsx` | Add `onError` fallback to 2 logo `<img>` tags |
-| Other components with `logo_url` rendering | Same `onError` fallback pattern |
+| `src/test/setup.ts` | Create |
+| `tsconfig.app.json` | Modify (add vitest/globals) |
+| `package.json` | Modify (add test deps) |
+| `src/test/regression-bugs.test.tsx` | Create (Bugs 58, 59, 60, 63) |
+| `supabase/functions/notify-proposal-approved/template_test.ts` | Create (Bug 61) |
 
