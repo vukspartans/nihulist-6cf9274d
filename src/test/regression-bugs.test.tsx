@@ -70,7 +70,7 @@ describe("Bug 58: Entrepreneur signature visible to consultant on approved propo
     };
     render(<SignatureSection proposal={proposal} />);
 
-    const img = screen.getByAlt("חתימה");
+    const img = screen.getByAltText("חתימה");
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute("src", proposal.signature_blob);
     expect(screen.getByTestId("signature-section")).toBeInTheDocument();
