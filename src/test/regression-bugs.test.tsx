@@ -80,7 +80,7 @@ describe("Bug 58: Entrepreneur signature visible to consultant on approved propo
     const proposal = { status: "accepted", signature_blob: null };
     render(<SignatureSection proposal={proposal} />);
 
-    expect(screen.queryByAlt("חתימה")).not.toBeInTheDocument();
+    expect(screen.queryByAltText("חתימה")).not.toBeInTheDocument();
     expect(screen.queryByTestId("signature-section")).not.toBeInTheDocument();
   });
 
